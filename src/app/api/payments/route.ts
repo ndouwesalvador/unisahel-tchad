@@ -1,0 +1,646 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { db } from '@/lib/db'
+import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
+import { paymentQuerySchema, createPaymentSchema, updatePaymentSchema, validateQuery, validateBody, formatZodError } from '@/lib/validations/api'
+import { Prisma } from '@prisma/client'
+
+async function getPaymentsHandler(user: SessionUser, tenantId: string, request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const validatedQuery = validateQuery(paymentQuerySchema, searchParams)
+
+    const { studentId, academicYearId, status, paymentMethod, startDate, endDate, page, limit } = validatedQuery
+    const skip = (page - 1) * limit
+
+    const where: Prisma.PaymentWhereInput = {
+      tenantId,
+    }
+
+    if (studentId) {
+      where.studentId = studentId
+    }
+
+    if (academicYearId) {
+      where.academicYearId = academicYearId
+    }
+
+    if (status) {
+      where.status = status
+    }
+
+    if (paymentMethod) {
+      where.paymentMethod = paymentMethod
+    }
+
+    if (startDate || endDate) {
+      where.createdAt = {}
+      if (startDate) where.createdAt.gte = new Date(startDate)
+      if (endDate) where.createdAt.lte = new Date(endDate)
+    }
+
+    const [payments, total] = await Promise.all([
+      db.payment.findMany({
+        where,
+        include: {
+          student: {
+            select: {
+              id: true,
+              matricule: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              currentProgram: { select: { name: true, code: true } },
+              currentLevel: { select: { name: true, code: true } },
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      db.payment.count({ where }),
+    ])
+
+    const totalPages = Math.ceil(total / limit)
+
+    return NextResponse.json({
+      data: payments,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1,
+      },
+    })
+  } catch (error) {
+    console.error('Payments API error:', error)
+    return NextResponse.json(
+      {
+        error: 'Failed to fetch payments',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 }
+    )
+  }
+}
+
+async function createPaymentHandler(user: SessionUser, tenantId: string, request: NextRequest) {
+  try {
+    const body = await request.json()
+    const validatedBody = validateBody(createPaymentSchema, body)
+
+    // Verify student belongs to tenant
+    const student = await db.student.findFirst({ where: { id: validatedBody.studentId, tenantId } })
+    if (!student) {
+      return NextResponse.json(
+        { error: 'Student not found in this tenant' },
+        { status: 404 }
+      )
+    }
+
+    // Verify academic year belongs to tenant
+    const academicYear = await db.academicYear.findFirst({ where: { id: validatedBody.academicYearId, tenantId } })
+    if (!academicYear) {
+      return NextResponse.json(
+        { error: 'Academic year not found in this tenant' },
+        { status: 404 }
+      )
+    }
+
+    // Verify fee structure if provided
+    if (validatedBody.feeStructureId) {
+      const feeStructure = await db.feeStructure.findFirst({ where: { id: validatedBody.feeStructureId, tenantId } })
+      if (!feeStructure) {
+        return NextResponse.json(
+          { error: 'Fee structure not found in this tenant' },
+          { status: 404 }
+        )
+      }
+    }
+
+    // Generate receipt number if not provided
+    let receiptNumber = validatedBody.receiptNumber
+    if (!receiptNumber) {
+      const settings = await db.tenantSettings.findUnique({ where: { tenantId } })
+      const prefix = settings?.receiptPrefix || 'REC'
+      const year = new Date().getFullYear()
+      const count = await db.payment.count({ where: { tenantId } })
+      const seq = String(count + 1).padStart(6, '0')
+      receiptNumber = `${prefix}-${year}-${seq}`
+    }
+
+    // Check receipt number uniqueness
+    const existingReceipt = await db.payment.findFirst({ where: { receiptNumber, tenantId } })
+    if (existingReceipt) {
+      return NextResponse.json(
+        { error: 'Receipt number already exists' },
+        { status: 409 }
+      )
+    }
+
+    // If payment is VALIDATED, set validation date and validated by
+    const paymentData: Prisma.PaymentCreateInput = {
+      ...validatedBody,
+      receiptNumber,
+      tenantId,
+      student: { connect: { id: validatedBody.studentId } },
+      academicYearId: validatedBody.academicYearId,
+      validatedBy: validatedBody.status === 'VALIDATED' ? user.id : undefined,
+      validationDate: validatedBody.status === 'VALIDATED' ? new Date() : undefined,
+    }
+
+    // Remove fields not in Prisma model
+    delete (paymentData as any).feeStructureId
+    delete (paymentData as any).studentId
+    delete (paymentData as any).academicYear
+
+    const payment = await db.payment.create({
+      data: paymentData,
+      include: {
+        student: {
+          select: {
+            id: true,
+            matricule: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            currentProgram: { select: { name: true, code: true } },
+            currentLevel: { select: { name: true, code: true } },
+          },
+        },
+      },
+    })
+
+    // Audit log
+    await db.auditLog.create({
+      data: {
+        tenantId,
+        userId: user.id,
+        action: 'CREATE',
+        entity: 'Payment',
+        entityId: payment.id,
+        details: JSON.stringify({ receiptNumber: payment.receiptNumber, amount: payment.amount, studentId: payment.studentId }),
+      },
+    })
+
+    return NextResponse.json({ data: payment }, { status: 201 })
+  } catch (error) {
+    console.error('Create payment error:', error)
+    if (error instanceof Error && error.name === 'ZodError') {
+      return NextResponse.json(
+        { error: 'Validation failed', details: formatZodError(error as any) },
+        { status: 400 }
+      )
+    }
+    return NextResponse.json(
+      { error: 'Failed to create payment', details: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500 }
+    )
+  }
+}
+
+async function updatePaymentHandler(user: SessionUser, tenantId: string, request: NextRequest) {
+  try {
+    const body = await request.json()
+    const validatedBody = validateBody(updatePaymentSchema, body)
+    const { id, validationDate, feeStructureId, ...data } = validatedBody
+
+    // Verify payment belongs to tenant
+    const existing = await db.payment.findFirst({ where: { id, tenantId } })
+    if (!existing) {
+      return NextResponse.json(
+        { error: 'Payment not found' },
+        { status: 404 }
+      )
+    }
+
+    // Prepare update data
+    const updateData: Prisma.PaymentUpdateInput = { ...data }
+
+    // If status is changing to VALIDATED, set validation date and validated by
+    if (data.status === 'VALIDATED' && existing.status !== 'VALIDATED') {
+      updateData.validatedBy = user.id
+      updateData.validationDate = new Date()
+    } else if (validationDate) {
+      updateData.validationDate = new Date(validationDate)
+    }
+
+    const payment = await db.payment.update({
+      where: { id },
+      data: updateData,
+      include: {
+        student: {
+          select: {
+            id: true,
+            matricule: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            currentProgram: { select: { name: true, code: true } },
+            currentLevel: { select: { name: true, code: true } },
+          },
+        },
+      },
+    })
+
+    // Audit log
+    await db.auditLog.create({
+      data: {
+        tenantId,
+        userId: user.id,
+        action: 'UPDATE',
+        entity: 'Payment',
+        entityId: payment.id,
+        details: JSON.stringify({ receiptNumber: payment.receiptNumber, amount: payment.amount, status: payment.status }),
+      },
+    })
+
+    return NextResponse.json({ data: payment })
+  } catch (error) {
+    console.error('Update payment error:', error)
+    if (error instanceof Error && error.name === 'ZodError') {
+      return NextResponse.json(
+        { error: 'Validation failed', details: formatZodError(error as any) },
+        { status: 400 }
+      )
+    }
+    return NextResponse.json(
+      { error: 'Failed to update payment', details: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500 }
+    )
+  }
+}
+
+async function deletePaymentHandler(user: SessionUser, tenantId: string, request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const id = searchParams.get('id')
+
+    if (!id) {
+      return NextResponse.json(
+        { error: 'Payment ID is required' },
+        { status: 400 }
+      )
+    }
+
+    // Verify payment belongs to tenant
+    const existing = await db.payment.findFirst({ where: { id, tenantId } })
+    if (!existing) {
+      return NextResponse.json(
+        { error: 'Payment not found' },
+        { status: 404 }
+      )
+    }
+
+    // Soft delete - change status to CANCELLED
+    const payment = await db.payment.update({
+      where: { id },
+      data: { status: 'CANCELLED' },
+    })
+
+    // Audit log
+    await db.auditLog.create({
+      data: {
+        tenantId,
+        userId: user.id,
+        action: 'DELETE',
+        entity: 'Payment',
+        entityId: payment.id,
+        details: JSON.stringify({ receiptNumber: payment.receiptNumber, amount: payment.amount }),
+      },
+    })
+
+    return NextResponse.json({ data: { id: payment.id, status: payment.status } })
+  } catch (error) {
+    console.error('Delete payment error:', error)
+    return NextResponse.json(
+      { error: 'Failed to cancel payment', details: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500 }
+    )
+  }
+}
+
+async function getPaymentReceiptHandler(user: SessionUser, tenantId: string, request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const id = searchParams.get('id')
+
+    if (!id) {
+      return NextResponse.json(
+        { error: 'Payment ID is required' },
+        { status: 400 }
+      )
+    }
+
+    const payment = await db.payment.findFirst({
+      where: { id, tenantId },
+      include: {
+        student: {
+          include: {
+            currentProgram: { select: { id: true, name: true, code: true } },
+            currentLevel: { select: { id: true, name: true, code: true } },
+            tenant: { select: { name: true, shortName: true, logo: true, address: true, city: true, phone: true, email: true, rectorName: true, rectorTitle: true } },
+          },
+        },
+      },
+    })
+
+    if (!payment) {
+      return NextResponse.json(
+        { error: 'Payment not found' },
+        { status: 404 }
+      )
+    }
+
+    // Get fee structures for this student's program/level if available
+    const feeStructures = await db.feeStructure.findMany({
+      where: {
+        tenantId,
+        OR: [
+          { programId: payment.student.currentProgramId || undefined },
+          { levelId: payment.student.currentLevelId || undefined },
+        ],
+      },
+    })
+
+    return NextResponse.json({
+      data: {
+        payment,
+        feeStructures,
+        tenant: payment.student.tenant,
+      },
+    })
+  } catch (error) {
+    console.error('Get payment receipt error:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch payment receipt', details: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500 }
+    )
+  }
+}
+
+async function getPaymentStatsHandler(user: SessionUser, tenantId: string, request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const academicYearId = searchParams.get('academicYearId')
+    const startDate = searchParams.get('startDate')
+    const endDate = searchParams.get('endDate')
+
+    const where: Prisma.PaymentWhereInput = { tenantId }
+
+    if (academicYearId) {
+      where.academicYearId = academicYearId
+    }
+
+    if (startDate || endDate) {
+      where.createdAt = {}
+      if (startDate) where.createdAt.gte = new Date(startDate)
+      if (endDate) where.createdAt.lte = new Date(endDate)
+    }
+
+    const [totalAmount, validatedAmount, pendingAmount, cancelledAmount, countByStatus, countByMethod] = await Promise.all([
+      db.payment.aggregate({ where, _sum: { amount: true } }),
+      db.payment.aggregate({ where: { ...where, status: 'VALIDATED' }, _sum: { amount: true } }),
+      db.payment.aggregate({ where: { ...where, status: 'PENDING' }, _sum: { amount: true } }),
+      db.payment.aggregate({ where: { ...where, status: 'CANCELLED' }, _sum: { amount: true } }),
+      db.payment.groupBy({ by: ['status'], where, _count: { id: true }, _sum: { amount: true } }),
+      db.payment.groupBy({ by: ['paymentMethod'], where, _count: { id: true }, _sum: { amount: true } }),
+    ])
+
+    const recentPayments = await db.payment.findMany({
+      where,
+      include: {
+        student: { select: { matricule: true, firstName: true, lastName: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+    })
+
+    return NextResponse.json({
+      data: {
+        summary: {
+          totalAmount: totalAmount._sum.amount || 0,
+          validatedAmount: validatedAmount._sum.amount || 0,
+          pendingAmount: pendingAmount._sum.amount || 0,
+          cancelledAmount: cancelledAmount._sum.amount || 0,
+        },
+        byStatus: countByStatus.map(s => ({
+          status: s.status,
+          count: s._count.id,
+          amount: s._sum.amount || 0,
+        })),
+        byMethod: countByMethod.map(m => ({
+          method: m.paymentMethod,
+          count: m._count.id,
+          amount: m._sum.amount || 0,
+        })),
+        recentPayments,
+      },
+    })
+  } catch (error) {
+    console.error('Get payment stats error:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch payment statistics', details: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500 }
+    )
+  }
+}
+
+// ========================================
+// Mobile Money Helpers
+// ========================================
+
+async function initiateMobileMoneyPayment(user: SessionUser, tenantId: string, request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { paymentId, provider, phoneNumber } = body
+
+    if (!paymentId || !provider || !phoneNumber) {
+      return NextResponse.json(
+        { error: 'paymentId, provider, and phoneNumber are required' },
+        { status: 400 }
+      )
+    }
+
+    const payment = await db.payment.findFirst({ where: { id: paymentId, tenantId } })
+    if (!payment) {
+      return NextResponse.json(
+        { error: 'Payment not found' },
+        { status: 404 }
+      )
+    }
+
+    // Update payment with mobile money details
+    const updatedPayment = await db.payment.update({
+      where: { id: paymentId },
+      data: {
+        mobileMoneyProvider: provider,
+        transactionRef: `MM_${provider}_${Date.now()}`,
+        status: 'PENDING',
+      },
+    })
+
+    // In production, here you would call the actual Mobile Money API
+    // For now, return mock response
+    const mockResponse = {
+      success: true,
+      transactionId: `MM_${provider}_${Date.now()}`,
+      reference: payment.transactionRef || `REF_${Date.now()}`,
+      message: `Paiement initié via ${provider} Money`,
+    }
+
+    // Audit log
+    await db.auditLog.create({
+      data: {
+        tenantId,
+        userId: user.id,
+        action: 'MOBILE_MONEY_INITIATE',
+        entity: 'Payment',
+        entityId: paymentId,
+        details: JSON.stringify({ provider, phoneNumber, mockResponse }),
+      },
+    })
+
+    return NextResponse.json({ data: { payment: updatedPayment, mobileMoneyResponse: mockResponse } })
+  } catch (error) {
+    console.error('Mobile money initiate error:', error)
+    return NextResponse.json(
+      { error: 'Failed to initiate mobile money payment', details: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500 }
+    )
+  }
+}
+
+async function checkMobileMoneyStatus(user: SessionUser, tenantId: string, request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const paymentId = searchParams.get('paymentId')
+
+    if (!paymentId) {
+      return NextResponse.json(
+        { error: 'paymentId is required' },
+        { status: 400 }
+      )
+    }
+
+    const payment = await db.payment.findFirst({ where: { id: paymentId, tenantId } })
+    if (!payment) {
+      return NextResponse.json(
+        { error: 'Payment not found' },
+        { status: 404 }
+      )
+    }
+
+    // In production, here you would call the actual Mobile Money API to check status
+    // For now, return mock response
+    const mockResponse = {
+      status: 'PENDING', // PENDING, SUCCESS, FAILED, EXPIRED
+      transactionId: payment.transactionRef,
+      message: 'En attente de validation',
+    }
+
+    return NextResponse.json({ data: { payment, mobileMoneyStatus: mockResponse } })
+  } catch (error) {
+    console.error('Mobile money status check error:', error)
+    return NextResponse.json(
+      { error: 'Failed to check mobile money status', details: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500 }
+    )
+  }
+}
+
+async function mobileMoneyWebhookHandler(tenantId: string, request: NextRequest) {
+  try {
+    const body = await request.json()
+    // This is a generic webhook handler for mobile money callbacks
+    // In production, verify signature and process based on provider
+
+    const { transactionRef, status, provider, phoneNumber, amount } = body
+
+    if (!transactionRef) {
+      return NextResponse.json({ error: 'transactionRef is required' }, { status: 400 })
+    }
+
+    const payment = await db.payment.findFirst({
+      where: { transactionRef, tenantId },
+    })
+
+    if (!payment) {
+      return NextResponse.json({ error: 'Payment not found' }, { status: 404 })
+    }
+
+    let newStatus = payment.status
+    if (status === 'SUCCESS' || status === 'COMPLETED') {
+      newStatus = 'VALIDATED'
+    } else if (status === 'FAILED' || status === 'CANCELLED') {
+      newStatus = 'CANCELLED'
+    }
+
+    const updatedPayment = await db.payment.update({
+      where: { id: payment.id },
+      data: {
+        status: newStatus,
+        validatedBy: newStatus === 'VALIDATED' ? 'MOBILE_MONEY_WEBHOOK' : undefined,
+        validationDate: newStatus === 'VALIDATED' ? new Date() : undefined,
+        comment: `Webhook ${provider}: ${JSON.stringify(body)}`,
+      },
+    })
+
+    // Audit log
+    await db.auditLog.create({
+      data: {
+        tenantId,
+        userId: 'MOBILE_MONEY_WEBHOOK',
+        action: 'MOBILE_MONEY_WEBHOOK',
+        entity: 'Payment',
+        entityId: payment.id,
+        details: JSON.stringify({ provider, status, newStatus, body }),
+      },
+    })
+
+    return NextResponse.json({ data: updatedPayment })
+  } catch (error) {
+    console.error('Mobile money webhook error:', error)
+    return NextResponse.json(
+      { error: 'Failed to process webhook', details: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500 }
+    )
+  }
+}
+
+export const GET = withTenantAuth(async (user: SessionUser, tenantId: string, request: NextRequest) => {
+  const { searchParams } = new URL(request.url)
+  const id = searchParams.get('id')
+  const receipt = searchParams.get('receipt')
+  const stats = searchParams.get('stats')
+
+  if (stats === 'true') {
+    return getPaymentStatsHandler(user, tenantId, request)
+  }
+  if (id && receipt === 'true') {
+    return getPaymentReceiptHandler(user, tenantId, request)
+  }
+  if (id && searchParams.get('mobileMoneyStatus') === 'true') {
+    return checkMobileMoneyStatus(user, tenantId, request)
+  }
+  return getPaymentsHandler(user, tenantId, request)
+})
+
+export const POST = withTenantAuth(async (user: SessionUser, tenantId: string, request: NextRequest) => {
+  const { searchParams } = new URL(request.url)
+  const action = searchParams.get('action')
+
+  if (action === 'mobile-money-initiate') {
+    return initiateMobileMoneyPayment(user, tenantId, request)
+  }
+  if (action === 'mobile-money-webhook') {
+    return mobileMoneyWebhookHandler(tenantId, request)
+  }
+  return createPaymentHandler(user, tenantId, request)
+}, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'CAISSE', 'SCOLARITE'])
+
+export const PUT = withTenantAuth(updatePaymentHandler, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'CAISSE', 'SCOLARITE'])
+
+export const DELETE = withTenantAuth(deletePaymentHandler, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'CAISSE'])
