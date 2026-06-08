@@ -6,7 +6,7 @@ let dbUrl = process.env.DATABASE_URL
 
 if (process.env.NODE_ENV === 'production') {
   const tmpDbPath = '/tmp/custom.db'
-  const bundledDbPath = path.join(process.cwd(), 'db', 'custom.db')
+  const bundledDbPath = path.join(process.cwd(), 'prisma', 'db', 'custom.db')
   
   try {
     if (!fs.existsSync(tmpDbPath)) {

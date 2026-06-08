@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
   /* config options here */
   reactStrictMode: true,
   outputFileTracingIncludes: {
-    "/**": ["db/**/*"],
+    "/**": ["prisma/db/**/*"],
   },
 };
 
