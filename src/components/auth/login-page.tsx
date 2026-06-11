@@ -103,10 +103,30 @@ export function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const callbackUrl = searchParams.get('callbackUrl') || '/'
 
-  const handleDemoLogin = (demo: DemoRole) => {
+  const handleDemoLogin = async (demo: DemoRole) => {
     setEmail(demo.email)
     setPassword('password123')
-    handleSubmit(new Event('submit') as unknown as React.FormEvent)
+    setIsLoading(true)
+
+    try {
+      const result = await signIn('credentials', {
+        email: demo.email,
+        password: 'password123',
+        redirect: false,
+        callbackUrl,
+      })
+
+      if (result?.error) {
+        toast.error('Échec de la connexion', { description: result.error })
+      } else {
+        toast.success('Connexion réussie')
+        window.location.href = callbackUrl
+      }
+    } catch {
+      toast.error('Erreur de connexion', { description: 'Veuillez réessayer' })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -125,7 +145,7 @@ export function LoginPage() {
         toast.error('Échec de la connexion', { description: result.error })
       } else {
         toast.success('Connexion réussie')
-        router.refresh()
+        window.location.href = callbackUrl
       }
     } catch {
       toast.error('Erreur de connexion', { description: 'Veuillez réessayer' })
