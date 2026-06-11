@@ -13,11 +13,17 @@ export function useDashboardStats() {
   });
 }
 
-export function useStudents() {
+export function useStudents(params?: { search?: string; status?: string; programId?: string; levelId?: string; page?: number; limit?: number }) {
   return useQuery({
-    queryKey: ['students'],
+    queryKey: ['students', params],
     queryFn: async () => {
-      const res = await fetch('/api/students');
+      const url = new URL('/api/students', window.location.origin);
+      if (params) {
+        Object.entries(params).forEach(([key, value]) => {
+          if (value !== undefined && value !== '') url.searchParams.append(key, value.toString());
+        });
+      }
+      const res = await fetch(url.toString());
       if (!res.ok) {
         throw new Error('Failed to fetch students');
       }
@@ -26,11 +32,17 @@ export function useStudents() {
   });
 }
 
-export function usePayments() {
+export function usePayments(params?: { search?: string; status?: string; paymentMethod?: string; startDate?: string; endDate?: string; page?: number; limit?: number }) {
   return useQuery({
-    queryKey: ['payments'],
+    queryKey: ['payments', params],
     queryFn: async () => {
-      const res = await fetch('/api/payments');
+      const url = new URL('/api/payments', window.location.origin);
+      if (params) {
+        Object.entries(params).forEach(([key, value]) => {
+          if (value !== undefined && value !== '') url.searchParams.append(key, value.toString());
+        });
+      }
+      const res = await fetch(url.toString());
       if (!res.ok) {
         throw new Error('Failed to fetch payments');
       }

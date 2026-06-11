@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { useAppStore } from '@/lib/store'
+import { useStudents } from '@/lib/api-hooks'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -53,34 +54,6 @@ interface DemoStudent {
   sexe: 'M' | 'F'
   age: number
 }
-
-const demoStudents: DemoStudent[] = [
-  { id: '1', matricule: 'UDN/L2/2024/001', nom: 'ABAKAR', prenom: 'Adam Hassane', filiere: 'Droit', niveau: 'L2', statut: 'INSCRIT', credits: 48, email: 'adam.abakar@univ.td', telephone: '+235 66 12 34 56', sexe: 'M', age: 22 },
-  { id: '2', matricule: 'UDN/L3/2024/002', nom: 'KHAMIS', prenom: 'Fatime', filiere: 'Sciences', niveau: 'L3', statut: 'INSCRIT', credits: 112, email: 'fatime.khamis@univ.td', telephone: '+235 66 23 45 67', sexe: 'F', age: 24 },
-  { id: '3', matricule: 'UDN/L1/2024/003', nom: 'DJIBRINE', prenom: 'Amina', filiere: 'Lettres', niveau: 'L1', statut: 'PRE_INSCRIT', credits: 0, email: 'amina.djibrine@univ.td', telephone: '+235 66 34 56 78', sexe: 'F', age: 19 },
-  { id: '4', matricule: 'UDN/L2/2024/004', nom: 'MAHAMAT', prenom: 'Youssouf', filiere: 'Économie', niveau: 'L2', statut: 'INSCRIT', credits: 56, email: 'youssouf.mahamat@univ.td', telephone: '+235 66 45 67 89', sexe: 'M', age: 21 },
-  { id: '5', matricule: 'UDN/M1/2024/005', nom: 'NGARNDMI', prenom: 'Halimé', filiere: 'Droit', niveau: 'M1', statut: 'INSCRIT', credits: 178, email: 'halime.ngarndmi@univ.td', telephone: '+235 66 56 78 90', sexe: 'F', age: 26 },
-  { id: '6', matricule: 'UDN/L3/2024/006', nom: 'DOUMNGAR', prenom: 'Zakaria', filiere: 'Informatique', niveau: 'L3', statut: 'DIPLOME', credits: 180, email: 'zakaria.doumngar@univ.td', telephone: '+235 66 67 89 01', sexe: 'M', age: 25 },
-  { id: '7', matricule: 'UDN/L1/2024/007', nom: 'HISSEIN', prenom: 'Mariam', filiere: 'Médecine', niveau: 'L1', statut: 'INSCRIT', credits: 24, email: 'mariam.hissein@univ.td', telephone: '+235 66 78 90 12', sexe: 'F', age: 20 },
-  { id: '8', matricule: 'UDN/L2/2024/008', nom: 'SEID', prenom: 'Ibrahim', filiere: 'Agronomie', niveau: 'L2', statut: 'SUSPENDU', credits: 32, email: 'ibrahim.seid@univ.td', telephone: '+235 66 89 01 23', sexe: 'M', age: 23 },
-  { id: '9', matricule: 'UDN/L3/2024/009', nom: 'ADAM', prenom: 'Khadija', filiere: 'Sciences', niveau: 'L3', statut: 'INSCRIT', credits: 108, email: 'khadija.adam@univ.td', telephone: '+235 66 90 12 34', sexe: 'F', age: 24 },
-  { id: '10', matricule: 'UDN/M2/2024/010', nom: 'ADOUM', prenom: 'Abdoulaye', filiere: 'Droit', niveau: 'M2', statut: 'INSCRIT', credits: 234, email: 'abdoulaye.adoum@univ.td', telephone: '+235 66 01 23 45', sexe: 'M', age: 28 },
-  { id: '11', matricule: 'UDN/L1/2024/011', nom: 'BICHARA', prenom: 'Hawa', filiere: 'Lettres', niveau: 'L1', statut: 'INSCRIT', credits: 28, email: 'hawa.bichara@univ.td', telephone: '+235 66 11 22 33', sexe: 'F', age: 19 },
-  { id: '12', matricule: 'UDN/L2/2024/012', nom: 'MALLAH', prenom: 'Djimé', filiere: 'Économie', niveau: 'L2', statut: 'PRE_INSCRIT', credits: 0, email: 'djime.mallah@univ.td', telephone: '+235 66 22 33 44', sexe: 'M', age: 21 },
-  { id: '13', matricule: 'UDN/L3/2024/013', nom: 'YAYA', prenom: 'Moussa', filiere: 'Informatique', niveau: 'L3', statut: 'INSCRIT', credits: 98, email: 'moussa.yaya@univ.td', telephone: '+235 66 33 44 55', sexe: 'M', age: 23 },
-  { id: '14', matricule: 'UDN/L1/2024/014', nom: 'RAMADANE', prenom: 'Zara', filiere: 'Médecine', niveau: 'L1', statut: 'EXCLU', credits: 8, email: 'zara.ramadane@univ.td', telephone: '+235 66 44 55 66', sexe: 'F', age: 20 },
-  { id: '15', matricule: 'UDN/L2/2024/015', nom: 'ISSA', prenom: 'Mahamat Nour', filiere: 'Agronomie', niveau: 'L2', statut: 'INSCRIT', credits: 52, email: 'mahamat.issa@univ.td', telephone: '+235 66 55 66 77', sexe: 'M', age: 22 },
-  { id: '16', matricule: 'UDN/M1/2024/016', nom: 'AHMAT', prenom: 'Achta', filiere: 'Sciences', niveau: 'M1', statut: 'INSCRIT', credits: 192, email: 'achta.ahmat@univ.td', telephone: '+235 66 66 77 88', sexe: 'F', age: 27 },
-  { id: '17', matricule: 'UDN/L2/2024/017', nom: 'HAMID', prenom: 'Oumar', filiere: 'Droit', niveau: 'L2', statut: 'INSCRIT', credits: 44, email: 'oumar.hamid@univ.td', telephone: '+235 66 77 88 99', sexe: 'M', age: 22 },
-  { id: '18', matricule: 'UDN/L3/2024/018', nom: 'DJIMÉ', prenom: 'Métine', filiere: 'Économie', niveau: 'L3', statut: 'INSCRIT', credits: 116, email: 'metine.djime@univ.td', telephone: '+235 66 88 99 00', sexe: 'F', age: 24 },
-  { id: '19', matricule: 'UDN/L1/2024/019', nom: 'ABDALLAH', prenom: 'Fadoul', filiere: 'Lettres', niveau: 'L1', statut: 'PRE_INSCRIT', credits: 0, email: 'fadoul.abdallah@univ.td', telephone: '+235 66 99 00 11', sexe: 'M', age: 19 },
-  { id: '20', matricule: 'UDN/L2/2024/020', nom: 'HAROUN', prenom: 'Meriam', filiere: 'Informatique', niveau: 'L2', statut: 'INSCRIT', credits: 60, email: 'meriam.haroun@univ.td', telephone: '+235 67 00 11 22', sexe: 'F', age: 21 },
-  { id: '21', matricule: 'UDN/M2/2024/021', nom: 'TCHERÉ', prenom: 'Clément', filiere: 'Sciences', niveau: 'M2', statut: 'DIPLOME', credits: 300, email: 'clement.tchere@univ.td', telephone: '+235 67 11 22 33', sexe: 'M', age: 29 },
-  { id: '22', matricule: 'UDN/L1/2024/022', nom: 'MOUSSA', prenom: 'Adoum', filiere: 'Agronomie', niveau: 'L1', statut: 'INSCRIT', credits: 20, email: 'adoum.moussa@univ.td', telephone: '+235 67 22 33 44', sexe: 'M', age: 20 },
-  { id: '23', matricule: 'UDN/L3/2024/023', nom: 'SALEH', prenom: 'Hassana', filiere: 'Médecine', niveau: 'L3', statut: 'INSCRIT', credits: 104, email: 'hassana.saleh@univ.td', telephone: '+235 67 33 44 55', sexe: 'F', age: 25 },
-  { id: '24', matricule: 'UDN/L2/2024/024', nom: 'BACHAR', prenom: 'Ali', filiere: 'Droit', niveau: 'L2', statut: 'SUSPENDU', credits: 28, email: 'ali.bachar@univ.td', telephone: '+235 67 44 55 66', sexe: 'M', age: 23 },
-  { id: '25', matricule: 'UDN/M1/2024/025', nom: 'NÉGUIÉ', prenom: 'Kaltouma', filiere: 'Économie', niveau: 'M1', statut: 'INSCRIT', credits: 186, email: 'kaltouma.neguie@univ.td', telephone: '+235 67 55 66 77', sexe: 'F', age: 27 },
-]
 
 const statusConfig: Record<StudentStatus, { label: string; className: string }> = {
   INSCRIT: { label: 'Inscrit', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0 hover:bg-[#2d7a4f15]' },
@@ -155,10 +128,40 @@ export function StudentsList() {
   const [statutFilter, setStatutFilter] = useState('all')
   const [currentPage, setCurrentPage] = useState(1)
 
-  const filieres = [...new Set(demoStudents.map((s) => s.filiere))].sort()
-  const niveaux = [...new Set(demoStudents.map((s) => s.niveau))].sort()
+  const { data: studentsData, isLoading } = useStudents({ limit: 1000 })
 
-  const filteredStudents = demoStudents.filter((s) => {
+  const realStudents = useMemo(() => {
+    if (!studentsData?.data) return []
+    return studentsData.data.map((s: any) => {
+      const birthDate = new Date(s.dateOfBirth)
+      const today = new Date()
+      let age = today.getFullYear() - birthDate.getFullYear()
+      const m = today.getMonth() - birthDate.getMonth()
+      if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+        age--
+      }
+
+      return {
+        id: s.id,
+        matricule: s.matricule || 'N/A',
+        nom: s.lastName,
+        prenom: s.firstName,
+        filiere: s.currentProgram?.name || 'Non défini',
+        niveau: s.currentLevel?.code || 'N/A',
+        statut: s.status as StudentStatus,
+        credits: s.totalCreditsAcquired || 0,
+        email: s.email || '',
+        telephone: s.phone || '',
+        sexe: s.sex as 'M' | 'F',
+        age: age || 0,
+      } as DemoStudent
+    })
+  }, [studentsData])
+
+  const filieres = Array.from(new Set<string>(realStudents.map((s: DemoStudent) => s.filiere))).sort()
+  const niveaux = Array.from(new Set<string>(realStudents.map((s: DemoStudent) => s.niveau))).sort()
+
+  const filteredStudents = realStudents.filter((s: DemoStudent) => {
     const matchSearch =
       search === '' ||
       s.nom.toLowerCase().includes(search.toLowerCase()) ||
@@ -183,10 +186,10 @@ export function StudentsList() {
 
   // ─── Computed Stats ─────────────────────────────────────────────────────
   const totalStudents = filteredStudents.length
-  const maleCount = filteredStudents.filter(s => s.sexe === 'M').length
-  const femaleCount = filteredStudents.filter(s => s.sexe === 'F').length
+  const maleCount = filteredStudents.filter((s: DemoStudent) => s.sexe === 'M').length
+  const femaleCount = filteredStudents.filter((s: DemoStudent) => s.sexe === 'F').length
   const averageAge = filteredStudents.length > 0
-    ? Math.round(filteredStudents.reduce((acc, s) => acc + s.age, 0) / filteredStudents.length)
+    ? Math.round(filteredStudents.reduce((acc: number, s: DemoStudent) => acc + s.age, 0) / filteredStudents.length)
     : 0
 
   // Stagger animation variants for table rows
@@ -328,7 +331,7 @@ export function StudentsList() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedStudents.map((student, i) => (
+                {paginatedStudents.map((student: DemoStudent, i: number) => (
                   <motion.tr
                     key={student.id}
                     custom={i}

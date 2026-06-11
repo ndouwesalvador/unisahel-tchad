@@ -1,8 +1,10 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { toast } from 'sonner'
 import { motion } from 'framer-motion'
+import { useAppStore } from '@/lib/store'
+import { usePayments } from '@/lib/api-hooks'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -63,21 +65,6 @@ interface Payment {
   reference: string
   statut: 'paye' | 'en_attente' | 'annule'
 }
-
-const demoPayments: Payment[] = [
-  { id: '1', etudiant: 'ABAKAR Adam Hassane', matricule: 'UDN/L2/2024/001', montant: 175000, description: 'Frais d\'inscription 2024-2025', methode: 'mobile_money', date: '15/09/2024', reference: 'MM-2024-001', statut: 'paye' },
-  { id: '2', etudiant: 'ABAKAR Adam Hassane', matricule: 'UDN/L2/2024/001', montant: 250000, description: 'Frais de scolarite S1', methode: 'cash', date: '20/09/2024', reference: 'ESP-2024-045', statut: 'paye' },
-  { id: '3', etudiant: 'KHAMIS Fatime', matricule: 'UDN/L3/2024/002', montant: 175000, description: 'Frais d\'inscription 2024-2025', methode: 'bank', date: '14/09/2024', reference: 'BNK-2024-012', statut: 'paye' },
-  { id: '4', etudiant: 'KHAMIS Fatime', matricule: 'UDN/L3/2024/002', montant: 250000, description: 'Frais de scolarite S1', methode: 'mobile_money', date: '22/09/2024', reference: 'MM-2024-015', statut: 'paye' },
-  { id: '5', etudiant: 'MAHAMAT Youssouf', matricule: 'UDN/L2/2024/004', montant: 175000, description: 'Frais d\'inscription 2024-2025', methode: 'cash', date: '18/09/2024', reference: 'ESP-2024-052', statut: 'paye' },
-  { id: '6', etudiant: 'MAHAMAT Youssouf', matricule: 'UDN/L2/2024/004', montant: 250000, description: 'Frais de scolarite S1', methode: '', date: '', reference: '', statut: 'en_attente' },
-  { id: '7', etudiant: 'NGARNDMI Halime', matricule: 'UDN/M1/2024/005', montant: 200000, description: 'Frais d\'inscription Master', methode: 'mobile_money', date: '10/09/2024', reference: 'MM-2024-005', statut: 'paye' },
-  { id: '8', etudiant: 'HISSEIN Mariam', matricule: 'UDN/L1/2024/007', montant: 175000, description: 'Frais d\'inscription 2024-2025', methode: 'cash', date: '16/09/2024', reference: 'ESP-2024-048', statut: 'paye' },
-  { id: '9', etudiant: 'ISSA Mahamat Nour', matricule: 'UDN/L2/2024/015', montant: 250000, description: 'Frais de scolarite S1', methode: '', date: '', reference: '', statut: 'en_attente' },
-  { id: '10', etudiant: 'ADAM Khadija', matricule: 'UDN/L3/2024/009', montant: 175000, description: 'Frais d\'inscription 2024-2025', methode: 'bank', date: '11/09/2024', reference: 'BNK-2024-008', statut: 'paye' },
-  { id: '11', etudiant: 'BICHARA Hawa', matricule: 'UDN/L1/2024/011', montant: 175000, description: 'Frais d\'inscription 2024-2025', methode: 'mobile_money', date: '17/09/2024', reference: 'MM-2024-008', statut: 'paye' },
-  { id: '12', etudiant: 'SEID Ibrahim', matricule: 'UDN/L2/2024/008', montant: 175000, description: 'Frais d\'inscription 2024-2025', methode: '', date: '', reference: '', statut: 'annule' },
-]
 
 const statutConfig: Record<string, { label: string; className: string }> = {
   paye: { label: 'Paye', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0' },
@@ -157,12 +144,40 @@ export function PaymentsPage() {
   const [methodeFilter, setMethodeFilter] = useState('tous')
   const [newPayment, setNewPayment] = useState({ etudiant: '', montant: '', description: '', methode: '', reference: '' })
 
-  const totalEncaisse = demoPayments.filter(p => p.statut === 'paye').reduce((acc, p) => acc + p.montant, 0)
-  const totalEnAttente = demoPayments.filter(p => p.statut === 'en_attente').reduce((acc, p) => acc + p.montant, 0)
-  const totalAnnule = demoPayments.filter(p => p.statut === 'annule').reduce((acc, p) => acc + p.montant, 0)
-  const totalMobileMoney = demoPayments.filter(p => p.statut === 'paye' && p.methode === 'mobile_money').reduce((acc, p) => acc + p.montant, 0)
-  const totalCash = demoPayments.filter(p => p.statut === 'paye' && p.methode === 'cash').reduce((acc, p) => acc + p.montant, 0)
-  void demoPayments.filter(p => p.statut === 'paye' && p.methode === 'bank').reduce((acc, p) => acc + p.montant, 0)
+  const { data: paymentsData, isLoading } = usePayments({ limit: 1000 })
+
+  const realPayments = useMemo(() => {
+    if (!paymentsData?.data) return []
+    return paymentsData.data.map((p: any) => {
+      let statut = 'en_attente'
+      if (p.status === 'VALIDATED') statut = 'paye'
+      if (p.status === 'CANCELLED') statut = 'annule'
+
+      let methode = 'cash'
+      if (p.paymentMethod === 'MOBILE_MONEY') methode = 'mobile_money'
+      if (p.paymentMethod === 'BANK') methode = 'bank'
+
+      const date = new Date(p.createdAt).toLocaleDateString('fr-FR')
+
+      return {
+        id: p.id,
+        etudiant: `${p.student?.firstName || ''} ${p.student?.lastName || ''}`.trim(),
+        matricule: p.student?.matricule || 'N/A',
+        montant: p.amount,
+        description: p.comment || "Frais de scolarité",
+        methode: methode as 'cash' | 'mobile_money' | 'bank',
+        date,
+        reference: p.receiptNumber || p.transactionRef || '-',
+        statut: statut as 'paye' | 'en_attente' | 'annule',
+      }
+    })
+  }, [paymentsData])
+
+  const totalEncaisse = realPayments.filter((p: Payment) => p.statut === 'paye').reduce((acc: number, p: Payment) => acc + p.montant, 0)
+  const totalEnAttente = realPayments.filter((p: Payment) => p.statut === 'en_attente').reduce((acc: number, p: Payment) => acc + p.montant, 0)
+  const totalAnnule = realPayments.filter((p: Payment) => p.statut === 'annule').reduce((acc: number, p: Payment) => acc + p.montant, 0)
+  const totalMobileMoney = realPayments.filter((p: Payment) => p.statut === 'paye' && p.methode === 'mobile_money').reduce((acc: number, p: Payment) => acc + p.montant, 0)
+  const totalCash = realPayments.filter((p: Payment) => p.statut === 'paye' && p.methode === 'cash').reduce((acc: number, p: Payment) => acc + p.montant, 0)
 
   const mobileMoneyPercent = totalEncaisse > 0 ? Math.round((totalMobileMoney / totalEncaisse) * 100) : 0
   const cashPercent = totalEncaisse > 0 ? Math.round((totalCash / totalEncaisse) * 100) : 0
@@ -170,13 +185,13 @@ export function PaymentsPage() {
   const totalAttendu = totalEncaisse + totalEnAttente + totalAnnule
   const tauxRecouvrement = totalAttendu > 0 ? ((totalEncaisse / totalAttendu) * 100).toFixed(1) : '0.0'
 
-  const revenueDuJour = demoPayments.filter(p => p.statut === 'paye').slice(0, 3).reduce((acc, p) => acc + p.montant, 0)
+  const revenueDuJour = realPayments.filter((p: Payment) => p.statut === 'paye').slice(0, 3).reduce((acc: number, p: Payment) => acc + p.montant, 0)
   const revenueDuMois = revenueData[revenueData.length - 1]?.value || 4200000
 
   const animatedJour = useCountUp(revenueDuJour, 1600)
   const animatedMois = useCountUp(revenueDuMois, 1800)
 
-  const filteredPayments = demoPayments.filter(p => {
+  const filteredPayments = realPayments.filter((p: Payment) => {
     const matchSearch = search === '' ||
       p.etudiant.toLowerCase().includes(search.toLowerCase()) ||
       p.matricule.toLowerCase().includes(search.toLowerCase()) ||
@@ -187,8 +202,8 @@ export function PaymentsPage() {
   })
 
   // Recent 3 payments for ticker
-  const recentPayments = demoPayments
-    .filter(p => p.statut === 'paye')
+  const recentPayments = realPayments
+    .filter((p: Payment) => p.statut === 'paye')
     .slice(0, 3)
 
   const maxRevenue = Math.max(...revenueData.map(r => r.value))
@@ -326,7 +341,7 @@ export function PaymentsPage() {
                 <span className="text-[10px] font-semibold text-[#1a2744] uppercase tracking-wide">Derniers paiements</span>
               </div>
               <div className="flex items-center gap-3 overflow-x-auto">
-                {recentPayments.map((p, i) => {
+                {recentPayments.map((p: Payment, i: number) => {
                   const methode = methodeLabels[p.methode]
                   return (
                     <motion.div
@@ -362,7 +377,7 @@ export function PaymentsPage() {
                 <div>
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Total encaisse</p>
                   <p className="text-xl font-bold text-[#2d7a4f] mt-1">{formatFCFA(totalEncaisse)}</p>
-                  <p className="text-xs text-gray-400 mt-1">{demoPayments.filter(p => p.statut === 'paye').length} paiements</p>
+                  <p className="text-xs text-gray-400 mt-1">{realPayments.filter((p: Payment) => p.statut === 'paye').length} paiements</p>
                 </div>
                 <div className="w-10 h-10 rounded-xl bg-[#2d7a4f15] flex items-center justify-center">
                   <TrendingUp className="size-5 text-[#2d7a4f]" />
@@ -386,7 +401,7 @@ export function PaymentsPage() {
                 <div>
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">En attente</p>
                   <p className="text-xl font-bold text-[#d4a853] mt-1">{formatFCFA(totalEnAttente)}</p>
-                  <p className="text-xs text-gray-400 mt-1">{demoPayments.filter(p => p.statut === 'en_attente').length} paiements</p>
+                  <p className="text-xs text-gray-400 mt-1">{realPayments.filter((p: Payment) => p.statut === 'en_attente').length} paiements</p>
                 </div>
                 <div className="w-10 h-10 rounded-xl bg-[#d4a85315] flex items-center justify-center">
                   <Clock className="size-5 text-[#d4a853]" />
@@ -410,7 +425,7 @@ export function PaymentsPage() {
                 <div>
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Annule</p>
                   <p className="text-xl font-bold text-[#c62828] mt-1">{formatFCFA(totalAnnule)}</p>
-                  <p className="text-xs text-gray-400 mt-1">{demoPayments.filter(p => p.statut === 'annule').length} paiements</p>
+                  <p className="text-xs text-gray-400 mt-1">{realPayments.filter((p: Payment) => p.statut === 'annule').length} paiements</p>
                 </div>
                 <div className="w-10 h-10 rounded-xl bg-[#c6282815] flex items-center justify-center">
                   <AlertCircle className="size-5 text-[#c62828]" />
@@ -434,7 +449,7 @@ export function PaymentsPage() {
                 <div>
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Mobile Money</p>
                   <p className="text-xl font-bold text-[#d4a853] mt-1">{formatFCFA(totalMobileMoney)}</p>
-                  <p className="text-xs text-gray-400 mt-1">{demoPayments.filter(p => p.statut === 'paye' && p.methode === 'mobile_money').length} transactions</p>
+                  <p className="text-xs text-gray-400 mt-1">{realPayments.filter((p: Payment) => p.statut === 'paye' && p.methode === 'mobile_money').length} transactions</p>
                 </div>
                 <div className="w-10 h-10 rounded-xl bg-[#d4a85315] flex items-center justify-center">
                   <Smartphone className="size-5 text-[#d4a853]" />
@@ -692,7 +707,7 @@ export function PaymentsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredPayments.map((payment, idx) => {
+                  {filteredPayments.map((payment: Payment, idx: number) => {
                     const methode = methodeLabels[payment.methode]
                     return (
                       <TableRow
