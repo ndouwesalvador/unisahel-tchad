@@ -9,6 +9,7 @@ import { db } from '@/lib/db'
 import { z } from 'zod'
 
 export const authConfig = {
+  secret: process.env.NEXTAUTH_SECRET || "dev-secret-change-in-production-min-32-chars",
   adapter: PrismaAdapter(db) as Adapter,
   session: { strategy: 'jwt' as const },
   pages: {
