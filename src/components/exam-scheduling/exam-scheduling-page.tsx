@@ -1,25 +1,45 @@
 ﻿'use client'
 
 import { useState, useMemo } from 'react'
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
 import { motion } from 'framer-motion'
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
 import { Button } from '@/components/ui/button'
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
 import { Badge } from '@/components/ui/badge'
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
 import { Input } from '@/components/ui/input'
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
 import { Label } from '@/components/ui/label'
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
 import { Progress } from '@/components/ui/progress'
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
 import { Separator } from '@/components/ui/separator'
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
 import {
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
   Table,
   TableBody,
   TableCell,
@@ -28,7 +48,9 @@ import { toast } from 'sonner'
   TableRow,
 } from '@/components/ui/table'
 import {
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
   Select,
   SelectContent,
   SelectItem,
@@ -36,14 +58,18 @@ import { toast } from 'sonner'
   SelectValue,
 } from '@/components/ui/select'
 import {
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
   Calendar,
   Clock,
   MapPin,
@@ -224,7 +250,7 @@ export function ExamSchedulingPage() {
           <p className="text-sm text-gray-500">Gestion des sessions et planification des examens</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="text-xs" onClick={() => toast.success("Export en préparation...")}>
+          <Button variant="outline" size="sm" className="text-xs" onClick={() => exportToExcel(filteredExams, 'export_exam-scheduling')}>
             <Download className="size-3.5 mr-1.5" />
             Exporter
           </Button>
@@ -364,7 +390,7 @@ export function ExamSchedulingPage() {
                 <Sparkles className="size-3.5 mr-1.5" />
                 Generer le planning automatiquement
               </Button>
-              <Button variant="outline" size="sm" className="text-xs" onClick={() => toast.success("Export en préparation...")}>
+              <Button variant="outline" size="sm" className="text-xs" onClick={() => exportToExcel(filteredExams, 'export_exam-scheduling')}>
                 <FileText className="size-3.5 mr-1.5" />
                 Exporter le planning
               </Button>
@@ -799,4 +825,5 @@ export function ExamSchedulingPage() {
     </div>
   )
 }
+
 

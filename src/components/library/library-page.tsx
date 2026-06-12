@@ -1,21 +1,37 @@
 ﻿'use client'
 
 import { useState } from 'react'
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
 import { motion } from 'framer-motion'
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
 import { Button } from '@/components/ui/button'
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
 import { Input } from '@/components/ui/input'
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
 import { Badge } from '@/components/ui/badge'
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
 import { Progress } from '@/components/ui/progress'
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
 import {
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
   Table,
   TableBody,
   TableCell,
@@ -24,7 +40,9 @@ import { toast } from 'sonner'
   TableRow,
 } from '@/components/ui/table'
 import {
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
   Select,
   SelectContent,
   SelectItem,
@@ -32,14 +50,18 @@ import { toast } from 'sonner'
   SelectValue,
 } from '@/components/ui/select'
 import {
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
   BookOpen,
   BookMarked,
   Monitor,
@@ -292,7 +314,7 @@ export function LibraryPage() {
             <FileSearch className="size-3.5 mr-1.5" />
             Recherche avancee
           </Button>
-          <Button size="sm" variant="outline" className="text-xs border-[#1a274430] text-[#1a2744] hover:bg-[#1a274408]" onClick={() => toast.success("Export en préparation...")}>
+          <Button size="sm" variant="outline" className="text-xs border-[#1a274430] text-[#1a2744] hover:bg-[#1a274408]" onClick={() => exportToExcel(filteredCatalog, 'export_library')}>
             <Download className="size-3.5 mr-1.5" />
             Exporter le catalogue
           </Button>
@@ -968,4 +990,5 @@ export function LibraryPage() {
     </motion.div>
   )
 }
+
 

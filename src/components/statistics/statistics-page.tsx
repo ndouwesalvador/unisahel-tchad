@@ -1,15 +1,25 @@
 ﻿'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
 import { motion } from 'framer-motion'
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
 import { Button } from '@/components/ui/button'
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
 import {
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
   Select,
   SelectContent,
   SelectItem,
@@ -17,7 +27,9 @@ import { toast } from 'sonner'
   SelectValue,
 } from '@/components/ui/select'
 import {
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
   BarChart,
   Bar,
   XAxis,
@@ -33,7 +45,9 @@ import { toast } from 'sonner'
   Line,
 } from 'recharts'
 import {
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
   TrendingUp,
   Users,
   GraduationCap,
@@ -186,7 +200,7 @@ export function StatisticsPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <Button variant="outline" size="sm" className="text-xs bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white" onClick={() => toast.success("Export en préparation...")}>
+                <Button variant="outline" size="sm" className="text-xs bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white" onClick={() => exportToExcel([{ 'Message': 'Données en cours de synchronisation' }], 'export_statistics')}>
                   <Download className="size-3.5 mr-1.5" />
                   Exporter PDF
                 </Button>
@@ -455,4 +469,5 @@ export function StatisticsPage() {
     </div>
   )
 }
+
 

@@ -1,19 +1,33 @@
 ﻿'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
 import { motion, AnimatePresence } from 'framer-motion'
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
 import { Button } from '@/components/ui/button'
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
 import { Input } from '@/components/ui/input'
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
 import { Badge } from '@/components/ui/badge'
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
 import {
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
   Select,
   SelectContent,
   SelectItem,
@@ -21,7 +35,9 @@ import { toast } from 'sonner'
   SelectValue,
 } from '@/components/ui/select'
 import {
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
   Dialog,
   DialogContent,
   DialogHeader,
@@ -29,7 +45,9 @@ import { toast } from 'sonner'
   DialogTrigger,
 } from '@/components/ui/dialog'
 import {
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
   Table,
   TableBody,
   TableCell,
@@ -38,26 +56,42 @@ import { toast } from 'sonner'
   TableRow,
 } from '@/components/ui/table'
 import {
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
 import { Textarea } from '@/components/ui/textarea'
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
 import { Label } from '@/components/ui/label'
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
 import { Switch } from '@/components/ui/switch'
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
 import { Separator } from '@/components/ui/separator'
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
 import {
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
   MessageSquare,
   Send,
   Users,
@@ -369,7 +403,7 @@ export function CommunicationPage() {
                 </div>
               </DialogContent>
             </Dialog>
-            <Button variant="outline" className="gap-2 bg-white/10 backdrop-blur border-white/20 text-white hover:bg-white/20 hover:text-white" onClick={() => toast.success("Export en préparation...")}>
+            <Button variant="outline" className="gap-2 bg-white/10 backdrop-blur border-white/20 text-white hover:bg-white/20 hover:text-white" onClick={() => exportToExcel(filteredConversations, 'export_communication')}>
               <Download className="size-4" />
               Exporter
             </Button>
@@ -1062,4 +1096,5 @@ export function CommunicationPage() {
     </TooltipProvider>
   )
 }
+
 

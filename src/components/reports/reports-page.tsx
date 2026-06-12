@@ -1,25 +1,45 @@
 ﻿'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
 import { motion } from 'framer-motion'
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
 import { Button } from '@/components/ui/button'
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
 import { Input } from '@/components/ui/input'
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
 import { Badge } from '@/components/ui/badge'
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
 import { Label } from '@/components/ui/label'
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
 import { Separator } from '@/components/ui/separator'
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
 import { Switch } from '@/components/ui/switch'
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
 import {
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
   Select,
   SelectContent,
   SelectItem,
@@ -27,7 +47,9 @@ import { toast } from 'sonner'
   SelectValue,
 } from '@/components/ui/select'
 import {
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
   Table,
   TableBody,
   TableCell,
@@ -36,7 +58,9 @@ import { toast } from 'sonner'
   TableRow,
 } from '@/components/ui/table'
 import {
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
   Dialog,
   DialogContent,
   DialogHeader,
@@ -44,18 +68,26 @@ import { toast } from 'sonner'
   DialogTrigger,
 } from '@/components/ui/dialog'
 import {
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
 import {
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
   BarChart3,
   TrendingUp,
   FileText,
@@ -292,7 +324,7 @@ export function ReportsPage() {
                     <Calendar className="size-4" />
                     Programmer
                   </Button>
-                  <Button className="bg-white/10 backdrop-blur border border-white/20 text-white hover:bg-white/20 hover:text-white gap-2" onClick={() => toast.success("Export en préparation...")}>
+                  <Button className="bg-white/10 backdrop-blur border border-white/20 text-white hover:bg-white/20 hover:text-white gap-2" onClick={() => exportToExcel(filteredReports, 'export_reports')}>
                     <Download className="size-4" />
                     Exporter
                   </Button>
@@ -1217,4 +1249,5 @@ export function ReportsPage() {
     </TooltipProvider>
   )
 }
+
 

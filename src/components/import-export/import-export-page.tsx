@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -51,18 +51,18 @@ import {
   ChevronDown,
 } from 'lucide-react'
 
-// ─── Demo Data ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Demo Data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 type ImportType = 'Etudiants' | 'Enseignants' | 'Notes' | 'Paiements' | 'Structure'
-type ImportTypeLabel = 'Étudiants' | 'Enseignants' | 'Notes' | 'Paiements' | 'Structure'
+type ImportTypeLabel = 'Ã‰tudiants' | 'Enseignants' | 'Notes' | 'Paiements' | 'Structure'
 type ExportType = 'ListeEtudiants' | 'RelevesNotes' | 'EtatsFinanciers' | 'Statistiques' | 'AnnuaireEnseignants' | 'StructureAcademique'
-type ExportTypeLabel = 'Liste des étudiants' | 'Relevés de notes' | 'États financiers' | 'Statistiques' | 'Annuaire enseignants' | 'Structure académique'
+type ExportTypeLabel = 'Liste des Ã©tudiants' | 'RelevÃ©s de notes' | 'Ã‰tats financiers' | 'Statistiques' | 'Annuaire enseignants' | 'Structure acadÃ©mique'
 type ExportFormat = 'PDF' | 'Excel' | 'CSV'
 type ImportStatus = 'Succes' | 'Partiel' | 'Echoue' | 'EnCours' | 'EnAttente'
-type ImportStatusLabel = 'Succès' | 'Partiel' | 'Échoué' | 'En cours' | 'En attente'
+type ImportStatusLabel = 'SuccÃ¨s' | 'Partiel' | 'Ã‰chouÃ©' | 'En cours' | 'En attente'
 
 const importTypeMap: Record<ImportType, ImportTypeLabel> = {
-  Etudiants: 'Étudiants',
+  Etudiants: 'Ã‰tudiants',
   Enseignants: 'Enseignants',
   Notes: 'Notes',
   Paiements: 'Paiements',
@@ -70,12 +70,12 @@ const importTypeMap: Record<ImportType, ImportTypeLabel> = {
 }
 
 const exportTypeMap: Record<ExportType, ExportTypeLabel> = {
-  ListeEtudiants: 'Liste des étudiants',
-  RelevesNotes: 'Relevés de notes',
-  EtatsFinanciers: 'États financiers',
+  ListeEtudiants: 'Liste des Ã©tudiants',
+  RelevesNotes: 'RelevÃ©s de notes',
+  EtatsFinanciers: 'Ã‰tats financiers',
   Statistiques: 'Statistiques',
   AnnuaireEnseignants: 'Annuaire enseignants',
-  StructureAcademique: 'Structure académique',
+  StructureAcademique: 'Structure acadÃ©mique',
 }
 
 interface ImportRecord {
@@ -97,15 +97,15 @@ interface ExportRecord {
 }
 
 const importStatusConfig: Record<ImportStatus, { label: ImportStatusLabel; className: string; icon: React.ElementType }> = {
-  Succes: { label: 'Succès', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0', icon: CheckCircle2 },
+  Succes: { label: 'SuccÃ¨s', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0', icon: CheckCircle2 },
   Partiel: { label: 'Partiel', className: 'bg-[#d4a85315] text-[#d4a853] border-0', icon: AlertCircle },
-  Echoue: { label: 'Échoué', className: 'bg-[#c6282815] text-[#c62828] border-0', icon: XCircle },
+  Echoue: { label: 'Ã‰chouÃ©', className: 'bg-[#c6282815] text-[#c62828] border-0', icon: XCircle },
   EnCours: { label: 'En cours', className: 'bg-[#1a274415] text-[#1a2744] border-0', icon: Clock },
   EnAttente: { label: 'En attente', className: 'bg-[#d4a85315] text-[#d4a853] border-0', icon: AlertCircle },
 }
 
 const demoImportHistory: ImportRecord[] = [
-  { id: '1', type: 'Étudiants', fileName: 'etudiants_l1_2024.xlsx', lignes: 156, status: 'Succes', date: '15/09/2024 10:30' },
+  { id: '1', type: 'Ã‰tudiants', fileName: 'etudiants_l1_2024.xlsx', lignes: 156, status: 'Succes', date: '15/09/2024 10:30' },
   { id: '2', type: 'Notes', fileName: 'notes_s1_droit.xlsx', lignes: 342, status: 'Partiel', date: '20/01/2025 14:15' },
   { id: '3', type: 'Enseignants', fileName: 'enseignants_2024.csv', lignes: 28, status: 'Succes', date: '05/09/2024 09:00' },
   { id: '4', type: 'Paiements', fileName: 'paiements_oct2024.xlsx', lignes: 89, status: 'Echoue', date: '12/10/2024 16:45' },
@@ -113,25 +113,25 @@ const demoImportHistory: ImportRecord[] = [
 ]
 
 const demoExportHistory: ExportRecord[] = [
-  { id: '1', type: 'Liste des étudiants', format: 'Excel', taille: '2.4 Mo', date: '15/09/2024 10:30', telechargements: 3 },
-  { id: '2', type: 'Relevés de notes', format: 'PDF', taille: '8.1 Mo', date: '25/01/2025 08:00', telechargements: 12 },
-  { id: '3', type: 'États financiers', format: 'Excel', taille: '1.7 Mo', date: '30/12/2024 16:30', telechargements: 5 },
-  { id: '4', type: 'Liste des étudiants', format: 'CSV', taille: '540 Ko', date: '10/11/2024 14:20', telechargements: 2 },
-  { id: '5', type: 'Structure académique', format: 'PDF', taille: '3.2 Mo', date: '05/10/2024 09:15', telechargements: 8 },
+  { id: '1', type: 'Liste des Ã©tudiants', format: 'Excel', taille: '2.4 Mo', date: '15/09/2024 10:30', telechargements: 3 },
+  { id: '2', type: 'RelevÃ©s de notes', format: 'PDF', taille: '8.1 Mo', date: '25/01/2025 08:00', telechargements: 12 },
+  { id: '3', type: 'Ã‰tats financiers', format: 'Excel', taille: '1.7 Mo', date: '30/12/2024 16:30', telechargements: 5 },
+  { id: '4', type: 'Liste des Ã©tudiants', format: 'CSV', taille: '540 Ko', date: '10/11/2024 14:20', telechargements: 2 },
+  { id: '5', type: 'Structure acadÃ©mique', format: 'PDF', taille: '3.2 Mo', date: '05/10/2024 09:15', telechargements: 8 },
   { id: '6', type: 'Annuaire enseignants', format: 'PDF', taille: '1.9 Mo', date: '18/11/2024 11:00', telechargements: 6 },
   { id: '7', type: 'Statistiques', format: 'Excel', taille: '4.5 Mo', date: '22/12/2024 15:45', telechargements: 4 },
-  { id: '8', type: 'Relevés de notes', format: 'Excel', taille: '6.3 Mo', date: '28/02/2025 10:20', telechargements: 9 },
+  { id: '8', type: 'RelevÃ©s de notes', format: 'Excel', taille: '6.3 Mo', date: '28/02/2025 10:20', telechargements: 9 },
 ]
 
-// ─── Import Preview Demo ──────────────────────────────────────────────────────
+// â”€â”€â”€ Import Preview Demo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-const previewColumns = ['Matricule', 'Nom', 'Prénom', 'Date naissance', 'Filière', 'Statut']
+const previewColumns = ['Matricule', 'Nom', 'PrÃ©nom', 'Date naissance', 'FiliÃ¨re', 'Statut']
 const previewRows = [
   ['UDN/L1/2024/050', 'ABAKAR', 'Adam', '15/03/2001', 'Droit', 'Nouveau'],
   ['UDN/L1/2024/051', 'HISSEIN', 'Mariam', '22/07/2002', 'Droit', 'Nouveau'],
   ['UDN/L1/2024/052', 'MAHAMAT', 'Youssouf', '08/11/2000', 'Droit', 'Nouveau'],
-  ['UDN/L1/2024/053', 'KHAMIS', 'Fatime', '30/01/2003', 'Économie', 'Nouveau'],
-  ['UDN/L1/2024/054', 'DJIMÉ', 'Hawa', '12/05/2001', 'Économie', 'Nouveau'],
+  ['UDN/L1/2024/053', 'KHAMIS', 'Fatime', '30/01/2003', 'Ã‰conomie', 'Nouveau'],
+  ['UDN/L1/2024/054', 'DJIMÃ‰', 'Hawa', '12/05/2001', 'Ã‰conomie', 'Nouveau'],
 ]
 
 const dummyValidationSummary = {
@@ -140,7 +140,7 @@ const dummyValidationSummary = {
   duplicates: 5,
 }
 
-// ─── Custom useCountUp Hook ────────────────────────────────────────────────────
+// â”€â”€â”€ Custom useCountUp Hook â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function useCountUp(target: number, duration = 1400) {
   const [value, setValue] = useState(0)
@@ -166,7 +166,7 @@ function useCountUp(target: number, duration = 1400) {
   return value
 }
 
-// ─── Animated Stat Component ────────────────────────────────────────────────────
+// â”€â”€â”€ Animated Stat Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function AnimatedStat({ value, label, icon: Icon }: { value: number; label: string; icon: React.ElementType }) {
   const count = useCountUp(value, 1400)
@@ -183,7 +183,7 @@ function AnimatedStat({ value, label, icon: Icon }: { value: number; label: stri
   )
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function ImportExportPage() {
   const [importType, setImportType] = useState<ImportType>('Etudiants')
@@ -204,8 +204,8 @@ export function ImportExportPage() {
   const teachersData = useAppStore(s => s.teachers)
 
   const handleExport = () => {
-    toast.success('Génération lancée', {
-      description: `L'export ${exportTypeMap[exportType]} au format ${exportFormat} est en cours de préparation.`
+    toast.success('GÃ©nÃ©ration lancÃ©e', {
+      description: `L'export ${exportTypeMap[exportType]} au format ${exportFormat} est en cours de prÃ©paration.`
     })
     
     let dataToExport: any[] = []
@@ -215,8 +215,8 @@ export function ImportExportPage() {
       dataToExport = studentsData.map(s => ({
         Matricule: s.matricule || 'N/A',
         Nom: s.lastName,
-        Prénom: s.firstName,
-        Filière: s.currentProgram?.name || '',
+        PrÃ©nom: s.firstName,
+        FiliÃ¨re: s.currentProgram?.name || '',
         Niveau: s.currentLevel?.code || '',
         Statut: s.status,
         Email: s.email || '',
@@ -227,9 +227,9 @@ export function ImportExportPage() {
       dataToExport = teachersData.map(t => ({
         Matricule: t.matricule || 'N/A',
         Nom: t.lastName,
-        Prénom: t.firstName,
+        PrÃ©nom: t.firstName,
         Statut: t.status,
-        Spécialité: t.speciality || '',
+        SpÃ©cialitÃ©: t.speciality || '',
         Email: t.email || '',
         Grade: t.grade || ''
       }))
@@ -237,7 +237,7 @@ export function ImportExportPage() {
     } else {
       dataToExport = [
         { ID: 1, Type: exportType, Date: new Date().toLocaleDateString() },
-        { ID: 2, Information: 'Données simulées pour la démo' }
+        { ID: 2, Information: 'DonnÃ©es simulÃ©es pour la dÃ©mo' }
       ]
       fileName = `${exportType}_demo`
     }
@@ -247,7 +247,7 @@ export function ImportExportPage() {
     } else if (exportFormat === 'CSV') {
       exportToCSV(dataToExport, fileName)
     } else {
-      toast.info('Export PDF en développement. Format Excel généré en remplacement.')
+      toast.info('Export PDF en dÃ©veloppement. Format Excel gÃ©nÃ©rÃ© en remplacement.')
       exportToExcel(dataToExport, fileName, exportTypeMap[exportType])
     }
   }
@@ -279,7 +279,7 @@ export function ImportExportPage() {
         })
         setShowPreview(true)
         setShowValidation(true)
-        toast.success('Fichier chargé avec succès', { description: `${data.length} lignes trouvées.` })
+        toast.success('Fichier chargÃ© avec succÃ¨s', { description: `${data.length} lignes trouvÃ©es.` })
       } else {
         toast.error('Le fichier est vide ou illisible.')
       }
@@ -296,8 +296,8 @@ export function ImportExportPage() {
         if (prev >= 100) {
           clearInterval(interval)
           setIsImporting(false)
-          toast.success('Import terminé avec succès', {
-            description: `Les données pour ${importTypeMap[importType]} ont été intégrées.`
+          toast.success('Import terminÃ© avec succÃ¨s', {
+            description: `Les donnÃ©es pour ${importTypeMap[importType]} ont Ã©tÃ© intÃ©grÃ©es.`
           })
           setShowPreview(false)
           setShowValidation(false)
@@ -335,7 +335,7 @@ export function ImportExportPage() {
       initial="hidden"
       animate="visible"
     >
-      {/* ─── Gradient Header Banner ─────────────────────────────────────────── */}
+      {/* â”€â”€â”€ Gradient Header Banner â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <motion.div variants={itemVariants} className="relative overflow-hidden rounded-xl">
         <div className="absolute inset-0 bg-gradient-to-r from-[#1a2744] via-[#1f3050] to-[#2d7a4f]" />
         <svg className="absolute inset-0 w-full h-full opacity-[0.07]" xmlns="http://www.w3.org/2000/svg">
@@ -362,7 +362,7 @@ export function ImportExportPage() {
         </div>
       </motion.div>
 
-      {/* ─── Recent Activity Ticker ─────────────────────────────────────────── */}
+      {/* â”€â”€â”€ Recent Activity Ticker â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <motion.div variants={itemVariants}>
         <Card className="border-l-4 border-l-[#2d7a4f]">
           <CardContent className="p-4">
@@ -447,7 +447,7 @@ export function ImportExportPage() {
           </TabsTrigger>
         </TabsList>
 
-        {/* ─── Import Tab ─── */}
+        {/* â”€â”€â”€ Import Tab â”€â”€â”€ */}
         <TabsContent value="import" className="mt-4 space-y-6">
           {/* Import Section with border */}
           <motion.div
@@ -473,7 +473,7 @@ export function ImportExportPage() {
                   <div className="space-y-4">
                     {/* Import Type Selector */}
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium">Type de données</Label>
+                      <Label className="text-sm font-medium">Type de donnÃ©es</Label>
                       <Select value={importType} onValueChange={(v) => setImportType(v as ImportType)}>
                         <SelectTrigger className="h-10">
                           <SelectValue />
@@ -488,7 +488,7 @@ export function ImportExportPage() {
 
                     {/* Download Template Buttons */}
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium">Modèles disponibles</Label>
+                      <Label className="text-sm font-medium">ModÃ¨les disponibles</Label>
                       <div className="space-y-1.5">
                         {(Object.entries(importTypeMap) as [ImportType, ImportTypeLabel][]).map(([key, label]) => (
                           <Button
@@ -498,8 +498,8 @@ export function ImportExportPage() {
                             className="w-full text-xs h-8 justify-start"
                             onClick={() => {
                               setImportType(key)
-                              toast.info('Téléchargement du modèle...', {
-                                description: `Le modèle Excel pour ${label} est en cours de téléchargement.`
+                              toast.info('TÃ©lÃ©chargement du modÃ¨le...', {
+                                description: `Le modÃ¨le Excel pour ${label} est en cours de tÃ©lÃ©chargement.`
                               })
                             }}
                           >
@@ -533,9 +533,9 @@ export function ImportExportPage() {
                           <Upload className={`size-10 mx-auto mb-3 ${isDragOver ? 'text-[#2d7a4f]' : 'text-gray-300'}`} />
                         </motion.div>
                         <p className="text-sm font-medium text-gray-600 mb-1">
-                          Glisser-déposer votre fichier ici
+                          Glisser-dÃ©poser votre fichier ici
                         </p>
-                        <p className="text-xs text-gray-400 mb-3">ou cliquer pour sélectionner</p>
+                        <p className="text-xs text-gray-400 mb-3">ou cliquer pour sÃ©lectionner</p>
                         <div className="flex items-center justify-center gap-2 flex-wrap mb-4">
                           <Badge variant="outline" className="text-[10px] bg-white">
                             <FileSpreadsheet className="size-3 mr-1 text-[#2d7a4f]" />
@@ -573,7 +573,7 @@ export function ImportExportPage() {
                       onClick={() => setShowPreview(true)}
                     >
                       <Eye className="size-3.5 mr-1.5" />
-                      Prévisualiser les données
+                      PrÃ©visualiser les donnÃ©es
                     </Button>
                   </div>
 
@@ -586,12 +586,12 @@ export function ImportExportPage() {
                           <div className="flex items-center gap-2">
                             <TableIcon className="size-4 text-[#1a2744]" />
                             <CardTitle className="text-sm font-semibold text-[#1a2744]">
-                              Aperçu des données - {importTypeMap[importType]}
+                              AperÃ§u des donnÃ©es - {importTypeMap[importType]}
                             </CardTitle>
                           </div>
                           {showPreview && (
                             <Badge className="text-[10px] bg-[#2d7a4f15] text-[#2d7a4f] border-0">
-                              {dynamicPreviewRows.length} lignes détectées
+                              {dynamicPreviewRows.length} lignes dÃ©tectÃ©es
                             </Badge>
                           )}
                         </div>
@@ -643,7 +643,7 @@ export function ImportExportPage() {
                               className="py-12 text-center"
                             >
                               <FileSpreadsheet className="size-12 text-gray-200 mx-auto mb-3" />
-                              <p className="text-sm text-gray-400">Sélectionnez un fichier et cliquez sur Prévisualiser</p>
+                              <p className="text-sm text-gray-400">SÃ©lectionnez un fichier et cliquez sur PrÃ©visualiser</p>
                             </motion.div>
                           )}
                         </AnimatePresence>
@@ -691,8 +691,8 @@ export function ImportExportPage() {
                         <AlertTriangle className="size-4 text-[#d4a853]" />
                       </div>
                       <div>
-                        <CardTitle className="text-sm font-semibold text-[#1a2744]">Validation des données</CardTitle>
-                        <p className="text-xs text-gray-400 mt-0.5">Vérifiez les données avant de confirmer l&apos;import</p>
+                        <CardTitle className="text-sm font-semibold text-[#1a2744]">Validation des donnÃ©es</CardTitle>
+                        <p className="text-xs text-gray-400 mt-0.5">VÃ©rifiez les donnÃ©es avant de confirmer l&apos;import</p>
                       </div>
                     </div>
                     <Button
@@ -702,7 +702,7 @@ export function ImportExportPage() {
                       onClick={() => setShowValidation(!showValidation)}
                     >
                       <ChevronDown className={`size-3.5 mr-1 transition-transform ${showValidation ? 'rotate-180' : ''}`} />
-                      Détails
+                      DÃ©tails
                     </Button>
                   </div>
                 </CardHeader>
@@ -727,7 +727,7 @@ export function ImportExportPage() {
                       <Copy className="size-5 text-[#d4a853] shrink-0" />
                       <div>
                         <p className="text-lg font-bold text-[#d4a853]">{validationSummary.duplicates}</p>
-                        <p className="text-[10px] text-gray-500">Doublons détectés</p>
+                        <p className="text-[10px] text-gray-500">Doublons dÃ©tectÃ©s</p>
                       </div>
                     </div>
                   </div>
@@ -742,7 +742,7 @@ export function ImportExportPage() {
                       >
                         {/* Error preview table */}
                         <div className="mb-4">
-                          <p className="text-xs font-medium text-gray-500 mb-2">Aperçu des lignes en erreur :</p>
+                          <p className="text-xs font-medium text-gray-500 mb-2">AperÃ§u des lignes en erreur :</p>
                           <div className="overflow-x-auto rounded-lg border border-gray-100">
                             <Table>
                               <TableHeader>
@@ -767,7 +767,7 @@ export function ImportExportPage() {
                                 <TableRow>
                                   <TableCell className="py-1.5 text-xs text-gray-500">45</TableCell>
                                   <TableCell className="py-1.5 text-xs font-mono text-[#d4a853]">UDN/L1/2024/094</TableCell>
-                                  <TableCell className="py-1.5 text-xs text-[#d4a853]">Doublon - déjà importé</TableCell>
+                                  <TableCell className="py-1.5 text-xs text-[#d4a853]">Doublon - dÃ©jÃ  importÃ©</TableCell>
                                   <TableCell className="py-1.5">
                                     <Button variant="ghost" size="sm" className="h-6 text-[10px] text-[#2d7a4f]">
                                       Ignorer
@@ -776,7 +776,7 @@ export function ImportExportPage() {
                                 </TableRow>
                                 <TableRow>
                                   <TableCell className="py-1.5 text-xs text-gray-500">89</TableCell>
-                                  <TableCell className="py-1.5 text-xs font-mono text-[#c62828]">—</TableCell>
+                                  <TableCell className="py-1.5 text-xs font-mono text-[#c62828]">â€”</TableCell>
                                   <TableCell className="py-1.5 text-xs text-[#c62828]">Matricule manquant</TableCell>
                                   <TableCell className="py-1.5">
                                     <Button variant="ghost" size="sm" className="h-6 text-[10px] text-[#2d7a4f]">
@@ -812,7 +812,7 @@ export function ImportExportPage() {
                     </Button>
                     <div className="ml-auto flex items-center gap-1 text-xs text-gray-400">
                       <Info className="size-3" />
-                      <span>{validationSummary.validLines} lignes seront importées</span>
+                      <span>{validationSummary.validLines} lignes seront importÃ©es</span>
                     </div>
                   </div>
                 </CardContent>
@@ -885,7 +885,7 @@ export function ImportExportPage() {
                                   variant="ghost" 
                                   size="sm" 
                                   className="h-7 text-[10px] text-[#2d7a4f]"
-                                  onClick={() => toast.info('Aperçu du rapport disponible prochainement')}
+                                  onClick={() => toast.info('AperÃ§u du rapport disponible prochainement')}
                                 >
                                   <Eye className="size-3 mr-1" />
                                   Voir
@@ -894,7 +894,7 @@ export function ImportExportPage() {
                                   variant="ghost" 
                                   size="sm" 
                                   className="h-7 text-[10px] text-gray-600"
-                                  onClick={() => toast.success("L'import a été relancé dans la file d'attente")}
+                                  onClick={() => toast.success("L'import a Ã©tÃ© relancÃ© dans la file d'attente")}
                                 >
                                   <RotateCcw className="size-3 mr-1" />
                                   Relancer
@@ -925,13 +925,13 @@ export function ImportExportPage() {
                   </div>
                   <div>
                     <h3 className="text-sm font-semibold text-[#1a2744] mb-1">
-                      Import adapté aux universités africaines
+                      Import adaptÃ© aux universitÃ©s africaines
                     </h3>
                     <p className="text-xs text-gray-500 leading-relaxed">
-                      UniSahel prend en charge les fichiers Excel provenant de systèmes legacy courants dans les universités africaines.
-                      Le mapping de champs permet d&apos;adapter automatiquement les formats de données (noms en majuscules, dates au format JJ/MM/AAAA,
-                      numéros de matricule personnalisés). Les modèles d&apos;import sont préconfigurés pour le système LMD et les structures
-                      académiques locales. En cas de doute, utilisez le bouton de prévisualisation pour vérifier vos données avant import.
+                      UniSahel prend en charge les fichiers Excel provenant de systÃ¨mes legacy courants dans les universitÃ©s africaines.
+                      Le mapping de champs permet d&apos;adapter automatiquement les formats de donnÃ©es (noms en majuscules, dates au format JJ/MM/AAAA,
+                      numÃ©ros de matricule personnalisÃ©s). Les modÃ¨les d&apos;import sont prÃ©configurÃ©s pour le systÃ¨me LMD et les structures
+                      acadÃ©miques locales. En cas de doute, utilisez le bouton de prÃ©visualisation pour vÃ©rifier vos donnÃ©es avant import.
                     </p>
                     <div className="flex items-center gap-3 mt-3">
                       <Button 
@@ -947,10 +947,10 @@ export function ImportExportPage() {
                         variant="outline" 
                         size="sm" 
                         className="text-xs h-8"
-                        onClick={() => toast.info("Affichage des formats supportés...")}
+                        onClick={() => toast.info("Affichage des formats supportÃ©s...")}
                       >
                         <HardDrive className="size-3 mr-1.5" />
-                        Formats supportés
+                        Formats supportÃ©s
                       </Button>
                     </div>
                   </div>
@@ -960,7 +960,7 @@ export function ImportExportPage() {
           </motion.div>
         </TabsContent>
 
-        {/* ─── Export Tab ─── */}
+        {/* â”€â”€â”€ Export Tab â”€â”€â”€ */}
         <TabsContent value="export" className="mt-4 space-y-6">
           {/* Export Section with border */}
           <motion.div
@@ -976,7 +976,7 @@ export function ImportExportPage() {
                   </div>
                   <div>
                     <CardTitle className="text-sm font-semibold text-[#1a2744]">Exporter des donnees</CardTitle>
-                    <p className="text-xs text-gray-400 mt-0.5">Générez des rapports et extractions de données</p>
+                    <p className="text-xs text-gray-400 mt-0.5">GÃ©nÃ©rez des rapports et extractions de donnÃ©es</p>
                   </div>
                 </div>
               </CardHeader>
@@ -1032,10 +1032,10 @@ export function ImportExportPage() {
 
                     {/* Date Range */}
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium">Période</Label>
+                      <Label className="text-sm font-medium">PÃ©riode</Label>
                       <div className="grid grid-cols-2 gap-2">
                         <div className="space-y-1">
-                          <Label className="text-[10px] text-gray-400">Date début</Label>
+                          <Label className="text-[10px] text-gray-400">Date dÃ©but</Label>
                           <Input type="date" className="h-9 text-xs" />
                         </div>
                         <div className="space-y-1">
@@ -1051,7 +1051,7 @@ export function ImportExportPage() {
                       onClick={handleExport}
                     >
                       <Download className="size-3.5 mr-1.5" />
-                      Générer l&apos;export
+                      GÃ©nÃ©rer l&apos;export
                     </Button>
                   </div>
 
@@ -1061,7 +1061,7 @@ export function ImportExportPage() {
                       <CardHeader className="pb-3">
                         <div className="flex items-center justify-between">
                           <CardTitle className="text-sm font-semibold text-[#1a2744]">
-                            Exports récents
+                            Exports rÃ©cents
                           </CardTitle>
                           <Badge className="text-[10px] bg-gray-100 text-gray-500 border-0">
                             {demoExportHistory.length} exports
@@ -1077,7 +1077,7 @@ export function ImportExportPage() {
                                 <TableHead className="text-xs font-semibold">Type</TableHead>
                                 <TableHead className="text-xs font-semibold">Format</TableHead>
                                 <TableHead className="text-xs font-semibold">Taille</TableHead>
-                                <TableHead className="text-xs font-semibold text-center">Téléchargements</TableHead>
+                                <TableHead className="text-xs font-semibold text-center">TÃ©lÃ©chargements</TableHead>
                                 <TableHead className="text-xs font-semibold text-right">Actions</TableHead>
                               </TableRow>
                             </TableHeader>
@@ -1113,10 +1113,10 @@ export function ImportExportPage() {
                                       variant="ghost" 
                                       size="sm" 
                                       className="h-7 text-xs text-[#2d7a4f]"
-                                      onClick={() => toast.success(`Le fichier ${record.type} a été téléchargé`)}
+                                      onClick={() => toast.success(`Le fichier ${record.type} a Ã©tÃ© tÃ©lÃ©chargÃ©`)}
                                     >
                                       <Download className="size-3 mr-1" />
-                                      Télécharger
+                                      TÃ©lÃ©charger
                                     </Button>
                                   </TableCell>
                                 </TableRow>
@@ -1136,3 +1136,4 @@ export function ImportExportPage() {
     </motion.div>
   )
 }
+

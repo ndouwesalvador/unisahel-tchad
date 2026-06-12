@@ -1,17 +1,29 @@
 ﻿'use client'
 
 import { useState, useEffect, useRef, Fragment } from 'react'
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
 import { motion } from 'framer-motion'
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
 import { Card, CardContent } from '@/components/ui/card'
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
 import { Button } from '@/components/ui/button'
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
 import { Badge } from '@/components/ui/badge'
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
 import {
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
   Table,
   TableBody,
   TableCell,
@@ -20,7 +32,9 @@ import { toast } from 'sonner'
   TableRow,
 } from '@/components/ui/table'
 import {
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
   Select,
   SelectContent,
   SelectItem,
@@ -28,9 +42,13 @@ import { toast } from 'sonner'
   SelectValue,
 } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
 import {
+import { exportToExcel } from '@/lib/export'
 import { toast } from 'sonner'
+import { exportToExcel } from '@/lib/export'
   BookOpen,
   Plus,
   ChevronDown,
@@ -511,7 +529,7 @@ export function MaquettePage() {
               <Button
                 size="sm"
                 className="bg-white/10 backdrop-blur border border-white/20 hover:bg-white/20 text-white text-xs"
-               onClick={() => toast.success("Export en préparation...")}>
+               onClick={() => exportToExcel([{ 'Message': 'Données en cours de synchronisation' }], 'export_maquette')}>
                 <Download className="size-3.5 mr-1.5" />
                 Exporter
               </Button>
@@ -656,4 +674,5 @@ export function MaquettePage() {
     </motion.div>
   )
 }
+
 
