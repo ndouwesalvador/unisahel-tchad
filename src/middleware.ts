@@ -16,7 +16,10 @@ export async function middleware(req: NextRequest) {
   }
 
   // Validate session via NextAuth
-  const token = await getToken({ req })
+  const token = await getToken({ 
+    req, 
+    secret: process.env.NEXTAUTH_SECRET || "dev-secret-change-in-production-min-32-chars" 
+  })
   if (!token) {
     const callbackUrl = encodeURIComponent(nextUrl.pathname + nextUrl.search)
     return NextResponse.redirect(new URL(`/login?callbackUrl=${callbackUrl}`, nextUrl))
