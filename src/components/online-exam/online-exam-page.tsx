@@ -1,13 +1,21 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
+import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { toast } from 'sonner'
 import { Input } from '@/components/ui/input'
+import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
+import { toast } from 'sonner'
 import { Progress } from '@/components/ui/progress'
+import { toast } from 'sonner'
 import {
+import { toast } from 'sonner'
   Table,
   TableBody,
   TableCell,
@@ -16,6 +24,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import {
+import { toast } from 'sonner'
   Select,
   SelectContent,
   SelectItem,
@@ -23,12 +32,14 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import {
+import { toast } from 'sonner'
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import {
+import { toast } from 'sonner'
   Monitor,
   Clock,
   FileCheck,
@@ -58,7 +69,7 @@ import {
   FileText,
 } from 'lucide-react'
 
-// ─── useCountUp Hook ──────────────────────────────────────────────────────────
+// â”€â”€â”€ useCountUp Hook â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function useCountUp(target: number, duration: number = 1400) {
   const [value, setValue] = useState(0)
@@ -78,7 +89,7 @@ function useCountUp(target: number, duration: number = 1400) {
   return value
 }
 
-// ─── Demo Data ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Demo Data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface UpcomingExam {
   id: string
@@ -203,7 +214,7 @@ const demoBankQuestions: BankQuestion[] = [
   { id: '10', text: 'Comparer les approches gloutonnes et la programmation dynamique', type: 'Dissertation', difficulty: 'Difficile', points: 5, usageCount: 23, course: 'Algorithmique' },
 ]
 
-// ─── Config Maps ──────────────────────────────────────────────────────────────
+// â”€â”€â”€ Config Maps â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const examTypeConfig: Record<string, { label: string; className: string }> = {
   'QCM': { label: 'QCM', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0' },
@@ -246,7 +257,7 @@ const difficultyConfig: Record<string, { label: string; className: string }> = {
   'Difficile': { label: 'Difficile', className: 'bg-[#c6282815] text-[#c62828] border-0' },
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function OnlineExamPage() {
   const examensPrevus = useCountUp(12, 1400)
@@ -370,7 +381,7 @@ export function OnlineExamPage() {
         initial="hidden"
         animate="visible"
       >
-        {/* ── Gradient Header Banner ───────────────────────────────────────────── */}
+        {/* â”€â”€ Gradient Header Banner â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <motion.div variants={itemVariants}>
           <div className="relative overflow-hidden bg-gradient-to-r from-[#1a2744] via-[#1f3050] to-[#2d7a4f] p-6 md:p-8 rounded-xl mb-2">
             {/* SVG pattern overlay */}
@@ -393,7 +404,7 @@ export function OnlineExamPage() {
                     <FileCheck className="size-3.5 mr-1.5" />
                     Mes examens
                   </Button>
-                  <Button size="sm" variant="outline" className="text-xs bg-white/10 backdrop-blur border-white/20 text-white hover:bg-white/20 hover:text-white">
+                  <Button size="sm" variant="outline" className="text-xs bg-white/10 backdrop-blur border-white/20 text-white hover:bg-white/20 hover:text-white" onClick={() => toast.success("Export en préparation...")}>
                     <Download className="size-3.5 mr-1.5" />
                     Exporter les resultats
                   </Button>
@@ -414,7 +425,7 @@ export function OnlineExamPage() {
           </div>
         </motion.div>
 
-        {/* ── 4 Stats Cards ──────────────────────────────────────────────────────── */}
+        {/* â”€â”€ 4 Stats Cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Examens en cours */}
           <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
@@ -515,7 +526,7 @@ export function OnlineExamPage() {
           </motion.div>
         </motion.div>
 
-        {/* ── Exam Calendar Card ──────────────────────────────────────────────── */}
+        {/* â”€â”€ Exam Calendar Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <motion.div variants={itemVariants}>
           <Card className="border-l-4 border-l-[#1a2744]">
             <div className="h-1 bg-gradient-to-r from-[#1a2744] via-[#2d7a4f] to-[#d4a853]" />
@@ -618,7 +629,7 @@ export function OnlineExamPage() {
           </Card>
         </motion.div>
 
-        {/* ── Active Exam Interface Card ──────────────────────────────────────── */}
+        {/* â”€â”€ Active Exam Interface Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <motion.div variants={itemVariants}>
           <Card className="border-l-4 border-l-[#2d7a4f]">
             <div className="h-1 bg-gradient-to-r from-[#2d7a4f] to-[#3da66a]" />
@@ -873,7 +884,7 @@ export function OnlineExamPage() {
           )}
         </AnimatePresence>
 
-        {/* ── Results & Grading Card ──────────────────────────────────────────── */}
+        {/* â”€â”€ Results & Grading Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <motion.div variants={itemVariants}>
           <Card className="border-l-4 border-l-[#d4a853]">
             <div className="h-1 bg-gradient-to-r from-[#d4a853] to-[#e6c477]" />
@@ -893,7 +904,7 @@ export function OnlineExamPage() {
                       onChange={(e) => setResultSearch(e.target.value)}
                     />
                   </div>
-                  <Button size="sm" variant="outline" className="text-xs border-[#1a274430] text-[#1a2744] hover:bg-[#1a274408]">
+                  <Button size="sm" variant="outline" className="text-xs border-[#1a274430] text-[#1a2744] hover:bg-[#1a274408]" onClick={() => toast.success("Export en préparation...")}>
                     <Download className="size-3.5 mr-1.5" />
                     Exporter
                   </Button>
@@ -1002,7 +1013,7 @@ export function OnlineExamPage() {
           </Card>
         </motion.div>
 
-        {/* ── Anti-Cheat & Proctoring + Question Bank Row ─────────────────────── */}
+        {/* â”€â”€ Anti-Cheat & Proctoring + Question Bank Row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Anti-Cheat Card */}
           <motion.div variants={itemVariants}>
@@ -1190,7 +1201,7 @@ export function OnlineExamPage() {
           </motion.div>
         </div>
 
-        {/* ── African Context Card ────────────────────────────────────────────── */}
+        {/* â”€â”€ African Context Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <motion.div variants={itemVariants}>
           <Card className="border-l-4 border-l-[#2d7a4f]">
             <div className="h-1 bg-gradient-to-r from-[#1a2744] via-[#2d7a4f] to-[#d4a853]" />
@@ -1314,3 +1325,4 @@ export function OnlineExamPage() {
     </TooltipProvider>
   )
 }
+

@@ -1,14 +1,23 @@
-'use client'
+﻿'use client'
 
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { motion } from 'framer-motion'
+import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { toast } from 'sonner'
 import { Input } from '@/components/ui/input'
+import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
+import { toast } from 'sonner'
 import { Progress } from '@/components/ui/progress'
+import { toast } from 'sonner'
 import { Checkbox } from '@/components/ui/checkbox'
+import { toast } from 'sonner'
 import {
+import { toast } from 'sonner'
   Table,
   TableBody,
   TableCell,
@@ -17,6 +26,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import {
+import { toast } from 'sonner'
   Select,
   SelectContent,
   SelectItem,
@@ -24,6 +34,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import {
+import { toast } from 'sonner'
   GraduationCap,
   Briefcase,
   TrendingUp,
@@ -47,7 +58,7 @@ import {
   CheckCircle2,
 } from 'lucide-react'
 
-// ─── Demo Data ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Demo Data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface Alumnus {
   id: string
@@ -150,7 +161,7 @@ function formatFCFA(amount: number) {
   return amount.toLocaleString('fr-FR') + ' FCFA'
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function AlumniPage() {
   const [search, setSearch] = useState('')
@@ -196,7 +207,7 @@ export function AlumniPage() {
       initial="hidden"
       animate="visible"
     >
-      {/* ── Header ────────────────────────────────────────────────────────────── */}
+      {/* â”€â”€ Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <motion.div variants={itemVariants} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-[#1a2744]">Alumni &amp; Anciens etudiants</h1>
@@ -211,14 +222,14 @@ export function AlumniPage() {
             <Upload className="size-3.5 mr-1.5" />
             Importer
           </Button>
-          <Button size="sm" variant="outline" className="text-xs border-[#d4a853] text-[#d4a853] hover:bg-[#d4a85310]">
+          <Button size="sm" variant="outline" className="text-xs border-[#d4a853] text-[#d4a853] hover:bg-[#d4a85310]" onClick={() => toast.success("Export en préparation...")}>
             <Download className="size-3.5 mr-1.5" />
             Exporter
           </Button>
         </div>
       </motion.div>
 
-      {/* ── Stats Cards ───────────────────────────────────────────────────────── */}
+      {/* â”€â”€ Stats Cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Total diplomes */}
         <Card className="overflow-hidden relative">
@@ -321,7 +332,7 @@ export function AlumniPage() {
         </Card>
       </motion.div>
 
-      {/* ── Filter & Search Bar ─────────────────────────────────────────────── */}
+      {/* â”€â”€ Filter & Search Bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <motion.div variants={itemVariants}>
         <Card>
           <CardContent className="p-4">
@@ -391,7 +402,7 @@ export function AlumniPage() {
         </Card>
       </motion.div>
 
-      {/* ── Alumni Directory Table ─────────────────────────────────────────────── */}
+      {/* â”€â”€ Alumni Directory Table â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <motion.div variants={itemVariants}>
         <Card>
           <CardHeader className="pb-3">
@@ -481,7 +492,7 @@ export function AlumniPage() {
         </Card>
       </motion.div>
 
-      {/* ── Career Tracking + Alumni Network Stats ──────────────────────────── */}
+      {/* â”€â”€ Career Tracking + Alumni Network Stats â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Career Tracking */}
         <motion.div variants={itemVariants}>
@@ -630,7 +641,7 @@ export function AlumniPage() {
         </motion.div>
       </div>
 
-      {/* ── Graduation Year Distribution ──────────────────────────────────────── */}
+      {/* â”€â”€ Graduation Year Distribution â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <motion.div variants={itemVariants}>
         <Card className="border-l-4 border-l-[#1a2744]">
           <CardHeader className="pb-3">
@@ -669,7 +680,7 @@ export function AlumniPage() {
         </Card>
       </motion.div>
 
-      {/* ── Events & Contributions Row ────────────────────────────────────────── */}
+      {/* â”€â”€ Events & Contributions Row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Events & Networking */}
         <motion.div variants={itemVariants}>
@@ -813,3 +824,4 @@ export function AlumniPage() {
     </motion.div>
   )
 }
+

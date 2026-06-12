@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -201,6 +202,11 @@ export function ImportExportPage() {
         if (prev >= 100) {
           clearInterval(interval)
           setIsImporting(false)
+          toast.success('Import terminé avec succès', {
+            description: `Les données pour ${importTypeMap[importType]} ont été intégrées.`
+          })
+          setShowPreview(false)
+          setShowValidation(false)
           return 100
         }
         return prev + 10
@@ -396,7 +402,12 @@ export function ImportExportPage() {
                             variant="outline"
                             size="sm"
                             className="w-full text-xs h-8 justify-start"
-                            onClick={() => setImportType(key)}
+                            onClick={() => {
+                              setImportType(key)
+                              toast.info('Téléchargement du modèle...', {
+                                description: `Le modèle Excel pour ${label} est en cours de téléchargement.`
+                              })
+                            }}
                           >
                             <FileDown className="size-3 mr-1.5 text-[#2d7a4f]" />
                             {label}
@@ -767,11 +778,21 @@ export function ImportExportPage() {
                             </TableCell>
                             <TableCell className="py-2.5 text-right">
                               <div className="flex items-center justify-end gap-1">
-                                <Button variant="ghost" size="sm" className="h-7 text-[10px] text-[#2d7a4f]">
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="h-7 text-[10px] text-[#2d7a4f]"
+                                  onClick={() => toast.info('Aperçu du rapport disponible prochainement')}
+                                >
                                   <Eye className="size-3 mr-1" />
                                   Voir
                                 </Button>
-                                <Button variant="ghost" size="sm" className="h-7 text-[10px] text-gray-600">
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="h-7 text-[10px] text-gray-600"
+                                  onClick={() => toast.success("L'import a été relancé dans la file d'attente")}
+                                >
                                   <RotateCcw className="size-3 mr-1" />
                                   Relancer
                                 </Button>
@@ -810,11 +831,21 @@ export function ImportExportPage() {
                       académiques locales. En cas de doute, utilisez le bouton de prévisualisation pour vérifier vos données avant import.
                     </p>
                     <div className="flex items-center gap-3 mt-3">
-                      <Button variant="outline" size="sm" className="text-xs h-8">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="text-xs h-8"
+                        onClick={() => toast.info("Ouverture du guide d'importation...")}
+                      >
                         <FileDown className="size-3 mr-1.5" />
                         Guide d&apos;import
                       </Button>
-                      <Button variant="outline" size="sm" className="text-xs h-8">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="text-xs h-8"
+                        onClick={() => toast.info("Affichage des formats supportés...")}
+                      >
                         <HardDrive className="size-3 mr-1.5" />
                         Formats supportés
                       </Button>
@@ -912,7 +943,14 @@ export function ImportExportPage() {
                     </div>
 
                     {/* Generate Button */}
-                    <Button className="w-full bg-[#1a2744] hover:bg-[#1a2744]/90 text-white text-xs h-10">
+                    <Button 
+                      className="w-full bg-[#1a2744] hover:bg-[#1a2744]/90 text-white text-xs h-10"
+                      onClick={() => {
+                        toast.success('Génération lancée', {
+                          description: `L'export ${exportTypeMap[exportType]} au format ${exportFormat} est en cours de préparation.`
+                        })
+                      }}
+                    >
                       <Download className="size-3.5 mr-1.5" />
                       Générer l&apos;export
                     </Button>
@@ -972,7 +1010,12 @@ export function ImportExportPage() {
                                     <span className="text-xs font-semibold text-[#1a2744]">{record.telechargements}</span>
                                   </TableCell>
                                   <TableCell className="py-2.5 text-right">
-                                    <Button variant="ghost" size="sm" className="h-7 text-xs text-[#2d7a4f]">
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm" 
+                                      className="h-7 text-xs text-[#2d7a4f]"
+                                      onClick={() => toast.success(`Le fichier ${record.type} a été téléchargé`)}
+                                    >
                                       <Download className="size-3 mr-1" />
                                       Télécharger
                                     </Button>

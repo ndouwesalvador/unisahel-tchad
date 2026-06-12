@@ -1,16 +1,27 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { toast } from 'sonner'
 import { motion } from 'framer-motion'
+import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { toast } from 'sonner'
 import { Input } from '@/components/ui/input'
+import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
+import { toast } from 'sonner'
 import { Progress } from '@/components/ui/progress'
+import { toast } from 'sonner'
 import { Textarea } from '@/components/ui/textarea'
+import { toast } from 'sonner'
 import { Separator } from '@/components/ui/separator'
+import { toast } from 'sonner'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { toast } from 'sonner'
 import {
+import { toast } from 'sonner'
   Table,
   TableBody,
   TableCell,
@@ -19,6 +30,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import {
+import { toast } from 'sonner'
   Select,
   SelectContent,
   SelectItem,
@@ -26,13 +38,16 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import {
+import { toast } from 'sonner'
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { toast } from 'sonner'
 import {
+import { toast } from 'sonner'
   Briefcase,
   FileCheck,
   TrendingUp,
@@ -57,7 +72,7 @@ import {
   Zap,
 } from 'lucide-react'
 
-// ─── useCountUp Hook ──────────────────────────────────────────────────────────
+// â”€â”€â”€ useCountUp Hook â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function useCountUp(target: number, duration: number = 1400) {
   const [value, setValue] = useState(0)
@@ -77,7 +92,7 @@ function useCountUp(target: number, duration: number = 1400) {
   return value
 }
 
-// ─── Demo Data ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Demo Data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface InternshipEntry {
   id: string
@@ -172,7 +187,7 @@ const demoEvaluations: EvaluationResult[] = [
   { id: 'e6', studentName: 'HISSEIN Mariam', grade: 'Excellent', date: '22/07/2024' },
 ]
 
-// ─── Status & Type Configs ────────────────────────────────────────────────────
+// â”€â”€â”€ Status & Type Configs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const typeConfig: Record<string, { label: string; className: string }> = {
   professionnel: { label: 'Stage professionnel', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0' },
@@ -208,7 +223,7 @@ const sectorConfig: Record<string, { className: string; icon: React.ElementType 
 
 const workflowSteps = ['Soumission', 'Validation etablissement', 'Signature entreprise']
 
-// ─── Component ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function InternshipsPage() {
   const [search, setSearch] = useState('')
@@ -285,7 +300,7 @@ export function InternshipsPage() {
         initial="hidden"
         animate="visible"
       >
-        {/* ── 1. Gradient Header Banner ──────────────────────────────────────────── */}
+        {/* â”€â”€ 1. Gradient Header Banner â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <motion.div variants={itemVariants} className="relative overflow-hidden rounded-xl">
           <div
             className="absolute inset-0"
@@ -322,7 +337,7 @@ export function InternshipsPage() {
                   <FileCheck className="size-3.5 mr-1.5" />
                   Valider convention
                 </Button>
-                <Button size="sm" className="bg-white/10 backdrop-blur border border-white/15 text-white hover:bg-white/20 text-xs">
+                <Button size="sm" className="bg-white/10 backdrop-blur border border-white/15 text-white hover:bg-white/20 text-xs" onClick={() => toast.success("Export en préparation...")}>
                   <Download className="size-3.5 mr-1.5" />
                   Exporter
                 </Button>
@@ -357,7 +372,7 @@ export function InternshipsPage() {
           </div>
         </motion.div>
 
-        {/* ── 2. Stats Cards ────────────────────────────────────────────────────── */}
+        {/* â”€â”€ 2. Stats Cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Stages actifs */}
           <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
@@ -464,7 +479,7 @@ export function InternshipsPage() {
           </motion.div>
         </motion.div>
 
-        {/* ── 3. Stage Convention Tracker Card ───────────────────────────────────── */}
+        {/* â”€â”€ 3. Stage Convention Tracker Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <motion.div variants={itemVariants}>
           <Card className="border-l-4 border-l-[#1a2744]">
             <CardHeader className="pb-3">
@@ -630,7 +645,7 @@ export function InternshipsPage() {
           </Card>
         </motion.div>
 
-        {/* ── 4. Convention Validation Workflow Card ─────────────────────────────── */}
+        {/* â”€â”€ 4. Convention Validation Workflow Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <motion.div variants={itemVariants}>
           <Card className="border-l-4 border-l-[#d4a853]">
             <CardHeader className="pb-3">
@@ -762,7 +777,7 @@ export function InternshipsPage() {
           </Card>
         </motion.div>
 
-        {/* ── 5. Stage Evaluation Card ───────────────────────────────────────────── */}
+        {/* â”€â”€ 5. Stage Evaluation Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <motion.div variants={itemVariants}>
             <Card className="border-l-4 border-l-[#2d7a4f] h-full">
@@ -896,7 +911,7 @@ export function InternshipsPage() {
           </motion.div>
         </div>
 
-        {/* ── 6. Stage Sites & Partenaires Card ──────────────────────────────────── */}
+        {/* â”€â”€ 6. Stage Sites & Partenaires Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <motion.div variants={itemVariants}>
           <Card className="border-l-4 border-l-[#1a2744]">
             <CardHeader className="pb-3">
@@ -979,7 +994,7 @@ export function InternshipsPage() {
           </Card>
         </motion.div>
 
-        {/* ── 7. Timeline de Stage Card ──────────────────────────────────────────── */}
+        {/* â”€â”€ 7. Timeline de Stage Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <motion.div variants={itemVariants}>
           <Card className="border-l-4 border-l-[#2d7a4f]">
             <CardHeader className="pb-3">
@@ -1070,7 +1085,7 @@ export function InternshipsPage() {
           </Card>
         </motion.div>
 
-        {/* ── 8. African Context Card ────────────────────────────────────────────── */}
+        {/* â”€â”€ 8. African Context Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <motion.div variants={itemVariants}>
           <Card className="border-l-4 border-l-[#d4a853]">
             <CardHeader className="pb-3">
@@ -1190,3 +1205,4 @@ export function InternshipsPage() {
     </TooltipProvider>
   )
 }
+

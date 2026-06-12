@@ -1,12 +1,19 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
+import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { toast } from 'sonner'
 import { Input } from '@/components/ui/input'
+import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
+import { toast } from 'sonner'
 import {
+import { toast } from 'sonner'
   Select,
   SelectContent,
   SelectItem,
@@ -14,6 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import {
+import { toast } from 'sonner'
   Dialog,
   DialogContent,
   DialogHeader,
@@ -21,6 +29,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import {
+import { toast } from 'sonner'
   Table,
   TableBody,
   TableCell,
@@ -29,18 +38,26 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import {
+import { toast } from 'sonner'
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { toast } from 'sonner'
 import { Textarea } from '@/components/ui/textarea'
+import { toast } from 'sonner'
 import { Label } from '@/components/ui/label'
+import { toast } from 'sonner'
 import { Switch } from '@/components/ui/switch'
+import { toast } from 'sonner'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { toast } from 'sonner'
 import { Separator } from '@/components/ui/separator'
+import { toast } from 'sonner'
 import {
+import { toast } from 'sonner'
   MessageSquare,
   Send,
   Users,
@@ -74,7 +91,7 @@ import {
   Circle,
 } from 'lucide-react'
 
-// ─── Demo Data ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Demo Data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const conversations = [
   { id: 1, name: 'Abakar Mahamat', type: 'Individuel', lastMessage: 'Merci pour les resultats du semestre', time: '09:45', unread: 2, online: true, avatar: 'AM' },
@@ -111,7 +128,7 @@ const channels = [
 ]
 
 const broadcasts = [
-  { id: 1, subject: 'Rentrée S2 2024-2025', audience: 'Tous les etudiants', type: 'Info', priority: 'Normal', sentDate: '15 Fev 2025', readRate: 89, delivered: 2847, failed: 12 },
+  { id: 1, subject: 'RentrÃ©e S2 2024-2025', audience: 'Tous les etudiants', type: 'Info', priority: 'Normal', sentDate: '15 Fev 2025', readRate: 89, delivered: 2847, failed: 12 },
   { id: 2, subject: 'Convocation jury delib.', audience: 'Enseignants', type: 'Academique', priority: 'High', sentDate: '12 Fev 2025', readRate: 95, delivered: 156, failed: 2 },
   { id: 3, subject: 'Alerte paiement urgent', audience: 'Etudiants impayes', type: 'Urgent', priority: 'Critical', sentDate: '10 Fev 2025', readRate: 78, delivered: 234, failed: 45 },
   { id: 4, subject: 'Modification emploi du temps', audience: 'Informatique L3', type: 'Administratif', priority: 'Normal', sentDate: '08 Fev 2025', readRate: 92, delivered: 67, failed: 1 },
@@ -142,7 +159,7 @@ const drafts = [
   { id: 5, subject: 'Information bourses de recherche', template: 'convocation', audience: 'Doctorants', lastModified: '08 Fev 2025', status: 'Brouillon' },
 ]
 
-// ─── useCountUp Hook ──────────────────────────────────────────────────────────
+// â”€â”€â”€ useCountUp Hook â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function useCountUp(target: number, duration: number = 1400) {
   const [value, setValue] = useState(0)
@@ -162,7 +179,7 @@ function useCountUp(target: number, duration: number = 1400) {
   return value
 }
 
-// ─── Animation Variants ────────────────────────────────────────────────────────
+// â”€â”€â”€ Animation Variants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -177,7 +194,7 @@ const itemVariants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' } },
 } as const
 
-// ─── Main Component ────────────────────────────────────────────────────────────
+// â”€â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function CommunicationPage() {
   const messagesCount = useCountUp(45, 1400)
@@ -259,7 +276,7 @@ export function CommunicationPage() {
         animate="visible"
         className="space-y-6"
       >
-        {/* ─── Gradient Header Banner ─────────────────────────────────────────── */}
+        {/* â”€â”€â”€ Gradient Header Banner â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <motion.div variants={itemVariants}>
           <div className="relative overflow-hidden bg-gradient-to-r from-[#1a2744] via-[#1f3050] to-[#2d7a4f] p-6 md:p-8 rounded-xl mb-2">
             {/* SVG pattern overlay */}
@@ -352,7 +369,7 @@ export function CommunicationPage() {
                 </div>
               </DialogContent>
             </Dialog>
-            <Button variant="outline" className="gap-2 bg-white/10 backdrop-blur border-white/20 text-white hover:bg-white/20 hover:text-white">
+            <Button variant="outline" className="gap-2 bg-white/10 backdrop-blur border-white/20 text-white hover:bg-white/20 hover:text-white" onClick={() => toast.success("Export en préparation...")}>
               <Download className="size-4" />
               Exporter
             </Button>
@@ -373,7 +390,7 @@ export function CommunicationPage() {
           </div>
         </motion.div>
 
-        {/* ─── Stats Cards ───────────────────────────────────────────────────── */}
+        {/* â”€â”€â”€ Stats Cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <motion.div variants={containerVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
             { label: 'Messages aujourd\'hui', value: 45, trend: '+12%', color: '#2d7a4f', icon: MessageSquare, progress: 65 },
@@ -416,7 +433,7 @@ export function CommunicationPage() {
           ))}
         </motion.div>
 
-        {/* ─── Messaging Interface ───────────────────────────────────────────── */}
+        {/* â”€â”€â”€ Messaging Interface â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <motion.div variants={itemVariants}>
           <Card className="overflow-hidden">
             <div className="h-1 bg-gradient-to-r from-[#1a2744] via-[#2d7a4f] to-[#d4a853]" />
@@ -617,7 +634,7 @@ export function CommunicationPage() {
           </Card>
         </motion.div>
 
-        {/* ─── Broadcast / Diffusion Card ────────────────────────────────────── */}
+        {/* â”€â”€â”€ Broadcast / Diffusion Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <motion.div variants={itemVariants}>
           <Card className="border-l-4 border-l-[#d4a853]">
             <div className="h-1 bg-gradient-to-r from-[#1a2744] to-[#2d7a4f]" />
@@ -690,7 +707,7 @@ export function CommunicationPage() {
           </Card>
         </motion.div>
 
-        {/* ─── Channels & Notifications Row ──────────────────────────────────── */}
+        {/* â”€â”€â”€ Channels & Notifications Row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Channels Card */}
           <motion.div variants={itemVariants}>
@@ -802,7 +819,7 @@ export function CommunicationPage() {
           </motion.div>
         </div>
 
-        {/* ─── Announcement Drafts & African Context Row ─────────────────────── */}
+        {/* â”€â”€â”€ Announcement Drafts & African Context Row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Announcement Drafts Card */}
           <motion.div variants={itemVariants}>
@@ -1045,3 +1062,4 @@ export function CommunicationPage() {
     </TooltipProvider>
   )
 }
+

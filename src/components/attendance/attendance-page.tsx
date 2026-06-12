@@ -1,13 +1,21 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { toast } from 'sonner'
 import { motion } from 'framer-motion'
+import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { toast } from 'sonner'
 import { Input } from '@/components/ui/input'
+import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
+import { toast } from 'sonner'
 import { Progress } from '@/components/ui/progress'
+import { toast } from 'sonner'
 import {
+import { toast } from 'sonner'
   Table,
   TableBody,
   TableCell,
@@ -16,6 +24,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import {
+import { toast } from 'sonner'
   Select,
   SelectContent,
   SelectItem,
@@ -23,18 +32,21 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import {
+import { toast } from 'sonner'
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
+import { toast } from 'sonner'
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import {
+import { toast } from 'sonner'
   ClipboardCheck,
   UserX,
   TrendingUp,
@@ -62,7 +74,7 @@ import {
   Bell,
 } from 'lucide-react'
 
-// ─── Demo Data ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Demo Data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 type AttendanceStatus = 'Present' | 'Absent' | 'Justifie' | 'Retard'
 
@@ -168,7 +180,7 @@ const monthlyTrend = [
   { month: 'Mar', rate: 93 },
 ]
 
-// ─── Config Maps ──────────────────────────────────────────────────────────────
+// â”€â”€â”€ Config Maps â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const statusConfig: Record<string, { label: string; className: string; icon: React.ElementType; bgColor: string }> = {
   'Present': { label: 'Present', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0', icon: CheckCircle2, bgColor: 'bg-[#2d7a4f05]' },
@@ -189,7 +201,7 @@ const justificationStatusConfig: Record<string, { label: string; className: stri
   'rejetee': { label: 'Rejetee', className: 'bg-[#c6282815] text-[#c62828] border-0' },
 }
 
-// ─── useCountUp Hook ──────────────────────────────────────────────────────────
+// â”€â”€â”€ useCountUp Hook â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function useCountUp(target: number, duration: number = 1400) {
   const [value, setValue] = useState(0)
@@ -209,7 +221,7 @@ function useCountUp(target: number, duration: number = 1400) {
   return value
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function AttendancePage() {
   const presencesCount = useCountUp(1247, 1400)
@@ -307,7 +319,7 @@ export function AttendancePage() {
         initial="hidden"
         animate="visible"
       >
-        {/* ── Gradient Header Banner ───────────────────────────────────────────── */}
+        {/* â”€â”€ Gradient Header Banner â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <motion.div variants={itemVariants}>
           <div className="relative overflow-hidden bg-gradient-to-r from-[#1a2744] via-[#1f3050] to-[#2d7a4f] p-6 md:p-8 rounded-xl mb-2">
             {/* SVG pattern overlay */}
@@ -327,7 +339,7 @@ export function AttendancePage() {
                     <FileCheck className="size-3.5 mr-1.5" />
                     Justifier une absence
                   </Button>
-                  <Button size="sm" variant="outline" className="text-xs bg-white/10 backdrop-blur border-white/20 text-white hover:bg-white/20 hover:text-white">
+                  <Button size="sm" variant="outline" className="text-xs bg-white/10 backdrop-blur border-white/20 text-white hover:bg-white/20 hover:text-white" onClick={() => toast.success("Export en préparation...")}>
                     <Download className="size-3.5 mr-1.5" />
                     Exporter
                   </Button>
@@ -348,7 +360,7 @@ export function AttendancePage() {
           </div>
         </motion.div>
 
-        {/* ── 4 Stats Cards ──────────────────────────────────────────────────────── */}
+        {/* â”€â”€ 4 Stats Cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Presences aujourd'hui */}
           <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
@@ -452,7 +464,7 @@ export function AttendancePage() {
           </motion.div>
         </motion.div>
 
-        {/* ── Filter & Search Bar ──────────────────────────────────────────────── */}
+        {/* â”€â”€ Filter & Search Bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <motion.div variants={itemVariants}>
           <Card>
             <CardContent className="p-4">
@@ -534,7 +546,7 @@ export function AttendancePage() {
           </Card>
         </motion.div>
 
-        {/* ── Daily Attendance Table ──────────────────────────────────────────────── */}
+        {/* â”€â”€ Daily Attendance Table â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <motion.div variants={itemVariants}>
           <Card className="border-l-4 border-l-[#2d7a4f]">
             <div className="h-1 bg-gradient-to-r from-[#1a2744] via-[#2d7a4f] to-[#d4a853]" />
@@ -665,7 +677,7 @@ export function AttendancePage() {
           </Card>
         </motion.div>
 
-        {/* ── Weekly Overview & Absence Justification ──────────────────────────── */}
+        {/* â”€â”€ Weekly Overview & Absence Justification â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Weekly Overview Card */}
           <motion.div variants={itemVariants}>
@@ -841,7 +853,7 @@ export function AttendancePage() {
           </motion.div>
         </div>
 
-        {/* ── Alerts & Sanctions Card ──────────────────────────────────────────────── */}
+        {/* â”€â”€ Alerts & Sanctions Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <motion.div variants={itemVariants}>
           <Card className="border-l-4 border-l-[#ef4444]">
             <CardHeader className="pb-3">
@@ -991,7 +1003,7 @@ export function AttendancePage() {
           </Card>
         </motion.div>
 
-        {/* ── Course Attendance Statistics Card ──────────────────────────────────── */}
+        {/* â”€â”€ Course Attendance Statistics Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <motion.div variants={itemVariants}>
           <Card>
             <CardHeader className="pb-3">
@@ -1107,7 +1119,7 @@ export function AttendancePage() {
           </Card>
         </motion.div>
 
-        {/* ── African Context Card ──────────────────────────────────────────────── */}
+        {/* â”€â”€ African Context Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <motion.div variants={itemVariants}>
           <Card className="border-l-4 border-l-[#1a2744]">
             <CardHeader className="pb-3">
@@ -1220,3 +1232,4 @@ export function AttendancePage() {
     </TooltipProvider>
   )
 }
+

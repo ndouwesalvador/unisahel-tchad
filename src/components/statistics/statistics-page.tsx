@@ -1,10 +1,15 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { toast } from 'sonner'
 import { motion } from 'framer-motion'
+import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { toast } from 'sonner'
 import {
+import { toast } from 'sonner'
   Select,
   SelectContent,
   SelectItem,
@@ -12,6 +17,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import {
+import { toast } from 'sonner'
   BarChart,
   Bar,
   XAxis,
@@ -27,6 +33,7 @@ import {
   Line,
 } from 'recharts'
 import {
+import { toast } from 'sonner'
   TrendingUp,
   Users,
   GraduationCap,
@@ -35,14 +42,14 @@ import {
   Calendar,
 } from 'lucide-react'
 
-// ─── Demo Data ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Demo Data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const studentsByFaculty = [
   { name: 'Droit', etudiants: 620, femmes: 280, hommes: 340 },
   { name: 'Sciences', etudiants: 480, femmes: 180, hommes: 300 },
   { name: 'Lettres', etudiants: 350, femmes: 210, hommes: 140 },
-  { name: 'Économie', etudiants: 410, femmes: 190, hommes: 220 },
-  { name: 'Médecine', etudiants: 290, femmes: 150, hommes: 140 },
+  { name: 'Ã‰conomie', etudiants: 410, femmes: 190, hommes: 220 },
+  { name: 'MÃ©decine', etudiants: 290, femmes: 150, hommes: 140 },
   { name: 'Informatique', etudiants: 380, femmes: 80, hommes: 300 },
   { name: 'Agronomie', etudiants: 317, femmes: 107, hommes: 210 },
 ]
@@ -57,9 +64,9 @@ const successRateByYear = [
 ]
 
 const paymentCollection = [
-  { name: 'Encaissé', value: 45200000, color: '#2d7a4f' },
+  { name: 'EncaissÃ©', value: 45200000, color: '#2d7a4f' },
   { name: 'En attente', value: 12500000, color: '#d4a853' },
-  { name: 'Impayé', value: 8300000, color: '#c62828' },
+  { name: 'ImpayÃ©', value: 8300000, color: '#c62828' },
 ]
 
 const gradeDistribution = [
@@ -74,18 +81,18 @@ const gradeDistribution = [
 ]
 
 const successByProgram = [
-  { program: 'Droit Privé', L1: 62, L2: 68, L3: 75 },
+  { program: 'Droit PrivÃ©', L1: 62, L2: 68, L3: 75 },
   { program: 'Informatique', L1: 55, L2: 72, L3: 80 },
   { program: 'Sciences', L1: 58, L2: 65, L3: 70 },
   { program: 'Lettres', L1: 70, L2: 74, L3: 78 },
-  { program: 'Médecine', L1: 48, L2: 60, L3: 72 },
+  { program: 'MÃ©decine', L1: 48, L2: 60, L3: 72 },
 ]
 
 function formatFCFA(amount: number) {
   return (amount / 1000000).toFixed(1) + 'M FCFA'
 }
 
-// ─── Animated Count-Up Hook ──────────────────────────────────────────────────
+// â”€â”€â”€ Animated Count-Up Hook â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function useCountUp(target: number, duration: number = 1400) {
   const [count, setCount] = useState(0)
@@ -116,7 +123,7 @@ function useCountUp(target: number, duration: number = 1400) {
   return count
 }
 
-// ─── Header Stat Component ────────────────────────────────────────────────────
+// â”€â”€â”€ Header Stat Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function HeaderStat({ value, label, suffix = '' }: { value: number; label: string; suffix?: string }) {
   const animatedValue = useCountUp(value, 1600)
@@ -130,7 +137,7 @@ function HeaderStat({ value, label, suffix = '' }: { value: number; label: strin
   )
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function StatisticsPage() {
   const totalStudents = studentsByFaculty.reduce((acc, f) => acc + f.etudiants, 0)
@@ -179,7 +186,7 @@ export function StatisticsPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <Button variant="outline" size="sm" className="text-xs bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white">
+                <Button variant="outline" size="sm" className="text-xs bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white" onClick={() => toast.success("Export en préparation...")}>
                   <Download className="size-3.5 mr-1.5" />
                   Exporter PDF
                 </Button>
@@ -204,9 +211,9 @@ export function StatisticsPage() {
       {/* Key Metrics - Staggered fade-in */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { title: 'Étudiants totaux', value: totalStudents.toLocaleString('fr-FR'), icon: Users, color: '#2d7a4f', bgColor: '#2d7a4f15' },
-          { title: 'Taux de réussite', value: `${globalSuccessRate}%`, icon: TrendingUp, color: '#1a2744', bgColor: '#1a274415' },
-          { title: 'Taux féminin', value: `${Math.round((totalFemmes / totalStudents) * 100)}%`, icon: GraduationCap, color: '#d4a853', bgColor: '#d4a85315' },
+          { title: 'Ã‰tudiants totaux', value: totalStudents.toLocaleString('fr-FR'), icon: Users, color: '#2d7a4f', bgColor: '#2d7a4f15' },
+          { title: 'Taux de rÃ©ussite', value: `${globalSuccessRate}%`, icon: TrendingUp, color: '#1a2744', bgColor: '#1a274415' },
+          { title: 'Taux fÃ©minin', value: `${Math.round((totalFemmes / totalStudents) * 100)}%`, icon: GraduationCap, color: '#d4a853', bgColor: '#d4a85315' },
           { title: 'Encaissement', value: '45.2M FCFA', icon: CreditCard, color: '#2d7a4f', bgColor: '#2d7a4f15' },
         ].map((metric, i) => (
           <motion.div
@@ -243,7 +250,7 @@ export function StatisticsPage() {
             <div className="h-1 bg-gradient-to-r from-[#1a2744] to-[#2d7a4f]" />
             <CardHeader className="pb-2">
               <CardTitle className="text-base font-semibold text-[#1a2744]">
-                Étudiants par faculté
+                Ã‰tudiants par facultÃ©
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -277,7 +284,7 @@ export function StatisticsPage() {
             <div className="h-1 bg-gradient-to-r from-[#2d7a4f] to-[#3da66a]" />
             <CardHeader className="pb-2">
               <CardTitle className="text-base font-semibold text-[#1a2744]">
-                Taux de réussite par année
+                Taux de rÃ©ussite par annÃ©e
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -294,7 +301,7 @@ export function StatisticsPage() {
                         boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
                         fontSize: '12px',
                       }}
-                      formatter={(value: number) => [`${value}%`, 'Taux de réussite']}
+                      formatter={(value: number) => [`${value}%`, 'Taux de rÃ©ussite']}
                     />
                     <Line
                       type="monotone"
@@ -381,9 +388,9 @@ export function StatisticsPage() {
                         boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
                         fontSize: '12px',
                       }}
-                      formatter={(value: number) => [`${value} étudiants`, 'Effectif']}
+                      formatter={(value: number) => [`${value} Ã©tudiants`, 'Effectif']}
                     />
-                    <Bar dataKey="count" name="Étudiants" radius={[4, 4, 0, 0]}>
+                    <Bar dataKey="count" name="Ã‰tudiants" radius={[4, 4, 0, 0]}>
                       {gradeDistribution.map((entry, index) => {
                         const mid = parseFloat(entry.range.split('-')[0])
                         const color = mid >= 10 ? '#2d7a4f' : mid >= 8 ? '#d4a853' : '#c62828'
@@ -404,7 +411,7 @@ export function StatisticsPage() {
           <div className="h-1 bg-gradient-to-r from-[#1a2744] via-[#2d7a4f] to-[#d4a853]" />
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-semibold text-[#1a2744]">
-              Taux de réussite par programme et niveau (%)
+              Taux de rÃ©ussite par programme et niveau (%)
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -448,3 +455,4 @@ export function StatisticsPage() {
     </div>
   )
 }
+

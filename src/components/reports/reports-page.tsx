@@ -1,15 +1,25 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { toast } from 'sonner'
 import { motion } from 'framer-motion'
+import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { toast } from 'sonner'
 import { Input } from '@/components/ui/input'
+import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
+import { toast } from 'sonner'
 import { Label } from '@/components/ui/label'
+import { toast } from 'sonner'
 import { Separator } from '@/components/ui/separator'
+import { toast } from 'sonner'
 import { Switch } from '@/components/ui/switch'
+import { toast } from 'sonner'
 import {
+import { toast } from 'sonner'
   Select,
   SelectContent,
   SelectItem,
@@ -17,6 +27,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import {
+import { toast } from 'sonner'
   Table,
   TableBody,
   TableCell,
@@ -25,6 +36,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import {
+import { toast } from 'sonner'
   Dialog,
   DialogContent,
   DialogHeader,
@@ -32,14 +44,18 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import {
+import { toast } from 'sonner'
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { toast } from 'sonner'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { toast } from 'sonner'
 import {
+import { toast } from 'sonner'
   BarChart3,
   TrendingUp,
   FileText,
@@ -63,7 +79,7 @@ import {
   Mail,
 } from 'lucide-react'
 
-// ─── useCountUp Hook ──────────────────────────────────────────────────────────
+// â”€â”€â”€ useCountUp Hook â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function useCountUp(target: number, duration: number = 1400) {
   const [value, setValue] = useState(0)
@@ -83,7 +99,7 @@ function useCountUp(target: number, duration: number = 1400) {
   return value
 }
 
-// ─── Animation Variants ────────────────────────────────────────────────────────
+// â”€â”€â”€ Animation Variants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -98,7 +114,7 @@ const itemVariants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' } },
 } as const
 
-// ─── Demo Data ─────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Demo Data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const reportTypes = [
   { id: 'performance', name: 'Performance academique', description: 'Analyse des resultats et taux de reussite par UE et programme', icon: BarChart3, color: '#2d7a4f' },
@@ -217,7 +233,7 @@ const successRateData = [
   { level: 'M2', value: 82, color: '#1a2744' },
 ]
 
-// ─── Main Component ────────────────────────────────────────────────────────────
+// â”€â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function ReportsPage() {
   const rapportsGeneres = useCountUp(156, 1400)
@@ -256,7 +272,7 @@ export function ReportsPage() {
         initial="hidden"
         animate="visible"
       >
-        {/* ─── 1. Gradient Header Banner ────────────────────────────────────────── */}
+        {/* â”€â”€â”€ 1. Gradient Header Banner â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <motion.div variants={itemVariants}>
           <div className="relative overflow-hidden bg-gradient-to-r from-[#1a2744] via-[#1f3050] to-[#2d7a4f] p-6 md:p-8 rounded-xl">
             {/* SVG pattern overlay */}
@@ -276,7 +292,7 @@ export function ReportsPage() {
                     <Calendar className="size-4" />
                     Programmer
                   </Button>
-                  <Button className="bg-white/10 backdrop-blur border border-white/20 text-white hover:bg-white/20 hover:text-white gap-2">
+                  <Button className="bg-white/10 backdrop-blur border border-white/20 text-white hover:bg-white/20 hover:text-white gap-2" onClick={() => toast.success("Export en préparation...")}>
                     <Download className="size-4" />
                     Exporter
                   </Button>
@@ -301,7 +317,7 @@ export function ReportsPage() {
           </div>
         </motion.div>
 
-        {/* ─── 2. Stats Cards ──────────────────────────────────────────────────── */}
+        {/* â”€â”€â”€ 2. Stats Cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <motion.div variants={containerVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Rapports generes */}
           <motion.div variants={itemVariants} whileHover={{ scale: 1.02, boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }} transition={{ duration: 0.2 }}>
@@ -412,7 +428,7 @@ export function ReportsPage() {
           </motion.div>
         </motion.div>
 
-        {/* ─── 3. Report Builder Card ───────────────────────────────────────────── */}
+        {/* â”€â”€â”€ 3. Report Builder Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <motion.div variants={itemVariants}>
           <Card className="border-l-4 border-l-[#1a2744]">
             <div className="h-1 bg-gradient-to-r from-[#1a2744] via-[#2d7a4f] to-[#d4a853]" />
@@ -544,7 +560,7 @@ export function ReportsPage() {
           </Card>
         </motion.div>
 
-        {/* ─── 4. Pre-built Report Templates Card ────────────────────────────────── */}
+        {/* â”€â”€â”€ 4. Pre-built Report Templates Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <motion.div variants={itemVariants}>
           <Card className="border-l-4 border-l-[#d4a853]">
             <div className="h-1 bg-gradient-to-r from-[#d4a853] to-[#e6c477]" />
@@ -599,7 +615,7 @@ export function ReportsPage() {
           </Card>
         </motion.div>
 
-        {/* ─── 5. Recent Reports Table Card ──────────────────────────────────────── */}
+        {/* â”€â”€â”€ 5. Recent Reports Table Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <motion.div variants={itemVariants}>
           <Card className="border-l-4 border-l-[#2d7a4f]">
             <div className="h-1 bg-gradient-to-r from-[#2d7a4f] to-[#3da66a]" />
@@ -755,7 +771,7 @@ export function ReportsPage() {
           </Card>
         </motion.div>
 
-        {/* ─── 6. Analytics Dashboard Card ──────────────────────────────────────── */}
+        {/* â”€â”€â”€ 6. Analytics Dashboard Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <motion.div variants={itemVariants}>
           <Card className="border-l-4 border-l-[#1a2744]">
             <div className="h-1 bg-gradient-to-r from-[#1a2744] via-[#2d7a4f] to-[#d4a853]" />
@@ -949,7 +965,7 @@ export function ReportsPage() {
           </Card>
         </motion.div>
 
-        {/* ─── 7. Scheduled Reports Card ─────────────────────────────────────────── */}
+        {/* â”€â”€â”€ 7. Scheduled Reports Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <motion.div variants={itemVariants}>
           <Card className="border-l-4 border-l-[#d4a853]">
             <div className="h-1 bg-gradient-to-r from-[#d4a853] to-[#e6c477]" />
@@ -1070,7 +1086,7 @@ export function ReportsPage() {
           </Card>
         </motion.div>
 
-        {/* ─── 8. African Context Card ──────────────────────────────────────────── */}
+        {/* â”€â”€â”€ 8. African Context Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <motion.div variants={itemVariants}>
           <Card className="border-l-4 border-l-[#2d7a4f]">
             <div className="h-1 bg-gradient-to-r from-[#2d7a4f] to-[#3da66a]" />
@@ -1201,3 +1217,4 @@ export function ReportsPage() {
     </TooltipProvider>
   )
 }
+
