@@ -3,6 +3,8 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
+import { useAppStore } from '@/lib/store'
+import { exportToExcel, exportToCSV, parseExcelFile } from '@/lib/export'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -132,7 +134,7 @@ const previewRows = [
   ['UDN/L1/2024/054', 'DJIMÉ', 'Hawa', '12/05/2001', 'Économie', 'Nouveau'],
 ]
 
-const validationSummary = {
+const dummyValidationSummary = {
   validLines: 148,
   errorLines: 3,
   duplicates: 5,
@@ -193,6 +195,98 @@ export function ImportExportPage() {
   const [importProgress, setImportProgress] = useState(0)
   const [isImporting, setIsImporting] = useState(false)
   const [isDragOver, setIsDragOver] = useState(false)
+  
+  const [dynamicPreviewCols, setDynamicPreviewCols] = useState<string[]>(previewColumns)
+  const [dynamicPreviewRows, setDynamicPreviewRows] = useState<any[][]>(previewRows)
+  const [validationSummary, setValidationSummary] = useState(dummyValidationSummary)
+
+  const studentsData = useAppStore(s => s.students)
+  const teachersData = useAppStore(s => s.teachers)
+
+  const handleExport = () => {
+    toast.success('Génération lancée', {
+      description: `L'export ${exportTypeMap[exportType]} au format ${exportFormat} est en cours de préparation.`
+    })
+    
+    let dataToExport: any[] = []
+    let fileName = ''
+    
+    if (exportType === 'ListeEtudiants') {
+      dataToExport = studentsData.map(s => ({
+        Matricule: s.matricule || 'N/A',
+        Nom: s.lastName,
+        Prénom: s.firstName,
+        Filière: s.currentProgram?.name || '',
+        Niveau: s.currentLevel?.code || '',
+        Statut: s.status,
+        Email: s.email || '',
+        Sexe: s.sex || 'N/A'
+      }))
+      fileName = `etudiants_export_${new Date().getTime()}`
+    } else if (exportType === 'AnnuaireEnseignants') {
+      dataToExport = teachersData.map(t => ({
+        Matricule: t.matricule || 'N/A',
+        Nom: t.lastName,
+        Prénom: t.firstName,
+        Statut: t.status,
+        Spécialité: t.speciality || '',
+        Email: t.email || '',
+        Grade: t.grade || ''
+      }))
+      fileName = `enseignants_export_${new Date().getTime()}`
+    } else {
+      dataToExport = [
+        { ID: 1, Type: exportType, Date: new Date().toLocaleDateString() },
+        { ID: 2, Information: 'Données simulées pour la démo' }
+      ]
+      fileName = `${exportType}_demo`
+    }
+    
+    if (exportFormat === 'Excel') {
+      exportToExcel(dataToExport, fileName, exportTypeMap[exportType])
+    } else if (exportFormat === 'CSV') {
+      exportToCSV(dataToExport, fileName)
+    } else {
+      toast.info('Export PDF en développement. Format Excel généré en remplacement.')
+      exportToExcel(dataToExport, fileName, exportTypeMap[exportType])
+    }
+  }
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement> | React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    setIsDragOver(false)
+    let file: File | undefined
+    if ('dataTransfer' in e) {
+      file = e.dataTransfer.files[0]
+    } else if ('target' in e && e.target.files) {
+      file = e.target.files[0]
+    }
+    
+    if (!file) return
+
+    toast.info('Analyse du fichier...', { description: file.name })
+    
+    try {
+      const data = await parseExcelFile(file)
+      if (data && data.length > 0) {
+        const cols = Object.keys(data[0])
+        setDynamicPreviewCols(cols)
+        setDynamicPreviewRows(data.slice(0, 10).map(row => cols.map(col => String(row[col] || ''))))
+        setValidationSummary({
+          validLines: data.length,
+          errorLines: 0,
+          duplicates: 0
+        })
+        setShowPreview(true)
+        setShowValidation(true)
+        toast.success('Fichier chargé avec succès', { description: `${data.length} lignes trouvées.` })
+      } else {
+        toast.error('Le fichier est vide ou illisible.')
+      }
+    } catch (error) {
+      toast.error('Erreur lors de la lecture du fichier Excel.')
+    }
+  }
 
   const handleImport = useCallback(() => {
     setIsImporting(true)
@@ -430,7 +524,7 @@ export function ImportExportPage() {
                         }`}
                         onDragOver={(e) => { e.preventDefault(); setIsDragOver(true) }}
                         onDragLeave={() => setIsDragOver(false)}
-                        onDrop={(e) => { e.preventDefault(); setIsDragOver(false) }}
+                        onDrop={handleFileUpload}
                       >
                         <motion.div
                           animate={isDragOver ? { scale: 1.05 } : { scale: 1 }}
@@ -442,7 +536,7 @@ export function ImportExportPage() {
                           Glisser-déposer votre fichier ici
                         </p>
                         <p className="text-xs text-gray-400 mb-3">ou cliquer pour sélectionner</p>
-                        <div className="flex items-center justify-center gap-2 flex-wrap">
+                        <div className="flex items-center justify-center gap-2 flex-wrap mb-4">
                           <Badge variant="outline" className="text-[10px] bg-white">
                             <FileSpreadsheet className="size-3 mr-1 text-[#2d7a4f]" />
                             .xlsx
@@ -460,7 +554,16 @@ export function ImportExportPage() {
                             .json
                           </Badge>
                         </div>
-                        <Input type="file" className="hidden" accept=".xlsx,.xls,.csv,.json" />
+                        <Input 
+                          type="file" 
+                          id="file-upload"
+                          className="hidden" 
+                          accept=".xlsx,.xls,.csv,.json" 
+                          onChange={handleFileUpload} 
+                        />
+                        <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => document.getElementById('file-upload')?.click()}>
+                          Parcourir les fichiers
+                        </Button>
                       </motion.div>
                     </div>
 
@@ -488,7 +591,7 @@ export function ImportExportPage() {
                           </div>
                           {showPreview && (
                             <Badge className="text-[10px] bg-[#2d7a4f15] text-[#2d7a4f] border-0">
-                              {previewRows.length} lignes détectées
+                              {dynamicPreviewRows.length} lignes détectées
                             </Badge>
                           )}
                         </div>
@@ -507,13 +610,13 @@ export function ImportExportPage() {
                               <Table>
                                 <TableHeader>
                                   <TableRow className="bg-gray-50">
-                                    {previewColumns.map(col => (
+                                    {dynamicPreviewCols.map(col => (
                                       <TableHead key={col} className="text-xs font-semibold">{col}</TableHead>
                                     ))}
                                   </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                  {previewRows.map((row, idx) => (
+                                  {dynamicPreviewRows.map((row, idx) => (
                                     <TableRow key={idx} className="hover:bg-gray-50/50">
                                       {row.map((cell, cidx) => (
                                         <TableCell key={cidx} className="py-1.5 text-xs text-gray-600">
@@ -945,11 +1048,7 @@ export function ImportExportPage() {
                     {/* Generate Button */}
                     <Button 
                       className="w-full bg-[#1a2744] hover:bg-[#1a2744]/90 text-white text-xs h-10"
-                      onClick={() => {
-                        toast.success('Génération lancée', {
-                          description: `L'export ${exportTypeMap[exportType]} au format ${exportFormat} est en cours de préparation.`
-                        })
-                      }}
+                      onClick={handleExport}
                     >
                       <Download className="size-3.5 mr-1.5" />
                       Générer l&apos;export

@@ -17,6 +17,13 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { exportToExcel } from '@/lib/export'
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -228,7 +235,12 @@ export function StudentsList() {
               </motion.p>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" className="text-xs bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="text-xs bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"
+                onClick={() => exportToExcel(filteredStudents, 'liste_etudiants')}
+              >
                 <FileSpreadsheet className="size-3.5 mr-1.5" />
                 Excel
               </Button>
