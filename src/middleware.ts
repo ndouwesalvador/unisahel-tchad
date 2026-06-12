@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { auth } from '@/lib/auth/config'
+import { getToken } from 'next-auth/jwt'
 
 export const runtime = 'nodejs'
 
@@ -16,8 +16,8 @@ export async function middleware(req: NextRequest) {
   }
 
   // Validate session via NextAuth
-  const session = await auth()
-  if (!session?.user) {
+  const token = await getToken({ req })
+  if (!token) {
     const callbackUrl = encodeURIComponent(nextUrl.pathname + nextUrl.search)
     return NextResponse.redirect(new URL(`/login?callbackUrl=${callbackUrl}`, nextUrl))
   }

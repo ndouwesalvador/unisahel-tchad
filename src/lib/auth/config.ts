@@ -1,4 +1,4 @@
-import NextAuth from 'next-auth'
+import NextAuth, { getServerSession } from 'next-auth'
 import type { Adapter } from 'next-auth/adapters'
 import type { JWT } from 'next-auth/jwt'
 import type { Session, User } from 'next-auth'
@@ -14,18 +14,6 @@ export const authConfig = {
   pages: {
     signIn: '/login',
     error: '/login',
-  },
-  useSecureCookies: process.env.NODE_ENV === 'production',
-  cookies: {
-    sessionToken: {
-      name: 'next-auth.session-token',
-      options: {
-        httpOnly: true,
-        sameSite: 'lax',
-        path: '/',
-        secure: process.env.NODE_ENV === 'production',
-      },
-    },
   },
   providers: [
     Credentials({
@@ -144,4 +132,4 @@ export const authConfig = {
   },
 }
 
-export const { handlers, auth, signIn, signOut } = NextAuth(authConfig)
+export const auth = () => getServerSession(authConfig)
