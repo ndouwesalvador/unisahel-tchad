@@ -8,7 +8,7 @@
 
 ## 🚨 RÉSUMÉ EXÉCUTIF — à lire en premier
 
-> **Mise à jour du 2026-07-24 (suite session) :** Chantiers 0 (build cassé), 1 (sécurité API) et l'essentiel de 2 (migration Postgres) sont **terminés**. Détail en fin de document, section [Journal des correctifs appliqués](#journal-des-correctifs-appliqués).
+> **Mise à jour du 2026-07-24 (suite session) :** Chantiers 0 (build cassé), 1 (sécurité API), l'essentiel de 2 (migration Postgres) sont **terminés**, et Chantier 3 (branchement frontend) est **bien avancé** (11 modules branchés sur leurs vraies API). Détail en fin de document, section [Journal des correctifs appliqués](#journal-des-correctifs-appliqués).
 
 **Diagnostic initial** (avant correctifs) : le build était cassé. Le commit `95bd31c` (export xlsx) avait corrompu **12 fichiers `.tsx`** avec une édition automatique ratée (ligne d'import dupliquée 14 à 34 fois, texte français mal encodé). Résultat à l'époque :
 - `npx tsc --noEmit` → **232 erreurs**
@@ -257,6 +257,23 @@ Découverte en cours de route : une base **Neon Postgres était déjà provision
 - Fallback `NEXTAUTH_SECRET` codé en dur supprimé (`src/middleware.ts`, `src/lib/auth/config.ts`) — centralisé dans `src/lib/auth/secret.ts`, qui lève une erreur explicite si la variable est absente en production au lieu de déployer silencieusement avec un secret public.
 
 Reste pour aller plus loin sur ce chantier (non traité, hors scope de cette passe) : ajouter des restrictions de rôle plus fines sur ces 10 routes (elles restent ouvertes à tout utilisateur authentifié du tenant, comme avant le bug — aucune nouvelle politique de rôle n'a été inventée) ; tests de régression automatisés sur l'auth/isolation tenant.
+
+### Chantier 3 — branchement frontend 🟢 bien avancé
+11 modules branchés sur leurs vraies API (via de nouveaux hooks React Query dans `src/lib/api-hooks.ts` : `useHrStaff`, `useAttendance`, `useScholarships`, `useAlumni`, `useInternships`, `useStructure`, `useRooms`, `useOnlineExams`, `useReports`, `useCommunications`, plus `useTeachers` qui existait déjà) : **teachers, hr, attendance, scholarships, alumni, internships, structure, rooms (room-booking), online-exam, reports, communication**.
+
+Pour chaque page, seule la donnée principale (celle qui a un vrai modèle Prisma + route API) a été branchée ; les jeux de données secondaires sans backend ont été volontairement laissés en l'état plutôt que d'inventer des API :
+- `hr` : demandes de congé, postes vacants, évaluations
+- `attendance` : justificatifs, sanctions
+- `scholarships` : bénéficiaires individuels
+- `internships` : conventions en attente, partenaires, chronologie, évaluations
+- `room-booking` : liste des réservations et inventaire équipement (l'API `/api/rooms` ne renvoie qu'un compteur agrégé de réservations du jour, pas le planning par salle)
+- `online-exam` : banque de questions, résultats étudiants, incidents de surveillance
+- `reports` : modèles de rapport, rapports planifiés, graphiques analytiques
+- `communication` : messagerie/chat en direct, canaux, notifications, brouillons
+
+Plusieurs enums stockés en DB (anglais MAJUSCULES, ex. `"HOSPITALIER"` -> en fait `"HOSPITALIER"`/`"PROFESSIONNEL"`/etc., ou statuts `"EN_COURS"`) ne correspondaient à aucun des unions locales attendues par l'UI (français minuscule avec tirets, ex. `'en-cours'`) — chaque page fait maintenant une traduction explicite et défensive plutôt que de supposer un alignement de casse.
+
+**Reste à brancher** (pas de backend confirmé ou pas encore traité) : `grades-page.tsx` (⚠️ prioritaire — `/api/grades` est une des 5 routes solides depuis le début, jamais branchée au frontend), `candidature`, `timetable`, `transport`, `library`, `results`, `institution`, `maquette`, `announcements`, `advising`, `notification-panel`.
 
 ### Accès Vercel
 Un token Vercel a été fourni en session (durée de vie : 1 semaine annoncée par l'utilisateur). Stocké uniquement dans `.env.local` (ignoré par git, jamais commité). Projet Vercel identifié : `unisahel-tchad` (compte `ndouwesalvadors-projects`), lié en local via `vercel link`. Aucun cron Vercel n'était configuré au moment de l'inspection — à clarifier avec l'utilisateur si un cron spécifique est souhaité (ex. sauvegardes automatisées, cf. Chantier 4.9).
