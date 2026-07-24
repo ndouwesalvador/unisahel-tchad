@@ -48,6 +48,7 @@ import {
   Building2,
 } from 'lucide-react'
 import { useAppStore } from '@/lib/store'
+import { useTeachers } from '@/lib/api-hooks'
 import {
   Dialog,
   DialogContent,
@@ -125,26 +126,30 @@ const gradeFullNames: Record<GradeType, string> = {
   'Professionnel': 'Professionnel',
 }
 
-const demoTeachers: Teacher[] = [
-  { id: '1', matricule: 'ENS/001', nom: 'Youssouf', prenom: 'Abakar Moussa', grade: 'MCF', departement: 'Droit Prive', specialisation: 'Droit des Obligations', heuresSem: 12, statut: 'Actif', telephone: '+235 66 01 02 03', email: 'a.youssouf@univ.td' },
-  { id: '2', matricule: 'ENS/002', nom: 'Hassan Abakar', prenom: 'Fatime', grade: 'MA', departement: 'Droit Public', specialisation: 'Droit Administratif', heuresSem: 14, statut: 'Actif', telephone: '+235 66 04 05 06', email: 'f.hassan@univ.td' },
-  { id: '3', matricule: 'ENS/003', nom: 'Adam Brahim', prenom: 'Mahamat', grade: 'Assistant', departement: 'Mathematiques', specialisation: 'Analyse Numerique', heuresSem: 16, statut: 'Actif', telephone: '+235 66 07 08 09', email: 'm.adam@univ.td' },
-  { id: '4', matricule: 'ENS/004', nom: 'Aboubakar Oumar', prenom: 'Khadidja', grade: 'MA', departement: 'Lettres Modernes', specialisation: 'Litterature Africaine', heuresSem: 14, statut: 'Actif', telephone: '+235 66 10 11 12', email: 'k.aboubakar@univ.td' },
-  { id: '5', matricule: 'ENS/005', nom: 'Deby Itno', prenom: 'Idriss', grade: 'Professeur', departement: 'Informatique', specialisation: 'Intelligence Artificielle', heuresSem: 8, statut: 'Actif', telephone: '+235 66 13 14 15', email: 'i.deby@univ.td' },
-  { id: '6', matricule: 'ENS/006', nom: 'Mahamat Nour', prenom: 'Adam', grade: 'MCF', departement: 'Sciences Economiques', specialisation: 'Macroeconomie', heuresSem: 10, statut: 'Actif', telephone: '+235 66 16 17 18', email: 'a.mahamatnour@univ.td' },
-  { id: '7', matricule: 'ENS/007', nom: 'Djime', prenom: 'Hawa', grade: 'Assistant', departement: 'Droit Prive', specialisation: 'Droit Commercial', heuresSem: 16, statut: 'Actif', telephone: '+235 66 19 20 21', email: 'h.djime@univ.td' },
-  { id: '8', matricule: 'ENS/008', nom: 'Ibrahim Seid', prenom: 'Ousman', grade: 'Vacataire', departement: 'Gestion', specialisation: 'Comptabilite', heuresSem: 6, statut: 'Actif', telephone: '+235 66 22 23 24', email: 'o.ibrahim@univ.td' },
-  { id: '9', matricule: 'ENS/009', nom: 'Hissein', prenom: 'Mariam', grade: 'MA', departement: 'Sociologie', specialisation: 'Sociologie Rurale', heuresSem: 14, statut: 'Conge', telephone: '+235 66 25 26 27', email: 'm.hissein@univ.td' },
-  { id: '10', matricule: 'ENS/010', nom: 'Bichara', prenom: 'Youssouf', grade: 'Professeur', departement: 'Droit Public', specialisation: 'Droit Constitutionnel', heuresSem: 6, statut: 'Actif', telephone: '+235 66 28 29 30', email: 'y.bichara@univ.td' },
-  { id: '11', matricule: 'ENS/011', nom: 'Khamis', prenom: 'Zara', grade: 'Assistant', departement: 'Informatique', specialisation: 'Reseaux et Telecoms', heuresSem: 18, statut: 'Actif', telephone: '+235 66 31 32 33', email: 'z.khamis@univ.td' },
-  { id: '12', matricule: 'ENS/012', nom: 'Ngarndmi', prenom: 'Halime', grade: 'Professionnel', departement: 'Gestion', specialisation: 'Ressources Humaines', heuresSem: 4, statut: 'Actif', telephone: '+235 66 34 35 36', email: 'h.ngarndmi@univ.td' },
-  { id: '13', matricule: 'ENS/013', nom: 'Issa', prenom: 'Abakar', grade: 'MCF', departement: 'Lettres Modernes', specialisation: 'Linguistique', heuresSem: 10, statut: 'Actif', telephone: '+235 66 37 38 39', email: 'a.issa@univ.td' },
-  { id: '14', matricule: 'ENS/014', nom: 'Ahmat', prenom: 'Djibrine', grade: 'Vacataire', departement: 'Sciences Economiques', specialisation: 'Microeconomie', heuresSem: 6, statut: 'Actif', telephone: '+235 66 40 41 42', email: 'd.ahmat@univ.td' },
-  { id: '15', matricule: 'ENS/015', nom: 'Adoum', prenom: 'Khadija', grade: 'MA', departement: 'Droit Prive', specialisation: 'Droit de la Famille', heuresSem: 12, statut: 'Actif', telephone: '+235 66 43 44 45', email: 'k.adoum@univ.td' },
-  { id: '16', matricule: 'ENS/016', nom: 'Seid', prenom: 'Ibrahim', grade: 'Professeur', departement: 'Sociologie', specialisation: 'Anthropologie', heuresSem: 0, statut: 'Retraite', telephone: '+235 66 46 47 48', email: 'i.seid@univ.td' },
-]
+const gradeApiToUi: Record<string, GradeType> = {
+  PROFESSEUR_TITULAIRE: 'Professeur',
+  MAITRE_CONFERENCES: 'MCF',
+  MAITRE_ASSISTANT: 'MA',
+  ASSISTANT: 'Assistant',
+  VACATAIRE: 'Vacataire',
+}
 
-const departements = ['Tous', 'Droit Prive', 'Droit Public', 'Mathematiques', 'Lettres Modernes', 'Informatique', 'Sciences Economiques', 'Gestion', 'Sociologie']
+function mapTeacher(t: any): Teacher {
+  return {
+    id: t.id,
+    matricule: t.employeeId || 'N/A',
+    nom: t.user?.lastName || '',
+    prenom: t.user?.firstName || '',
+    grade: gradeApiToUi[t.grade as string] || 'Professionnel',
+    departement: t.department?.name || 'Non affecte',
+    specialisation: t.specialization || '',
+    heuresSem: t.currentHours ?? t.maxHoursPerWeek ?? 0,
+    statut: t.isActive ? 'Actif' : 'Retraite',
+    telephone: t.user?.phone || undefined,
+    email: t.user?.email || undefined,
+  }
+}
+
 const grades = ['Tous', 'Professeur', 'MCF', 'MA', 'Assistant', 'Vacataire', 'Professionnel']
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -156,15 +161,20 @@ export function TeachersPage() {
   const [filterGrade, setFilterGrade] = useState('Tous')
   const [showNewTeacher, setShowNewTeacher] = useState(false)
 
-  const totalEnseignants = demoTeachers.filter(t => t.statut === 'Actif').length
-  const totalHeures = demoTeachers.reduce((acc, t) => acc + t.heuresSem, 0)
+  const { data: teachersQuery, isLoading } = useTeachers({ limit: 1000 })
+  const teachers: Teacher[] = (teachersQuery?.data || []).map(mapTeacher)
+
+  const departements = ['Tous', ...Array.from(new Set(teachers.map(t => t.departement))).sort()]
+
+  const totalEnseignants = teachers.filter(t => t.statut === 'Actif').length
+  const totalHeures = teachers.reduce((acc, t) => acc + t.heuresSem, 0)
   const gradeBreakdown = {
-    'Professeur': demoTeachers.filter(t => t.grade === 'Professeur').length,
-    'MCF': demoTeachers.filter(t => t.grade === 'MCF').length,
-    'MA': demoTeachers.filter(t => t.grade === 'MA').length,
-    'Assistant': demoTeachers.filter(t => t.grade === 'Assistant').length,
-    'Vacataire': demoTeachers.filter(t => t.grade === 'Vacataire').length,
-    'Professionnel': demoTeachers.filter(t => t.grade === 'Professionnel').length,
+    'Professeur': teachers.filter(t => t.grade === 'Professeur').length,
+    'MCF': teachers.filter(t => t.grade === 'MCF').length,
+    'MA': teachers.filter(t => t.grade === 'MA').length,
+    'Assistant': teachers.filter(t => t.grade === 'Assistant').length,
+    'Vacataire': teachers.filter(t => t.grade === 'Vacataire').length,
+    'Professionnel': teachers.filter(t => t.grade === 'Professionnel').length,
   }
 
   // Count-up stats
@@ -173,7 +183,7 @@ export function TeachersPage() {
   const countHeures = useCountUp(totalHeures, 1300)
   const countVac = useCountUp(gradeBreakdown['Vacataire'], 1000)
 
-  const filteredTeachers = demoTeachers.filter(t => {
+  const filteredTeachers = teachers.filter(t => {
     const matchSearch = search === '' ||
       `${t.nom} ${t.prenom}`.toLowerCase().includes(search.toLowerCase()) ||
       t.matricule.toLowerCase().includes(search.toLowerCase()) ||
@@ -515,7 +525,14 @@ export function TeachersPage() {
                         </motion.tr>
                       )
                     })}
-                    {filteredTeachers.length === 0 && (
+                    {isLoading && (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-8 text-sm text-gray-400">
+                          Chargement...
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    {!isLoading && filteredTeachers.length === 0 && (
                       <TableRow>
                         <TableCell colSpan={8} className="text-center py-8 text-sm text-gray-400">
                           Aucun enseignant trouve
@@ -566,7 +583,7 @@ export function TeachersPage() {
               </div>
               <div>
                 <p className="text-xs text-gray-500">Departements couverts</p>
-                <p className="text-lg font-bold text-[#1a2744]">9</p>
+                <p className="text-lg font-bold text-[#1a2744]">{departements.length - 1}</p>
               </div>
             </div>
           </CardContent>

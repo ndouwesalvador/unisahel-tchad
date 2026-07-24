@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { motion } from 'framer-motion'
+import { useScholarships } from '@/lib/api-hooks'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -74,16 +75,61 @@ interface Scholarship {
   duration: string
 }
 
-const demoScholarships: Scholarship[] = [
-  { id: '1', name: "Bourse d'Excellence", type: 'merite', budget: 15000000, maxBeneficiaires: 50, beneficiaires: 42, status: 'active', duration: '9 mois' },
-  { id: '2', name: 'Bourse du Ministere', type: 'gouvernemental', budget: 10000000, maxBeneficiaires: 80, beneficiaires: 72, status: 'active', duration: '12 mois' },
-  { id: '3', name: 'Fonds de Solidarite Africaine', type: 'besoin', budget: 8000000, maxBeneficiaires: 45, beneficiaires: 38, status: 'active', duration: '10 mois' },
-  { id: '4', name: 'Bourse Master AUF', type: 'international', budget: 5000000, maxBeneficiaires: 20, beneficiaires: 18, status: 'active', duration: '24 mois' },
-  { id: '5', name: "Aide d'Urgence Humanitaire", type: 'urgence', budget: 3000000, maxBeneficiaires: 35, beneficiaires: 35, status: 'cloturee', duration: '6 mois' },
-  { id: '6', name: 'Bourse de Recherche', type: 'recherche', budget: 2000000, maxBeneficiaires: 12, beneficiaires: 8, status: 'active', duration: '12 mois' },
-  { id: '7', name: 'Programme Erasmus+', type: 'echange', budget: 1500000, maxBeneficiaires: 10, beneficiaires: 7, status: 'en_attente', duration: '6 mois' },
-  { id: '8', name: 'Bourse Sportive', type: 'sportif', budget: 500000, maxBeneficiaires: 60, beneficiaires: 55, status: 'active', duration: '9 mois' },
-]
+// ─── API Mapping ────────────────────────────────────────────────────────────
+
+const knownScholarshipTypes = ['merite', 'besoin', 'gouvernemental', 'international', 'urgence', 'recherche', 'echange', 'sportif'] as const
+type KnownScholarshipType = typeof knownScholarshipTypes[number]
+
+const knownScholarshipStatuses = ['active', 'cloturee', 'en_attente'] as const
+type KnownScholarshipStatus = typeof knownScholarshipStatuses[number]
+
+interface ScholarshipRecord {
+  id: string
+  name: string
+  type: string
+  budget: number
+  currency: string
+  duration: string | null
+  eligibility: string | null
+  maxBeneficiaries: number | null
+  currentCount: number
+  status: string
+  startDate: string | null
+  endDate: string | null
+}
+
+function isKnownScholarshipType(value: string): value is KnownScholarshipType {
+  return (knownScholarshipTypes as readonly string[]).includes(value)
+}
+
+function isKnownScholarshipStatus(value: string): value is KnownScholarshipStatus {
+  return (knownScholarshipStatuses as readonly string[]).includes(value)
+}
+
+function mapScholarship(r: ScholarshipRecord): Scholarship {
+  const lowerType = (r.type || '').toLowerCase()
+  const type: KnownScholarshipType = isKnownScholarshipType(lowerType) ? lowerType : 'merite'
+
+  const rawStatus = r.status || ''
+  const lowerStatus = rawStatus.toLowerCase()
+  let status: KnownScholarshipStatus = 'active'
+  if (rawStatus.toUpperCase() === 'ACTIVE') {
+    status = 'active'
+  } else if (isKnownScholarshipStatus(lowerStatus)) {
+    status = lowerStatus
+  }
+
+  return {
+    id: r.id,
+    name: r.name,
+    type,
+    budget: r.budget,
+    maxBeneficiaires: r.maxBeneficiaries ?? 0,
+    beneficiaires: r.currentCount ?? 0,
+    status,
+    duration: r.duration || '',
+  }
+}
 
 interface Beneficiary {
   id: string
@@ -156,15 +202,18 @@ export function ScholarshipsPage() {
   const [scholarshipSearch, setScholarshipSearch] = useState('')
   const [newScholarshipForm, setNewScholarshipForm] = useState({ name: '', type: '', budget: '', duree: '', maxBeneficiaires: '' })
 
+  const { data: scholarshipsQuery, isLoading } = useScholarships()
+  const scholarships: Scholarship[] = (scholarshipsQuery?.scholarships || []).map(mapScholarship)
+
   // Stats
-  const totalActive = demoScholarships.filter(s => s.status === 'active').length
-  const totalBeneficiaires = demoScholarships.reduce((acc, s) => acc + s.beneficiaires, 0)
-  const totalBudget = demoScholarships.reduce((acc, s) => acc + s.budget, 0)
-  const totalMaxBeneficiaires = demoScholarships.reduce((acc, s) => acc + s.maxBeneficiaires, 0)
+  const totalActive = scholarships.filter(s => s.status === 'active').length
+  const totalBeneficiaires = scholarships.reduce((acc, s) => acc + s.beneficiaires, 0)
+  const totalBudget = scholarships.reduce((acc, s) => acc + s.budget, 0)
+  const totalMaxBeneficiaires = scholarships.reduce((acc, s) => acc + s.maxBeneficiaires, 0)
   const tauxCouverture = totalMaxBeneficiaires > 0 ? Math.round((totalBeneficiaires / totalMaxBeneficiaires) * 100) : 0
 
   // Filter scholarships
-  const filteredScholarships = demoScholarships.filter(s => {
+  const filteredScholarships = scholarships.filter(s => {
     const matchSearch = scholarshipSearch === '' ||
       s.name.toLowerCase().includes(scholarshipSearch.toLowerCase())
     return matchSearch
@@ -197,7 +246,7 @@ export function ScholarshipsPage() {
   }))
 
   const totalCommitted = demoBeneficiaries.filter(b => b.status === 'beneficiaire').reduce((acc, b) => acc + b.amount, 0)
-  const totalAvailable = demoScholarships.reduce((acc, s) => {
+  const totalAvailable = scholarships.reduce((acc, s) => {
     const committed = demoBeneficiaries.filter(b => b.status === 'beneficiaire' && b.program === s.name).reduce((sum, b) => sum + b.amount, 0)
     return acc + (s.budget - committed)
   }, 0)
@@ -324,14 +373,14 @@ export function ScholarshipsPage() {
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Bourses actives</p>
                 <p className="text-xl font-bold text-[#2d7a4f] mt-1">{totalActive}</p>
-                <p className="text-xs text-gray-400 mt-1">sur {demoScholarships.length} programmes</p>
+                <p className="text-xs text-gray-400 mt-1">sur {scholarships.length} programmes</p>
               </div>
               <div className="w-10 h-10 rounded-xl bg-[#2d7a4f15] flex items-center justify-center">
                 <Award className="size-5 text-[#2d7a4f]" />
               </div>
             </div>
             <div className="mt-3">
-              <Progress value={(totalActive / demoScholarships.length) * 100} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#2d7a4f]" />
+              <Progress value={scholarships.length > 0 ? (totalActive / scholarships.length) * 100 : 0} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#2d7a4f]" />
             </div>
           </CardContent>
         </Card>
@@ -351,7 +400,7 @@ export function ScholarshipsPage() {
               </div>
             </div>
             <div className="mt-3">
-              <Progress value={(totalBeneficiaires / totalMaxBeneficiaires) * 100} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#1a2744]" />
+              <Progress value={totalMaxBeneficiaires > 0 ? (totalBeneficiaires / totalMaxBeneficiaires) * 100 : 0} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#1a2744]" />
             </div>
           </CardContent>
         </Card>
@@ -499,7 +548,14 @@ export function ScholarshipsPage() {
                       </TableRow>
                     )
                   })}
-                  {filteredScholarships.length === 0 && (
+                  {isLoading && (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8 text-sm text-gray-400">
+                        Chargement...
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {!isLoading && filteredScholarships.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={7} className="text-center py-8 text-sm text-gray-400">
                         Aucun programme trouve

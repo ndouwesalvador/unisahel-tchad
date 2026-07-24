@@ -1,5 +1,18 @@
 import { useQuery } from '@tanstack/react-query';
 
+function useSimpleGet(key: string, path: string) {
+  return useQuery({
+    queryKey: [key],
+    queryFn: async () => {
+      const res = await fetch(path);
+      if (!res.ok) {
+        throw new Error(`Failed to fetch ${key}`);
+      }
+      return res.json();
+    },
+  });
+}
+
 export function useDashboardStats() {
   return useQuery({
     queryKey: ['dashboardStats'],
@@ -68,4 +81,44 @@ export function usePayments(params?: { search?: string; status?: string; payment
       return res.json();
     },
   });
+}
+
+export function useHrStaff() {
+  return useSimpleGet('hrStaff', '/api/hr');
+}
+
+export function useAttendance() {
+  return useSimpleGet('attendance', '/api/attendance');
+}
+
+export function useScholarships() {
+  return useSimpleGet('scholarships', '/api/scholarships');
+}
+
+export function useAlumni() {
+  return useSimpleGet('alumni', '/api/alumni');
+}
+
+export function useInternships() {
+  return useSimpleGet('internships', '/api/internships');
+}
+
+export function useStructure() {
+  return useSimpleGet('structure', '/api/structure');
+}
+
+export function useRooms() {
+  return useSimpleGet('rooms', '/api/rooms');
+}
+
+export function useOnlineExams() {
+  return useSimpleGet('onlineExams', '/api/online-exams');
+}
+
+export function useReports() {
+  return useSimpleGet('reports', '/api/reports');
+}
+
+export function useCommunications() {
+  return useSimpleGet('communications', '/api/communications');
 }

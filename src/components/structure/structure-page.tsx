@@ -46,6 +46,7 @@ import {
   Handshake,
   TrendingUp,
 } from 'lucide-react'
+import { useStructure } from '@/lib/api-hooks'
 
 // ─── Faculty Data ────────────────────────────────────────────────────────────
 
@@ -70,184 +71,128 @@ interface Faculty {
   teachers: number
 }
 
-const faculties: Faculty[] = [
-  {
-    id: 'f1',
-    name: 'Faculté de Droit et Sciences Politiques',
-    dean: 'Pr. Youssouf Abakar',
-    icon: Scale,
-    gradientFrom: '#1a2744',
-    gradientTo: '#2d4a7a',
-    departments: [
-      {
-        id: 'd1', name: 'Droit Privé', icon: Scale, teachers: 12, students: 340,
-        programs: [
-          { id: 'fi1', name: 'Droit Privé', levels: ['Licence 1', 'Licence 2', 'Licence 3', 'Master 1', 'Master 2'] },
-          { id: 'fi2', name: 'Droit des Affaires', levels: ['Master 1', 'Master 2'] },
-        ],
-      },
-      {
-        id: 'd2', name: 'Droit Public', icon: Landmark, teachers: 10, students: 280,
-        programs: [
-          { id: 'fi3', name: 'Droit Public', levels: ['Licence 1', 'Licence 2', 'Licence 3', 'Master 1', 'Master 2'] },
-          { id: 'fi4', name: 'Relations Internationales', levels: ['Master 1', 'Master 2'] },
-        ],
-      },
-      {
-        id: 'd3', name: 'Sciences Politiques', icon: Handshake, teachers: 6, students: 150,
-        programs: [
-          { id: 'fi5', name: 'Sciences Politiques', levels: ['Licence 1', 'Licence 2', 'Licence 3'] },
-        ],
-      },
-      {
-        id: 'd4', name: 'Sciences Criminelles', icon: Scale, teachers: 4, students: 90,
-        programs: [
-          { id: 'fi6', name: 'Sciences Criminelles', levels: ['Licence 1', 'Licence 2', 'Licence 3'] },
-        ],
-      },
-    ],
-    students: 860,
-    teachers: 32,
-  },
-  {
-    id: 'f2',
-    name: 'Faculté des Sciences et Techniques',
-    dean: 'Dr. Mahamat Nour Ibrahim',
-    icon: FlaskConical,
-    gradientFrom: '#2d7a4f',
-    gradientTo: '#3da66a',
-    departments: [
-      {
-        id: 'd5', name: 'Informatique', icon: Laptop, teachers: 8, students: 220,
-        programs: [
-          { id: 'fi7', name: 'Informatique', levels: ['Licence 1', 'Licence 2', 'Licence 3', 'Master 1'] },
-          { id: 'fi8', name: 'Systèmes d\'Information', levels: ['Master 1', 'Master 2'] },
-        ],
-      },
-      {
-        id: 'd6', name: 'Biologie', icon: Microscope, teachers: 7, students: 180,
-        programs: [
-          { id: 'fi9', name: 'Biologie Animale', levels: ['Licence 1', 'Licence 2', 'Licence 3'] },
-          { id: 'fi10', name: 'Biologie Végétale', levels: ['Licence 1', 'Licence 2', 'Licence 3'] },
-        ],
-      },
-      {
-        id: 'd7', name: 'Mathématiques', icon: TrendingUp, teachers: 6, students: 130,
-        programs: [
-          { id: 'fi11', name: 'Mathématiques', levels: ['Licence 1', 'Licence 2', 'Licence 3'] },
-        ],
-      },
-      {
-        id: 'd8', name: 'Physique-Chimie', icon: FlaskConical, teachers: 5, students: 110,
-        programs: [
-          { id: 'fi12', name: 'Physique', levels: ['Licence 1', 'Licence 2', 'Licence 3'] },
-          { id: 'fi13', name: 'Chimie', levels: ['Licence 1', 'Licence 2', 'Licence 3'] },
-        ],
-      },
-    ],
-    students: 640,
-    teachers: 26,
-  },
-  {
-    id: 'f3',
-    name: 'Faculté des Lettres, Langues et Arts',
-    dean: 'Dr. Hassan Fatimé',
-    icon: PenTool,
-    gradientFrom: '#d4a853',
-    gradientTo: '#e8c97a',
-    departments: [
-      {
-        id: 'd9', name: 'Français', icon: BookOpen, teachers: 8, students: 200,
-        programs: [
-          { id: 'fi14', name: 'Lettres Modernes', levels: ['Licence 1', 'Licence 2', 'Licence 3'] },
-          { id: 'fi15', name: 'Linguistique', levels: ['Master 1', 'Master 2'] },
-        ],
-      },
-      {
-        id: 'd10', name: 'Anglais', icon: Globe, teachers: 6, students: 160,
-        programs: [
-          { id: 'fi16', name: 'Anglais', levels: ['Licence 1', 'Licence 2', 'Licence 3'] },
-        ],
-      },
-      {
-        id: 'd11', name: 'Arabe', icon: BookOpen, teachers: 5, students: 140,
-        programs: [
-          { id: 'fi17', name: 'Langue et Littérature Arabes', levels: ['Licence 1', 'Licence 2', 'Licence 3'] },
-        ],
-      },
-      {
-        id: 'd12', name: 'Géographie', icon: Globe, teachers: 4, students: 100,
-        programs: [
-          { id: 'fi18', name: 'Géographie', levels: ['Licence 1', 'Licence 2', 'Licence 3'] },
-        ],
-      },
-    ],
-    students: 600,
-    teachers: 23,
-  },
-  {
-    id: 'f4',
-    name: 'Faculté des Sciences de la Santé',
-    dean: 'Dr. Khamis Seid',
-    icon: Stethoscope,
-    gradientFrom: '#5b8c5a',
-    gradientTo: '#7ab87a',
-    departments: [
-      {
-        id: 'd13', name: 'Médecine', icon: Stethoscope, teachers: 15, students: 180,
-        programs: [
-          { id: 'fi19', name: 'Médecine Générale', levels: ['1ère année', '2ème année', '3ème année', '4ème année', '5ème année', '6ème année', '7ème année'] },
-        ],
-      },
-      {
-        id: 'd14', name: 'Pharmacie', icon: FlaskConical, teachers: 8, students: 80,
-        programs: [
-          { id: 'fi20', name: 'Pharmacie', levels: ['1ère année', '2ème année', '3ème année', '4ème année', '5ème année'] },
-        ],
-      },
-      {
-        id: 'd15', name: 'Santé Publique', icon: Leaf, teachers: 4, students: 60,
-        programs: [
-          { id: 'fi21', name: 'Santé Publique', levels: ['Master 1', 'Master 2'] },
-        ],
-      },
-    ],
-    students: 320,
-    teachers: 27,
-  },
-  {
-    id: 'f5',
-    name: 'Faculté des Sciences Économiques et de Gestion',
-    dean: 'Mme Khamis Caisse',
-    icon: TrendingUp,
-    gradientFrom: '#8b5e3c',
-    gradientTo: '#b87a50',
-    departments: [
-      {
-        id: 'd16', name: 'Économie', icon: TrendingUp, teachers: 8, students: 260,
-        programs: [
-          { id: 'fi22', name: 'Sciences Économiques', levels: ['Licence 1', 'Licence 2', 'Licence 3', 'Master 1'] },
-          { id: 'fi23', name: 'Économie Appliquée', levels: ['Master 1', 'Master 2'] },
-        ],
-      },
-      {
-        id: 'd17', name: 'Gestion', icon: Building2, teachers: 7, students: 240,
-        programs: [
-          { id: 'fi24', name: 'Sciences de Gestion', levels: ['Licence 1', 'Licence 2', 'Licence 3'] },
-          { id: 'fi25', name: 'Comptabilité-Contrôle', levels: ['Master 1', 'Master 2'] },
-        ],
-      },
-      {
-        id: 'd18', name: 'Commerce International', icon: Globe, teachers: 4, students: 100,
-        programs: [
-          { id: 'fi26', name: 'Commerce International', levels: ['Licence 1', 'Licence 2', 'Licence 3'] },
-        ],
-      },
-    ],
-    students: 600,
-    teachers: 19,
-  },
+// ─── API Response Types (shape returned by GET /api/structure) ────────────
+
+interface ApiTeacherRef {
+  id: string
+  employeeId: string
+  grade: string
+  specialization?: string | null
+  user: { firstName: string; lastName: string }
+}
+
+interface ApiCourseElement {
+  id: string
+  teacher: ApiTeacherRef | null
+}
+
+interface ApiTeachingUnit {
+  id: string
+  responsible: ApiTeacherRef | null
+  courseElements: ApiCourseElement[]
+}
+
+interface ApiSemester {
+  id: string
+  teachingUnits: ApiTeachingUnit[]
+}
+
+interface ApiLevel {
+  id: string
+  name: string
+  orderIndex: number
+  semesters: ApiSemester[]
+}
+
+interface ApiProgram {
+  id: string
+  name: string
+  levels: ApiLevel[]
+}
+
+interface ApiDepartment {
+  id: string
+  name: string
+  programs: ApiProgram[]
+}
+
+export interface ApiFaculty {
+  id: string
+  name: string
+  deanName?: string | null
+  deanTitle?: string | null
+  departments: ApiDepartment[]
+}
+
+// ─── Mapping: API shape → Local UI shape ───────────────────────────────────
+//
+// Cosmetic fields with no equivalent in the API response (icon, gradient
+// colors) are assigned from a fixed palette cycled by index rather than
+// fabricated per-entity. Student counts have no data source on this endpoint
+// (the Student model isn't included in /api/structure) and default to 0.
+// Teacher counts ARE derived from real data: distinct teachers referenced as
+// `responsible` or `teacher` on teaching units / course elements nested under
+// the faculty or department.
+
+const FACULTY_ICONS: React.ElementType[] = [Scale, FlaskConical, PenTool, Stethoscope, TrendingUp, Building2, Landmark, Globe]
+const FACULTY_GRADIENTS: [string, string][] = [
+  ['#1a2744', '#2d4a7a'],
+  ['#2d7a4f', '#3da66a'],
+  ['#d4a853', '#e8c97a'],
+  ['#5b8c5a', '#7ab87a'],
+  ['#8b5e3c', '#b87a50'],
 ]
+const DEPARTMENT_ICONS: React.ElementType[] = [BookOpen, Laptop, Microscope, TrendingUp, FlaskConical, Globe, Landmark, Handshake, Scale, Leaf]
+
+function collectTeacherIdsFromPrograms(programs: ApiProgram[]): Set<string> {
+  const ids = new Set<string>()
+  programs.forEach(program => {
+    program.levels.forEach(level => {
+      level.semesters.forEach(semester => {
+        semester.teachingUnits.forEach(unit => {
+          if (unit.responsible) ids.add(unit.responsible.id)
+          unit.courseElements.forEach(element => {
+            if (element.teacher) ids.add(element.teacher.id)
+          })
+        })
+      })
+    })
+  })
+  return ids
+}
+
+function mapDepartment(dept: ApiDepartment, index: number): Department {
+  return {
+    id: dept.id,
+    name: dept.name,
+    icon: DEPARTMENT_ICONS[index % DEPARTMENT_ICONS.length],
+    programs: dept.programs.map(program => ({
+      id: program.id,
+      name: program.name,
+      levels: program.levels.map(level => level.name),
+    })),
+    teachers: collectTeacherIdsFromPrograms(dept.programs).size,
+    students: 0, // no student/enrollment data available from /api/structure
+  }
+}
+
+function mapFaculty(faculty: ApiFaculty, index: number): Faculty {
+  const [gradientFrom, gradientTo] = FACULTY_GRADIENTS[index % FACULTY_GRADIENTS.length]
+  const dean = [faculty.deanTitle, faculty.deanName].filter(Boolean).join(' ').trim()
+  const allPrograms = faculty.departments.flatMap(d => d.programs)
+
+  return {
+    id: faculty.id,
+    name: faculty.name,
+    dean: dean || 'Non renseigné',
+    icon: FACULTY_ICONS[index % FACULTY_ICONS.length],
+    gradientFrom,
+    gradientTo,
+    departments: faculty.departments.map((dept, i) => mapDepartment(dept, i)),
+    students: 0, // no student/enrollment data available from /api/structure
+    teachers: collectTeacherIdsFromPrograms(allPrograms).size,
+  }
+}
 
 // ─── Org Chart Tree Data ────────────────────────────────────────────────────
 
@@ -261,7 +206,7 @@ interface OrgNode {
   children?: OrgNode[]
 }
 
-function buildOrgTree(): OrgNode {
+function buildOrgTree(faculties: Faculty[]): OrgNode {
   return {
     id: 'root',
     name: 'Université de N\'Djamena',
@@ -294,8 +239,6 @@ function buildOrgTree(): OrgNode {
     })),
   }
 }
-
-const orgTree = buildOrgTree()
 
 // ─── Org Node Component ────────────────────────────────────────────────────
 
@@ -604,8 +547,14 @@ function AddEntityDialog({
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 export function StructurePage() {
+  const { data: structureQuery, isLoading } = useStructure()
   const [viewMode, setViewMode] = useState<'cards' | 'tree'>('cards')
   const [searchQuery, setSearchQuery] = useState('')
+
+  const faculties: Faculty[] = ((structureQuery?.faculties || []) as ApiFaculty[]).map(
+    (faculty, index) => mapFaculty(faculty, index)
+  )
+  const orgTree = buildOrgTree(faculties)
 
   const totalDepartments = faculties.reduce((acc, f) => acc + f.departments.length, 0)
   const totalPrograms = faculties.reduce(
@@ -754,6 +703,11 @@ export function StructurePage() {
       </motion.div>
 
       {/* Content */}
+      {isLoading ? (
+        <div className="flex items-center justify-center py-16 text-sm text-gray-400">
+          Chargement...
+        </div>
+      ) : (
       <AnimatePresence mode="wait">
         {viewMode === 'cards' ? (
           <motion.div
@@ -852,6 +806,7 @@ export function StructurePage() {
           </motion.div>
         )}
       </AnimatePresence>
+      )}
     </div>
   )
 }

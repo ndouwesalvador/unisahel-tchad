@@ -3,6 +3,7 @@
 import { exportToExcel } from '@/lib/export'
 import { useState } from 'react'
 import { motion } from 'framer-motion'
+import { useAlumni } from '@/lib/api-hooks'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -66,23 +67,51 @@ interface Alumnus {
   telephone: string
 }
 
-const demoAlumni: Alumnus[] = [
-  { id: '1', nom: 'HISSEIN', prenom: 'Adam', diplome: 'Licence', annee: 2020, filiere: 'Informatique', poste: 'Ingenieur IT', entreprise: 'Orange Tchad', pays: 'Tchad', statut: 'actif', contact: true, email: 'adam.hissein@orange.td', telephone: '+235 66 12 34 56' },
-  { id: '2', nom: 'NADJIKO', prenom: 'Marie', diplome: 'Master', annee: 2018, filiere: 'Droit', poste: 'Avocate', entreprise: 'Cabinet Nadjiko & Associes', pays: 'Tchad', statut: 'actif', contact: true, email: 'marie.nadjiko@cabinet.td', telephone: '+235 66 78 90 12' },
-  { id: '3', nom: 'ABDALLAH', prenom: 'Ibrahim', diplome: 'Doctorat', annee: 2016, filiere: 'Medecine', poste: 'Medecin', entreprise: 'Hopital General de N\'Djamena', pays: 'Tchad', statut: 'actif', contact: true, email: 'ibrahim.abdallah@hopital.td', telephone: '+235 66 23 45 67' },
-  { id: '4', nom: 'DJIMRANGAR', prenom: 'Fatime', diplome: 'Licence', annee: 2022, filiere: 'Economie', poste: 'Cadre banque', entreprise: 'Banque Sahelo-Saharienne', pays: 'Tchad', statut: 'actif', contact: true, email: 'fatime.djim@bs2i.td', telephone: '+235 66 34 56 78' },
-  { id: '5', nom: 'MAHAMAT', prenom: 'Youssouf', diplome: 'Master', annee: 2019, filiere: 'Informatique', poste: 'Directeur IT', entreprise: 'Airtel Tchad', pays: 'Tchad', statut: 'actif', contact: false, email: 'youssouf.mahamat@airtel.td', telephone: '+235 66 45 67 89' },
-  { id: '6', nom: 'NGARNDMI', prenom: 'Halime', diplome: 'Licence', annee: 2021, filiere: 'Mathematiques', poste: 'Enseignant', entreprise: 'Lycee Felix Eboue', pays: 'Tchad', statut: 'actif', contact: true, email: 'halime.ngarndmi@education.td', telephone: '+235 66 56 78 90' },
-  { id: '7', nom: 'BAKARY', prenom: 'Soumaine', diplome: 'Master', annee: 2017, filiere: 'Droit', poste: 'Directeur ONG', entreprise: 'ONG Action Sahel', pays: 'Cameroun', statut: 'actif', contact: true, email: 'soumaine.bakary@actionsahel.org', telephone: '+237 6 12 34 56' },
-  { id: '8', nom: 'KHAMIS', prenom: 'Khadija', diplome: 'Licence', annee: 2023, filiere: 'Economie', poste: 'Entrepreneure', entreprise: 'Sahel Consulting', pays: 'Senegal', statut: 'actif', contact: true, email: 'khadija.khamis@sahelconsulting.sn', telephone: '+221 77 12 34 56' },
-  { id: '9', nom: 'ABAKAR', prenom: 'Moussa', diplome: 'Doctorat', annee: 2015, filiere: 'Medecine', poste: 'Chirurgien', entreprise: 'CHU de Dakar', pays: 'Senegal', statut: 'actif', contact: false, email: '', telephone: '' },
-  { id: '10', nom: 'YOUNOUS', prenom: 'Amina', diplome: 'Master', annee: 2020, filiere: 'Informatique', poste: 'Chef de projet', entreprise: 'Ministere des Finances', pays: 'Niger', statut: 'inactif', contact: false, email: 'amina.younous@finances.ne', telephone: '' },
-  { id: '11', nom: 'SEID', prenom: 'Hassane', diplome: 'Licence', annee: 2024, filiere: 'Droit', poste: 'Juriste', entreprise: 'Societe des Hydrocarbures', pays: 'Tchad', statut: 'actif', contact: true, email: 'hassane.seid@sht.td', telephone: '+235 66 67 89 01' },
-  { id: '12', nom: 'HAROUN', prenom: 'Mariam', diplome: 'Master', annee: 2019, filiere: 'Economie', poste: 'Analyste financiere', entreprise: 'BCEAO', pays: 'Cote d\'Ivoire', statut: 'actif', contact: true, email: 'mariam.haroun@bceao.ci', telephone: '+225 07 12 34 56' },
-  { id: '13', nom: 'ADAM', prenom: 'Brahim', diplome: 'Licence', annee: 2022, filiere: 'Mathematiques', poste: 'Data Analyst', entreprise: 'Orange Sonatel', pays: 'Senegal', statut: 'inactif', contact: true, email: 'brahim.adam@sonatel.sn', telephone: '+221 78 12 34 56' },
-  { id: '14', nom: 'ISSA', prenom: 'Oumar', diplome: 'Master', annee: 2018, filiere: 'Informatique', poste: 'CTO', entreprise: 'TechSahel', pays: 'France', statut: 'injoignable', contact: false, email: '', telephone: '' },
-  { id: '15', nom: 'ZAKARIA', prenom: 'Fatoumata', diplome: 'Doctorat', annee: 2016, filiere: 'Medecine', poste: 'Professeur', entreprise: 'Universite de N\'Djamena', pays: 'Tchad', statut: 'actif', contact: true, email: 'fatoumata.zakaria@univ-ndjamena.td', telephone: '+235 66 89 01 23' },
-]
+interface AlumniRecord {
+  id: string
+  studentId: string
+  firstName: string
+  lastName: string
+  email: string | null
+  phone: string | null
+  diploma: string | null
+  graduationYear: number
+  program: string | null
+  currentPosition: string | null
+  company: string | null
+  sector: string | null
+  country: string | null
+  city: string | null
+  status: string
+  isContributing: boolean
+  contributionAmt: number
+  linkedIn: string | null
+  lastContactDate: string | null
+}
+
+const statutApiToUi: Record<string, Alumnus['statut']> = {
+  ACTIF: 'actif',
+  INACTIF: 'inactif',
+  INJOIGNABLE: 'injoignable',
+}
+
+function mapAlumnus(a: AlumniRecord): Alumnus {
+  return {
+    id: a.id,
+    nom: a.lastName,
+    prenom: a.firstName,
+    diplome: a.diploma || '',
+    annee: a.graduationYear,
+    filiere: a.program || '',
+    poste: a.currentPosition || '',
+    entreprise: a.company || '',
+    pays: a.country || '',
+    statut: statutApiToUi[(a.status || '').toUpperCase()] || 'actif',
+    contact: !!a.lastContactDate,
+    email: a.email || '',
+    telephone: a.phone || '',
+  }
+}
 
 const statutConfig: Record<string, { label: string; className: string }> = {
   actif: { label: 'Actif', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0' },
@@ -161,7 +190,10 @@ export function AlumniPage() {
   const [statusFilter, setStatusFilter] = useState('tous')
   const [selectedAlumnus, setSelectedAlumnus] = useState<string | null>('3')
 
-  const filteredAlumni = demoAlumni.filter((a) => {
+  const { data: alumniQuery, isLoading } = useAlumni()
+  const alumni: Alumnus[] = (alumniQuery?.alumni || []).map(mapAlumnus)
+
+  const filteredAlumni = alumni.filter((a) => {
     const matchSearch =
       search === '' ||
       `${a.nom} ${a.prenom}`.toLowerCase().includes(search.toLowerCase()) ||
@@ -173,7 +205,7 @@ export function AlumniPage() {
     return matchSearch && matchYear && matchFiliere && matchCountry && matchStatus
   })
 
-  const selectedAlumnusData = demoAlumni.find((a) => a.id === selectedAlumnus)
+  const selectedAlumnusData = alumni.find((a) => a.id === selectedAlumnus)
 
   const maxGradCount = Math.max(...graduationYears.map((y) => y.count))
 
@@ -468,7 +500,14 @@ export function AlumniPage() {
                       </TableCell>
                     </TableRow>
                   ))}
-                  {filteredAlumni.length === 0 && (
+                  {isLoading && (
+                    <TableRow>
+                      <TableCell colSpan={9} className="text-center py-8 text-sm text-gray-400">
+                        Chargement...
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {!isLoading && filteredAlumni.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={9} className="text-center py-8 text-sm text-gray-400">
                         Aucun alumni trouve

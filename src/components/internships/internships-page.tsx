@@ -2,6 +2,7 @@
 
 import { exportToExcel } from '@/lib/export'
 import { useState, useEffect, useRef } from 'react'
+import { useInternships } from '@/lib/api-hooks'
 import { motion } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -91,20 +92,48 @@ interface InternshipEntry {
   tuteur: string
 }
 
-const demoInternships: InternshipEntry[] = [
-  { id: '1', studentName: 'MAHAMAT Youssouf', matricule: 'UDN/L3/2024/001', entreprise: "Hopital General de Reference N'Djamena", type: 'hospitalier', period: '01/03/2025 - 31/08/2025', status: 'en-cours', tuteur: 'Dr. KHAMIS Abdoulaye' },
-  { id: '2', studentName: 'FATIME Khamis', matricule: 'UDN/L2/2024/002', entreprise: 'Orange Tchad', type: 'professionnel', period: '15/02/2025 - 15/07/2025', status: 'convention-signee', tuteur: 'M. DJIMARTINOUBA Robert' },
-  { id: '3', studentName: 'ISSA Mahamat Nour', matricule: 'UDN/M1/2024/003', entreprise: 'Banque Sahelo-Saharienne', type: 'professionnel', period: '01/01/2025 - 30/06/2025', status: 'en-cours', tuteur: 'Mme. NASSERINGAR Fatime' },
-  { id: '4', studentName: 'HAWA Ngarndmi', matricule: 'UDN/L3/2024/004', entreprise: 'Ministere de la Sante', type: 'recherche', period: '01/04/2025 - 30/09/2025', status: 'en-attente', tuteur: 'Dr. HISSEIN Adam' },
-  { id: '5', studentName: 'ABAKAR Adam Hassane', matricule: 'UDN/M2/2024/005', entreprise: 'UNICEF Tchad', type: 'fin-etudes', period: '15/01/2025 - 15/07/2025', status: 'en-cours', tuteur: 'M. BICHARA Nathanael' },
-  { id: '6', studentName: 'KHAMIS Fatime', matricule: 'UDN/L2/2024/006', entreprise: 'Airtel', type: 'professionnel', period: '01/02/2025 - 31/07/2025', status: 'termine', tuteur: 'M. OUMAR Ibrahim' },
-  { id: '7', studentName: 'NGARNDMI Halime', matricule: 'UDN/L3/2024/007', entreprise: 'Bureau Veritas', type: 'professionnel', period: '01/03/2025 - 31/08/2025', status: 'en-cours', tuteur: 'Mme. DJIMADOUMBER Lea' },
-  { id: '8', studentName: 'HISSEIN Mariam', matricule: 'UDN/M1/2024/008', entreprise: 'Total Energies Tchad', type: 'fin-etudes', period: '01/02/2025 - 30/07/2025', status: 'convention-signee', tuteur: 'M. SEID Mahamat' },
-  { id: '9', studentName: 'ADAM Khadija', matricule: 'UDN/L2/2024/009', entreprise: "Hopital General de Reference N'Djamena", type: 'hospitalier', period: '15/03/2025 - 15/09/2025', status: 'en-cours', tuteur: 'Dr. ABAKAR Youssouf' },
-  { id: '10', studentName: 'BICHARA Hawa', matricule: 'UDN/L1/2024/010', entreprise: 'Ministere de la Sante', type: 'hospitalier', period: '01/05/2025 - 31/10/2025', status: 'en-attente', tuteur: 'Dr. FATIME Khamis' },
-  { id: '11', studentName: 'SEID Ibrahim', matricule: 'UDN/L3/2024/011', entreprise: 'Orange Tchad', type: 'professionnel', period: '01/01/2025 - 30/06/2025', status: 'annule', tuteur: 'M. ISSA Nour' },
-  { id: '12', studentName: 'DJIMADOUMBER Deubong', matricule: 'UDN/M2/2024/012', entreprise: 'UNICEF Tchad', type: 'recherche', period: '15/02/2025 - 15/08/2025', status: 'en-cours', tuteur: 'Mme. HAWA Ngarndmi' },
-]
+interface InternshipRecord {
+  id: string
+  studentName: string
+  matricule: string
+  entreprise: string
+  type: 'PROFESSIONNEL' | 'HOSPITALIER' | 'RECHERCHE' | 'FIN_ETUDES'
+  period: string | null
+  status: 'EN_ATTENTE' | 'CONVENTION_SIGNEE' | 'EN_COURS' | 'TERMINE' | 'ANNULE'
+  tuteur: string | null
+  startDate: string | null
+  endDate: string | null
+  evaluation: string | null
+  evaluationDate: string | null
+}
+
+const internshipTypeApiToUi: Record<InternshipRecord['type'], InternshipEntry['type']> = {
+  PROFESSIONNEL: 'professionnel',
+  HOSPITALIER: 'hospitalier',
+  RECHERCHE: 'recherche',
+  FIN_ETUDES: 'fin-etudes',
+}
+
+const internshipStatusApiToUi: Record<InternshipRecord['status'], InternshipEntry['status']> = {
+  EN_COURS: 'en-cours',
+  CONVENTION_SIGNEE: 'convention-signee',
+  EN_ATTENTE: 'en-attente',
+  TERMINE: 'termine',
+  ANNULE: 'annule',
+}
+
+function mapInternship(r: InternshipRecord): InternshipEntry {
+  return {
+    id: r.id,
+    studentName: r.studentName,
+    matricule: r.matricule,
+    entreprise: r.entreprise,
+    type: internshipTypeApiToUi[r.type],
+    period: r.period || '',
+    status: internshipStatusApiToUi[r.status],
+    tuteur: r.tuteur || '',
+  }
+}
 
 interface PendingConvention {
   id: string
@@ -212,6 +241,9 @@ const workflowSteps = ['Soumission', 'Validation etablissement', 'Signature entr
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function InternshipsPage() {
+  const { data: internshipsQuery, isLoading } = useInternships()
+  const internships: InternshipEntry[] = (internshipsQuery?.internships || []).map(mapInternship)
+
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState('tous')
   const [statusFilter, setStatusFilter] = useState('tous')
@@ -238,7 +270,7 @@ export function InternshipsPage() {
   const countTauxCompletion = useCountUp(92, 1300)
 
   // Filter internships
-  const filteredInternships = demoInternships.filter(i => {
+  const filteredInternships = internships.filter(i => {
     const matchSearch = search === '' ||
       i.studentName.toLowerCase().includes(search.toLowerCase()) ||
       i.matricule.toLowerCase().includes(search.toLowerCase()) ||
@@ -250,7 +282,7 @@ export function InternshipsPage() {
     return matchSearch && matchType && matchStatus && matchPeriod && matchEntreprise
   })
 
-  const uniqueEntreprises = [...new Set(demoInternships.map(i => i.entreprise))]
+  const uniqueEntreprises = [...new Set(internships.map(i => i.entreprise))]
 
   const handleValidateConvention = (id: string, action: 'approved' | 'rejected') => {
     setConventionStatuses(prev => ({ ...prev, [id]: action }))
@@ -616,7 +648,14 @@ export function InternshipsPage() {
                           </TableRow>
                         )
                       })}
-                      {filteredInternships.length === 0 && (
+                      {isLoading && (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center py-8 text-sm text-gray-400">
+                            Chargement...
+                          </TableCell>
+                        </TableRow>
+                      )}
+                      {!isLoading && filteredInternships.length === 0 && (
                         <TableRow>
                           <TableCell colSpan={7} className="text-center py-8 text-sm text-gray-400">
                             Aucun stage trouve

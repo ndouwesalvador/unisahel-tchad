@@ -3,6 +3,7 @@
 import { exportToExcel } from '@/lib/export'
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useOnlineExams } from '@/lib/api-hooks'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -94,16 +95,47 @@ interface UpcomingExam {
   progress?: number
 }
 
-const demoUpcomingExams: UpcomingExam[] = [
-  { id: '1', name: 'Examen Final - Algorithmique', course: 'Algorithmique avancee', date: '18 Mars 2025', time: '08:00', duration: '2h', questions: 20, type: 'Mixte', status: 'En cours', progress: 65 },
-  { id: '2', name: 'Examen Partiel - Droit Constitutionnel', course: 'Droit constitutionnel', date: '19 Mars 2025', time: '10:00', duration: '1h30', questions: 30, type: 'QCM', status: 'Planifie' },
-  { id: '3', name: 'Examen Final - Macroeconomie', course: 'Macroeconomie', date: '20 Mars 2025', time: '14:00', duration: '2h', questions: 5, type: 'Dissertation', status: 'Planifie' },
-  { id: '4', name: 'Examen TP - Bases de donnees', course: 'Bases de donnees', date: '21 Mars 2025', time: '08:00', duration: '3h', questions: 15, type: 'Mixte', status: 'Planifie' },
-  { id: '5', name: 'Examen Final - Anatomie P1', course: 'Anatomie P1', date: '22 Mars 2025', time: '10:00', duration: '2h', questions: 40, type: 'QCM', status: 'Planifie' },
-  { id: '6', name: 'Examen Partiel - Microeconomie', course: 'Microeconomie', date: '24 Mars 2025', time: '14:00', duration: '2h', questions: 4, type: 'Dissertation', status: 'Planifie' },
-  { id: '7', name: 'Examen Final - Reseau', course: 'Reseau et systeme', date: '15 Mars 2025', time: '08:00', duration: '2h', questions: 25, type: 'QCM', status: 'Termine' },
-  { id: '8', name: 'Examen TP - Programmation C++', course: 'Programmation C++', date: '14 Mars 2025', time: '14:00', duration: '3h', questions: 10, type: 'Mixte', status: 'Termine' },
-]
+interface OnlineExamRecord {
+  id: string
+  name: string
+  course: string
+  examDate: string
+  duration: string
+  questions: number
+  type: 'QCM' | 'DISSERTATION' | 'MIXTE'
+  status: 'PLANNED' | 'IN_PROGRESS' | 'COMPLETED'
+  progress: number
+}
+
+const examTypeApiToUi: Record<OnlineExamRecord['type'], UpcomingExam['type']> = {
+  'QCM': 'QCM',
+  'DISSERTATION': 'Dissertation',
+  'MIXTE': 'Mixte',
+}
+
+const examStatusApiToUi: Record<OnlineExamRecord['status'], UpcomingExam['status']> = {
+  'PLANNED': 'Planifie',
+  'IN_PROGRESS': 'En cours',
+  'COMPLETED': 'Termine',
+}
+
+function mapExam(r: OnlineExamRecord): UpcomingExam {
+  const examDate = new Date(r.examDate)
+  const date = examDate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+  const time = examDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', hour12: false })
+  return {
+    id: r.id,
+    name: r.name,
+    course: r.course,
+    date: date.charAt(0).toUpperCase() + date.slice(1),
+    time,
+    duration: r.duration,
+    questions: r.questions,
+    type: examTypeApiToUi[r.type] || 'QCM',
+    status: examStatusApiToUi[r.status] || 'Planifie',
+    progress: r.progress,
+  }
+}
 
 interface ExamQuestion {
   id: number
@@ -250,6 +282,9 @@ const difficultyConfig: Record<string, { label: string; className: string }> = {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function OnlineExamPage() {
+  const { data: examsQuery, isLoading: examsLoading } = useOnlineExams()
+  const upcomingExams: UpcomingExam[] = (examsQuery?.exams || []).map(mapExam)
+
   const examensPrevus = useCountUp(12, 1400)
   const tauxCompletion = useCountUp(87, 1300)
 
@@ -528,10 +563,10 @@ export function OnlineExamPage() {
                 </CardTitle>
                 <div className="flex items-center gap-2">
                   <Badge className="text-[10px] bg-[#2d7a4f15] text-[#2d7a4f] border-0">
-                    {demoUpcomingExams.filter(e => e.status === 'En cours').length} en cours
+                    {examsQuery?.stats?.inProgress ?? upcomingExams.filter(e => e.status === 'En cours').length} en cours
                   </Badge>
                   <Badge className="text-[10px] bg-[#d4a85315] text-[#d4a853] border-0">
-                    {demoUpcomingExams.filter(e => e.status === 'Planifie').length} planifies
+                    {examsQuery?.stats?.planned ?? upcomingExams.filter(e => e.status === 'Planifie').length} planifies
                   </Badge>
                 </div>
               </div>
@@ -552,7 +587,7 @@ export function OnlineExamPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {demoUpcomingExams.map((exam) => {
+                    {upcomingExams.map((exam) => {
                       const typeConf = examTypeConfig[exam.type]
                       const statusConf = examStatusConfig[exam.status]
                       const StatusIcon = statusConf?.icon
@@ -612,6 +647,20 @@ export function OnlineExamPage() {
                         </TableRow>
                       )
                     })}
+                    {examsLoading && (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-8 text-sm text-gray-400">
+                          Chargement...
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    {!examsLoading && upcomingExams.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-8 text-sm text-gray-400">
+                          Aucun examen trouve
+                        </TableCell>
+                      </TableRow>
+                    )}
                   </TableBody>
                 </Table>
               </div>

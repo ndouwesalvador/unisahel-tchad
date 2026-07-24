@@ -67,6 +67,7 @@ import {
   Mail,
   Award,
 } from 'lucide-react'
+import { useHrStaff } from '@/lib/api-hooks'
 
 // ─── useCountUp Hook ─────────────────────────────────────────────────────────
 
@@ -119,24 +120,39 @@ interface StaffMember {
   joinDate: string
 }
 
-const demoStaff: StaffMember[] = [
-  { id: '1', name: 'MAHAMAT Abakar', department: 'Informatique', position: 'Chef de departement', contract: 'cdi', status: 'actif', email: 'abakar.mahamat@univ.td', phone: '+235 66 12 34 56', joinDate: '15/03/2018' },
-  { id: '2', name: 'HISSEIN Fatime', department: 'Droit', position: 'Maitre de conferences', contract: 'cdi', status: 'actif', email: 'fatime.hissein@univ.td', phone: '+235 66 23 45 67', joinDate: '01/09/2015' },
-  { id: '3', name: 'NGARNDMI Halime', department: 'Sciences', position: 'Professeur titulaire', contract: 'cdi', status: 'en_conge', email: 'halime.ngarndmi@univ.td', phone: '+235 66 34 56 78', joinDate: '10/01/2012' },
-  { id: '4', name: 'KHAMIS Youssouf', department: 'Economie', position: 'Charge de cours', contract: 'cdd', status: 'actif', email: 'youssouf.khamis@univ.td', phone: '+235 66 45 67 89', joinDate: '01/10/2023' },
-  { id: '5', name: 'ADAM Khadija', department: 'Lettres', position: 'Assistante pedagogique', contract: 'vacataire', status: 'actif', email: 'khadija.adam@univ.td', phone: '+235 66 56 78 90', joinDate: '15/01/2024' },
-  { id: '6', name: 'ISSA Mahamat Nour', department: 'Informatique', position: 'Vacataire programmation', contract: 'vacataire', status: 'actif', email: 'nour.issa@univ.td', phone: '+235 66 67 89 01', joinDate: '01/02/2024' },
-  { id: '7', name: 'DJIMADOUMBER Deubong', department: 'Administration', position: 'Directrice administrative', contract: 'cdi', status: 'actif', email: 'deubong.djimadoumber@univ.td', phone: '+235 66 78 90 12', joinDate: '05/06/2010' },
-  { id: '8', name: 'BICHARA Hawa', department: 'Scolarite', position: 'Chef de scolarite', contract: 'cdi', status: 'actif', email: 'hawa.bichara@univ.td', phone: '+235 66 89 01 23', joinDate: '20/09/2016' },
-  { id: '9', name: 'OUMAR Abdoulaye', department: 'Comptabilite', position: 'Comptable', contract: 'cdd', status: 'actif', email: 'abdoulaye.oumar@univ.td', phone: '+235 66 90 12 34', joinDate: '01/11/2022' },
-  { id: '10', name: 'SEID Ibrahim', department: 'Medecine', position: 'Professeur agregue', contract: 'cdi', status: 'en_conge', email: 'ibrahim.seid@univ.td', phone: '+235 66 01 23 45', joinDate: '12/04/2014' },
-  { id: '11', name: 'NASSERINGAR Lea', department: 'Sciences', position: 'Stagiaire recherche', contract: 'stagiaire', status: 'actif', email: 'lea.nasseringar@univ.td', phone: '+235 66 12 34 57', joinDate: '01/03/2025' },
-  { id: '12', name: 'ABAKAR Adam', department: 'Droit', position: 'Vacataire droit civil', contract: 'vacataire', status: 'suspendu', email: 'adam.abakar@univ.td', phone: '+235 66 23 45 68', joinDate: '01/09/2023' },
-  { id: '13', name: 'HAROUN Djibrine', department: 'Informatique', position: ' Ingenieur systeme', contract: 'cdi', status: 'actif', email: 'djibrine.haroun@univ.td', phone: '+235 66 34 56 79', joinDate: '08/07/2019' },
-  { id: '14', name: 'MALLAHM Zara', department: 'Lettres', position: 'Maitre assistante', contract: 'cdd', status: 'depart', email: 'zara.mallahm@univ.td', phone: '+235 66 45 67 80', joinDate: '01/10/2021' },
-  { id: '15', name: 'YAYA Djerabé', department: 'Economie', position: 'Professeur titulaire', contract: 'cdi', status: 'actif', email: 'djerabe.yaya@univ.td', phone: '+235 66 56 78 91', joinDate: '03/02/2011' },
-  { id: '16', name: 'Brahim Malloum', department: 'Administration', position: 'Agent d\'accueil', contract: 'cdd', status: 'actif', email: 'malloum.brahim@univ.td', phone: '+235 66 67 89 02', joinDate: '15/06/2024' },
-]
+interface ApiStaff {
+  id: string
+  firstName: string
+  lastName: string
+  email: string
+  phone: string | null
+  department: string
+  position: string
+  contractType: 'CDI' | 'CDD' | 'Vacataire' | 'Stagiaire'
+  status: 'actif' | 'en_conge' | 'suspendu' | 'depart'
+  joinDate: string
+}
+
+const contractTypeApiToUi: Record<ApiStaff['contractType'], StaffMember['contract']> = {
+  CDI: 'cdi',
+  CDD: 'cdd',
+  Vacataire: 'vacataire',
+  Stagiaire: 'stagiaire',
+}
+
+function mapStaff(s: ApiStaff): StaffMember {
+  return {
+    id: s.id,
+    name: `${s.lastName} ${s.firstName}`,
+    department: s.department,
+    position: s.position,
+    contract: contractTypeApiToUi[s.contractType],
+    status: s.status,
+    email: s.email,
+    phone: s.phone || '',
+    joinDate: new Date(s.joinDate).toLocaleDateString('fr-FR'),
+  }
+}
 
 interface LeaveRequest {
   id: string
@@ -294,17 +310,20 @@ export function HrPage() {
   const [leaveActions, setLeaveActions] = useState<Record<string, 'approuve' | 'refuse' | null>>({})
   const [showNewOffer, setShowNewOffer] = useState(false)
 
+  const { data: staffQuery, isLoading } = useHrStaff()
+  const staff: StaffMember[] = (staffQuery?.data || []).map(mapStaff)
+
   // Count-up stats
-  const totalPersonnel = useCountUp(demoStaff.length, 1400)
-  const activePersonnel = useCountUp(demoStaff.filter(s => s.status === 'actif').length, 1200)
-  const tauxOccupation = useCountUp(Math.round((demoStaff.filter(s => s.status === 'actif').length / demoStaff.length) * 100), 1300)
-  const adminCount = useCountUp(demoStaff.filter(s => ['Administration', 'Scolarite', 'Comptabilite'].includes(s.department)).length, 1100)
-  const permCount = useCountUp(demoStaff.filter(s => s.contract === 'cdi').length, 1200)
-  const vacCount = useCountUp(demoStaff.filter(s => s.contract === 'vacataire').length, 1000)
+  const totalPersonnel = useCountUp(staff.length, 1400)
+  const activePersonnel = useCountUp(staff.filter(s => s.status === 'actif').length, 1200)
+  const tauxOccupation = useCountUp(staff.length > 0 ? Math.round((staff.filter(s => s.status === 'actif').length / staff.length) * 100) : 0, 1300)
+  const adminCount = useCountUp(staff.filter(s => ['Administration', 'Scolarite', 'Comptabilite'].includes(s.department)).length, 1100)
+  const permCount = useCountUp(staff.filter(s => s.contract === 'cdi').length, 1200)
+  const vacCount = useCountUp(staff.filter(s => s.contract === 'vacataire').length, 1000)
   const vacantPosts = useCountUp(5, 1000)
 
   // Filtered staff
-  const filteredStaff = demoStaff.filter(s => {
+  const filteredStaff = staff.filter(s => {
     const matchSearch = search === '' ||
       s.name.toLowerCase().includes(search.toLowerCase()) ||
       s.position.toLowerCase().includes(search.toLowerCase()) ||
@@ -643,7 +662,14 @@ export function HrPage() {
                         </TableRow>
                       )
                     })}
-                    {filteredStaff.length === 0 && (
+                    {isLoading && (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-8 text-sm text-gray-400">
+                          Chargement...
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    {!isLoading && filteredStaff.length === 0 && (
                       <TableRow>
                         <TableCell colSpan={7} className="text-center py-8 text-sm text-gray-400">
                           Aucun personnel trouve

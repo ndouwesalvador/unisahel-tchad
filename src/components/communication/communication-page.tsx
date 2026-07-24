@@ -1,6 +1,7 @@
 'use client'
 
 import { exportToExcel } from '@/lib/export'
+import { useCommunications } from '@/lib/api-hooks'
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -111,16 +112,70 @@ const channels = [
   { id: 8, name: 'Urgences', members: 412, lastActivity: 'Il y a 10 min', description: 'Alertes et communications urgentes', type: 'Prive', joined: true },
 ]
 
-const broadcasts = [
-  { id: 1, subject: 'Rentrée S2 2024-2025', audience: 'Tous les etudiants', type: 'Info', priority: 'Normal', sentDate: '15 Fev 2025', readRate: 89, delivered: 2847, failed: 12 },
-  { id: 2, subject: 'Convocation jury delib.', audience: 'Enseignants', type: 'Academique', priority: 'High', sentDate: '12 Fev 2025', readRate: 95, delivered: 156, failed: 2 },
-  { id: 3, subject: 'Alerte paiement urgent', audience: 'Etudiants impayes', type: 'Urgent', priority: 'Critical', sentDate: '10 Fev 2025', readRate: 78, delivered: 234, failed: 45 },
-  { id: 4, subject: 'Modification emploi du temps', audience: 'Informatique L3', type: 'Administratif', priority: 'Normal', sentDate: '08 Fev 2025', readRate: 92, delivered: 67, failed: 1 },
-  { id: 5, subject: 'Resultats S1 disponibles', audience: 'Tous les etudiants', type: 'Academique', priority: 'High', sentDate: '05 Fev 2025', readRate: 94, delivered: 2847, failed: 8 },
-  { id: 6, subject: 'Bourses excellence 2025', audience: 'Etudiants merite', type: 'Info', priority: 'Normal', sentDate: '01 Fev 2025', readRate: 85, delivered: 312, failed: 5 },
-  { id: 7, subject: 'Fermeture campus 14 Fev', audience: 'Tout le personnel', type: 'Administratif', priority: 'Normal', sentDate: '30 Jan 2025', readRate: 91, delivered: 189, failed: 3 },
-  { id: 8, subject: 'Inscription pedagogique', audience: 'L2 toutes filieres', type: 'Academique', priority: 'High', sentDate: '25 Jan 2025', readRate: 82, delivered: 456, failed: 18 },
-]
+interface Broadcast {
+  id: string
+  subject: string
+  audience: string
+  type: string
+  priority: string
+  sentDate: string
+  readRate: number
+  delivered: number
+  failed: number
+}
+
+interface CommunicationRecord {
+  id: string
+  subject: string
+  audience: string
+  type: 'INFO' | 'URGENT' | 'ACADEMIC' | 'ADMINISTRATIVE'
+  priority: 'NORMAL' | 'HIGH' | 'CRITICAL'
+  channel: 'EMAIL' | 'SMS' | 'PUSH' | 'IN_APP'
+  status: 'PENDING' | 'SENT' | 'FAILED'
+  content: string | null
+  sentDate: string | null
+  readRate: number
+  deliveredCount: number
+  failedCount: number
+}
+
+// Keys must match typeConfig / priorityConfig lookups below
+const broadcastTypeApiToUi: Record<CommunicationRecord['type'], string> = {
+  INFO: 'Info',
+  URGENT: 'Urgent',
+  ACADEMIC: 'Academique',
+  ADMINISTRATIVE: 'Administratif',
+}
+
+const broadcastPriorityApiToUi: Record<CommunicationRecord['priority'], string> = {
+  NORMAL: 'Normal',
+  HIGH: 'High',
+  CRITICAL: 'Critical',
+}
+
+const shortMonths = ['Jan', 'Fev', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aou', 'Sep', 'Oct', 'Nov', 'Dec']
+
+function formatSentDate(sentDate: string | null): string {
+  if (!sentDate) return 'Non envoye'
+  const d = new Date(sentDate)
+  if (Number.isNaN(d.getTime())) return 'Non envoye'
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${day} ${shortMonths[d.getMonth()]} ${d.getFullYear()}`
+}
+
+function mapBroadcast(r: CommunicationRecord): Broadcast {
+  return {
+    id: r.id,
+    subject: r.subject,
+    audience: r.audience,
+    type: broadcastTypeApiToUi[r.type] || 'Info',
+    priority: broadcastPriorityApiToUi[r.priority] || 'Normal',
+    sentDate: formatSentDate(r.sentDate),
+    readRate: r.readRate ?? 0,
+    delivered: r.deliveredCount ?? 0,
+    failed: r.failedCount ?? 0,
+  }
+}
 
 const notifications = [
   { id: 1, message: 'Convocation S2 envoyee a 2847 etudiants', type: 'Email', status: 'Envoye', date: '15 Fev 09:00', count: 2847 },
@@ -190,6 +245,9 @@ export function CommunicationPage() {
   const [showMobileChat, setShowMobileChat] = useState(false)
   const [broadcastDialogOpen, setBroadcastDialogOpen] = useState(false)
   const [previewDraft, setPreviewDraft] = useState<number | null>(null)
+
+  const { data: communicationsQuery, isLoading: broadcastsLoading } = useCommunications()
+  const broadcasts: Broadcast[] = (communicationsQuery?.communications || []).map(mapBroadcast)
 
   // Filter conversations
   const filteredConversations = conversations.filter((c) => {
@@ -378,7 +436,7 @@ export function CommunicationPage() {
         <motion.div variants={containerVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
             { label: 'Messages aujourd\'hui', value: 45, trend: '+12%', color: '#2d7a4f', icon: MessageSquare, progress: 65 },
-            { label: 'Diffusions actives', value: 8, trend: '', color: '#1a2744', icon: Megaphone, progress: 40 },
+            { label: 'Diffusions actives', value: broadcasts.length, trend: '', color: '#1a2744', icon: Megaphone, progress: 40 },
             { label: 'Taux de lecture', value: '87%', trend: '+3%', color: '#d4a853', icon: Eye, progress: 87 },
             { label: 'Canaux actifs', value: 12, trend: '', color: '#1a2744', icon: Hash, progress: 60 },
           ].map((stat) => (
@@ -684,6 +742,20 @@ export function CommunicationPage() {
                         </TableRow>
                       )
                     })}
+                    {broadcastsLoading && (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-8 text-sm text-gray-400">
+                          Chargement...
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    {!broadcastsLoading && broadcasts.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-8 text-sm text-gray-400">
+                          Aucune diffusion trouvee
+                        </TableCell>
+                      </TableRow>
+                    )}
                   </TableBody>
                 </Table>
               </ScrollArea>

@@ -2,6 +2,7 @@
 
 import { exportToExcel } from '@/lib/export'
 import { useState, useEffect, useRef } from 'react'
+import { useAttendance } from '@/lib/api-hooks'
 import { motion } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -80,28 +81,43 @@ interface AttendanceRecord {
   level: string
 }
 
-const demoAttendanceRecords: AttendanceRecord[] = [
-  { id: '1', studentName: 'MAHAMAT Youssouf', matricule: 'UDN/L3/2024/001', course: 'Algorithmique avancee', timeSlot: '08:00 - 10:00', status: 'Present', duration: '2h', justification: '-', program: 'Informatique', level: 'L3' },
-  { id: '2', studentName: 'ABDOULAYE Ibrahim', matricule: 'UDN/L2/2024/002', course: 'Droit constitutionnel', timeSlot: '08:00 - 10:00', status: 'Absent', duration: '-', justification: '-', program: 'Droit', level: 'L2' },
-  { id: '3', studentName: 'FATIME Khamis', matricule: 'UDN/M1/2024/003', course: 'Macroeconomie', timeSlot: '10:00 - 12:00', status: 'Present', duration: '2h', justification: '-', program: 'Economie', level: 'M1' },
-  { id: '4', studentName: 'HAWA Ngarndmi', matricule: 'UDN/L1/2024/004', course: 'Anatomie P1', timeSlot: '08:00 - 10:00', status: 'Justifie', duration: '-', justification: 'Certificat medical', program: 'Medecine', level: 'L1' },
-  { id: '5', studentName: 'ISSA Mahamat Nour', matricule: 'UDN/L3/2024/005', course: 'Bases de donnees', timeSlot: '14:00 - 16:00', status: 'Retard', duration: '1h30', justification: '-', program: 'Informatique', level: 'L3' },
-  { id: '6', studentName: 'ADAM Khadija', matricule: 'UDN/L2/2024/006', course: 'Droit civil', timeSlot: '10:00 - 12:00', status: 'Present', duration: '2h', justification: '-', program: 'Droit', level: 'L2' },
-  { id: '7', studentName: 'BICHARA Abdelkerim', matricule: 'UDN/M2/2024/007', course: 'Microeconomie', timeSlot: '14:00 - 16:00', status: 'Absent', duration: '-', justification: '-', program: 'Economie', level: 'M2' },
-  { id: '8', studentName: 'DJIMADOUMBER Deubong', matricule: 'UDN/L1/2024/008', course: 'Physiologie', timeSlot: '08:00 - 10:00', status: 'Present', duration: '2h', justification: '-', program: 'Medecine', level: 'L1' },
-  { id: '9', studentName: 'NASSERINGAR Lea', matricule: 'UDN/L3/2024/009', course: 'Reseau et systeme', timeSlot: '10:00 - 12:00', status: 'Present', duration: '2h', justification: '-', program: 'Informatique', level: 'L3' },
-  { id: '10', studentName: 'OUMAR Abdoulaye', matricule: 'UDN/L2/2024/010', course: 'Droit penal', timeSlot: '14:00 - 16:00', status: 'Justifie', duration: '-', justification: 'Deces famille', program: 'Droit', level: 'L2' },
-  { id: '11', studentName: 'HISSEIN Mariam', matricule: 'UDN/M1/2024/011', course: 'Statistiques avancees', timeSlot: '10:00 - 12:00', status: 'Present', duration: '2h', justification: '-', program: 'Economie', level: 'M1' },
-  { id: '12', studentName: 'SEID Ibrahim', matricule: 'UDN/L1/2024/012', course: 'Biochimie', timeSlot: '14:00 - 16:00', status: 'Absent', duration: '-', justification: '-', program: 'Medecine', level: 'L1' },
-  { id: '13', studentName: 'ABAKAR Adam', matricule: 'UDN/L2/2024/013', course: 'Programmation C++', timeSlot: '08:00 - 10:00', status: 'Retard', duration: '1h', justification: '-', program: 'Informatique', level: 'L2' },
-  { id: '14', studentName: 'KHAMIS Fatime', matricule: 'UDN/L3/2024/014', course: 'Droit administratif', timeSlot: '10:00 - 12:00', status: 'Present', duration: '2h', justification: '-', program: 'Droit', level: 'L3' },
-  { id: '15', studentName: 'NGARBA Michel', matricule: 'UDN/M1/2024/015', course: 'Econometrie', timeSlot: '14:00 - 16:00', status: 'Present', duration: '2h', justification: '-', program: 'Economie', level: 'M1' },
-  { id: '16', studentName: 'ZENE Mahamat', matricule: 'UDN/L1/2024/016', course: 'Histologie', timeSlot: '08:00 - 10:00', status: 'Justifie', duration: '-', justification: 'Convocation officielle', program: 'Medecine', level: 'L1' },
-  { id: '17', studentName: 'RAMADAN Halime', matricule: 'UDN/L2/2024/017', course: 'Intelligence artificielle', timeSlot: '10:00 - 12:00', status: 'Absent', duration: '-', justification: '-', program: 'Informatique', level: 'L2' },
-  { id: '18', studentName: 'DJIME Soumaine', matricule: 'UDN/L3/2024/018', course: 'Droit international', timeSlot: '14:00 - 16:00', status: 'Present', duration: '2h', justification: '-', program: 'Droit', level: 'L3' },
-  { id: '19', studentName: 'SALEH Hawa', matricule: 'UDN/M2/2024/019', course: 'Finance publique', timeSlot: '08:00 - 10:00', status: 'Retard', duration: '1h15', justification: '-', program: 'Economie', level: 'M2' },
-  { id: '20', studentName: 'MALLAH Adoum', matricule: 'UDN/L1/2024/020', course: 'Parasitologie', timeSlot: '10:00 - 12:00', status: 'Absent', duration: '-', justification: '-', program: 'Medecine', level: 'L1' },
-]
+// ─── API Mapping ────────────────────────────────────────────────────────────
+
+interface ApiAttendanceRecord {
+  id: string
+  studentName: string
+  matricule: string
+  course: string
+  timeSlot: string
+  status: 'PRESENT' | 'ABSENT' | 'JUSTIFIED' | 'LATE'
+  duration: string | null
+  justification: string | null
+  program: string | null
+  level: string | null
+  date: string
+}
+
+const apiStatusToUi: Record<ApiAttendanceRecord['status'], AttendanceStatus> = {
+  PRESENT: 'Present',
+  ABSENT: 'Absent',
+  JUSTIFIED: 'Justifie',
+  LATE: 'Retard',
+}
+
+function mapAttendance(record: ApiAttendanceRecord): AttendanceRecord {
+  return {
+    id: record.id,
+    studentName: record.studentName,
+    matricule: record.matricule,
+    course: record.course,
+    timeSlot: record.timeSlot,
+    status: apiStatusToUi[record.status] || 'Present',
+    duration: record.duration || '-',
+    justification: record.justification || '-',
+    program: record.program || '',
+    level: record.level || '',
+  }
+}
 
 interface JustificationEntry {
   id: string
@@ -221,9 +237,16 @@ export function AttendancePage() {
   const [filterCourse, setFilterCourse] = useState('tous')
   const [filterStatus, setFilterStatus] = useState('tous')
   const [filterLevel, setFilterLevel] = useState('tous')
-  const [attendanceData, setAttendanceData] = useState(demoAttendanceRecords)
+  const { data: attendanceQuery, isLoading } = useAttendance()
+  const attendanceRecords: AttendanceRecord[] = (attendanceQuery?.records || []).map(mapAttendance)
+  const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>([])
   const [justificationData, setJustificationData] = useState(demoJustifications)
   const [offlineMode, setOfflineMode] = useState(false)
+
+  useEffect(() => {
+    setAttendanceData(attendanceRecords)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [attendanceQuery])
 
   // Toggle attendance status
   const toggleStatus = (id: string) => {
@@ -298,7 +321,7 @@ export function AttendancePage() {
   } as const
 
   // Unique courses for filter
-  const uniqueCourses = [...new Set(demoAttendanceRecords.map(r => r.course))]
+  const uniqueCourses = [...new Set(attendanceData.map(r => r.course))]
 
   return (
     <TooltipProvider>
@@ -651,7 +674,14 @@ export function AttendancePage() {
                         </motion.tr>
                       )
                     })}
-                    {filteredRecords.length === 0 && (
+                    {isLoading && (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-8 text-sm text-gray-400">
+                          Chargement...
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    {!isLoading && filteredRecords.length === 0 && (
                       <TableRow>
                         <TableCell colSpan={7} className="text-center py-8 text-sm text-gray-400">
                           Aucun enregistrement trouve

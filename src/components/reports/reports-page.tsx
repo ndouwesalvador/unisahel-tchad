@@ -1,6 +1,7 @@
 'use client'
 
 import { exportToExcel } from '@/lib/export'
+import { useReports } from '@/lib/api-hooks'
 import { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -142,20 +143,62 @@ interface RecentReport {
   downloadCount: number
 }
 
-const recentReports: RecentReport[] = [
-  { id: '1', name: 'Releve S1 2024-2025 Informatique', type: 'Academique', typeColor: '#2d7a4f', generatedBy: 'ABAKAR Mahamat', date: '15/02/2025', status: 'termine', size: '2.4 MB', downloadCount: 34 },
-  { id: '2', name: 'Bilan financier Janvier 2025', type: 'Financier', typeColor: '#d4a853', generatedBy: 'KHAMIS Fatime', date: '14/02/2025', status: 'termine', size: '1.8 MB', downloadCount: 12 },
-  { id: '3', name: "Statistiques d'admission L1", type: 'Admission', typeColor: '#1a2744', generatedBy: 'MAHAMAT Youssouf', date: '13/02/2025', status: 'en_cours', size: '-', downloadCount: 0 },
-  { id: '4', name: "Rapport absenteisme S1", type: 'Presence', typeColor: '#c62828', generatedBy: 'NGARNDMI Halime', date: '12/02/2025', status: 'termine', size: '3.1 MB', downloadCount: 56 },
-  { id: '5', name: 'Deliberation Droit L3', type: 'Deliberation', typeColor: '#1a2744', generatedBy: 'HISSEIN Mariam', date: '11/02/2025', status: 'termine', size: '1.2 MB', downloadCount: 89 },
-  { id: '6', name: 'Rapport bourses S1 2025', type: 'Financier', typeColor: '#d4a853', generatedBy: 'ISSA Mahamat Nour', date: '10/02/2025', status: 'erreur', size: '-', downloadCount: 0 },
-  { id: '7', name: 'Progression credits M1', type: 'Academique', typeColor: '#2d7a4f', generatedBy: 'ADAM Khadija', date: '09/02/2025', status: 'termine', size: '890 KB', downloadCount: 23 },
-  { id: '8', name: 'Bibliotheque emprunts Q4', type: 'Ressources', typeColor: '#0891b2', generatedBy: 'BICHARA Hawa', date: '08/02/2025', status: 'termine', size: '560 KB', downloadCount: 8 },
-  { id: '9', name: 'Bilan institutionnel 2024', type: 'Institutionnel', typeColor: '#1a2744', generatedBy: 'DJIMADOUMBER Deubong', date: '07/02/2025', status: 'en_cours', size: '-', downloadCount: 0 },
-  { id: '10', name: 'Releve S1 Medecine L2', type: 'Academique', typeColor: '#2d7a4f', generatedBy: 'NASSERINGAR Lea', date: '06/02/2025', status: 'termine', size: '1.5 MB', downloadCount: 45 },
-  { id: '11', name: 'Paiements en attente Fev', type: 'Financier', typeColor: '#d4a853', generatedBy: 'OUMAR Abdoulaye', date: '05/02/2025', status: 'termine', size: '720 KB', downloadCount: 18 },
-  { id: '12', name: 'Examens rattrapage stats', type: 'Examen', typeColor: '#8b5cf6', generatedBy: 'ZAKARIA Oumar', date: '04/02/2025', status: 'termine', size: '2.0 MB', downloadCount: 67 },
-]
+// Maps the Prisma `Report.type` enum to the French display label + the
+// color already used elsewhere in this file (see reportTemplates above).
+const reportTypeLabels: Record<string, string> = {
+  PERFORMANCE: 'Academique',
+  FINANCIAL: 'Financier',
+  ATTENDANCE: 'Presence',
+  EXAM: 'Examen',
+  PROGRESS: 'Academique',
+  INSTITUTIONAL: 'Institutionnel',
+}
+
+const reportTypeColors: Record<string, string> = {
+  Academique: '#2d7a4f',
+  Financier: '#d4a853',
+  Presence: '#c62828',
+  Examen: '#8b5cf6',
+  Institutionnel: '#1a2744',
+}
+
+const reportStatusMap: Record<string, RecentReport['status']> = {
+  COMPLETED: 'termine',
+  GENERATING: 'en_cours',
+  PENDING: 'en_cours',
+  ERROR: 'erreur',
+}
+
+interface ReportRecord {
+  id: string
+  name: string
+  type: string
+  format?: string
+  status?: string
+  period?: string | null
+  level?: string | null
+  program?: string | null
+  generatedBy: string
+  fileSize?: string | null
+  downloadCount: number
+  scheduledAt?: string | null
+  createdAt: string
+}
+
+function mapReport(r: ReportRecord): RecentReport {
+  const label = reportTypeLabels[r.type] || r.type
+  return {
+    id: r.id,
+    name: r.name,
+    type: label,
+    typeColor: reportTypeColors[label] || '#1a2744',
+    generatedBy: r.generatedBy,
+    date: new Date(r.createdAt).toLocaleDateString('fr-FR'),
+    status: reportStatusMap[r.status || 'PENDING'] || 'en_cours',
+    size: r.fileSize || '-',
+    downloadCount: r.downloadCount,
+  }
+}
 
 interface ScheduledReport {
   id: string
@@ -221,9 +264,13 @@ const successRateData = [
 // ─── Main Component ────────────────────────────────────────────────────────────
 
 export function ReportsPage() {
-  const rapportsGeneres = useCountUp(156, 1400)
+  const { data: reportsQuery, isLoading } = useReports()
+  const reportsList: RecentReport[] = (reportsQuery?.reports || []).map(mapReport)
+  const reportStats = reportsQuery?.stats
+
+  const rapportsGeneres = useCountUp(reportStats?.total ?? 0, 1400)
   const rapportsPlanifies = useCountUp(12, 1200)
-  const telechargements = useCountUp(892, 1500)
+  const telechargements = useCountUp(reportStats?.totalDownloads ?? 0, 1500)
 
   const [selectedType, setSelectedType] = useState<string | null>(null)
   const [periode, setPeriode] = useState('s2-2024-2025')
@@ -240,7 +287,7 @@ export function ReportsPage() {
   )
 
   // Filter reports
-  const filteredReports = recentReports.filter(r => {
+  const filteredReports = reportsList.filter(r => {
     const matchSearch = searchReport === '' ||
       r.name.toLowerCase().includes(searchReport.toLowerCase()) ||
       r.generatedBy.toLowerCase().includes(searchReport.toLowerCase())
@@ -742,7 +789,14 @@ export function ReportsPage() {
                         </TableRow>
                       )
                     })}
-                    {filteredReports.length === 0 && (
+                    {isLoading && (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-8 text-sm text-gray-400">
+                          Chargement...
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    {!isLoading && filteredReports.length === 0 && (
                       <TableRow>
                         <TableCell colSpan={8} className="text-center py-8 text-sm text-gray-400">
                           Aucun rapport trouve

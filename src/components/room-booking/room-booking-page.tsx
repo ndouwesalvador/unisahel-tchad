@@ -76,6 +76,7 @@ import {
   Signal,
   MapPin,
 } from 'lucide-react'
+import { useRooms } from '@/lib/api-hooks'
 
 // ─── Custom useCountUp Hook ────────────────────────────────────────────────────
 
@@ -140,73 +141,35 @@ interface EquipmentItem {
   nextMaintenance: string
 }
 
-// ─── Demo Data ──────────────────────────────────────────────────────────────────
+// ─── API Mapping ────────────────────────────────────────────────────────────────
 
-const demoRooms: Room[] = [
-  {
-    id: '1', name: 'Amphi 500', capacity: 500, building: 'Batiment A',
-    equipment: ['Video-projecteur', 'Climatisation', 'Micro', 'WiFi'],
-    status: 'occupee',
-    todaySchedule: [
-      { start: '08:00', end: '10:00', purpose: 'Cours' },
-      { start: '14:00', end: '16:00', purpose: 'Conference' },
-    ],
-  },
-  {
-    id: '2', name: 'Salle Tchad', capacity: 120, building: 'Batiment B',
-    equipment: ['Video-projecteur', 'Tableau blanc', 'WiFi'],
-    status: 'libre',
-    todaySchedule: [
-      { start: '10:00', end: '12:00', purpose: 'Reunion' },
-    ],
-  },
-  {
-    id: '3', name: 'Labo Informatique', capacity: 40, building: 'Batiment C',
-    equipment: ['Ordinateurs', 'Video-projecteur', 'Climatisation', 'WiFi'],
-    status: 'occupee',
-    todaySchedule: [
-      { start: '08:00', end: '12:00', purpose: 'Cours' },
-      { start: '14:00', end: '18:00', purpose: 'Examen' },
-    ],
-  },
-  {
-    id: '4', name: 'Salle de conference', capacity: 200, building: 'Batiment A',
-    equipment: ['Video-projecteur', 'Climatisation', 'Micro', 'Tableau interactif', 'WiFi'],
-    status: 'libre',
+interface RoomRecord {
+  id: string
+  name: string
+  type?: string
+  capacity: number
+  building: string | null
+  equipment: string
+  status: RoomStatus
+  isActive: boolean
+}
+
+function mapRoom(r: RoomRecord): Room {
+  return {
+    id: r.id,
+    name: r.name,
+    capacity: r.capacity,
+    equipment: r.equipment ? r.equipment.split(',').map(s => s.trim()).filter(Boolean) : [],
+    status: r.status,
+    // The /api/rooms GET endpoint does not return per-room reservation slots,
+    // only an aggregate `todayReservations` count across all rooms. There is
+    // no data source for a per-room schedule, so it is left empty here.
     todaySchedule: [],
-  },
-  {
-    id: '5', name: 'Salle Sahara', capacity: 80, building: 'Batiment B',
-    equipment: ['Video-projecteur', 'Tableau blanc', 'WiFi'],
-    status: 'maintenance',
-    todaySchedule: [],
-  },
-  {
-    id: '6', name: 'Amphi 300', capacity: 300, building: 'Batiment A',
-    equipment: ['Video-projecteur', 'Climatisation', 'Micro', 'WiFi'],
-    status: 'libre',
-    todaySchedule: [
-      { start: '16:00', end: '18:00', purpose: 'Conference' },
-    ],
-  },
-  {
-    id: '7', name: 'Labo Langues', capacity: 30, building: 'Batiment D',
-    equipment: ['Ordinateurs', 'Casques audio', 'WiFi'],
-    status: 'occupee',
-    todaySchedule: [
-      { start: '08:00', end: '10:00', purpose: 'Cours' },
-      { start: '10:00', end: '12:00', purpose: 'Cours' },
-    ],
-  },
-  {
-    id: '8', name: 'Salle Logone', capacity: 60, building: 'Batiment B',
-    equipment: ['Video-projecteur', 'Climatisation', 'Tableau blanc'],
-    status: 'libre',
-    todaySchedule: [
-      { start: '14:00', end: '16:00', purpose: 'Reunion' },
-    ],
-  },
-]
+    building: r.building || '',
+  }
+}
+
+// ─── Demo Data ──────────────────────────────────────────────────────────────────
 
 const demoReservations: Reservation[] = [
   { id: '1', room: 'Amphi 500', date: '10/03/2025', startTime: '08:00', endTime: '10:00', purpose: 'Cours', organizer: 'Dr. MAHAMAT Ali', participants: 180, status: 'confirmee' },
@@ -313,6 +276,9 @@ export function RoomBookingPage() {
   const [filterStatus, setFilterStatus] = useState('all')
   const [currentWeekOffset, setCurrentWeekOffset] = useState(0)
 
+  const { data: roomsQuery, isLoading } = useRooms()
+  const rooms: Room[] = (roomsQuery?.data || []).map(mapRoom)
+
   // Weekly calendar demo data
   const weeklyReservations = useMemo(() => {
     const data: Record<string, { slot: string; purpose: ReservationPurpose; room: string; organizer: string; duration: number }[]> = {}
@@ -364,8 +330,8 @@ export function RoomBookingPage() {
   }, [selectedRoom, reservDate, reservStart, reservEnd])
 
   // Stats
-  const availableCount = demoRooms.filter(r => r.status === 'libre').length
-  const todayReservCount = 8
+  const availableCount = roomsQuery?.stats?.available ?? rooms.filter(r => r.status === 'libre').length
+  const todayReservCount = roomsQuery?.stats?.todayReservations ?? 0
   const occupancyRate = 72
 
   // Reservation stats
@@ -454,7 +420,7 @@ export function RoomBookingPage() {
         {/* ─── 4 Stats Cards ────────────────────────────────────────────────────── */}
         <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { label: 'Salles totales', value: demoRooms.length, color: '#1a2744', icon: Building2, trend: '+2', trendUp: true },
+            { label: 'Salles totales', value: rooms.length, color: '#1a2744', icon: Building2, trend: '+2', trendUp: true },
             { label: 'Disponibles', value: availableCount, color: '#2d7a4f', icon: DoorOpen, trend: '', trendUp: true },
             { label: 'Reservations ce mois', value: 47, color: '#d4a853', icon: Calendar, trend: '+12%', trendUp: true },
             { label: 'Conflits', value: 2, color: '#c62828', icon: AlertTriangle, trend: '-1', trendUp: false },
@@ -496,10 +462,25 @@ export function RoomBookingPage() {
         <motion.div variants={itemVariants}>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold text-[#1a2744] uppercase tracking-wide">Apercu des salles</h2>
-            <Badge className="text-[10px] bg-[#1a274410] text-[#1a2744] border-0">{demoRooms.length} salles</Badge>
+            <Badge className="text-[10px] bg-[#1a274410] text-[#1a2744] border-0">{rooms.length} salles</Badge>
           </div>
+          {isLoading && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Card key={i} className="h-40 animate-pulse">
+                  <CardContent className="p-4">
+                    <div className="h-full flex items-center justify-center text-xs text-gray-400">Chargement...</div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+          {!isLoading && rooms.length === 0 && (
+            <div className="text-center py-8 text-sm text-gray-400">Aucune salle trouvee</div>
+          )}
+          {!isLoading && rooms.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {demoRooms.map((room) => {
+            {rooms.map((room) => {
               const sConfig = statusConfig[room.status]
               return (
                 <motion.div
@@ -592,6 +573,7 @@ export function RoomBookingPage() {
               )
             })}
           </div>
+          )}
         </motion.div>
 
         {/* ─── Weekly Calendar View Card ────────────────────────────────────────── */}
@@ -721,7 +703,7 @@ export function RoomBookingPage() {
                       <SelectValue placeholder="Choisir une salle" />
                     </SelectTrigger>
                     <SelectContent>
-                      {demoRooms.filter(r => r.status !== 'maintenance').map(room => (
+                      {rooms.filter(r => r.status !== 'maintenance').map(room => (
                         <SelectItem key={room.id} value={room.name}>{room.name} ({room.capacity} pl.)</SelectItem>
                       ))}
                     </SelectContent>
@@ -867,7 +849,7 @@ export function RoomBookingPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Toutes les salles</SelectItem>
-                    {demoRooms.map(room => (
+                    {rooms.map(room => (
                       <SelectItem key={room.id} value={room.name}>{room.name}</SelectItem>
                     ))}
                   </SelectContent>
