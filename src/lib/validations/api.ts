@@ -6,7 +6,11 @@ import { z } from 'zod'
 
 export const paginationSchema = z.object({
   page: z.coerce.number().int().positive().default(1),
-  limit: z.coerce.number().int().positive().max(100).default(10),
+  // Several list pages fetch up to 1000 records at once for client-side
+  // search/filter (students-list, teachers-page, payments-page, grades-page,
+  // import-export-page) - found failing with 500s (ZodError: limit too big)
+  // during live verification of grades-page.tsx. 100 was too low for real usage.
+  limit: z.coerce.number().int().positive().max(1000).default(10),
 })
 
 export const tenantQuerySchema = z.object({

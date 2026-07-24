@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { motion } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -41,11 +42,14 @@ import {
   Pencil,
   TrendingUp,
 } from 'lucide-react'
+import { useStructure, useStudents, useDashboardStats } from '@/lib/api-hooks'
+import { exportToExcel, parseExcelFile } from '@/lib/export'
 
-// ─── Demo Data ────────────────────────────────────────────────────────────────
+// ─── Types ──────────────────────────────────────────────────────────────────
 
 interface GradeEntry {
-  id: string
+  studentId: string
+  gradeId: string | null
   matricule: string
   nom: string
   prenom: string
@@ -53,92 +57,310 @@ interface GradeEntry {
   exam: string
   tp: string
   moyenne: number | null
-  validated: boolean
+  isLocked: boolean
   observation: string
 }
 
-const demoGrades: GradeEntry[] = [
-  { id: '1', matricule: 'UDN/L2/2024/001', nom: 'ABAKAR', prenom: 'Adam Hassane', cc: '12', exam: '14', tp: '', moyenne: 12.8, validated: true, observation: '' },
-  { id: '2', matricule: 'UDN/L3/2024/002', nom: 'KHAMIS', prenom: 'Fatime', cc: '15', exam: '16', tp: '', moyenne: 15.6, validated: true, observation: '' },
-  { id: '3', matricule: 'UDN/L2/2024/004', nom: 'MAHAMAT', prenom: 'Youssouf', cc: '9', exam: '8', tp: '', moyenne: 8.4, validated: false, observation: 'Rattrapage necessaire' },
-  { id: '4', matricule: 'UDN/M1/2024/005', nom: 'NGARNDMI', prenom: 'Halime', cc: '11', exam: '13', tp: '12', moyenne: 12.2, validated: true, observation: '' },
-  { id: '5', matricule: 'UDN/L3/2024/009', nom: 'ADAM', prenom: 'Khadija', cc: '14', exam: '12', tp: '', moyenne: 12.8, validated: true, observation: '' },
-  { id: '6', matricule: 'UDN/M2/2024/010', nom: 'ADOUM', prenom: 'Abdoulaye', cc: '8', exam: '7', tp: '', moyenne: 7.4, validated: false, observation: 'Note elimination' },
-  { id: '7', matricule: 'UDN/L1/2024/011', nom: 'BICHARA', prenom: 'Hawa', cc: '13', exam: '11', tp: '14', moyenne: 12.2, validated: true, observation: '' },
-  { id: '8', matricule: 'UDN/L3/2024/013', nom: 'YAYA', prenom: 'Moussa', cc: '10', exam: '12', tp: '', moyenne: 11.2, validated: true, observation: '' },
-  { id: '9', matricule: 'UDN/L2/2024/015', nom: 'ISSA', prenom: 'Mahamat Nour', cc: '7', exam: '6', tp: '', moyenne: 6.4, validated: false, observation: 'Note elimination' },
-  { id: '10', matricule: 'UDN/M1/2024/016', nom: 'AHMAT', prenom: 'Achta', cc: '16', exam: '15', tp: '14', moyenne: 15.2, validated: true, observation: '' },
-  { id: '11', matricule: 'UDN/L2/2024/017', nom: 'HAMID', prenom: 'Oumar', cc: '11', exam: '10', tp: '', moyenne: 10.4, validated: false, observation: '' },
-  { id: '12', matricule: 'UDN/L3/2024/018', nom: 'DJIME', prenom: 'Metine', cc: '12', exam: '14', tp: '', moyenne: 13.2, validated: true, observation: '' },
-  { id: '13', matricule: 'UDN/L2/2024/020', nom: 'HAROUN', prenom: 'Meriam', cc: '9', exam: '11', tp: '10', moyenne: 10.2, validated: false, observation: '' },
-  { id: '14', matricule: 'UDN/M2/2024/021', nom: 'TCHERE', prenom: 'Clement', cc: '14', exam: '13', tp: '', moyenne: 13.4, validated: true, observation: '' },
-  { id: '15', matricule: 'UDN/L3/2024/023', nom: 'SALEH', prenom: 'Hassana', cc: '13', exam: '15', tp: '12', moyenne: 13.8, validated: true, observation: '' },
-]
+interface FlatUE {
+  teachingUnitId: string
+  courseElementId: string | null
+  code: string
+  name: string
+  semesterId: string
+  semesterName: string
+  levelId: string
+  levelName: string
+  programId: string
+  programName: string
+}
+
+type LocalEdit = { cc?: string; exam?: string; tp?: string; observation?: string }
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+function flattenTeachingUnits(faculties: any[]): FlatUE[] {
+  const result: FlatUE[] = []
+  for (const faculty of faculties || []) {
+    for (const dept of faculty.departments || []) {
+      for (const program of dept.programs || []) {
+        for (const level of program.levels || []) {
+          for (const semester of level.semesters || []) {
+            for (const tu of semester.teachingUnits || []) {
+              result.push({
+                teachingUnitId: tu.id,
+                courseElementId: tu.courseElements?.[0]?.id || null,
+                code: tu.code || tu.id,
+                name: tu.name,
+                semesterId: semester.id,
+                semesterName: semester.name,
+                levelId: level.id,
+                levelName: level.name,
+                programId: program.id,
+                programName: program.name,
+              })
+            }
+          }
+        }
+      }
+    }
+  }
+  return result
+}
+
+function computeMoyenne(cc: string, exam: string, tp: string): number | null {
+  if (cc === '' || exam === '') return null
+  const ccN = parseFloat(cc) || 0
+  const examN = parseFloat(exam) || 0
+  const tpN = parseFloat(tp)
+  if (tp !== '' && !isNaN(tpN)) {
+    return parseFloat((ccN * 0.3 + examN * 0.5 + tpN * 0.2).toFixed(1))
+  }
+  return parseFloat((ccN * 0.4 + examN * 0.6).toFixed(1))
+}
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function GradesPage() {
-  const [grades, setGrades] = useState(demoGrades)
-  const [selectedUE, setSelectedUE] = useState('DRO301')
-  const [selectedSemester, setSelectedSemester] = useState('S3')
-  const [selectedSession, setSelectedSession] = useState('normale')
-  const [isLocked, setIsLocked] = useState(false)
+  const queryClient = useQueryClient()
+
+  const { data: structureQuery, isLoading: structureLoading } = useStructure()
+  const { data: dashboardQuery } = useDashboardStats()
+  const academicYearId: string | undefined = dashboardQuery?.currentAcademicYear?.id
+
+  const ueList = useMemo(() => flattenTeachingUnits(structureQuery?.faculties || []), [structureQuery])
+
+  const [selectedUE, setSelectedUE] = useState<string>('')
+  useEffect(() => {
+    if (!selectedUE && ueList.length > 0) setSelectedUE(ueList[0].teachingUnitId)
+  }, [ueList, selectedUE])
+
+  const currentUE = ueList.find(u => u.teachingUnitId === selectedUE)
+
+  const [selectedSession, setSelectedSession] = useState<'normale' | 'rattrapage'>('normale')
+  const apiSession = selectedSession === 'rattrapage' ? 'RATTRAPAGE' : 'NORMALE'
+
+  const [editingLocked, setEditingLocked] = useState(false)
   const [bulkMode, setBulkMode] = useState(false)
+  const [localEdits, setLocalEdits] = useState<Record<string, LocalEdit>>({})
+  const [saving, setSaving] = useState(false)
+  const [validatingId, setValidatingId] = useState<string | null>(null)
+  const importInputRef = useRef<HTMLInputElement>(null)
 
-  const ueList = [
-    { code: 'DRO301', name: 'Droit des Obligations', semester: 'S3' },
-    { code: 'DRO302', name: 'Droit de la Famille', semester: 'S3' },
-    { code: 'DRO401', name: 'Droit Commercial', semester: 'S4' },
-    { code: 'DRO402', name: 'Droit Administratif', semester: 'S4' },
-    { code: 'INF101', name: 'Algorithmique', semester: 'S1' },
-    { code: 'MAT101', name: 'Mathematiques', semester: 'S1' },
-  ]
+  const { data: studentsQuery, isLoading: studentsLoading } = useStudents({
+    programId: currentUE?.programId,
+    levelId: currentUE?.levelId,
+    limit: 1000,
+  })
 
-  const handleGradeChange = (id: string, field: 'cc' | 'exam' | 'tp', value: string) => {
-    setGrades(prev => prev.map(g => {
-      if (g.id !== id) return g
-      const updated = { ...g, [field]: value }
-      const cc = parseFloat(updated.cc) || 0
-      const exam = parseFloat(updated.exam) || 0
-      const tp = parseFloat(updated.tp)
-      if (updated.cc !== '' && updated.exam !== '') {
-        if (!isNaN(tp)) {
-          updated.moyenne = parseFloat((cc * 0.3 + exam * 0.5 + tp * 0.2).toFixed(1))
-        } else {
-          updated.moyenne = parseFloat((cc * 0.4 + exam * 0.6).toFixed(1))
-        }
-      } else {
-        updated.moyenne = null
+  const { data: gradesQuery, isLoading: gradesLoading } = useQuery({
+    queryKey: ['grades', selectedUE, apiSession, academicYearId],
+    queryFn: async () => {
+      const params = new URLSearchParams({ teachingUnitId: selectedUE, session: apiSession, limit: '500' })
+      if (academicYearId) params.set('academicYearId', academicYearId)
+      const res = await fetch(`/api/grades?${params.toString()}`)
+      if (!res.ok) throw new Error('Failed to fetch grades')
+      return res.json()
+    },
+    enabled: !!selectedUE,
+  })
+
+  const dataLoading = structureLoading || studentsLoading || gradesLoading
+
+  const grades: GradeEntry[] = useMemo(() => {
+    const students = studentsQuery?.data || []
+    const existingByStudent = new Map<string, any>()
+    for (const g of gradesQuery?.data || []) existingByStudent.set(g.studentId, g)
+
+    return students.map((s: any) => {
+      const existing = existingByStudent.get(s.id)
+      const edit = localEdits[s.id] || {}
+      const cc = edit.cc !== undefined ? edit.cc : (existing?.ccGrade != null ? String(existing.ccGrade) : '')
+      const exam = edit.exam !== undefined ? edit.exam : (existing?.examGrade != null ? String(existing.examGrade) : '')
+      const tp = edit.tp !== undefined ? edit.tp : (existing?.tpGrade != null ? String(existing.tpGrade) : '')
+      const observation = edit.observation !== undefined ? edit.observation : (existing?.comment || '')
+      const hasLocalEdit = edit.cc !== undefined || edit.exam !== undefined || edit.tp !== undefined
+      const moyenne = hasLocalEdit ? computeMoyenne(cc, exam, tp) : (existing?.finalGrade ?? computeMoyenne(cc, exam, tp))
+
+      return {
+        studentId: s.id,
+        gradeId: existing?.id ?? null,
+        matricule: s.matricule || '',
+        nom: s.lastName,
+        prenom: s.firstName,
+        cc, exam, tp, observation,
+        moyenne,
+        isLocked: existing?.isLocked ?? false,
+      } as GradeEntry
+    })
+  }, [studentsQuery, gradesQuery, localEdits])
+
+  const handleGradeChange = (studentId: string, field: 'cc' | 'exam' | 'tp', value: string) => {
+    setLocalEdits(prev => ({ ...prev, [studentId]: { ...prev[studentId], [field]: value } }))
+  }
+
+  const handleObservationChange = (studentId: string, value: string) => {
+    setLocalEdits(prev => ({ ...prev, [studentId]: { ...prev[studentId], observation: value } }))
+  }
+
+  const refetchGrades = () => queryClient.invalidateQueries({ queryKey: ['grades', selectedUE, apiSession, academicYearId] })
+
+  const handleSave = async () => {
+    if (!currentUE) return
+    if (!currentUE.courseElementId) {
+      toast.error("Aucun élément constitutif (ECUE) configuré pour cette UE", { description: "Impossible d'enregistrer des notes sans ECUE." })
+      return
+    }
+    if (!academicYearId) {
+      toast.error("Année académique courante introuvable")
+      return
+    }
+    const toSave = grades.filter(g => g.moyenne !== null)
+    if (toSave.length === 0) {
+      toast.info('Aucune note à enregistrer')
+      return
+    }
+    setSaving(true)
+    try {
+      const payload = {
+        academicYearId,
+        session: apiSession,
+        grades: toSave.map(g => ({
+          studentId: g.studentId,
+          teachingUnitId: currentUE.teachingUnitId,
+          courseElementId: currentUE.courseElementId,
+          academicYearId,
+          session: apiSession,
+          ccGrade: g.cc !== '' ? parseFloat(g.cc) : undefined,
+          examGrade: g.exam !== '' ? parseFloat(g.exam) : undefined,
+          tpGrade: g.tp !== '' ? parseFloat(g.tp) : undefined,
+          comment: g.observation || undefined,
+        })),
       }
-      return updated
-    }))
+      const res = await fetch('/api/grades?action=bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Échec de l'enregistrement")
+      const r = data.data
+      toast.success('Notes enregistrées', {
+        description: `${r.created} créées, ${r.updated} mises à jour${r.errors?.length ? `, ${r.errors.length} erreur(s)` : ''}`,
+      })
+      setLocalEdits({})
+      refetchGrades()
+    } catch (e) {
+      toast.error('Erreur', { description: e instanceof Error ? e.message : "Échec de l'enregistrement" })
+    } finally {
+      setSaving(false)
+    }
   }
 
-  const handleObservationChange = (id: string, value: string) => {
-    setGrades(prev => prev.map(g => {
-      if (g.id !== id) return g
-      return { ...g, observation: value }
-    }))
+  const lockGrade = async (gradeId: string) => {
+    const res = await fetch(`/api/grades?action=lock&id=${gradeId}&lock=true`, { method: 'POST' })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      throw new Error(data.error || 'Échec de la validation')
+    }
   }
 
-  const handleValidateGrade = (id: string) => {
-    setGrades(prev => prev.map(g => {
-      if (g.id !== id) return g
-      return { ...g, validated: true }
-    }))
+  const handleValidateGrade = async (gradeId: string | null) => {
+    if (!gradeId) {
+      toast.error('Enregistrez la note avant de la valider')
+      return
+    }
+    setValidatingId(gradeId)
+    try {
+      await lockGrade(gradeId)
+      toast.success('Note validée')
+      refetchGrades()
+    } catch (e) {
+      toast.error('Erreur', { description: e instanceof Error ? e.message : 'Échec de la validation' })
+    } finally {
+      setValidatingId(null)
+    }
+  }
+
+  const handleValidateAll = async () => {
+    const toValidate = grades.filter(g => g.gradeId && g.moyenne !== null && !g.isLocked)
+    if (toValidate.length === 0) {
+      toast.info('Aucune note à valider')
+      return
+    }
+    setValidatingId('all')
+    try {
+      const results = await Promise.allSettled(toValidate.map(g => lockGrade(g.gradeId as string)))
+      const failed = results.filter(r => r.status === 'rejected').length
+      toast.success('Validation terminée', {
+        description: `${toValidate.length - failed} note(s) validée(s)${failed ? `, ${failed} échec(s)` : ''}`,
+      })
+      refetchGrades()
+    } finally {
+      setValidatingId(null)
+    }
+  }
+
+  const handleExport = () => {
+    if (grades.length === 0) {
+      toast.info('Aucune donnée à exporter')
+      return
+    }
+    exportToExcel(
+      grades.map(g => ({
+        Matricule: g.matricule,
+        Nom: g.nom,
+        Prenom: g.prenom,
+        CC: g.cc,
+        Examen: g.exam,
+        TP: g.tp,
+        Moyenne: g.moyenne ?? '',
+        Statut: g.isLocked ? 'Valide' : (g.moyenne !== null ? 'A valider' : '-'),
+      })),
+      `notes_${currentUE?.code || 'export'}`
+    )
+    toast.success('Export généré')
+  }
+
+  const handleImportClick = () => importInputRef.current?.click()
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    try {
+      const rows = await parseExcelFile(file) as Record<string, unknown>[]
+      const byMatricule = new Map(grades.map(g => [g.matricule, g]))
+      const edits: Record<string, LocalEdit> = {}
+      let matched = 0
+      for (const row of rows) {
+        const matricule = String(row['Matricule'] ?? row['matricule'] ?? '').trim()
+        if (!matricule) continue
+        const student = byMatricule.get(matricule)
+        if (!student) continue
+        matched++
+        edits[student.studentId] = {
+          cc: row['CC'] !== undefined ? String(row['CC']) : undefined,
+          exam: row['Examen'] !== undefined ? String(row['Examen']) : (row['Exam'] !== undefined ? String(row['Exam']) : undefined),
+          tp: row['TP'] !== undefined ? String(row['TP']) : undefined,
+        }
+      }
+      setLocalEdits(prev => ({ ...prev, ...edits }))
+      toast.success('Fichier importé', { description: `${matched} étudiant(s) mis à jour sur ${rows.length} ligne(s) lues. Cliquez sur Enregistrer pour sauvegarder.` })
+    } catch (err) {
+      toast.error('Erreur import', { description: err instanceof Error ? err.message : 'Fichier illisible' })
+    }
   }
 
   // ─── Computed Stats ──────────────────────────────────────────────────────
   const validGrades = grades.filter(g => g.moyenne !== null)
   const validCount = validGrades.filter(g => g.moyenne! >= 10).length
-  void validGrades.filter(g => g.moyenne! < 10).length
   const classAverage = validGrades.length > 0
     ? validGrades.reduce((acc, g) => acc + (g.moyenne || 0), 0) / validGrades.length
     : 0
   const validationRate = validGrades.length > 0
     ? Math.round((validCount / validGrades.length) * 100)
     : 0
-  const pendingValidation = grades.filter(g => g.moyenne !== null && !g.validated).length
+  const pendingValidation = grades.filter(g => g.moyenne !== null && !g.isLocked).length
   const notesSaisies = validGrades.length
   const notesAttendues = grades.length
 
@@ -200,6 +422,8 @@ export function GradesPage() {
 
   return (
     <div className="space-y-5">
+      <input ref={importInputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImportFile} />
+
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -8 }}
@@ -212,17 +436,17 @@ export function GradesPage() {
           <p className="text-sm text-gray-500">Saisie, calcul et validation des notes</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="text-xs" onClick={() => toast.success('Fichier importé avec succès', { description: '15 lignes traitées' })}>
+          <Button variant="outline" size="sm" className="text-xs" onClick={handleImportClick}>
             <Upload className="size-3.5 mr-1.5" />
             Importer Excel
           </Button>
-          <Button variant="outline" size="sm" className="text-xs" onClick={() => toast.success('Export en cours', { description: 'Le fichier sera téléchargé dans un instant' })}>
+          <Button variant="outline" size="sm" className="text-xs" onClick={handleExport}>
             <Download className="size-3.5 mr-1.5" />
             Exporter
           </Button>
-          <Button size="sm" className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs" onClick={() => toast.success('Notes enregistrées', { description: `${grades.filter(g => g.moyenne !== null).length} notes sauvegardées` })}>
+          <Button size="sm" className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs" disabled={saving} onClick={handleSave}>
             <Save className="size-3.5 mr-1.5" />
-            Enregistrer
+            {saving ? 'Enregistrement...' : 'Enregistrer'}
           </Button>
         </div>
       </motion.div>
@@ -354,17 +578,17 @@ export function GradesPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Selectors */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label className="text-xs font-medium text-gray-600">UE / ECUE</Label>
-                <Select value={selectedUE} onValueChange={setSelectedUE}>
+                <Select value={selectedUE} onValueChange={setSelectedUE} disabled={ueList.length === 0}>
                   <SelectTrigger className="h-9 text-sm">
-                    <SelectValue placeholder="Unite d'enseignement" />
+                    <SelectValue placeholder={structureLoading ? 'Chargement...' : "Unite d'enseignement"} />
                   </SelectTrigger>
                   <SelectContent>
                     {ueList.map(ue => (
-                      <SelectItem key={ue.code} value={ue.code}>
-                        {ue.code} - {ue.name}
+                      <SelectItem key={ue.teachingUnitId} value={ue.teachingUnitId}>
+                        {ue.code} - {ue.name} ({ue.programName} {ue.levelName})
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -372,7 +596,7 @@ export function GradesPage() {
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs font-medium text-gray-600">Session</Label>
-                <Select value={selectedSession} onValueChange={setSelectedSession}>
+                <Select value={selectedSession} onValueChange={(v) => setSelectedSession(v as 'normale' | 'rattrapage')}>
                   <SelectTrigger className="h-9 text-sm">
                     <SelectValue placeholder="Session" />
                   </SelectTrigger>
@@ -382,21 +606,16 @@ export function GradesPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-gray-600">Semestre</Label>
-                <Select value={selectedSemester} onValueChange={setSelectedSemester}>
-                  <SelectTrigger className="h-9 text-sm">
-                    <SelectValue placeholder="Semestre" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="S1">Semestre 1</SelectItem>
-                    <SelectItem value="S2">Semestre 2</SelectItem>
-                    <SelectItem value="S3">Semestre 3</SelectItem>
-                    <SelectItem value="S4">Semestre 4</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
+
+            {currentUE && !currentUE.courseElementId && (
+              <div className="p-3 bg-[#c6282808] border border-[#c6282815] rounded-lg">
+                <p className="text-xs text-[#c62828] font-medium flex items-center gap-1.5">
+                  <AlertCircle className="size-3.5" />
+                  Aucun élément constitutif (ECUE) n&apos;est configuré pour cette UE — la saisie de notes n&apos;est pas possible tant qu&apos;un ECUE n&apos;a pas été créé.
+                </p>
+              </div>
+            )}
 
             {/* Bulk entry note */}
             {bulkMode && (
@@ -426,8 +645,18 @@ export function GradesPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {grades.map((grade, i) => (
-                    <TableRow key={grade.id} className={`hover:bg-gray-50/50 ${getGradeBgColor(grade.moyenne)}`}>
+                  {dataLoading && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-8 text-sm text-gray-400">Chargement...</TableCell>
+                    </TableRow>
+                  )}
+                  {!dataLoading && grades.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-8 text-sm text-gray-400">Aucun étudiant inscrit dans ce programme/niveau</TableCell>
+                    </TableRow>
+                  )}
+                  {!dataLoading && grades.map((grade, i) => (
+                    <TableRow key={grade.studentId} className={`hover:bg-gray-50/50 ${getGradeBgColor(grade.moyenne)}`}>
                       <TableCell className="text-xs text-gray-400 py-2">{i + 1}</TableCell>
                       <TableCell className="py-2">
                         <div>
@@ -443,23 +672,25 @@ export function GradesPage() {
                           step="0.5"
                           value={grade.moyenne !== null ? grade.moyenne : ''}
                           readOnly
-                          disabled={isLocked}
+                          disabled={editingLocked}
                           className={`h-8 text-center text-sm font-bold w-20 mx-auto disabled:bg-gray-50 ${grade.moyenne !== null ? getGradeTextColor(grade.moyenne) : ''}`}
                         />
                       </TableCell>
                       <TableCell className="py-2">
                         <Input
                           value={grade.observation}
-                          onChange={(e) => handleObservationChange(grade.id, e.target.value)}
-                          disabled={isLocked}
+                          onChange={(e) => handleObservationChange(grade.studentId, e.target.value)}
+                          disabled={editingLocked}
                           placeholder="Observation..."
                           className="h-8 text-xs disabled:bg-gray-50"
                         />
                       </TableCell>
                       <TableCell className="py-2 text-center">
                         {grade.moyenne !== null ? (
-                          grade.moyenne >= 10 ? (
+                          grade.isLocked ? (
                             <Badge className="text-[10px] bg-[#2d7a4f15] text-[#2d7a4f] border-0">Valide</Badge>
+                          ) : grade.moyenne >= 10 ? (
+                            <Badge className="text-[10px] bg-[#2d7a4f15] text-[#2d7a4f] border-0">A valider</Badge>
                           ) : grade.moyenne >= 8 ? (
                             <Badge className="text-[10px] bg-[#f9a82515] text-[#f9a825] border-0">Compense</Badge>
                           ) : (
@@ -479,19 +710,19 @@ export function GradesPage() {
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <Button
-                  variant={isLocked ? 'outline' : 'default'}
+                  variant={editingLocked ? 'outline' : 'default'}
                   size="sm"
-                  className={`text-xs ${isLocked ? '' : 'bg-[#d4a853] hover:bg-[#c49a48] text-white'}`}
-                  onClick={() => setIsLocked(!isLocked)}
+                  className={`text-xs ${editingLocked ? '' : 'bg-[#d4a853] hover:bg-[#c49a48] text-white'}`}
+                  onClick={() => setEditingLocked(!editingLocked)}
                 >
-                  {isLocked ? (
+                  {editingLocked ? (
                     <Unlock className="size-3.5 mr-1.5" />
                   ) : (
                     <Lock className="size-3.5 mr-1.5" />
                   )}
-                  {isLocked ? 'Deverrouiller' : 'Verrouiller'}
+                  {editingLocked ? 'Deverrouiller' : 'Verrouiller'}
                 </Button>
-                {isLocked && (
+                {editingLocked && (
                   <Badge className="text-[10px] bg-[#c6282815] text-[#c62828] border-0">
                     <Lock className="size-3 mr-1" />
                     Verrouille
@@ -501,11 +732,11 @@ export function GradesPage() {
               <Button
                 size="sm"
                 className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs"
-                disabled={isLocked}
-                onClick={() => toast.success('Notes enregistrées', { description: 'Les notes ont été sauvegardées avec succès' })}
+                disabled={editingLocked || saving}
+                onClick={handleSave}
               >
                 <Save className="size-3.5 mr-1.5" />
-                Enregistrer les notes
+                {saving ? 'Enregistrement...' : 'Enregistrer les notes'}
               </Button>
             </div>
           </CardContent>
@@ -624,9 +855,9 @@ export function GradesPage() {
               <div className="flex items-center gap-2">
                 <FileCheck className="size-4 text-[#1a2744]" />
                 <CardTitle className="text-sm font-semibold text-[#1a2744]">
-                  {selectedUE} - {ueList.find(u => u.code === selectedUE)?.name}
+                  {currentUE ? `${currentUE.code} - ${currentUE.name}` : 'Aucune UE sélectionnée'}
                 </CardTitle>
-                {isLocked && (
+                {editingLocked && (
                   <Badge className="text-[10px] bg-[#c6282815] text-[#c62828] border-0">
                     <Lock className="size-3 mr-1" />
                     Verrouille
@@ -634,13 +865,18 @@ export function GradesPage() {
                 )}
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" className="text-xs" onClick={() => toast.success('Export en cours')}>
+                <Button variant="outline" size="sm" className="text-xs" onClick={handleExport}>
                   <Download className="size-3.5 mr-1.5" />
                   Exporter
                 </Button>
-                <Button size="sm" className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs" onClick={() => { setGrades(prev => prev.map(g => g.moyenne !== null ? { ...g, validated: true } : g)); toast.success('Toutes les notes validées') }}>
+                <Button
+                  size="sm"
+                  className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs"
+                  disabled={validatingId === 'all'}
+                  onClick={handleValidateAll}
+                >
                   <CheckCircle2 className="size-3.5 mr-1.5" />
-                  Valider tout
+                  {validatingId === 'all' ? 'Validation...' : 'Valider tout'}
                 </Button>
               </div>
             </div>
@@ -662,8 +898,18 @@ export function GradesPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {grades.map((grade, i) => (
-                    <TableRow key={grade.id} className={`hover:bg-gray-50/50 ${getGradeBgColor(grade.moyenne)}`}>
+                  {dataLoading && (
+                    <TableRow>
+                      <TableCell colSpan={9} className="text-center py-8 text-sm text-gray-400">Chargement...</TableCell>
+                    </TableRow>
+                  )}
+                  {!dataLoading && grades.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={9} className="text-center py-8 text-sm text-gray-400">Aucun étudiant inscrit dans ce programme/niveau</TableCell>
+                    </TableRow>
+                  )}
+                  {!dataLoading && grades.map((grade, i) => (
+                    <TableRow key={grade.studentId} className={`hover:bg-gray-50/50 ${getGradeBgColor(grade.moyenne)}`}>
                       <TableCell className="text-xs text-gray-400 py-2">{i + 1}</TableCell>
                       <TableCell className="text-xs font-mono text-gray-600 py-2">{grade.matricule}</TableCell>
                       <TableCell className="text-sm font-medium text-[#1a2744] py-2">
@@ -676,8 +922,8 @@ export function GradesPage() {
                           max="20"
                           step="0.5"
                           value={grade.cc}
-                          onChange={(e) => handleGradeChange(grade.id, 'cc', e.target.value)}
-                          disabled={isLocked}
+                          onChange={(e) => handleGradeChange(grade.studentId, 'cc', e.target.value)}
+                          disabled={editingLocked || grade.isLocked}
                           className="h-8 text-center text-sm w-20 mx-auto disabled:bg-gray-50"
                         />
                       </TableCell>
@@ -688,8 +934,8 @@ export function GradesPage() {
                           max="20"
                           step="0.5"
                           value={grade.exam}
-                          onChange={(e) => handleGradeChange(grade.id, 'exam', e.target.value)}
-                          disabled={isLocked}
+                          onChange={(e) => handleGradeChange(grade.studentId, 'exam', e.target.value)}
+                          disabled={editingLocked || grade.isLocked}
                           className="h-8 text-center text-sm w-20 mx-auto disabled:bg-gray-50"
                         />
                       </TableCell>
@@ -700,8 +946,8 @@ export function GradesPage() {
                           max="20"
                           step="0.5"
                           value={grade.tp}
-                          onChange={(e) => handleGradeChange(grade.id, 'tp', e.target.value)}
-                          disabled={isLocked}
+                          onChange={(e) => handleGradeChange(grade.studentId, 'tp', e.target.value)}
+                          disabled={editingLocked || grade.isLocked}
                           placeholder="-"
                           className="h-8 text-center text-sm w-20 mx-auto disabled:bg-gray-50"
                         />
@@ -723,17 +969,18 @@ export function GradesPage() {
                         )}
                       </TableCell>
                       <TableCell className="py-2 text-center">
-                        {!grade.validated && grade.moyenne !== null ? (
+                        {!grade.isLocked && grade.moyenne !== null ? (
                           <Button
                             variant="ghost"
                             size="sm"
                             className="h-7 text-[10px] text-[#2d7a4f] hover:text-[#236b40] hover:bg-[#2d7a4f10]"
-                            onClick={() => handleValidateGrade(grade.id)}
+                            disabled={validatingId === grade.gradeId}
+                            onClick={() => handleValidateGrade(grade.gradeId)}
                           >
                             <CheckCircle2 className="size-3 mr-1" />
-                            Valider
+                            {validatingId === grade.gradeId ? '...' : 'Valider'}
                           </Button>
-                        ) : grade.validated ? (
+                        ) : grade.isLocked ? (
                           <Badge className="text-[10px] bg-[#2d7a4f10] text-[#2d7a4f] border-0">
                             Valide
                           </Badge>
