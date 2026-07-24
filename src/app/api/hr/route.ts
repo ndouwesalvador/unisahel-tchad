@@ -1,20 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { withTenantAuth } from '@/lib/auth/helpers'
+import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
 
 // GET /api/hr - List staff with stats
-async function handleGet(request: NextRequest) {
+async function handleGet(_user: SessionUser, tenantId: string, _request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
-    const tenantId = searchParams.get('tenantId')
-
-    if (!tenantId) {
-      return NextResponse.json(
-        { error: 'tenantId query parameter is required' },
-        { status: 400 }
-      )
-    }
-
     const where = { tenantId }
 
     const [staff, total, active, onLeave, vacantPosts] = await Promise.all([
@@ -48,11 +38,10 @@ async function handleGet(request: NextRequest) {
 }
 
 // POST /api/hr - Create a new staff member
-async function handlePost(request: NextRequest) {
+async function handlePost(_user: SessionUser, tenantId: string, request: NextRequest) {
   try {
     const body = await request.json()
     const {
-      tenantId,
       firstName,
       lastName,
       email,
@@ -65,13 +54,6 @@ async function handlePost(request: NextRequest) {
     } = body
 
     // Validate required fields
-    if (!tenantId) {
-      return NextResponse.json(
-        { error: 'tenantId is required' },
-        { status: 400 }
-      )
-    }
-
     if (!firstName || !lastName || !email || !department || !position || !contractType) {
       return NextResponse.json(
         { error: 'firstName, lastName, email, department, position, and contractType are required fields' },
@@ -136,5 +118,5 @@ async function handlePost(request: NextRequest) {
   }
 }
 
-export const GET = withTenantAuth(handleGet as any)
-export const POST = withTenantAuth(handlePost as any)
+export const GET = withTenantAuth(handleGet)
+export const POST = withTenantAuth(handlePost)

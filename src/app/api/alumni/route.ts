@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { withTenantAuth } from '@/lib/auth/helpers'
+import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
 
-export async function GET(request: NextRequest) {
+async function handleGet(_user: SessionUser, tenantId: string, _request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
-    const tenantId = searchParams.get('tenantId') || ''
-
-    const where = tenantId ? { tenantId } : {}
+    const where = { tenantId }
 
     const [alumni] = await Promise.all([
       db.alumni.findMany({ where, orderBy: { graduationYear: 'desc' } }),
@@ -56,10 +53,44 @@ export async function GET(request: NextRequest) {
   }
 }
 
-async function handler(request: NextRequest) {
+async function handlePost(_user: SessionUser, tenantId: string, request: NextRequest) {
   try {
     const body = await request.json()
-    const alumni = await db.alumni.create({ data: body })
+    const {
+      studentId, firstName, lastName, email, phone, diploma, graduationYear,
+      program, currentPosition, company, sector, country, city, status,
+      isContributing, contributionAmt, linkedIn,
+    } = body
+
+    if (!firstName || !lastName || !graduationYear) {
+      return NextResponse.json(
+        { error: 'firstName, lastName, and graduationYear are required fields' },
+        { status: 400 }
+      )
+    }
+
+    const alumni = await db.alumni.create({
+      data: {
+        tenantId,
+        studentId: studentId ?? null,
+        firstName,
+        lastName,
+        email: email ?? null,
+        phone: phone ?? null,
+        diploma: diploma ?? null,
+        graduationYear,
+        program: program ?? null,
+        currentPosition: currentPosition ?? null,
+        company: company ?? null,
+        sector: sector ?? null,
+        country: country ?? null,
+        city: city ?? null,
+        status: status ?? undefined,
+        isContributing: typeof isContributing === 'boolean' ? isContributing : undefined,
+        contributionAmt: typeof contributionAmt === 'number' ? contributionAmt : undefined,
+        linkedIn: linkedIn ?? null,
+      },
+    })
     return NextResponse.json({ alumni }, { status: 201 })
   } catch {
     return NextResponse.json(
@@ -69,4 +100,5 @@ async function handler(request: NextRequest) {
   }
 }
 
-export const POST = withTenantAuth(handler as any)
+export const GET = withTenantAuth(handleGet)
+export const POST = withTenantAuth(handlePost)

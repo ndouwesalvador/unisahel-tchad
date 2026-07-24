@@ -1,20 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { withTenantAuth } from '@/lib/auth/helpers'
+import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
 
 // GET /api/rooms - List rooms with stats
-async function handleGet(request: NextRequest) {
+async function handleGet(_user: SessionUser, tenantId: string, _request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
-    const tenantId = searchParams.get('tenantId')
-
-    if (!tenantId) {
-      return NextResponse.json(
-        { error: 'tenantId query parameter is required' },
-        { status: 400 }
-      )
-    }
-
     const where = { tenantId }
 
     const [rooms, total, available, occupied, maintenance] = await Promise.all([
@@ -64,14 +54,13 @@ async function handleGet(request: NextRequest) {
   }
 }
 
-export const GET = withTenantAuth(handleGet as any)
+export const GET = withTenantAuth(handleGet)
 
 // POST /api/rooms - Create a new room reservation
-async function handlePost(request: NextRequest) {
+async function handlePost(_user: SessionUser, tenantId: string, request: NextRequest) {
   try {
     const body = await request.json()
     const {
-      tenantId,
       roomId,
       date,
       startTime,
@@ -83,13 +72,6 @@ async function handlePost(request: NextRequest) {
     } = body
 
     // Validate required fields
-    if (!tenantId) {
-      return NextResponse.json(
-        { error: 'tenantId is required' },
-        { status: 400 }
-      )
-    }
-
     if (!roomId || !date || !startTime || !endTime || !purpose || !organizer) {
       return NextResponse.json(
         { error: 'roomId, date, startTime, endTime, purpose, and organizer are required fields' },
@@ -106,9 +88,9 @@ async function handlePost(request: NextRequest) {
       )
     }
 
-    // Check that the room exists
-    const room = await db.room.findUnique({
-      where: { id: roomId },
+    // Check that the room exists in this tenant
+    const room = await db.room.findFirst({
+      where: { id: roomId, tenantId },
     })
 
     if (!room) {
@@ -182,4 +164,4 @@ async function handlePost(request: NextRequest) {
   }
 }
 
-export const POST = withTenantAuth(handlePost as any)
+export const POST = withTenantAuth(handlePost)

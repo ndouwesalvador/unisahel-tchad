@@ -1,19 +1,9 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { withTenantAuth } from '@/lib/auth/helpers'
+import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
 
-async function handler(request: Request) {
+async function handler(_user: SessionUser, tenantId: string, _request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
-    const tenantId = searchParams.get('tenantId')
-
-    if (!tenantId) {
-      return NextResponse.json(
-        { error: 'tenantId query parameter is required' },
-        { status: 400 }
-      )
-    }
-
     // Get tenant info
     const tenant = await db.tenant.findUnique({
       where: { id: tenantId },
@@ -207,4 +197,4 @@ async function handler(request: Request) {
   }
 }
 
-export const GET = withTenantAuth(handler as any)
+export const GET = withTenantAuth(handler)

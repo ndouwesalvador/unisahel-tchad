@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth/config'
 import { renderPDF } from '@/lib/pdf/templates'
 import { db } from '@/lib/db'
+import type { SessionUser } from '@/lib/auth/helpers'
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,12 +10,17 @@ export async function POST(request: NextRequest) {
     if (!session?.user) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
     }
+    const sessionUser = session.user as SessionUser
 
     const body = await request.json()
     const { type, studentId, tenantId, academicYearId, deliberationId, data } = body
 
     if (!type || !tenantId) {
       return NextResponse.json({ error: 'Type et tenant requis' }, { status: 400 })
+    }
+
+    if (sessionUser.role !== 'SUPER_ADMIN' && sessionUser.tenantId !== tenantId) {
+      return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
     }
 
     // Fetch real tenant data
@@ -40,8 +46,8 @@ export async function POST(request: NextRequest) {
     // Fetch real student data
     let student = data?.student || null
     if (studentId && !student) {
-      const studentDb = await db.student.findUnique({
-        where: { id: studentId },
+      const studentDb = await db.student.findFirst({
+        where: { id: studentId, tenantId },
         include: { currentLevel: { select: { name: true } }, currentProgram: { select: { name: true } } },
       })
       if (studentDb) {
@@ -135,7 +141,7 @@ export async function POST(request: NextRequest) {
         let academicYear = data?.academicYear || ''
         if (studentId) {
           const reg = await db.administrativeRegistration.findFirst({
-            where: { studentId },
+            where: { studentId, tenantId },
             orderBy: { createdAt: 'desc' },
             include: { academicYear: { select: { name: true } } },
           })
@@ -168,8 +174,8 @@ export async function POST(request: NextRequest) {
 
         // Fetch deliberation data from DB if deliberationId provided
         if (deliberationId) {
-          const delib = await db.deliberation.findUnique({
-            where: { id: deliberationId },
+          const delib = await db.deliberation.findFirst({
+            where: { id: deliberationId, tenantId },
             include: { decisions: true },
           })
 
@@ -216,7 +222,7 @@ export async function POST(request: NextRequest) {
         let academicYear = data?.academicYear || ''
         if (studentId) {
           const reg = await db.administrativeRegistration.findFirst({
-            where: { studentId },
+            where: { studentId, tenantId },
             orderBy: { createdAt: 'desc' },
             include: { academicYear: { select: { name: true } } },
           })
@@ -239,7 +245,7 @@ export async function POST(request: NextRequest) {
 
         // Fetch students by program/level from DB
         if (!studentsList.length && (data?.programId || data?.levelId)) {
-          const filters: Record<string, string> = {}
+          const filters: Record<string, string> = { tenantId }
           if (data?.programId) filters.currentProgramId = data.programId
           if (data?.levelId) filters.currentLevelId = data.levelId
           const dbStudents = await db.student.findMany({

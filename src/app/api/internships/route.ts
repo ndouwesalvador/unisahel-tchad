@@ -1,21 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { withTenantAuth } from '@/lib/auth/helpers'
+import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
 
 // GET /api/internships - List internships with stats
-// @ts-check
-export async function GET(request: NextRequest) {
+async function handleGet(_user: SessionUser, tenantId: string, _request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
-    const tenantId = searchParams.get('tenantId')
-
-    if (!tenantId) {
-      return NextResponse.json(
-        { error: 'tenantId query parameter is required' },
-        { status: 400 }
-      )
-    }
-
     const where = { tenantId }
 
     const [internships, total, enCours, conventionSignee, enAttente, termine, annule] = await Promise.all([
@@ -53,11 +42,10 @@ export async function GET(request: NextRequest) {
 }
 
 // POST /api/internships - Create a new internship
-async function handler(request: NextRequest) {
+async function handlePost(_user: SessionUser, tenantId: string, request: NextRequest) {
   try {
     const body = await request.json()
     const {
-      tenantId,
       studentName,
       matricule,
       entreprise,
@@ -70,13 +58,6 @@ async function handler(request: NextRequest) {
       evaluation,
       evaluationDate,
     } = body
-
-    if (!tenantId) {
-      return NextResponse.json(
-        { error: 'tenantId is required' },
-        { status: 400 }
-      )
-    }
 
     if (!studentName || !matricule || !entreprise || !type) {
       return NextResponse.json(
@@ -121,4 +102,5 @@ async function handler(request: NextRequest) {
   }
 }
 
-export const POST = withTenantAuth(handler as any)
+export const GET = withTenantAuth(handleGet)
+export const POST = withTenantAuth(handlePost)

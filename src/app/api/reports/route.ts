@@ -1,20 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { withTenantAuth } from '@/lib/auth/helpers'
+import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
 
 // GET /api/reports - List reports with stats
-async function handleGet(request: NextRequest) {
+async function handleGet(_user: SessionUser, tenantId: string, _request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
-    const tenantId = searchParams.get('tenantId')
-
-    if (!tenantId) {
-      return NextResponse.json(
-        { error: 'tenantId query parameter is required' },
-        { status: 400 }
-      )
-    }
-
     const where = { tenantId }
 
     const [reports, total, completed, pending, totalDownloadsResult] = await Promise.all([
@@ -50,20 +40,13 @@ async function handleGet(request: NextRequest) {
   }
 }
 
-export const GET = withTenantAuth(handleGet as any)
+export const GET = withTenantAuth(handleGet)
 
 // POST /api/reports - Create a new report
-async function handlePost(request: NextRequest) {
+async function handlePost(_user: SessionUser, tenantId: string, request: NextRequest) {
   try {
     const body = await request.json()
-    const { tenantId, name, type, format, period, level, program, generatedBy, scheduledAt } = body
-
-    if (!tenantId) {
-      return NextResponse.json(
-        { error: 'tenantId is required' },
-        { status: 400 }
-      )
-    }
+    const { name, type, format, period, level, program, generatedBy, scheduledAt } = body
 
     if (!name || !type || !format) {
       return NextResponse.json(
@@ -113,4 +96,4 @@ async function handlePost(request: NextRequest) {
   }
 }
 
-export const POST = withTenantAuth(handlePost as any)
+export const POST = withTenantAuth(handlePost)

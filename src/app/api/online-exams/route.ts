@@ -1,20 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { withTenantAuth } from '@/lib/auth/helpers'
+import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
 
 // GET /api/online-exams - List online exams with stats
-async function handleGet(request: NextRequest) {
+async function handleGet(_user: SessionUser, tenantId: string, _request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
-    const tenantId = searchParams.get('tenantId')
-
-    if (!tenantId) {
-      return NextResponse.json(
-        { error: 'tenantId query parameter is required' },
-        { status: 400 }
-      )
-    }
-
     const where = { tenantId }
 
     const [exams, planned, inProgress, completed] = await Promise.all([
@@ -47,17 +37,10 @@ async function handleGet(request: NextRequest) {
 }
 
 // POST /api/online-exams - Create a new online exam
-async function handlePost(request: NextRequest) {
+async function handlePost(_user: SessionUser, tenantId: string, request: NextRequest) {
   try {
     const body = await request.json()
-    const { tenantId, name, course, examDate, duration, questions, type } = body
-
-    if (!tenantId) {
-      return NextResponse.json(
-        { error: 'tenantId is required' },
-        { status: 400 }
-      )
-    }
+    const { name, course, examDate, duration, questions, type } = body
 
     if (!name || !course || !duration || !questions || !type) {
       return NextResponse.json(
@@ -104,5 +87,5 @@ async function handlePost(request: NextRequest) {
   }
 }
 
-export const GET = withTenantAuth(handleGet as any)
-export const POST = withTenantAuth(handlePost as any)
+export const GET = withTenantAuth(handleGet)
+export const POST = withTenantAuth(handlePost)

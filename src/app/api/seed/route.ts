@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import bcrypt from 'bcryptjs'
+import type { SessionUser } from '@/lib/auth/helpers'
 
 export async function GET() {
   try {
@@ -8,6 +9,9 @@ export async function GET() {
     const session = await auth()
     if (!session?.user) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
+    }
+    if ((session.user as SessionUser).role !== 'SUPER_ADMIN') {
+      return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
     }
 
     // Check if data already exists

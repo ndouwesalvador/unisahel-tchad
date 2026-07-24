@@ -1,20 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { withTenantAuth } from '@/lib/auth/helpers'
+import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
 
 // GET /api/attendance - List attendance records with computed stats
-export async function GET(request: NextRequest) {
+async function handleGet(_user: SessionUser, tenantId: string, _request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
-    const tenantId = searchParams.get('tenantId')
-
-    if (!tenantId) {
-      return NextResponse.json(
-        { error: 'tenantId query parameter is required' },
-        { status: 400 }
-      )
-    }
-
     const where = { tenantId }
 
     const [records, present, absent, justified, late] = await Promise.all([
@@ -53,17 +43,10 @@ export async function GET(request: NextRequest) {
 }
 
 // POST /api/attendance - Create a new attendance record
-async function handler(request: NextRequest) {
+async function handlePost(_user: SessionUser, tenantId: string, request: NextRequest) {
   try {
     const body = await request.json()
-    const { tenantId, studentName, matricule, course, timeSlot, status, duration, justification, program, level, date } = body
-
-    if (!tenantId) {
-      return NextResponse.json(
-        { error: 'tenantId is required' },
-        { status: 400 }
-      )
-    }
+    const { studentName, matricule, course, timeSlot, status, duration, justification, program, level, date } = body
 
     if (!studentName || !matricule || !course || !timeSlot || !status) {
       return NextResponse.json(
@@ -107,4 +90,5 @@ async function handler(request: NextRequest) {
   }
 }
 
-export const POST = withTenantAuth(handler as any)
+export const GET = withTenantAuth(handleGet)
+export const POST = withTenantAuth(handlePost)

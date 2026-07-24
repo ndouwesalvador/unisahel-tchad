@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { getToken } from 'next-auth/jwt'
+import { getAuthSecret } from '@/lib/auth/secret'
 
 export const runtime = 'nodejs'
 
@@ -16,9 +17,9 @@ export async function middleware(req: NextRequest) {
   }
 
   // Validate session via NextAuth
-  const token = await getToken({ 
-    req, 
-    secret: process.env.NEXTAUTH_SECRET || "dev-secret-change-in-production-min-32-chars" 
+  const token = await getToken({
+    req,
+    secret: getAuthSecret(),
   })
   if (!token) {
     const callbackUrl = encodeURIComponent(nextUrl.pathname + nextUrl.search)

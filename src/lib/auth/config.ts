@@ -7,9 +7,10 @@ import { PrismaAdapter } from '@auth/prisma-adapter'
 import bcrypt from 'bcryptjs'
 import { db } from '@/lib/db'
 import { z } from 'zod'
+import { getAuthSecret } from '@/lib/auth/secret'
 
 export const authConfig = {
-  secret: process.env.NEXTAUTH_SECRET || "dev-secret-change-in-production-min-32-chars",
+  secret: getAuthSecret(),
   adapter: PrismaAdapter(db) as Adapter,
   session: { strategy: 'jwt' as const },
   pages: {
