@@ -1,37 +1,14 @@
-﻿'use client'
+'use client'
 
+import { exportToExcel } from '@/lib/export'
 import { useState, useEffect, useRef } from 'react'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import { motion, AnimatePresence } from 'framer-motion'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import { Button } from '@/components/ui/button'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import { Input } from '@/components/ui/input'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import { Badge } from '@/components/ui/badge'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import { Progress } from '@/components/ui/progress'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import {
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
   Table,
   TableBody,
   TableCell,
@@ -40,9 +17,6 @@ import { exportToExcel } from '@/lib/export'
   TableRow,
 } from '@/components/ui/table'
 import {
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
   Select,
   SelectContent,
   SelectItem,
@@ -50,18 +24,12 @@ import { exportToExcel } from '@/lib/export'
   SelectValue,
 } from '@/components/ui/select'
 import {
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import {
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
   Monitor,
   Clock,
   FileCheck,
@@ -91,7 +59,7 @@ import { exportToExcel } from '@/lib/export'
   FileText,
 } from 'lucide-react'
 
-// â”€â”€â”€ useCountUp Hook â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── useCountUp Hook ──────────────────────────────────────────────────────────
 
 function useCountUp(target: number, duration: number = 1400) {
   const [value, setValue] = useState(0)
@@ -111,7 +79,7 @@ function useCountUp(target: number, duration: number = 1400) {
   return value
 }
 
-// â”€â”€â”€ Demo Data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Demo Data ────────────────────────────────────────────────────────────────
 
 interface UpcomingExam {
   id: string
@@ -236,7 +204,7 @@ const demoBankQuestions: BankQuestion[] = [
   { id: '10', text: 'Comparer les approches gloutonnes et la programmation dynamique', type: 'Dissertation', difficulty: 'Difficile', points: 5, usageCount: 23, course: 'Algorithmique' },
 ]
 
-// â”€â”€â”€ Config Maps â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Config Maps ──────────────────────────────────────────────────────────────
 
 const examTypeConfig: Record<string, { label: string; className: string }> = {
   'QCM': { label: 'QCM', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0' },
@@ -279,7 +247,7 @@ const difficultyConfig: Record<string, { label: string; className: string }> = {
   'Difficile': { label: 'Difficile', className: 'bg-[#c6282815] text-[#c62828] border-0' },
 }
 
-// â”€â”€â”€ Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export function OnlineExamPage() {
   const examensPrevus = useCountUp(12, 1400)
@@ -403,7 +371,7 @@ export function OnlineExamPage() {
         initial="hidden"
         animate="visible"
       >
-        {/* â”€â”€ Gradient Header Banner â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* ── Gradient Header Banner ───────────────────────────────────────────── */}
         <motion.div variants={itemVariants}>
           <div className="relative overflow-hidden bg-gradient-to-r from-[#1a2744] via-[#1f3050] to-[#2d7a4f] p-6 md:p-8 rounded-xl mb-2">
             {/* SVG pattern overlay */}
@@ -447,7 +415,7 @@ export function OnlineExamPage() {
           </div>
         </motion.div>
 
-        {/* â”€â”€ 4 Stats Cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* ── 4 Stats Cards ──────────────────────────────────────────────────────── */}
         <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Examens en cours */}
           <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
@@ -548,7 +516,7 @@ export function OnlineExamPage() {
           </motion.div>
         </motion.div>
 
-        {/* â”€â”€ Exam Calendar Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* ── Exam Calendar Card ──────────────────────────────────────────────── */}
         <motion.div variants={itemVariants}>
           <Card className="border-l-4 border-l-[#1a2744]">
             <div className="h-1 bg-gradient-to-r from-[#1a2744] via-[#2d7a4f] to-[#d4a853]" />
@@ -651,7 +619,7 @@ export function OnlineExamPage() {
           </Card>
         </motion.div>
 
-        {/* â”€â”€ Active Exam Interface Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* ── Active Exam Interface Card ──────────────────────────────────────── */}
         <motion.div variants={itemVariants}>
           <Card className="border-l-4 border-l-[#2d7a4f]">
             <div className="h-1 bg-gradient-to-r from-[#2d7a4f] to-[#3da66a]" />
@@ -906,7 +874,7 @@ export function OnlineExamPage() {
           )}
         </AnimatePresence>
 
-        {/* â”€â”€ Results & Grading Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* ── Results & Grading Card ──────────────────────────────────────────── */}
         <motion.div variants={itemVariants}>
           <Card className="border-l-4 border-l-[#d4a853]">
             <div className="h-1 bg-gradient-to-r from-[#d4a853] to-[#e6c477]" />
@@ -1035,7 +1003,7 @@ export function OnlineExamPage() {
           </Card>
         </motion.div>
 
-        {/* â”€â”€ Anti-Cheat & Proctoring + Question Bank Row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* ── Anti-Cheat & Proctoring + Question Bank Row ─────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Anti-Cheat Card */}
           <motion.div variants={itemVariants}>
@@ -1223,7 +1191,7 @@ export function OnlineExamPage() {
           </motion.div>
         </div>
 
-        {/* â”€â”€ African Context Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* ── African Context Card ────────────────────────────────────────────── */}
         <motion.div variants={itemVariants}>
           <Card className="border-l-4 border-l-[#2d7a4f]">
             <div className="h-1 bg-gradient-to-r from-[#1a2744] via-[#2d7a4f] to-[#d4a853]" />

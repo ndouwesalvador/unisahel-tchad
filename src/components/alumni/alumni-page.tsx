@@ -1,41 +1,15 @@
-﻿'use client'
+'use client'
 
+import { exportToExcel } from '@/lib/export'
 import { useState } from 'react'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import { motion } from 'framer-motion'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import { Button } from '@/components/ui/button'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import { Input } from '@/components/ui/input'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import { Badge } from '@/components/ui/badge'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import { Progress } from '@/components/ui/progress'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import { Checkbox } from '@/components/ui/checkbox'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import {
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
   Table,
   TableBody,
   TableCell,
@@ -44,9 +18,6 @@ import { exportToExcel } from '@/lib/export'
   TableRow,
 } from '@/components/ui/table'
 import {
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
   Select,
   SelectContent,
   SelectItem,
@@ -54,9 +25,6 @@ import { exportToExcel } from '@/lib/export'
   SelectValue,
 } from '@/components/ui/select'
 import {
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
   GraduationCap,
   Briefcase,
   TrendingUp,
@@ -80,7 +48,7 @@ import { exportToExcel } from '@/lib/export'
   CheckCircle2,
 } from 'lucide-react'
 
-// â”€â”€â”€ Demo Data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Demo Data ────────────────────────────────────────────────────────────────
 
 interface Alumnus {
   id: string
@@ -183,7 +151,7 @@ function formatFCFA(amount: number) {
   return amount.toLocaleString('fr-FR') + ' FCFA'
 }
 
-// â”€â”€â”€ Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export function AlumniPage() {
   const [search, setSearch] = useState('')
@@ -229,7 +197,7 @@ export function AlumniPage() {
       initial="hidden"
       animate="visible"
     >
-      {/* â”€â”€ Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Header ────────────────────────────────────────────────────────────── */}
       <motion.div variants={itemVariants} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-[#1a2744]">Alumni &amp; Anciens etudiants</h1>
@@ -251,7 +219,7 @@ export function AlumniPage() {
         </div>
       </motion.div>
 
-      {/* â”€â”€ Stats Cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Stats Cards ───────────────────────────────────────────────────────── */}
       <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Total diplomes */}
         <Card className="overflow-hidden relative">
@@ -354,7 +322,7 @@ export function AlumniPage() {
         </Card>
       </motion.div>
 
-      {/* â”€â”€ Filter & Search Bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Filter & Search Bar ─────────────────────────────────────────────── */}
       <motion.div variants={itemVariants}>
         <Card>
           <CardContent className="p-4">
@@ -424,7 +392,7 @@ export function AlumniPage() {
         </Card>
       </motion.div>
 
-      {/* â”€â”€ Alumni Directory Table â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Alumni Directory Table ─────────────────────────────────────────────── */}
       <motion.div variants={itemVariants}>
         <Card>
           <CardHeader className="pb-3">
@@ -514,7 +482,7 @@ export function AlumniPage() {
         </Card>
       </motion.div>
 
-      {/* â”€â”€ Career Tracking + Alumni Network Stats â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Career Tracking + Alumni Network Stats ──────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Career Tracking */}
         <motion.div variants={itemVariants}>
@@ -663,7 +631,7 @@ export function AlumniPage() {
         </motion.div>
       </div>
 
-      {/* â”€â”€ Graduation Year Distribution â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Graduation Year Distribution ──────────────────────────────────────── */}
       <motion.div variants={itemVariants}>
         <Card className="border-l-4 border-l-[#1a2744]">
           <CardHeader className="pb-3">
@@ -702,7 +670,7 @@ export function AlumniPage() {
         </Card>
       </motion.div>
 
-      {/* â”€â”€ Events & Contributions Row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Events & Contributions Row ────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Events & Networking */}
         <motion.div variants={itemVariants}>

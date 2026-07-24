@@ -1,29 +1,12 @@
-﻿'use client'
+'use client'
 
+import { exportToExcel } from '@/lib/export'
 import { useState, useEffect, useRef, Fragment } from 'react'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import { motion } from 'framer-motion'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import { Card, CardContent } from '@/components/ui/card'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import { Button } from '@/components/ui/button'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import { Badge } from '@/components/ui/badge'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import {
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
   Table,
   TableBody,
   TableCell,
@@ -32,9 +15,6 @@ import { exportToExcel } from '@/lib/export'
   TableRow,
 } from '@/components/ui/table'
 import {
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
   Select,
   SelectContent,
   SelectItem,
@@ -42,13 +22,7 @@ import { exportToExcel } from '@/lib/export'
   SelectValue,
 } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import {
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
   BookOpen,
   Plus,
   ChevronDown,
@@ -61,9 +35,9 @@ import { exportToExcel } from '@/lib/export'
   Upload,
 } from 'lucide-react'
 
-// â”€â”€â”€ Demo Data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Demo Data ────────────────────────────────────────────────────────────────
 
-type UEType = 'Fondamentale' | 'ComplÃ©mentaire' | 'Transversale'
+type UEType = 'Fondamentale' | 'Complémentaire' | 'Transversale'
 
 interface ECUE {
   code: string
@@ -106,7 +80,7 @@ interface Program {
 
 const typeConfig: Record<UEType, { label: string; className: string }> = {
   'Fondamentale': { label: 'Fondamentale', className: 'bg-[#1a274415] text-[#1a2744] border-0' },
-  'ComplÃ©mentaire': { label: 'ComplÃ©mentaire', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0' },
+  'Complémentaire': { label: 'Complémentaire', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0' },
   'Transversale': { label: 'Transversale', className: 'bg-[#d4a85315] text-[#d4a853] border-0' },
 }
 
@@ -132,8 +106,8 @@ const demoPrograms: Program[] = [
                 responsable: 'Pr. Youssouf Abakar Moussa',
                 ecues: [
                   { code: 'ECUE1011', nom: 'Introduction au Droit Civil', coefficient: 2, cm: 30, td: 15, tp: 0, stage: 0, enseignant: 'Pr. Youssouf Abakar Moussa' },
-                  { code: 'ECUE1012', nom: 'Sources du Droit', coefficient: 1, cm: 15, td: 10, tp: 0, stage: 0, enseignant: 'Dr. Hassan Abakar FatimÃ©' },
-                  { code: 'ECUE1013', nom: 'ThÃ©orie GÃ©nÃ©rale du Droit', coefficient: 1, cm: 15, td: 10, tp: 0, stage: 0, enseignant: 'Pr. Youssouf Abakar Moussa' },
+                  { code: 'ECUE1012', nom: 'Sources du Droit', coefficient: 1, cm: 15, td: 10, tp: 0, stage: 0, enseignant: 'Dr. Hassan Abakar Fatimé' },
+                  { code: 'ECUE1013', nom: 'Théorie Générale du Droit', coefficient: 1, cm: 15, td: 10, tp: 0, stage: 0, enseignant: 'Pr. Youssouf Abakar Moussa' },
                 ],
               },
               {
@@ -145,30 +119,30 @@ const demoPrograms: Program[] = [
                 responsable: 'Pr. Bichara Youssouf',
                 ecues: [
                   { code: 'ECUE1021', nom: 'Institutions Politiques', coefficient: 2, cm: 30, td: 15, tp: 0, stage: 0, enseignant: 'Pr. Bichara Youssouf' },
-                  { code: 'ECUE1022', nom: 'Droit Constitutionnel ComparÃ©', coefficient: 1, cm: 15, td: 10, tp: 0, stage: 0, enseignant: 'Dr. Adoum Khadija' },
+                  { code: 'ECUE1022', nom: 'Droit Constitutionnel Comparé', coefficient: 1, cm: 15, td: 10, tp: 0, stage: 0, enseignant: 'Dr. Adoum Khadija' },
                 ],
               },
               {
                 code: 'UE103',
-                nom: 'Ã‰conomie Politique',
+                nom: 'Économie Politique',
                 credits: 4,
-                type: 'ComplÃ©mentaire',
+                type: 'Complémentaire',
                 compensable: true,
                 responsable: 'Dr. Mahamat Nour Adam',
                 ecues: [
-                  { code: 'ECUE1031', nom: 'MacroÃ©conomie', coefficient: 2, cm: 25, td: 10, tp: 0, stage: 0, enseignant: 'Dr. Mahamat Nour Adam' },
-                  { code: 'ECUE1032', nom: 'MicroÃ©conomie', coefficient: 1, cm: 15, td: 10, tp: 0, stage: 0, enseignant: 'M. Ahmat Djibrine' },
+                  { code: 'ECUE1031', nom: 'Macroéconomie', coefficient: 2, cm: 25, td: 10, tp: 0, stage: 0, enseignant: 'Dr. Mahamat Nour Adam' },
+                  { code: 'ECUE1032', nom: 'Microéconomie', coefficient: 1, cm: 15, td: 10, tp: 0, stage: 0, enseignant: 'M. Ahmat Djibrine' },
                 ],
               },
               {
                 code: 'UE104',
-                nom: 'MÃ©thodologie du Travail Universitaire',
+                nom: 'Méthodologie du Travail Universitaire',
                 credits: 2,
                 type: 'Transversale',
                 compensable: false,
                 responsable: 'Mme Aboubakar Oumar Khadidja',
                 ecues: [
-                  { code: 'ECUE1041', nom: 'Techniques de RÃ©daction', coefficient: 1, cm: 10, td: 10, tp: 0, stage: 0, enseignant: 'Mme Aboubakar Oumar Khadidja' },
+                  { code: 'ECUE1041', nom: 'Techniques de Rédaction', coefficient: 1, cm: 10, td: 10, tp: 0, stage: 0, enseignant: 'Mme Aboubakar Oumar Khadidja' },
                   { code: 'ECUE1042', nom: 'Recherche Documentaire', coefficient: 1, cm: 10, td: 5, tp: 0, stage: 0, enseignant: 'Mme Aboubakar Oumar Khadidja' },
                 ],
               },
@@ -180,7 +154,7 @@ const demoPrograms: Program[] = [
                 compensable: false,
                 responsable: 'Dr. Khamis Zara',
                 ecues: [
-                  { code: 'ECUE1051', nom: 'Initiation Ã  l\'Informatique', coefficient: 1, cm: 10, td: 0, tp: 15, stage: 0, enseignant: 'Dr. Khamis Zara' },
+                  { code: 'ECUE1051', nom: 'Initiation à l\'Informatique', coefficient: 1, cm: 10, td: 0, tp: 15, stage: 0, enseignant: 'Dr. Khamis Zara' },
                 ],
               },
             ],
@@ -198,7 +172,7 @@ const demoPrograms: Program[] = [
                 responsable: 'Pr. Youssouf Abakar Moussa',
                 ecues: [
                   { code: 'ECUE2011', nom: 'Droit des Obligations', coefficient: 2, cm: 30, td: 15, tp: 0, stage: 0, enseignant: 'Pr. Youssouf Abakar Moussa' },
-                  { code: 'ECUE2012', nom: 'Droit des Contrats', coefficient: 1, cm: 15, td: 10, tp: 0, stage: 0, enseignant: 'Dr. DjimÃ© Hawa' },
+                  { code: 'ECUE2012', nom: 'Droit des Contrats', coefficient: 1, cm: 15, td: 10, tp: 0, stage: 0, enseignant: 'Dr. Djimé Hawa' },
                 ],
               },
               {
@@ -207,33 +181,33 @@ const demoPrograms: Program[] = [
                 credits: 6,
                 type: 'Fondamentale',
                 compensable: true,
-                responsable: 'Dr. Hassan Abakar FatimÃ©',
+                responsable: 'Dr. Hassan Abakar Fatimé',
                 ecues: [
-                  { code: 'ECUE2021', nom: 'Organisation Administrative', coefficient: 2, cm: 30, td: 15, tp: 0, stage: 0, enseignant: 'Dr. Hassan Abakar FatimÃ©' },
-                  { code: 'ECUE2022', nom: 'Actes Administratifs', coefficient: 1, cm: 15, td: 10, tp: 0, stage: 0, enseignant: 'Dr. Hassan Abakar FatimÃ©' },
+                  { code: 'ECUE2021', nom: 'Organisation Administrative', coefficient: 2, cm: 30, td: 15, tp: 0, stage: 0, enseignant: 'Dr. Hassan Abakar Fatimé' },
+                  { code: 'ECUE2022', nom: 'Actes Administratifs', coefficient: 1, cm: 15, td: 10, tp: 0, stage: 0, enseignant: 'Dr. Hassan Abakar Fatimé' },
                 ],
               },
               {
                 code: 'UE203',
                 nom: 'Sociologie Politique',
                 credits: 4,
-                type: 'ComplÃ©mentaire',
+                type: 'Complémentaire',
                 compensable: true,
                 responsable: 'Mme Hissein Mariam',
                 ecues: [
-                  { code: 'ECUE2031', nom: 'Sociologie GÃ©nÃ©rale', coefficient: 2, cm: 25, td: 10, tp: 0, stage: 0, enseignant: 'Mme Hissein Mariam' },
+                  { code: 'ECUE2031', nom: 'Sociologie Générale', coefficient: 2, cm: 25, td: 10, tp: 0, stage: 0, enseignant: 'Mme Hissein Mariam' },
                   { code: 'ECUE2032', nom: 'Sociologie Politique Africaine', coefficient: 1, cm: 15, td: 10, tp: 0, stage: 0, enseignant: 'Mme Hissein Mariam' },
                 ],
               },
               {
                 code: 'UE204',
-                nom: 'Langue FranÃ§aise',
+                nom: 'Langue Française',
                 credits: 2,
                 type: 'Transversale',
                 compensable: false,
                 responsable: 'Mme Aboubakar Oumar Khadidja',
                 ecues: [
-                  { code: 'ECUE2041', nom: 'Expression FranÃ§aise', coefficient: 1, cm: 10, td: 10, tp: 0, stage: 0, enseignant: 'Mme Aboubakar Oumar Khadidja' },
+                  { code: 'ECUE2041', nom: 'Expression Française', coefficient: 1, cm: 10, td: 10, tp: 0, stage: 0, enseignant: 'Mme Aboubakar Oumar Khadidja' },
                 ],
               },
               {
@@ -260,15 +234,15 @@ const demoPrograms: Program[] = [
             label: 'Semestre 3',
             ues: [
               { code: 'UE301', nom: 'Droit des Obligations Approfondi', credits: 6, type: 'Fondamentale', compensable: true, responsable: 'Pr. Youssouf Abakar Moussa', ecues: [] },
-              { code: 'UE302', nom: 'Droit PÃ©nal GÃ©nÃ©ral', credits: 6, type: 'Fondamentale', compensable: true, responsable: 'Dr. DjimÃ© Hawa', ecues: [] },
-              { code: 'UE303', nom: 'Droit International Public', credits: 4, type: 'ComplÃ©mentaire', compensable: true, responsable: 'Dr. Hassan Abakar FatimÃ©', ecues: [] },
+              { code: 'UE302', nom: 'Droit Pénal Général', credits: 6, type: 'Fondamentale', compensable: true, responsable: 'Dr. Djimé Hawa', ecues: [] },
+              { code: 'UE303', nom: 'Droit International Public', credits: 4, type: 'Complémentaire', compensable: true, responsable: 'Dr. Hassan Abakar Fatimé', ecues: [] },
             ],
           },
           {
             id: 'l2s2',
             label: 'Semestre 4',
             ues: [
-              { code: 'UE401', nom: 'Droit Commercial', credits: 6, type: 'Fondamentale', compensable: true, responsable: 'Dr. DjimÃ© Hawa', ecues: [] },
+              { code: 'UE401', nom: 'Droit Commercial', credits: 6, type: 'Fondamentale', compensable: true, responsable: 'Dr. Djimé Hawa', ecues: [] },
               { code: 'UE402', nom: 'Droit du Travail', credits: 6, type: 'Fondamentale', compensable: true, responsable: 'Dr. Adoum Khadija', ecues: [] },
             ],
           },
@@ -290,8 +264,8 @@ const demoPrograms: Program[] = [
             id: 'l3s2',
             label: 'Semestre 6',
             ues: [
-              { code: 'UE601', nom: 'MÃ©moire de Licence', credits: 10, type: 'Fondamentale', compensable: false, responsable: 'Pr. Youssouf Abakar Moussa', ecues: [] },
-              { code: 'UE602', nom: 'Stage Professionnel', credits: 6, type: 'ComplÃ©mentaire', compensable: false, responsable: 'M. Ngarndmi HalimÃ©', ecues: [] },
+              { code: 'UE601', nom: 'Mémoire de Licence', credits: 10, type: 'Fondamentale', compensable: false, responsable: 'Pr. Youssouf Abakar Moussa', ecues: [] },
+              { code: 'UE602', nom: 'Stage Professionnel', credits: 6, type: 'Complémentaire', compensable: false, responsable: 'M. Ngarndmi Halimé', ecues: [] },
             ],
           },
         ],
@@ -311,7 +285,7 @@ function getSemesterVolume(semester: Semester): { cm: number; td: number; tp: nu
   return { cm, td, tp, total: cm + td + tp }
 }
 
-// â”€â”€â”€ useCountUp Hook â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── useCountUp Hook ──────────────────────────────────────────────────────────
 
 function useCountUp(target: number, duration: number = 1400) {
   const [value, setValue] = useState(0)
@@ -331,7 +305,7 @@ function useCountUp(target: number, duration: number = 1400) {
   return value
 }
 
-// â”€â”€â”€ Semester Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Semester Component ───────────────────────────────────────────────────────
 
 function SemesterView({ semester }: { semester: Semester }) {
   const [expandedUEs, setExpandedUEs] = useState<Set<string>>(new Set())
@@ -356,7 +330,7 @@ function SemesterView({ semester }: { semester: Semester }) {
       <div className="flex flex-wrap gap-3">
         <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50">
           <CreditCard className="size-4 text-[#2d7a4f]" />
-          <span className="text-sm text-gray-600">Total crÃ©dits :</span>
+          <span className="text-sm text-gray-600">Total crédits :</span>
           <span className="text-sm font-bold text-[#1a2744]">{totalCredits}</span>
         </div>
         <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50">
@@ -391,7 +365,7 @@ function SemesterView({ semester }: { semester: Semester }) {
                   <TableHead className="text-xs font-semibold w-8"></TableHead>
                   <TableHead className="text-xs font-semibold">Code UE</TableHead>
                   <TableHead className="text-xs font-semibold">Nom UE</TableHead>
-                  <TableHead className="text-xs font-semibold text-center">CrÃ©dits</TableHead>
+                  <TableHead className="text-xs font-semibold text-center">Crédits</TableHead>
                   <TableHead className="text-xs font-semibold">Type</TableHead>
                   <TableHead className="text-xs font-semibold text-center">Compensable</TableHead>
                   <TableHead className="text-xs font-semibold">Responsable</TableHead>
@@ -493,7 +467,7 @@ function SemesterView({ semester }: { semester: Semester }) {
   )
 }
 
-// â”€â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 export function MaquettePage() {
   const totalUEsCount = useCountUp(42, 1400)
@@ -612,7 +586,7 @@ export function MaquettePage() {
           <CardContent className="p-4">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-xs font-medium text-gray-500 uppercase">CrÃ©dits totaux</p>
+                <p className="text-xs font-medium text-gray-500 uppercase">Crédits totaux</p>
                 <p className="text-2xl font-bold text-[#1a2744] mt-1">{program.levels.reduce((a, l) => a + l.semesters.reduce((b, s) => b + getSemesterCredits(s), 0), 0)}</p>
               </div>
               <div className="w-10 h-10 rounded-xl bg-[#1a274415] flex items-center justify-center">

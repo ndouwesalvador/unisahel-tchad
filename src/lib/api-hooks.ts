@@ -32,6 +32,25 @@ export function useStudents(params?: { search?: string; status?: string; program
   });
 }
 
+export function useTeachers(params?: { search?: string; departmentId?: string; grade?: string; isActive?: boolean; page?: number; limit?: number }) {
+  return useQuery({
+    queryKey: ['teachers', params],
+    queryFn: async () => {
+      const url = new URL('/api/teachers', window.location.origin);
+      if (params) {
+        Object.entries(params).forEach(([key, value]) => {
+          if (value !== undefined && value !== '') url.searchParams.append(key, value.toString());
+        });
+      }
+      const res = await fetch(url.toString());
+      if (!res.ok) {
+        throw new Error('Failed to fetch teachers');
+      }
+      return res.json();
+    },
+  });
+}
+
 export function usePayments(params?: { search?: string; status?: string; paymentMethod?: string; startDate?: string; endDate?: string; page?: number; limit?: number }) {
   return useQuery({
     queryKey: ['payments', params],

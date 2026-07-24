@@ -1,45 +1,16 @@
-﻿'use client'
+'use client'
 
+import { exportToExcel } from '@/lib/export'
 import { useState, useEffect, useRef } from 'react'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import { motion } from 'framer-motion'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import { Button } from '@/components/ui/button'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import { Input } from '@/components/ui/input'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import { Label } from '@/components/ui/label'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import { Badge } from '@/components/ui/badge'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import { Checkbox } from '@/components/ui/checkbox'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import { Separator } from '@/components/ui/separator'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import {
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
   Table,
   TableBody,
   TableCell,
@@ -48,9 +19,6 @@ import { exportToExcel } from '@/lib/export'
   TableRow,
 } from '@/components/ui/table'
 import {
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
   Select,
   SelectContent,
   SelectItem,
@@ -58,27 +26,18 @@ import { exportToExcel } from '@/lib/export'
   SelectValue,
 } from '@/components/ui/select'
 import {
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
 import {
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
   FileText,
   Users,
   CheckCircle2,
@@ -101,7 +60,7 @@ import { exportToExcel } from '@/lib/export'
   Download,
 } from 'lucide-react'
 
-// â”€â”€â”€ Demo Data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Demo Data ────────────────────────────────────────────────────────────────
 
 type CandidatureStatut = 'en_attente' | 'en_examen' | 'admis' | 'refuse' | 'en_attente_pieces'
 
@@ -135,7 +94,7 @@ const demoCandidatures: Candidature[] = [
   { id: '14', numero: 'CND-2025-014', candidat: 'Falmata Ali', filiere: 'Informatique', niveau: 'L3', date: '28/01/2025', statut: 'admis', email: 'falmata.a@email.com', telephone: '+235 66 45 56 67', type: 'Reinscription' },
   { id: '15', numero: 'CND-2025-015', candidat: 'Moussa Abdallah', filiere: 'Droit', niveau: 'L1', date: '29/01/2025', statut: 'en_attente', email: 'moussa.a@email.com', telephone: '+235 66 56 67 78', type: 'Premiere inscription' },
   { id: '16', numero: 'CND-2025-016', candidat: 'Kaltouma Mahamat', filiere: 'Economie', niveau: 'M2', date: '30/01/2025', statut: 'en_attente_pieces', email: 'kaltouma.m@email.com', telephone: '+235 66 67 78 89', type: 'Equivalence' },
-  { id: '17', numero: 'CND-2025-017', candidat: 'Ousmane DjimÃ©', filiere: 'Gestion', niveau: 'L2', date: '31/01/2025', statut: 'admis', email: 'ousmane.d@email.com', telephone: '+235 66 78 89 90', type: 'Premiere inscription' },
+  { id: '17', numero: 'CND-2025-017', candidat: 'Ousmane Djimé', filiere: 'Gestion', niveau: 'L2', date: '31/01/2025', statut: 'admis', email: 'ousmane.d@email.com', telephone: '+235 66 78 89 90', type: 'Premiere inscription' },
 ]
 
 interface RequiredDoc {
@@ -145,9 +104,9 @@ interface RequiredDoc {
 }
 
 const defaultDocs: RequiredDoc[] = [
-  { id: 'diplome', label: 'DiplÃ´me / BaccalaurÃ©at', status: 'recu' },
-  { id: 'releve', label: 'RelevÃ© de notes', status: 'en_verification' },
-  { id: 'photo', label: "Photo d'identitÃ©", status: 'recu' },
+  { id: 'diplome', label: 'Diplôme / Baccalauréat', status: 'recu' },
+  { id: 'releve', label: 'Relevé de notes', status: 'en_verification' },
+  { id: 'photo', label: "Photo d'identité", status: 'recu' },
   { id: 'naissance', label: "Extrait d'acte de naissance", status: 'manquant' },
   { id: 'lettre', label: 'Lettre de motivation', status: 'recu' },
   { id: 'cv', label: 'Curriculum vitae', status: 'manquant' },
@@ -157,14 +116,14 @@ const statutConfig: Record<CandidatureStatut, { label: string; className: string
   en_attente: { label: 'En attente', className: 'bg-[#d4a85318] text-[#d4a853] border-0' },
   en_examen: { label: 'En examen', className: 'bg-[#1a274418] text-[#1a2744] border-0' },
   admis: { label: 'Admis', className: 'bg-[#2d7a4f18] text-[#2d7a4f] border-0' },
-  refuse: { label: 'RefusÃ©', className: 'bg-[#c6282818] text-[#c62828] border-0' },
-  en_attente_pieces: { label: 'En attente de piÃ¨ces', className: 'bg-[#e6510018] text-[#e65100] border-0' },
+  refuse: { label: 'Refusé', className: 'bg-[#c6282818] text-[#c62828] border-0' },
+  en_attente_pieces: { label: 'En attente de pièces', className: 'bg-[#e6510018] text-[#e65100] border-0' },
 }
 
 const docStatusConfig: Record<string, { label: string; className: string; icon: React.ElementType }> = {
-  recu: { label: 'ReÃ§u', className: 'text-[#2d7a4f] bg-[#2d7a4f12]', icon: CheckCircle2 },
+  recu: { label: 'Reçu', className: 'text-[#2d7a4f] bg-[#2d7a4f12]', icon: CheckCircle2 },
   manquant: { label: 'Manquant', className: 'text-[#c62828] bg-[#c6282812]', icon: XCircle },
-  en_verification: { label: 'En vÃ©rification', className: 'text-[#d4a853] bg-[#d4a85312]', icon: Clock },
+  en_verification: { label: 'En vérification', className: 'text-[#d4a853] bg-[#d4a85312]', icon: Clock },
 }
 
 const filieres = [
@@ -181,9 +140,9 @@ const filieres = [
 const timelineEvents = [
   { label: 'Ouverture des candidatures', date: '15 Jan 2025', status: 'done' as const },
   { label: 'Date limite de soumission', date: '31 Mars 2025', status: 'current' as const },
-  { label: 'DÃ©libÃ©ration', date: '15 Avril 2025', status: 'upcoming' as const },
-  { label: "Affichage des rÃ©sultats", date: '25 Avril 2025', status: 'upcoming' as const },
-  { label: 'RentrÃ©e acadÃ©mique', date: '15 Septembre 2025', status: 'upcoming' as const },
+  { label: 'Délibération', date: '15 Avril 2025', status: 'upcoming' as const },
+  { label: "Affichage des résultats", date: '25 Avril 2025', status: 'upcoming' as const },
+  { label: 'Rentrée académique', date: '15 Septembre 2025', status: 'upcoming' as const },
 ]
 
 const programStats = [
@@ -197,7 +156,7 @@ const programStats = [
   { name: 'Agronomie', count: 15, color: '#e65100' },
 ]
 
-// â”€â”€â”€ useCountUp Hook â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── useCountUp Hook ──────────────────────────────────────────────────────────
 
 function useCountUp(target: number, duration: number = 1400) {
   const [value, setValue] = useState(0)
@@ -217,7 +176,7 @@ function useCountUp(target: number, duration: number = 1400) {
   return value
 }
 
-// â”€â”€â”€ Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export function CandidaturePage() {
   const candidaturesMoisCount = useCountUp(127, 1400)
@@ -330,7 +289,7 @@ export function CandidaturePage() {
           <CardContent className="p-4">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-xs font-medium text-gray-500 uppercase">Candidatures reÃ§ues</p>
+                <p className="text-xs font-medium text-gray-500 uppercase">Candidatures reçues</p>
                 <p className="text-2xl font-bold text-[#1a2744] mt-1">{totalRecues}</p>
                 <div className="flex items-center gap-1 mt-1">
                   <ArrowUpRight className="size-3 text-[#2d7a4f]" />
@@ -428,21 +387,21 @@ export function CandidaturePage() {
                 <Label className="text-xs font-medium text-gray-600">Type de candidature</Label>
                 <Select value={formType} onValueChange={setFormType}>
                   <SelectTrigger className="h-9 text-sm">
-                    <SelectValue placeholder="SÃ©lectionner le type" />
+                    <SelectValue placeholder="Sélectionner le type" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="premiere_inscription">PremiÃ¨re inscription</SelectItem>
-                    <SelectItem value="reinscription">RÃ©inscription</SelectItem>
+                    <SelectItem value="premiere_inscription">Première inscription</SelectItem>
+                    <SelectItem value="reinscription">Réinscription</SelectItem>
                     <SelectItem value="transfert">Transfert</SelectItem>
-                    <SelectItem value="equivalence">Ã‰quivalence</SelectItem>
+                    <SelectItem value="equivalence">Équivalence</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-gray-600">FiliÃ¨re souhaitÃ©e</Label>
+                <Label className="text-xs font-medium text-gray-600">Filière souhaitée</Label>
                 <Select value={formFiliere} onValueChange={setFormFiliere}>
                   <SelectTrigger className="h-9 text-sm">
-                    <SelectValue placeholder="SÃ©lectionner la filiÃ¨re" />
+                    <SelectValue placeholder="Sélectionner la filière" />
                   </SelectTrigger>
                   <SelectContent>
                     {filieres.map((f) => (
@@ -455,7 +414,7 @@ export function CandidaturePage() {
                 <Label className="text-xs font-medium text-gray-600">Niveau</Label>
                 <Select value={formNiveau} onValueChange={setFormNiveau}>
                   <SelectTrigger className="h-9 text-sm">
-                    <SelectValue placeholder="SÃ©lectionner le niveau" />
+                    <SelectValue placeholder="Sélectionner le niveau" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="l1">L1</SelectItem>
@@ -487,7 +446,7 @@ export function CandidaturePage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-gray-600">TÃ©lÃ©phone</Label>
+                <Label className="text-xs font-medium text-gray-600">Téléphone</Label>
                 <Input
                   type="tel"
                   placeholder="+235 66 XX XX XX"
@@ -509,7 +468,7 @@ export function CandidaturePage() {
                   onClick={() => setShowDocsDialog(true)}
                 >
                   <Upload className="size-3.5 mr-1" />
-                  PiÃ¨ces
+                  Pièces
                 </Button>
               </div>
             </CardContent>
@@ -522,7 +481,7 @@ export function CandidaturePage() {
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-semibold text-[#1a2744] flex items-center gap-2">
                 <FileCheck className="size-4 text-[#d4a853]" />
-                PiÃ¨ces requises
+                Pièces requises
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
@@ -558,7 +517,7 @@ export function CandidaturePage() {
                 )
               })}
               <div className="pt-2 flex items-center justify-between text-xs text-gray-400">
-                <span>{docs.filter(d => d.status === 'recu').length}/{docs.length} documents reÃ§us</span>
+                <span>{docs.filter(d => d.status === 'recu').length}/{docs.length} documents reçus</span>
                 <span>{docs.filter(d => d.status === 'manquant').length} manquant(s)</span>
               </div>
             </CardContent>
@@ -600,8 +559,8 @@ export function CandidaturePage() {
                       <SelectItem value="en_attente">En attente</SelectItem>
                       <SelectItem value="en_examen">En examen</SelectItem>
                       <SelectItem value="admis">Admis</SelectItem>
-                      <SelectItem value="refuse">RefusÃ©</SelectItem>
-                      <SelectItem value="en_attente_pieces">En attente de piÃ¨ces</SelectItem>
+                      <SelectItem value="refuse">Refusé</SelectItem>
+                      <SelectItem value="en_attente_pieces">En attente de pièces</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -612,9 +571,9 @@ export function CandidaturePage() {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-gray-50">
-                      <TableHead className="text-xs font-semibold w-[60px]">NÂ°</TableHead>
+                      <TableHead className="text-xs font-semibold w-[60px]">N°</TableHead>
                       <TableHead className="text-xs font-semibold">Candidat</TableHead>
-                      <TableHead className="text-xs font-semibold hidden md:table-cell">FiliÃ¨re</TableHead>
+                      <TableHead className="text-xs font-semibold hidden md:table-cell">Filière</TableHead>
                       <TableHead className="text-xs font-semibold hidden lg:table-cell">Niveau</TableHead>
                       <TableHead className="text-xs font-semibold hidden sm:table-cell">Date</TableHead>
                       <TableHead className="text-xs font-semibold">Statut</TableHead>
@@ -688,7 +647,7 @@ export function CandidaturePage() {
               </div>
               {filteredCandidatures.length === 0 && (
                 <div className="py-10 text-center text-sm text-gray-400">
-                  Aucune candidature trouvÃ©e
+                  Aucune candidature trouvée
                 </div>
               )}
             </CardContent>
@@ -760,7 +719,7 @@ export function CandidaturePage() {
               <CardContent className="space-y-5">
                 {/* Bar Chart - Applications per program */}
                 <div>
-                  <p className="text-xs font-medium text-gray-500 mb-3">Candidatures par filiÃ¨re</p>
+                  <p className="text-xs font-medium text-gray-500 mb-3">Candidatures par filière</p>
                   <div className="space-y-2">
                     {programStats.map((program) => (
                       <div key={program.name} className="flex items-center gap-2">
@@ -836,7 +795,7 @@ export function CandidaturePage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="w-2.5 h-2.5 rounded-full bg-[#c62828] shrink-0" />
-                        <span className="text-xs text-gray-600">RefusÃ©s ({refusalRate}%)</span>
+                        <span className="text-xs text-gray-600">Refusés ({refusalRate}%)</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="w-2.5 h-2.5 rounded-full bg-gray-200 shrink-0" />
@@ -862,22 +821,22 @@ export function CandidaturePage() {
               <Label className="text-sm">Type de candidature</Label>
               <Select value={formType} onValueChange={setFormType}>
                 <SelectTrigger>
-                  <SelectValue placeholder="SÃ©lectionner le type" />
+                  <SelectValue placeholder="Sélectionner le type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="premiere_inscription">PremiÃ¨re inscription</SelectItem>
-                  <SelectItem value="reinscription">RÃ©inscription</SelectItem>
+                  <SelectItem value="premiere_inscription">Première inscription</SelectItem>
+                  <SelectItem value="reinscription">Réinscription</SelectItem>
                   <SelectItem value="transfert">Transfert</SelectItem>
-                  <SelectItem value="equivalence">Ã‰quivalence</SelectItem>
+                  <SelectItem value="equivalence">Équivalence</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-sm">FiliÃ¨re souhaitÃ©e</Label>
+                <Label className="text-sm">Filière souhaitée</Label>
                 <Select value={formFiliere} onValueChange={setFormFiliere}>
                   <SelectTrigger>
-                    <SelectValue placeholder="FiliÃ¨re" />
+                    <SelectValue placeholder="Filière" />
                   </SelectTrigger>
                   <SelectContent>
                     {filieres.map((f) => (
@@ -922,7 +881,7 @@ export function CandidaturePage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-sm">TÃ©lÃ©phone</Label>
+                <Label className="text-sm">Téléphone</Label>
                 <Input
                   type="tel"
                   placeholder="+235 66 XX XX XX"
@@ -945,7 +904,7 @@ export function CandidaturePage() {
       <Dialog open={showDocsDialog} onOpenChange={setShowDocsDialog}>
         <DialogContent className="sm:max-w-[450px]">
           <DialogHeader>
-            <DialogTitle className="text-[#1a2744]">PiÃ¨ces requises pour la candidature</DialogTitle>
+            <DialogTitle className="text-[#1a2744]">Pièces requises pour la candidature</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-4">
             {docs.map((doc) => {

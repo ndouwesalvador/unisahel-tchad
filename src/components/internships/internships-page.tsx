@@ -1,49 +1,17 @@
-﻿'use client'
+'use client'
 
+import { exportToExcel } from '@/lib/export'
 import { useState, useEffect, useRef } from 'react'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import { motion } from 'framer-motion'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import { Button } from '@/components/ui/button'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import { Input } from '@/components/ui/input'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import { Badge } from '@/components/ui/badge'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import { Progress } from '@/components/ui/progress'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import { Textarea } from '@/components/ui/textarea'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import { Separator } from '@/components/ui/separator'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import {
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
   Table,
   TableBody,
   TableCell,
@@ -52,9 +20,6 @@ import { exportToExcel } from '@/lib/export'
   TableRow,
 } from '@/components/ui/table'
 import {
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
   Select,
   SelectContent,
   SelectItem,
@@ -62,22 +27,13 @@ import { exportToExcel } from '@/lib/export'
   SelectValue,
 } from '@/components/ui/select'
 import {
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { TooltipProvider } from '@/components/ui/tooltip'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import {
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
   Briefcase,
   FileCheck,
   TrendingUp,
@@ -102,7 +58,7 @@ import { exportToExcel } from '@/lib/export'
   Zap,
 } from 'lucide-react'
 
-// â”€â”€â”€ useCountUp Hook â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── useCountUp Hook ──────────────────────────────────────────────────────────
 
 function useCountUp(target: number, duration: number = 1400) {
   const [value, setValue] = useState(0)
@@ -122,7 +78,7 @@ function useCountUp(target: number, duration: number = 1400) {
   return value
 }
 
-// â”€â”€â”€ Demo Data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Demo Data ────────────────────────────────────────────────────────────────
 
 interface InternshipEntry {
   id: string
@@ -217,7 +173,7 @@ const demoEvaluations: EvaluationResult[] = [
   { id: 'e6', studentName: 'HISSEIN Mariam', grade: 'Excellent', date: '22/07/2024' },
 ]
 
-// â”€â”€â”€ Status & Type Configs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Status & Type Configs ────────────────────────────────────────────────────
 
 const typeConfig: Record<string, { label: string; className: string }> = {
   professionnel: { label: 'Stage professionnel', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0' },
@@ -253,7 +209,7 @@ const sectorConfig: Record<string, { className: string; icon: React.ElementType 
 
 const workflowSteps = ['Soumission', 'Validation etablissement', 'Signature entreprise']
 
-// â”€â”€â”€ Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export function InternshipsPage() {
   const [search, setSearch] = useState('')
@@ -330,7 +286,7 @@ export function InternshipsPage() {
         initial="hidden"
         animate="visible"
       >
-        {/* â”€â”€ 1. Gradient Header Banner â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* ── 1. Gradient Header Banner ──────────────────────────────────────────── */}
         <motion.div variants={itemVariants} className="relative overflow-hidden rounded-xl">
           <div
             className="absolute inset-0"
@@ -402,7 +358,7 @@ export function InternshipsPage() {
           </div>
         </motion.div>
 
-        {/* â”€â”€ 2. Stats Cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* ── 2. Stats Cards ────────────────────────────────────────────────────── */}
         <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Stages actifs */}
           <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
@@ -509,7 +465,7 @@ export function InternshipsPage() {
           </motion.div>
         </motion.div>
 
-        {/* â”€â”€ 3. Stage Convention Tracker Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* ── 3. Stage Convention Tracker Card ───────────────────────────────────── */}
         <motion.div variants={itemVariants}>
           <Card className="border-l-4 border-l-[#1a2744]">
             <CardHeader className="pb-3">
@@ -675,7 +631,7 @@ export function InternshipsPage() {
           </Card>
         </motion.div>
 
-        {/* â”€â”€ 4. Convention Validation Workflow Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* ── 4. Convention Validation Workflow Card ─────────────────────────────── */}
         <motion.div variants={itemVariants}>
           <Card className="border-l-4 border-l-[#d4a853]">
             <CardHeader className="pb-3">
@@ -807,7 +763,7 @@ export function InternshipsPage() {
           </Card>
         </motion.div>
 
-        {/* â”€â”€ 5. Stage Evaluation Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* ── 5. Stage Evaluation Card ───────────────────────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <motion.div variants={itemVariants}>
             <Card className="border-l-4 border-l-[#2d7a4f] h-full">
@@ -941,7 +897,7 @@ export function InternshipsPage() {
           </motion.div>
         </div>
 
-        {/* â”€â”€ 6. Stage Sites & Partenaires Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* ── 6. Stage Sites & Partenaires Card ──────────────────────────────────── */}
         <motion.div variants={itemVariants}>
           <Card className="border-l-4 border-l-[#1a2744]">
             <CardHeader className="pb-3">
@@ -1024,7 +980,7 @@ export function InternshipsPage() {
           </Card>
         </motion.div>
 
-        {/* â”€â”€ 7. Timeline de Stage Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* ── 7. Timeline de Stage Card ──────────────────────────────────────────── */}
         <motion.div variants={itemVariants}>
           <Card className="border-l-4 border-l-[#2d7a4f]">
             <CardHeader className="pb-3">
@@ -1115,7 +1071,7 @@ export function InternshipsPage() {
           </Card>
         </motion.div>
 
-        {/* â”€â”€ 8. African Context Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* ── 8. African Context Card ────────────────────────────────────────────── */}
         <motion.div variants={itemVariants}>
           <Card className="border-l-4 border-l-[#d4a853]">
             <CardHeader className="pb-3">

@@ -1,37 +1,14 @@
-﻿'use client'
+'use client'
 
+import { exportToExcel } from '@/lib/export'
 import { useState } from 'react'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import { motion } from 'framer-motion'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import { Button } from '@/components/ui/button'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import { Input } from '@/components/ui/input'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import { Badge } from '@/components/ui/badge'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import { Progress } from '@/components/ui/progress'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import {
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
   Table,
   TableBody,
   TableCell,
@@ -40,9 +17,6 @@ import { exportToExcel } from '@/lib/export'
   TableRow,
 } from '@/components/ui/table'
 import {
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
   Select,
   SelectContent,
   SelectItem,
@@ -50,18 +24,12 @@ import { exportToExcel } from '@/lib/export'
   SelectValue,
 } from '@/components/ui/select'
 import {
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
   BookOpen,
   BookMarked,
   Monitor,
@@ -92,7 +60,7 @@ import { exportToExcel } from '@/lib/export'
   XCircle,
 } from 'lucide-react'
 
-// â”€â”€â”€ Demo Data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Demo Data ────────────────────────────────────────────────────────────────
 
 interface CatalogItem {
   id: string
@@ -179,7 +147,7 @@ const demoRooms: RoomSpace[] = [
   { id: '5', name: 'Box individuels', capacity: '20 places', type: 'individuel', occupancy: 75 },
 ]
 
-// â”€â”€â”€ Config Maps â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Config Maps ──────────────────────────────────────────────────────────────
 
 const typeConfig: Record<string, { label: string; className: string }> = {
   livre: { label: 'Livre', className: 'bg-[#1a274415] text-[#1a2744] border-0' },
@@ -210,7 +178,7 @@ const borrowStatusConfig: Record<string, { label: string; className: string }> =
   a_l_heure: { label: "A l'heure", className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0' },
 }
 
-// â”€â”€â”€ Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export function LibraryPage() {
   const [search, setSearch] = useState('')
@@ -299,7 +267,7 @@ export function LibraryPage() {
       initial="hidden"
       animate="visible"
     >
-      {/* â”€â”€ Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Header ────────────────────────────────────────────────────────────── */}
       <motion.div variants={itemVariants} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-[#1a2744]">Bibliotheque &amp; Ressources</h1>
@@ -321,7 +289,7 @@ export function LibraryPage() {
         </div>
       </motion.div>
 
-      {/* â”€â”€ Stats Cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Stats Cards ──────────────────────────────────────────────────────── */}
       <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Ouvrages */}
         <Card className="overflow-hidden relative border-l-4 border-l-[#1a2744] hover:shadow-md transition-shadow">
@@ -410,7 +378,7 @@ export function LibraryPage() {
         </Card>
       </motion.div>
 
-      {/* â”€â”€ Search & Filter Bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Search & Filter Bar ─────────────────────────────────────────────── */}
       <motion.div variants={itemVariants}>
         <Card>
           <CardContent className="p-4">
@@ -485,7 +453,7 @@ export function LibraryPage() {
         </Card>
       </motion.div>
 
-      {/* â”€â”€ Catalog Table â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Catalog Table ───────────────────────────────────────────────────── */}
       <motion.div variants={itemVariants}>
         <Card>
           <CardHeader className="pb-3">
@@ -606,7 +574,7 @@ export function LibraryPage() {
         </Card>
       </motion.div>
 
-      {/* â”€â”€ Emprunts & Retours Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Emprunts & Retours Card ─────────────────────────────────────────── */}
       <motion.div variants={itemVariants}>
         <Card className="border-l-4 border-l-[#2d7a4f]">
           <CardHeader className="pb-3">
@@ -702,7 +670,7 @@ export function LibraryPage() {
         </Card>
       </motion.div>
 
-      {/* â”€â”€ Ressources Numeriques Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Ressources Numeriques Card ──────────────────────────────────────── */}
       <motion.div variants={itemVariants}>
         <Card className="border-l-4 border-l-[#d4a853]">
           <CardHeader className="pb-3">
@@ -754,7 +722,7 @@ export function LibraryPage() {
         </Card>
       </motion.div>
 
-      {/* â”€â”€ Horaires & Espaces Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Horaires & Espaces Card ─────────────────────────────────────────── */}
       <motion.div variants={itemVariants}>
         <Card className="border-l-4 border-l-[#1a2744]">
           <CardHeader className="pb-3">
@@ -859,7 +827,7 @@ export function LibraryPage() {
         </Card>
       </motion.div>
 
-      {/* â”€â”€ Statistiques d'Utilisation Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Statistiques d'Utilisation Card ─────────────────────────────────── */}
       <motion.div variants={itemVariants}>
         <Card className="border-l-4 border-l-[#2d7a4f]">
           <CardHeader className="pb-3">

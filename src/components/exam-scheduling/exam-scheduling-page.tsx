@@ -1,45 +1,16 @@
-﻿'use client'
+'use client'
 
+import { exportToExcel } from '@/lib/export'
 import { useState, useMemo } from 'react'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import { motion } from 'framer-motion'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import { Button } from '@/components/ui/button'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import { Badge } from '@/components/ui/badge'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import { Input } from '@/components/ui/input'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import { Label } from '@/components/ui/label'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import { Progress } from '@/components/ui/progress'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import { Separator } from '@/components/ui/separator'
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
 import {
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
   Table,
   TableBody,
   TableCell,
@@ -48,9 +19,6 @@ import { exportToExcel } from '@/lib/export'
   TableRow,
 } from '@/components/ui/table'
 import {
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
   Select,
   SelectContent,
   SelectItem,
@@ -58,18 +26,12 @@ import { exportToExcel } from '@/lib/export'
   SelectValue,
 } from '@/components/ui/select'
 import {
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
-import { exportToExcel } from '@/lib/export'
-import { toast } from 'sonner'
-import { exportToExcel } from '@/lib/export'
   Calendar,
   Clock,
   MapPin,
@@ -91,7 +53,7 @@ import { exportToExcel } from '@/lib/export'
   UserCheck,
 } from 'lucide-react'
 
-// â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 type ExamStatus = 'planifie' | 'confirme' | 'en_cours' | 'termine' | 'annule'
 
@@ -118,7 +80,7 @@ interface RoomInfo {
   conflictDetail?: string
 }
 
-// â”€â”€â”€ Demo Data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Demo Data ────────────────────────────────────────────────────────────────
 
 const examEntries: ExamEntry[] = [
   { id: '1', date: '07/07/2025', heure: '08:00 - 10:00', ue: 'Droit Civil', code: 'DR101', programme: 'Droit', niveau: 'L1', salle: 'Amphitheatre A', surveillant: 'Dr. MAHAMAT Ali', effectif: 180, statut: 'confirme' },
@@ -150,7 +112,7 @@ const rooms: RoomInfo[] = [
   { id: '6', name: 'Salle de conference', capacity: 150, occupancy: 85, hasConflict: true, conflictDetail: 'Droit international + Droit penal (14/07 10:30)' },
 ]
 
-// â”€â”€â”€ Status Config â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Status Config ─────────────────────────────────────────────────────────────
 
 const statusConfig: Record<ExamStatus, { label: string; className: string }> = {
   planifie: { label: 'Planifie', className: 'bg-sky-100 text-sky-700 border-0 hover:bg-sky-100' },
@@ -171,7 +133,7 @@ const weekDays = ['Lun 07', 'Mar 08', 'Mer 09', 'Jeu 10', 'Ven 11', 'Sam 12', 'L
 const weekDates = ['07/07/2025', '08/07/2025', '09/07/2025', '10/07/2025', '11/07/2025', '12/07/2025', '14/07/2025']
 const timeSlots = ['08:00 - 10:00', '10:30 - 12:30', '14:00 - 16:00']
 
-// â”€â”€â”€ Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Component ─────────────────────────────────────────────────────────────────
 
 export function ExamSchedulingPage() {
   const [selectedSession, setSelectedSession] = useState('sn-s1')
@@ -183,7 +145,7 @@ export function ExamSchedulingPage() {
   const [dateDebut, setDateDebut] = useState('07/07/2025')
   const [dateFin, setDateFin] = useState('18/07/2025')
 
-  // â”€â”€â”€ Filtered Exams â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── Filtered Exams ─────────────────────────────────────────────────────
   const filteredExams = useMemo(() => {
     return examEntries.filter(e => {
       if (filterProgramme !== 'all' && e.programme !== filterProgramme) return false
@@ -193,7 +155,7 @@ export function ExamSchedulingPage() {
     })
   }, [filterProgramme, filterSalle, filterStatut])
 
-  // â”€â”€â”€ Stats â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── Stats ──────────────────────────────────────────────────────────────
   const stats = useMemo(() => ({
     total: 48,
     enCours: 12,
@@ -201,7 +163,7 @@ export function ExamSchedulingPage() {
     conflits: 2,
   }), [])
 
-  // â”€â”€â”€ Weekly Calendar Data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── Weekly Calendar Data ───────────────────────────────────────────────
   const calendarExams = useMemo(() => {
     const map: Record<string, ExamEntry[]> = {}
     weekDates.forEach(d => { map[d] = [] })
@@ -213,7 +175,7 @@ export function ExamSchedulingPage() {
     return map
   }, [])
 
-  // â”€â”€â”€ Exam per Day Stats â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── Exam per Day Stats ─────────────────────────────────────────────────
   const examsPerDay = useMemo(() => {
     const dayLabels = ['Lun 07', 'Mar 08', 'Mer 09', 'Jeu 10', 'Ven 11', 'Sam 12', 'Lun 14', 'Mer 16', 'Ven 18']
     const dayDateMap: Record<string, string> = {
@@ -229,7 +191,7 @@ export function ExamSchedulingPage() {
   }, [])
   const maxExamsPerDay = Math.max(...examsPerDay.map(d => d.count), 1)
 
-  // â”€â”€â”€ Supervisor Stats â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── Supervisor Stats ───────────────────────────────────────────────────
   const supervisorStats = useMemo(() => {
     const assigned = new Set(examEntries.filter(e => e.statut !== 'annule').map(e => e.surveillant)).size
     const needed = 52
@@ -257,7 +219,7 @@ export function ExamSchedulingPage() {
         </div>
       </motion.div>
 
-      {/* â”€â”€â”€ Stats Cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ─── Stats Cards ──────────────────────────────────────────────────── */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
@@ -314,7 +276,7 @@ export function ExamSchedulingPage() {
         </div>
       </motion.div>
 
-      {/* â”€â”€â”€ Session Configuration Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ─── Session Configuration Card ───────────────────────────────────── */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
@@ -399,7 +361,7 @@ export function ExamSchedulingPage() {
         </Card>
       </motion.div>
 
-      {/* â”€â”€â”€ Exam Calendar View â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ─── Exam Calendar View ───────────────────────────────────────────── */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
@@ -503,7 +465,7 @@ export function ExamSchedulingPage() {
         </Card>
       </motion.div>
 
-      {/* â”€â”€â”€ Exam Schedule Table â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ─── Exam Schedule Table ──────────────────────────────────────────── */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
@@ -650,7 +612,7 @@ export function ExamSchedulingPage() {
         </Card>
       </motion.div>
 
-      {/* â”€â”€â”€ Bottom Grid: Room Assignment + Exam Statistics â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ─── Bottom Grid: Room Assignment + Exam Statistics ───────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* Room Assignment Card */}
         <motion.div

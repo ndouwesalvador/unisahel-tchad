@@ -57,7 +57,7 @@ async function getTeachersHandler(user: SessionUser, tenantId: string, request: 
             select: { id: true, name: true, shortName: true },
           },
           user: {
-            select: { id: true, email: true, phone: true, photo: true },
+            select: { id: true, email: true, phone: true, photo: true, firstName: true, lastName: true },
           },
           assignedElements: {
             select: { id: true, code: true, name: true, coefficient: true, teachingUnit: { select: { id: true, code: true, name: true } } },
