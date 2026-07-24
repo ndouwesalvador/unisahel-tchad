@@ -8,7 +8,7 @@
 
 ## 🚨 RÉSUMÉ EXÉCUTIF — à lire en premier
 
-> **Mise à jour du 2026-07-24 (suite session) :** Chantier 0 (build cassé) et l'essentiel de Chantier 2 (migration Postgres) sont **terminés**. Détail en fin de document, section [Journal des correctifs appliqués](#journal-des-correctifs-appliqués).
+> **Mise à jour du 2026-07-24 (suite session) :** Chantiers 0 (build cassé), 1 (sécurité API) et l'essentiel de 2 (migration Postgres) sont **terminés**. Détail en fin de document, section [Journal des correctifs appliqués](#journal-des-correctifs-appliqués).
 
 **Diagnostic initial** (avant correctifs) : le build était cassé. Le commit `95bd31c` (export xlsx) avait corrompu **12 fichiers `.tsx`** avec une édition automatique ratée (ligne d'import dupliquée 14 à 34 fois, texte français mal encodé). Résultat à l'époque :
 - `npx tsc --noEmit` → **232 erreurs**
@@ -246,6 +246,17 @@ Découverte en cours de route : une base **Neon Postgres était déjà provision
 - **Important — bug corrigé en amont** : avant cette session, `src/lib/db.ts` ignorait `DATABASE_URL` même quand il était configuré (le hack `/tmp` s'appliquait inconditionnellement en production). Autrement dit, même une fois Postgres branché, l'app n'aurait jamais réellement écrit dedans sans ce correctif.
 
 **Reste à faire côté Chantier 2** : rien de bloquant. Pour aller plus loin : envisager de réensemencer une base de démo plus riche (`/api/seed` complet) si utile pour les tests, et vérifier qu'un vrai flux de déploiement (push → build Vercel) fonctionne de bout en bout avec la nouvelle configuration — pas encore testé en conditions réelles de déploiement.
+
+### Chantier 1 — sécurité API ✅
+- Les 10 routes cassées par le bug de signature `withTenantAuth` (`structure`, `hr`, `online-exams`, `reports`, `rooms`, `scholarships`, et les POST de `attendance`/`internships`/`communications`/`alumni`) ont toutes été remises à la bonne signature `(user, tenantId, request)`, tous les `as any` supprimés.
+- Les 4 fuites de données inter-tenant (`GET` non authentifiés sur `attendance`/`internships`/`communications`/`alumni`) sont fermées — protégées par `withTenantAuth` comme le reste.
+- Bug additionnel découvert en corrigeant les signatures : plusieurs POST (`hr`, `rooms`, `reports`, `online-exams`, `attendance`, `internships`, `communications`, `scholarships`, `alumni`) faisaient confiance au `tenantId` envoyé dans le corps de la requête au lieu de celui validé par le middleware — un utilisateur du tenant A pouvait écrire dans les données du tenant B en changeant un simple champ du body. Corrigé partout pour n'utiliser que le `tenantId` vérifié.
+- `scholarships` et `alumni` en POST faisaient `db.x.create({ data: body })` sans aucune validation — remplacé par une extraction de champs explicite, cohérente avec le reste du code.
+- `documents/generate` vérifie maintenant que le `tenantId` demandé correspond à celui de l'utilisateur connecté (sinon 403), et les recherches étudiant/inscription/délibération/liste qu'il effectue sont scopées par tenant.
+- `/api/seed` restreint à `SUPER_ADMIN` (était : accessible à tout utilisateur connecté).
+- Fallback `NEXTAUTH_SECRET` codé en dur supprimé (`src/middleware.ts`, `src/lib/auth/config.ts`) — centralisé dans `src/lib/auth/secret.ts`, qui lève une erreur explicite si la variable est absente en production au lieu de déployer silencieusement avec un secret public.
+
+Reste pour aller plus loin sur ce chantier (non traité, hors scope de cette passe) : ajouter des restrictions de rôle plus fines sur ces 10 routes (elles restent ouvertes à tout utilisateur authentifié du tenant, comme avant le bug — aucune nouvelle politique de rôle n'a été inventée) ; tests de régression automatisés sur l'auth/isolation tenant.
 
 ### Accès Vercel
 Un token Vercel a été fourni en session (durée de vie : 1 semaine annoncée par l'utilisateur). Stocké uniquement dans `.env.local` (ignoré par git, jamais commité). Projet Vercel identifié : `unisahel-tchad` (compte `ndouwesalvadors-projects`), lié en local via `vercel link`. Aucun cron Vercel n'était configuré au moment de l'inspection — à clarifier avec l'utilisateur si un cron spécifique est souhaité (ex. sauvegardes automatisées, cf. Chantier 4.9).
