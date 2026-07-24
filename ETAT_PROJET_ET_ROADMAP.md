@@ -2,7 +2,7 @@
 
 > **Ce document remplace les documents de planification précédents** (`AUDIT_REPORT.md`, `IMPLEMENTATION_PLAN.md`, `PROGRESS_TRACKING.md`, `PRODUCTION_PLAN.md`, `PHASE1_PROGRESS.md`), datés du 2026-06-07/08 et **obsolètes** : ils annonçaient ~13% d'avancement et ne reflètent plus le code réel. Le contenu ci-dessous est basé sur une lecture directe du code source au commit `95bd31c` (2026-07-24), pas sur les anciens rapports.
 >
-> **Recommandation** : une fois ce document validé, archiver ou supprimer les 5 fichiers ci-dessus pour éviter toute confusion future (je ne les ai pas touchés — à confirmer avec toi).
+> **Mise à jour 2026-07-25** : les 5 fichiers ci-dessus ont été déplacés vers [`archive/`](archive/) (Chantier 5.6).
 
 ---
 

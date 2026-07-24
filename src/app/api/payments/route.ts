@@ -516,11 +516,13 @@ async function initiateMobileMoneyPayment(user: SessionUser, tenantId: string, r
 async function checkMobileMoneyStatus(user: SessionUser, tenantId: string, request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const paymentId = searchParams.get('paymentId')
+    // The GET dispatcher below routes here based on `id` + mobileMoneyStatus=true
+    // (see `export const GET`) - must read the same param name, not `paymentId`.
+    const paymentId = searchParams.get('id')
 
     if (!paymentId) {
       return NextResponse.json(
-        { error: 'paymentId is required' },
+        { error: 'id is required' },
         { status: 400 }
       )
     }
