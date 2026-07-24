@@ -556,7 +556,7 @@ export function PaymentsPage() {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm font-semibold text-[#1a2744]">Integration Mobile Money</CardTitle>
-                <Button size="sm" variant="outline" className="h-7 text-xs border-[#d4a853] text-[#d4a853] hover:bg-[#d4a85310]" onClick={() => toast.success('Configuration Mobile Money', { description: 'Paramètres des opérateurs disponibles' })}>
+                <Button size="sm" variant="outline" className="h-7 text-xs border-[#d4a853] text-[#d4a853] hover:bg-[#d4a85310]" onClick={() => toast.info('Bientot disponible', { description: "L'integration directe avec les operateurs Mobile Money est en cours de mise en place. Enregistrez ces paiements manuellement pour le moment." })}>
                   <Settings2 className="size-3 mr-1" />
                   Configurer
                 </Button>
@@ -596,10 +596,10 @@ export function PaymentsPage() {
 
               <div className="pt-2 border-t border-gray-100 flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
-                  <div className="w-2 h-2 rounded-full bg-[#2d7a4f] animate-pulse" />
-                  <span className="text-[10px] text-gray-500">API connectee</span>
+                  <div className="w-2 h-2 rounded-full bg-[#d4a853]" />
+                  <span className="text-[10px] text-gray-500">Bientot disponible</span>
                 </div>
-                <span className="text-[10px] text-gray-400">Derniere sync: il y a 5 min</span>
+                <span className="text-[10px] text-gray-400">Paiements a enregistrer manuellement</span>
               </div>
             </CardContent>
           </Card>

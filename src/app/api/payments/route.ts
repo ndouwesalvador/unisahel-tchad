@@ -257,6 +257,26 @@ async function updatePaymentHandler(user: SessionUser, tenantId: string, request
       },
     })
 
+    // Best-effort receipt email on validation - never fails the payment update itself
+    if (data.status === 'VALIDATED' && existing.status !== 'VALIDATED' && payment.student?.email) {
+      const { sendEmail } = await import('@/lib/email')
+      const amountLabel = `${payment.amount.toLocaleString('fr-FR')} ${payment.currency}`
+      await sendEmail({
+        to: payment.student.email,
+        subject: `Reçu de paiement ${payment.receiptNumber}`,
+        html: `
+          <p>Bonjour ${payment.student.firstName},</p>
+          <p>Votre paiement a été validé.</p>
+          <ul>
+            <li>Reçu N° : ${payment.receiptNumber}</li>
+            <li>Montant : ${amountLabel}</li>
+            <li>Date de validation : ${new Date().toLocaleDateString('fr-FR')}</li>
+          </ul>
+          <p>— UniSahel</p>
+        `,
+      })
+    }
+
     return NextResponse.json({ data: payment })
   } catch (error) {
     console.error('Update payment error:', error)
@@ -452,6 +472,11 @@ async function getPaymentStatsHandler(user: SessionUser, tenantId: string, reque
 // Mobile Money Helpers
 // ========================================
 
+// No Mobile Money provider (Airtel/Orange/MTN/Moov) is configured yet - there
+// are no API credentials for any of them. Rather than faking a successful
+// initiation (which used to silently flip the payment to PENDING with a
+// fabricated transaction reference), these endpoints report the real state:
+// not available yet. Wire up a real provider here once credentials exist.
 async function initiateMobileMoneyPayment(user: SessionUser, tenantId: string, request: NextRequest) {
   try {
     const body = await request.json()
@@ -472,38 +497,13 @@ async function initiateMobileMoneyPayment(user: SessionUser, tenantId: string, r
       )
     }
 
-    // Update payment with mobile money details
-    const updatedPayment = await db.payment.update({
-      where: { id: paymentId },
-      data: {
-        mobileMoneyProvider: provider,
-        transactionRef: `MM_${provider}_${Date.now()}`,
-        status: 'PENDING',
+    return NextResponse.json(
+      {
+        error: 'MOBILE_MONEY_NOT_CONFIGURED',
+        message: `L'intégration ${provider} Money n'est pas encore disponible. Enregistrez ce paiement manuellement en attendant.`,
       },
-    })
-
-    // In production, here you would call the actual Mobile Money API
-    // For now, return mock response
-    const mockResponse = {
-      success: true,
-      transactionId: `MM_${provider}_${Date.now()}`,
-      reference: payment.transactionRef || `REF_${Date.now()}`,
-      message: `Paiement initié via ${provider} Money`,
-    }
-
-    // Audit log
-    await db.auditLog.create({
-      data: {
-        tenantId,
-        userId: user.id,
-        action: 'MOBILE_MONEY_INITIATE',
-        entity: 'Payment',
-        entityId: paymentId,
-        details: JSON.stringify({ provider, phoneNumber, mockResponse }),
-      },
-    })
-
-    return NextResponse.json({ data: { payment: updatedPayment, mobileMoneyResponse: mockResponse } })
+      { status: 501 }
+    )
   } catch (error) {
     console.error('Mobile money initiate error:', error)
     return NextResponse.json(
@@ -533,15 +533,13 @@ async function checkMobileMoneyStatus(user: SessionUser, tenantId: string, reque
       )
     }
 
-    // In production, here you would call the actual Mobile Money API to check status
-    // For now, return mock response
-    const mockResponse = {
-      status: 'PENDING', // PENDING, SUCCESS, FAILED, EXPIRED
-      transactionId: payment.transactionRef,
-      message: 'En attente de validation',
-    }
-
-    return NextResponse.json({ data: { payment, mobileMoneyStatus: mockResponse } })
+    return NextResponse.json(
+      {
+        error: 'MOBILE_MONEY_NOT_CONFIGURED',
+        message: "L'intégration Mobile Money n'est pas encore disponible.",
+      },
+      { status: 501 }
+    )
   } catch (error) {
     console.error('Mobile money status check error:', error)
     return NextResponse.json(
