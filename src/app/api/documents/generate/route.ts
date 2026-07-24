@@ -72,6 +72,14 @@ export async function POST(request: NextRequest) {
     const verificationCode = data?.verificationCode || generateCode()
     const acYearId = academicYearId || data?.academicYearId || null
 
+    const { getVerificationUrl } = await import('@/lib/pdf/utils')
+    const QRCode = await import('qrcode')
+    const qrCodeDataUrl = await QRCode.toDataURL(getVerificationUrl(verificationCode), {
+      width: 200,
+      margin: 1,
+      color: { dark: '#1a2744', light: '#ffffff' },
+    })
+
     const { default: React } = await import('react')
 
     let DocumentComponent: React.ReactElement | null = null
@@ -130,7 +138,7 @@ export async function POST(request: NextRequest) {
 
         DocumentComponent = React.createElement(ReleveNotesPDF, {
           tenant, student: student || { firstName: '', lastName: '', matricule: '', program: '', level: '' },
-          semester, ueGrades, academicYear, docNumber, verificationCode,
+          semester, ueGrades, academicYear, docNumber, verificationCode, qrCodeDataUrl,
         })
         break
       }
@@ -150,7 +158,7 @@ export async function POST(request: NextRequest) {
 
         DocumentComponent = React.createElement(AttestationInscriptionPDF, {
           tenant, student: student || { firstName: '', lastName: '', matricule: '' },
-          academicYear, docNumber, verificationCode,
+          academicYear, docNumber, verificationCode, qrCodeDataUrl,
         })
         break
       }
@@ -160,7 +168,7 @@ export async function POST(request: NextRequest) {
         let diploma = data?.diploma || { title: '', mention: '', date: '' }
         DocumentComponent = React.createElement(DiplomePDF, {
           tenant, student: student || { firstName: '', lastName: '', matricule: '' },
-          diploma, docNumber, verificationCode,
+          diploma, docNumber, verificationCode, qrCodeDataUrl,
         })
         break
       }
@@ -212,7 +220,7 @@ export async function POST(request: NextRequest) {
         }
 
         DocumentComponent = React.createElement(PVDeliberationPDF, {
-          tenant, session, members, students, academicYear, docNumber, verificationCode,
+          tenant, session, members, students, academicYear, docNumber, verificationCode, qrCodeDataUrl,
         })
         break
       }
@@ -231,7 +239,7 @@ export async function POST(request: NextRequest) {
 
         DocumentComponent = React.createElement(CertificatScolaritePDF, {
           tenant, student: student || { firstName: '', lastName: '', matricule: '' },
-          academicYear, docNumber, verificationCode,
+          academicYear, docNumber, verificationCode, qrCodeDataUrl,
         })
         break
       }

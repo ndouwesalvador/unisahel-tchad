@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAppStore } from '@/lib/store'
 import { Card, CardContent } from '@/components/ui/card'
@@ -93,17 +94,18 @@ const verifiedDocuments: Record<string, {
 
 export function VerifyPage() {
   const { setView } = useAppStore()
+  const searchParams = useSearchParams()
   const [code, setCode] = useState('VER-UDN-2024-RN-001')
   const [searchResult, setSearchResult] = useState<typeof verifiedDocuments[string] | null | undefined>(undefined)
   const [searched, setSearched] = useState(false)
   const [verifying, setVerifying] = useState(false)
 
-  const handleSearch = async () => {
-    if (!code.trim()) return
+  const verifyCode = useCallback(async (rawCode: string) => {
+    if (!rawCode.trim()) return
     setVerifying(true)
     setSearched(false)
     try {
-      const res = await fetch(`/api/documents/verify/${encodeURIComponent(code.trim().toUpperCase())}`)
+      const res = await fetch(`/api/documents/verify/${encodeURIComponent(rawCode.trim().toUpperCase())}`)
       const data = await res.json()
       if (data.valid) {
         setSearchResult({
@@ -123,7 +125,19 @@ export function VerifyPage() {
       setSearched(true)
       setVerifying(false)
     }
-  }
+  }, [])
+
+  const handleSearch = () => verifyCode(code)
+
+  // Auto-fill and verify when arriving via a scanned QR code (/verify?code=XXX)
+  useEffect(() => {
+    const codeFromUrl = searchParams.get('code')
+    if (codeFromUrl) {
+      setCode(codeFromUrl)
+      verifyCode(codeFromUrl)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
 
   const handleReset = () => {
     setCode('')
@@ -133,7 +147,7 @@ export function VerifyPage() {
 
   const handleDemoVerify = () => {
     setCode('VER-UDN-2024-RN-001')
-    handleSearch()
+    verifyCode('VER-UDN-2024-RN-001')
   }
 
   return (

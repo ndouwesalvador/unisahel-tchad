@@ -1,6 +1,6 @@
 import React from 'react'
-import { Document, Page, Text, View, StyleSheet, Font } from '@react-pdf/renderer'
-import { formatDate, formatNumber, TenantInfo, StudentInfo } from './utils'
+import { Document, Page, Text, View, StyleSheet, Font, Image } from '@react-pdf/renderer'
+import { formatDate, formatNumber, getVerificationUrl, TenantInfo, StudentInfo } from './utils'
 
 Font.register({
   family: 'Helvetica',
@@ -170,6 +170,7 @@ const styles = StyleSheet.create({
     right: 40,
     flexDirection: 'row',
     justifyContent: 'center',
+    alignItems: 'center',
     gap: 20,
     padding: '6 10',
     backgroundColor: '#f0fdf4',
@@ -180,6 +181,14 @@ const styles = StyleSheet.create({
   verificationText: {
     fontSize: 7,
     color: colors.secondary,
+  },
+  verificationTextGroup: {
+    flexDirection: 'column',
+    gap: 2,
+  },
+  qrCode: {
+    width: 40,
+    height: 40,
   },
   stamp: {
     position: 'absolute',
@@ -218,14 +227,17 @@ function Stamp({ text = 'VALIDE' }: { text?: string }) {
   )
 }
 
-function Footer({ docNumber, verificationCode }: { docNumber?: string; verificationCode?: string }) {
+function Footer({ docNumber, verificationCode, qrCodeDataUrl }: { docNumber?: string; verificationCode?: string; qrCodeDataUrl?: string }) {
   return (
     <>
       {verificationCode && (
         <View style={styles.verificationBar}>
-          <Text style={styles.verificationText}>Code de vérification: {verificationCode}</Text>
-          <Text style={styles.verificationText}>|</Text>
-          <Text style={styles.verificationText}>Vérifier sur: unisahel.africa/verify</Text>
+          {/* eslint-disable-next-line jsx-a11y/alt-text -- @react-pdf/renderer's Image, not an HTML img */}
+          {qrCodeDataUrl && <Image src={qrCodeDataUrl} style={styles.qrCode} />}
+          <View style={styles.verificationTextGroup}>
+            <Text style={styles.verificationText}>Code de vérification: {verificationCode}</Text>
+            <Text style={styles.verificationText}>Scannez le QR code ou vérifiez sur {getVerificationUrl(verificationCode).replace(/^https?:\/\//, '')}</Text>
+          </View>
         </View>
       )}
       <View style={styles.footer}>
@@ -241,9 +253,9 @@ function Footer({ docNumber, verificationCode }: { docNumber?: string; verificat
 }
 
 export function ReleveNotesPDF({
-  tenant, student, semester, ueGrades, academicYear, docNumber, verificationCode,
+  tenant, student, semester, ueGrades, academicYear, docNumber, verificationCode, qrCodeDataUrl,
 }: {
-  tenant: TenantInfo; student: StudentInfo; semester: string; ueGrades: Array<{ ue: string; code: string; credits: number; notes: Array<{ ec: string; coef: number; cc?: number; exam?: number; final?: number }>; moyenne?: number }>; academicYear: string; docNumber: string; verificationCode: string
+  tenant: TenantInfo; student: StudentInfo; semester: string; ueGrades: Array<{ ue: string; code: string; credits: number; notes: Array<{ ec: string; coef: number; cc?: number; exam?: number; final?: number }>; moyenne?: number }>; academicYear: string; docNumber: string; verificationCode: string; qrCodeDataUrl?: string
 }) {
   return (
     <Document>
@@ -301,16 +313,16 @@ export function ReleveNotesPDF({
         ))}
 
         <Stamp />
-        <Footer docNumber={docNumber} verificationCode={verificationCode} />
+        <Footer docNumber={docNumber} verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} />
       </Page>
     </Document>
   )
 }
 
 export function AttestationInscriptionPDF({
-  tenant, student, academicYear, docNumber, verificationCode,
+  tenant, student, academicYear, docNumber, verificationCode, qrCodeDataUrl,
 }: {
-  tenant: TenantInfo; student: StudentInfo; academicYear: string; docNumber: string; verificationCode: string
+  tenant: TenantInfo; student: StudentInfo; academicYear: string; docNumber: string; verificationCode: string; qrCodeDataUrl?: string
 }) {
   return (
     <Document>
@@ -361,16 +373,16 @@ export function AttestationInscriptionPDF({
           </View>
         </View>
 
-        <Footer docNumber={docNumber} verificationCode={verificationCode} />
+        <Footer docNumber={docNumber} verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} />
       </Page>
     </Document>
   )
 }
 
 export function DiplomePDF({
-  tenant, student, diploma, docNumber, verificationCode,
+  tenant, student, diploma, docNumber, verificationCode, qrCodeDataUrl,
 }: {
-  tenant: TenantInfo; student: StudentInfo; diploma: { title: string; mention: string; date: string }; docNumber: string; verificationCode: string
+  tenant: TenantInfo; student: StudentInfo; diploma: { title: string; mention: string; date: string }; docNumber: string; verificationCode: string; qrCodeDataUrl?: string
 }) {
   return (
     <Document>
@@ -420,16 +432,16 @@ export function DiplomePDF({
         </View>
 
         <Stamp text="AUTHENTIQUE" />
-        <Footer docNumber={docNumber} verificationCode={verificationCode} />
+        <Footer docNumber={docNumber} verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} />
       </Page>
     </Document>
   )
 }
 
 export function PVDeliberationPDF({
-  tenant, session, members, students, academicYear, docNumber, verificationCode,
+  tenant, session, members, students, academicYear, docNumber, verificationCode, qrCodeDataUrl,
 }: {
-  tenant: TenantInfo; session: { name: string; date: string; type: string }; members: Array<{ name: string; role: string }>; students: Array<{ name: string; matricule: string; moy: number; decision: string; mention?: string }>; academicYear: string; docNumber: string; verificationCode: string
+  tenant: TenantInfo; session: { name: string; date: string; type: string }; members: Array<{ name: string; role: string }>; students: Array<{ name: string; matricule: string; moy: number; decision: string; mention?: string }>; academicYear: string; docNumber: string; verificationCode: string; qrCodeDataUrl?: string
 }) {
   const stats = {
     total: students.length,
@@ -533,16 +545,16 @@ export function PVDeliberationPDF({
           </View>
         </View>
 
-        <Footer docNumber={docNumber} verificationCode={verificationCode} />
+        <Footer docNumber={docNumber} verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} />
       </Page>
     </Document>
   )
 }
 
 export function CertificatScolaritePDF({
-  tenant, student, academicYear, docNumber, verificationCode,
+  tenant, student, academicYear, docNumber, verificationCode, qrCodeDataUrl,
 }: {
-  tenant: TenantInfo; student: StudentInfo; academicYear: string; docNumber: string; verificationCode: string
+  tenant: TenantInfo; student: StudentInfo; academicYear: string; docNumber: string; verificationCode: string; qrCodeDataUrl?: string
 }) {
   return (
     <Document>
@@ -589,7 +601,7 @@ export function CertificatScolaritePDF({
           </View>
         </View>
 
-        <Footer docNumber={docNumber} verificationCode={verificationCode} />
+        <Footer docNumber={docNumber} verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} />
       </Page>
     </Document>
   )

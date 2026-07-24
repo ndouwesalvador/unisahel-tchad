@@ -21,6 +21,16 @@ export function generateVerificationCode(): string {
   return result
 }
 
+export function getPublicBaseUrl(): string {
+  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`
+  return 'http://localhost:3000'
+}
+
+export function getVerificationUrl(verificationCode: string): string {
+  return `${getPublicBaseUrl()}/verify?code=${encodeURIComponent(verificationCode)}`
+}
+
 export interface TenantInfo {
   name: string
   shortName?: string
