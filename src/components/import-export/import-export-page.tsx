@@ -306,7 +306,7 @@ export function ImportExportPage() {
         return prev + 10
       })
     }, 300)
-  }, [])
+  }, [importType])
 
   const statsCards = [
     { label: 'Imports ce mois', value: 5, icon: ArrowRightLeft, color: '#1a2744' },

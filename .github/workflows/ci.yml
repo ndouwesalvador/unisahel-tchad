@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    # A build-blocking corrupted commit and a stale-Prisma-client deploy both
+    # reached production undetected earlier in this project's history because
+    # nothing ran these checks before a push. This workflow runs the same
+    # checks used locally, from a clean install, on every push/PR.
+    env:
+      # next build needs DATABASE_URL/DIRECT_URL to construct PrismaClient
+      # and NEXTAUTH_SECRET to evaluate the auth config module, but the build
+      # step itself never connects to the database - dummy values are enough.
+      DATABASE_URL: "postgresql://ci:ci@localhost:5432/ci_dummy"
+      DIRECT_URL: "postgresql://ci:ci@localhost:5432/ci_dummy"
+      NEXTAUTH_SECRET: "ci-only-dummy-secret-not-used-anywhere-else-32ch"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies (runs postinstall -> prisma generate)
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit -p tsconfig.json
+
+      - name: Lint
+        run: npx eslint .
+
+      - name: Unit tests
+        run: npx vitest run
+
+      - name: Build
+        run: npx next build
