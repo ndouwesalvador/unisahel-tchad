@@ -8,7 +8,7 @@
 
 ## 🚨 RÉSUMÉ EXÉCUTIF — à lire en premier
 
-> **Mise à jour du 2026-07-24 (suite session) :** Chantiers 0 (build cassé), 1 (sécurité API), l'essentiel de 2 (migration Postgres) sont **terminés**, et Chantier 3 (branchement frontend) est **bien avancé** (11 modules branchés sur leurs vraies API). Détail en fin de document, section [Journal des correctifs appliqués](#journal-des-correctifs-appliqués).
+> **Mise à jour du 2026-07-25 (suite session) :** Chantiers 0 (build cassé), 1 (sécurité API), l'essentiel de 2 (migration Postgres), 3 (branchement frontend, complet), et l'essentiel de 5 (CI/tests) sont **terminés**. Chantier 4 (fonctionnalités mockées) reste **partiel** — voir détail. Détail complet en fin de document, section [Journal des correctifs appliqués](#journal-des-correctifs-appliqués).
 
 **Diagnostic initial** (avant correctifs) : le build était cassé. Le commit `95bd31c` (export xlsx) avait corrompu **12 fichiers `.tsx`** avec une édition automatique ratée (ligne d'import dupliquée 14 à 34 fois, texte français mal encodé). Résultat à l'époque :
 - `npx tsc --noEmit` → **232 erreurs**
@@ -281,6 +281,14 @@ Plusieurs enums stockés en DB (anglais MAJUSCULES, ex. `"HOSPITALIER"` -> en fa
 - **Notifications email (4.3) 🟡** : décision utilisateur = Resend pour l'email (pas de SMS pour l'instant). `src/lib/email.ts` ajouté (dégrade proprement si `RESEND_API_KEY` absent, pas de faux succès). Branché sur UN cas concret et non ambigu : email de reçu au parent/étudiant quand un paiement est validé (`student.email` déjà disponible). **`RESEND_API_KEY` n'est pas configuré** — à ajouter dans `.env.local`/Vercel pour que l'envoi réel fonctionne. Les diffusions de masse (`Communications`, ex. "Tous les étudiants") ne sont pas branchées : `audience` est une chaîne libre sans liste de destinataires résolvable dans le schéma actuel — nécessite une décision de conception (segmentation d'audience) avant de pouvoir l'implémenter sans deviner.
 
 **Piège technique noté en passant** : `npm install <pkg>` peut perturber le client Prisma généré (`node_modules/.prisma/client`) sans le régénérer — après tout `npm install`, lancer `npx prisma generate` avant de retester, sinon `tsc` explose avec des erreurs `Prisma.XxxWhereInput has no exported member` qui n'ont rien à voir avec le vrai problème.
+
+### Chantier 5 — qualité, tests, déploiement ✅ pour l'essentiel
+- **5.1 CI ✅** : `.github/workflows/ci.yml` — à chaque push/PR sur `master`, install propre + `tsc` + `eslint` + `vitest` + `next build`. Deux runs verts confirmés depuis la mise en place.
+- **5.2 Tests d'intégration ✅** : `src/lib/auth/helpers.test.ts` (withAuth/withTenantAuth — régression directe du bug Chantier 1), `api/students/route.test.ts`, `api/payments/route.test.ts`, `api/grades/route.test.ts`. 29 tests au total. En les écrivant, j'ai trouvé et corrigé un vrai bug pré-existant non lié à mon travail : `checkMobileMoneyStatus` lisait `paymentId` dans l'URL alors que le dispatcher `GET` route sur `id` — l'endpoint ne pouvait jamais atteindre le correctif d'honnêteté du Chantier 4, il renvoyait juste une 400.
+- **5.3 E2E ✅** : Playwright installé, `e2e/login-and-verify.spec.ts` — connexion réelle → tableau de bord, vérification de document (code inconnu → réponse honnête "non trouvé"), et scan QR (`?code=`) qui auto-vérifie. 3/3 verts en local. **Pas branché dans le CI** : contrairement au job build (qui n'a besoin que d'une URL de DB syntaxiquement valide, jamais contactée), l'E2E a besoin d'une vraie base accessible avec de vrais utilisateurs — le brancher demanderait de mettre les vraies credentials Neon en secret GitHub Actions, une décision à prendre explicitement plutôt qu'en effet de bord.
+- **5.4 `.env.example` ✅** : documente toutes les variables réellement utilisées. Au passage, `.gitignore` excluait `.env*` sans exception — `.env.example` n'aurait donc jamais pu être commité ; corrigé.
+- **5.6 Nettoyage ✅** : scaffold `src/app/api/route.ts` supprimé, 5 anciens docs de planning archivés dans `archive/`.
+- **5.5 `vercel.ts`** : non fait — le déploiement fonctionne déjà correctement via l'intégration GitHub-Vercel existante ; valeur ajoutée faible pour l'effort, laissé de côté sauf besoin explicite plus tard.
 
 ### Accès Vercel
 Un token Vercel a été fourni en session (durée de vie : 1 semaine annoncée par l'utilisateur). Stocké uniquement dans `.env.local` (ignoré par git, jamais commité). Projet Vercel identifié : `unisahel-tchad` (compte `ndouwesalvadors-projects`), lié en local via `vercel link`. Aucun cron Vercel n'était configuré au moment de l'inspection — à clarifier avec l'utilisateur si un cron spécifique est souhaité (ex. sauvegardes automatisées, cf. Chantier 4.9).
