@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import { motion, AnimatePresence, useInView } from 'framer-motion'
 import { useAppStore } from '@/lib/store'
@@ -11,6 +12,17 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion'
+import { Marquee } from '@/components/ui/marquee'
+import { BentoGrid } from '@/components/ui/bento-grid'
+import { NumberTicker } from '@/components/ui/number-ticker'
+import { AnimatedBeam } from '@/components/ui/animated-beam'
+import { BorderBeam } from '@/components/ui/border-beam'
+import { Meteors } from '@/components/ui/meteors'
+import { ShimmerButton } from '@/components/ui/shimmer-button'
+import { AuroraText } from '@/components/ui/aurora-text'
+import { DottedMap } from '@/components/ui/dotted-map'
+import { MagicCard } from '@/components/ui/magic-card'
+import { Ripple } from '@/components/ui/ripple'
 import {
   Shield,
   BookOpen,
@@ -81,15 +93,6 @@ const containerVariants = {
   },
 } as const
 
-const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, ease: 'easeOut' },
-  },
-} as const
-
 // ─── Scroll Animation Wrapper ────────────────────────────────────────────────
 function FadeInSection({ children, className, delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
   const ref = useRef(null)
@@ -104,54 +107,6 @@ function FadeInSection({ children, className, delay = 0 }: { children: React.Rea
       className={className}
     >
       {children}
-    </motion.div>
-  )
-}
-
-// ─── useCountUp Hook ──────────────────────────────────────────────────────────
-function useCountUp(end: number, duration: number = 1600) {
-  const [count, setCount] = useState(0)
-  const ref = useRef(null)
-  const isInView = useInView(ref, { once: true })
-  const hasStarted = useRef(false)
-
-  useEffect(() => {
-    if (isInView && !hasStarted.current) {
-      hasStarted.current = true
-      const startTime = Date.now()
-      const step = () => {
-        const elapsed = (Date.now() - startTime) / 1000
-        const progress = Math.min(elapsed / (duration / 1000), 1)
-        const eased = 1 - Math.pow(1 - progress, 3)
-        setCount(Math.floor(eased * end))
-        if (progress < 1) {
-          requestAnimationFrame(step)
-        } else {
-          setCount(end)
-        }
-      }
-      requestAnimationFrame(step)
-    }
-  }, [isInView, end, duration])
-
-  return { count, ref }
-}
-
-// ─── Animated Stat ────────────────────────────────────────────────────────────
-function AnimatedStat({ value, suffix, label }: { value: number; suffix: string; label: string }) {
-  const { count, ref } = useCountUp(value, 1600)
-  return (
-    <motion.div
-      ref={ref}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      className="text-center px-4 py-3 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10"
-    >
-      <div className="text-3xl sm:text-4xl font-bold text-white tabular-nums">
-        {count.toLocaleString()}{suffix}
-      </div>
-      <div className="text-sm text-white/70 mt-1">{label}</div>
     </motion.div>
   )
 }
@@ -425,6 +380,7 @@ function DashboardPreview() {
       <div className="absolute -inset-6 bg-gradient-to-r from-[#2d7a4f]/20 via-[#d4a853]/10 to-[#2d7a4f]/20 blur-3xl rounded-[2rem]" />
 
       <div className="relative rounded-2xl border border-white/15 bg-white/[0.03] backdrop-blur-xl shadow-2xl overflow-hidden">
+        <BorderBeam size={220} duration={8} colorFrom="#2d7a4f" colorTo="#d4a853" />
         {/* Browser chrome */}
         <div className="flex items-center gap-2 px-4 py-3 border-b border-white/10 bg-white/[0.03]">
           <div className="flex gap-1.5">
@@ -592,6 +548,7 @@ function HeroSection() {
 
       <DotGridPattern />
       <FloatingElements />
+      <Meteors number={12} className="opacity-50" />
 
       {/* Ambient particles */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -670,7 +627,9 @@ function HeroSection() {
           className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white leading-tight tracking-tight text-balance"
         >
           Digitalisez votre{' '}
-          <span className="gradient-text">universite africaine</span>
+          <AuroraText colors={['#2d7a4f', '#3da66a', '#d4a853', '#2d7a4f']} speed={0.7}>
+            universite africaine
+          </AuroraText>
         </motion.h1>
 
         <motion.p
@@ -689,14 +648,15 @@ function HeroSection() {
           transition={{ duration: 0.8, delay: 0.8 }}
           className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4"
         >
-          <Button
-            size="lg"
+          <ShimmerButton
             onClick={() => setView('login')}
-            className="shimmer-button bg-[#2d7a4f] hover:bg-[#236b40] text-white px-8 text-base h-12"
+            background="linear-gradient(135deg, #2d7a4f, #236b40)"
+            shimmerColor="#ffffff"
+            className="px-8 h-12 text-base font-medium shadow-lg shadow-[#2d7a4f]/30"
           >
             Demarrer gratuitement
             <ArrowRight className="ml-2 size-4" />
-          </Button>
+          </ShimmerButton>
           <Button
             size="lg"
             className="bg-white/10 border border-white/30 text-white hover:bg-white/20 hover:border-white/50 px-8 text-base h-12"
@@ -725,15 +685,17 @@ function HeroSection() {
           transition={{ duration: 0.8, delay: 1.0 }}
           className="mt-14 flex flex-wrap items-center justify-center gap-4 sm:gap-6"
         >
-          {stats.map((stat, idx) => (
-            <motion.div
+          {stats.map((stat) => (
+            <div
               key={stat.label}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 1.2 + idx * 0.15 }}
+              className="text-center px-4 py-3 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10"
             >
-              <AnimatedStat value={stat.value} suffix={stat.suffix} label={stat.label} />
-            </motion.div>
+              <div className="text-3xl sm:text-4xl font-bold text-white tabular-nums flex items-center justify-center gap-0.5">
+                <NumberTicker value={stat.value} className="text-white" delay={1.2} />
+                <span>{stat.suffix}</span>
+              </div>
+              <div className="text-sm text-white/70 mt-1">{stat.label}</div>
+            </div>
           ))}
         </motion.div>
 
@@ -765,25 +727,25 @@ const segments = [
 
 function SegmentsBar() {
   return (
-    <section className="bg-white py-10 border-b border-gray-100">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <FadeInSection>
-          <p className="text-center text-xs font-semibold text-gray-400 uppercase tracking-wider mb-6">
-            Concu pour tous les etablissements d&apos;enseignement superieur
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
-            {segments.map((seg) => (
-              <div
-                key={seg.label}
-                className="flex items-center gap-2 px-4 py-2 rounded-full border border-gray-100 bg-gray-50/80 text-sm text-gray-600"
-              >
-                <seg.icon className="size-4 text-[#2d7a4f]" />
-                {seg.label}
-              </div>
-            ))}
-          </div>
-        </FadeInSection>
-      </div>
+    <section className="bg-white py-10 border-b border-gray-100 overflow-hidden">
+      <FadeInSection>
+        <p className="text-center text-xs font-semibold text-gray-400 uppercase tracking-wider mb-6 px-4">
+          Concu pour tous les etablissements d&apos;enseignement superieur
+        </p>
+      </FadeInSection>
+      <FadeInSection delay={0.1}>
+        <Marquee pauseOnHover className="[--duration:32s]">
+          {segments.map((seg) => (
+            <div
+              key={seg.label}
+              className="flex items-center gap-2 px-4 py-2 rounded-full border border-gray-100 bg-gray-50/80 text-sm text-gray-600 whitespace-nowrap"
+            >
+              <seg.icon className="size-4 text-[#2d7a4f]" />
+              {seg.label}
+            </div>
+          ))}
+        </Marquee>
+      </FadeInSection>
     </section>
   )
 }
@@ -875,41 +837,42 @@ function ModulesSection() {
           </div>
         </FadeInSection>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <BentoGrid className="grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 auto-rows-fr gap-5">
           {modules.map((mod, i) => (
             <FadeInSection
               key={mod.title}
               delay={i * 0.06}
               className={mod.featured ? 'sm:col-span-2 lg:col-span-2' : ''}
             >
-              <motion.div
-                whileHover={{ y: -4, boxShadow: '0 8px 30px rgba(26, 39, 68, 0.12)' }}
-                transition={{ duration: 0.2, ease: 'easeOut' }}
-                className={`group relative rounded-xl border border-gray-100 bg-white cursor-pointer hover:border-gray-200 transition-colors overflow-hidden h-full ${
-                  mod.featured ? 'p-7 flex flex-col justify-center' : 'p-6'
-                }`}
+              <MagicCard
+                className="h-full border-gray-100 hover:border-gray-200 transition-colors cursor-pointer"
+                gradientColor={mod.color}
+                gradientOpacity={0.06}
+                gradientFrom={mod.color}
+                gradientTo="#d4a853"
               >
-                <div
-                  className="absolute left-0 top-0 bottom-0 w-1 rounded-l-xl"
-                  style={{ backgroundColor: mod.borderColor }}
-                />
-                <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r from-[#1a2744] via-[#2d7a4f] to-[#d4a853] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                <div
-                  className={`rounded-xl flex items-center justify-center mb-4 transition-transform duration-200 group-hover:scale-110 group-hover:rotate-3 ${mod.featured ? 'w-14 h-14' : 'w-12 h-12'}`}
-                  style={{ backgroundColor: mod.bgColor }}
-                >
-                  <mod.icon className={mod.featured ? 'size-7' : 'size-6'} style={{ color: mod.color }} />
+                <div className={`relative h-full ${mod.featured ? 'p-7 flex flex-col justify-center' : 'p-6'}`}>
+                  <div
+                    className="absolute left-0 top-0 bottom-0 w-1"
+                    style={{ backgroundColor: mod.borderColor }}
+                  />
+                  <div
+                    className={`rounded-xl flex items-center justify-center mb-4 transition-transform duration-200 group-hover:scale-110 ${mod.featured ? 'w-14 h-14' : 'w-12 h-12'}`}
+                    style={{ backgroundColor: mod.bgColor }}
+                  >
+                    <mod.icon className={mod.featured ? 'size-7' : 'size-6'} style={{ color: mod.color }} />
+                  </div>
+                  <h3 className={`font-semibold text-[#1a2744] mb-2 ${mod.featured ? 'text-lg' : 'text-base'}`}>
+                    {mod.title}
+                  </h3>
+                  <p className="text-sm text-gray-500 leading-relaxed max-w-md">
+                    {mod.description}
+                  </p>
                 </div>
-                <h3 className={`font-semibold text-[#1a2744] mb-2 ${mod.featured ? 'text-lg' : 'text-base'}`}>
-                  {mod.title}
-                </h3>
-                <p className="text-sm text-gray-500 leading-relaxed max-w-md">
-                  {mod.description}
-                </p>
-              </motion.div>
+              </MagicCard>
             </FadeInSection>
           ))}
-        </div>
+        </BentoGrid>
 
         <FadeInSection delay={0.5}>
           <div className="mt-12 text-center">
@@ -1181,6 +1144,13 @@ const onboardingSteps = [
 ]
 
 function HowItWorksSection() {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const step1Ref = useRef<HTMLDivElement>(null)
+  const step2Ref = useRef<HTMLDivElement>(null)
+  const step3Ref = useRef<HTMLDivElement>(null)
+  const step4Ref = useRef<HTMLDivElement>(null)
+  const nodeRefs = [step1Ref, step2Ref, step3Ref, step4Ref] as const
+
   return (
     <section id="how-it-works" className="py-20 md:py-28 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -1198,14 +1168,11 @@ function HowItWorksSection() {
           </div>
         </FadeInSection>
 
-        <div className="relative grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-          {/* Connecting line (desktop) */}
-          <div className="hidden lg:block absolute top-7 left-[12.5%] right-[12.5%] h-px bg-gradient-to-r from-[#2d7a4f] via-[#d4a853] to-[#2d7a4f]" />
-
+        <div ref={containerRef} className="relative grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
           {onboardingSteps.map((step, i) => (
             <FadeInSection key={step.title} delay={i * 0.12}>
               <div className="relative flex flex-col items-center text-center">
-                <div className="relative z-10 w-14 h-14 rounded-2xl bg-[#1a2744] flex items-center justify-center mb-5 shadow-md">
+                <div ref={nodeRefs[i]} className="relative z-10 w-14 h-14 rounded-2xl bg-[#1a2744] flex items-center justify-center mb-5 shadow-md">
                   <step.icon className="size-6 text-white" />
                   <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-[#d4a853] text-[#1a2744] text-xs font-bold flex items-center justify-center">
                     {i + 1}
@@ -1216,6 +1183,43 @@ function HowItWorksSection() {
               </div>
             </FadeInSection>
           ))}
+
+          <AnimatedBeam
+            containerRef={containerRef}
+            fromRef={step1Ref}
+            toRef={step2Ref}
+            pathColor="#e5e7eb"
+            pathWidth={2}
+            pathOpacity={0.6}
+            gradientStartColor="#2d7a4f"
+            gradientStopColor="#d4a853"
+            duration={3}
+            delay={0}
+          />
+          <AnimatedBeam
+            containerRef={containerRef}
+            fromRef={step2Ref}
+            toRef={step3Ref}
+            pathColor="#e5e7eb"
+            pathWidth={2}
+            pathOpacity={0.6}
+            gradientStartColor="#2d7a4f"
+            gradientStopColor="#d4a853"
+            duration={3}
+            delay={0.6}
+          />
+          <AnimatedBeam
+            containerRef={containerRef}
+            fromRef={step3Ref}
+            toRef={step4Ref}
+            pathColor="#e5e7eb"
+            pathWidth={2}
+            pathOpacity={0.6}
+            gradientStartColor="#2d7a4f"
+            gradientStopColor="#d4a853"
+            duration={3}
+            delay={1.2}
+          />
         </div>
       </div>
     </section>
@@ -1240,8 +1244,11 @@ function SecuritySection() {
   ]
 
   return (
-    <section id="security" className="py-20 md:py-28 bg-gradient-to-br from-[#1a2744] via-[#1f3158] to-[#1a2744] text-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section id="security" className="relative overflow-hidden py-20 md:py-28 bg-gradient-to-br from-[#1a2744] via-[#1f3158] to-[#1a2744] text-white">
+      <div className="absolute inset-0 overflow-hidden">
+        <Meteors number={20} className="opacity-60" />
+      </div>
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <FadeInSection>
           <div className="text-center mb-16">
             <span className="inline-block px-3 py-1 text-xs font-semibold text-[#5cc98d] bg-[#2d7a4f10] rounded-full mb-4">
@@ -1289,6 +1296,21 @@ function SecuritySection() {
 }
 
 // ─── African Context Section ─────────────────────────────────────────────────
+// N'Djamena is the flagship market; the other markers sketch a plausible
+// multi-country African footprint alongside it (see "Couverture" figure).
+const africaRegion = { lat: { min: -36, max: 39 }, lng: { min: -19, max: 53 } }
+
+const africaMarkers = [
+  { lat: 12.1348, lng: 15.0557, size: 0.9 }, // N'Djamena, Tchad
+  { lat: 14.7167, lng: -17.4677, size: 0.5 }, // Dakar, Senegal
+  { lat: 12.6392, lng: -8.0029, size: 0.5 }, // Bamako, Mali
+  { lat: 6.5244, lng: 3.3792, size: 0.5 }, // Lagos, Nigeria
+  { lat: 3.848, lng: 11.5021, size: 0.5 }, // Yaounde, Cameroun
+  { lat: -4.4419, lng: 15.2663, size: 0.5 }, // Kinshasa, RDC
+  { lat: -1.2921, lng: 36.8219, size: 0.5 }, // Nairobi, Kenya
+  { lat: 33.5731, lng: -7.5898, size: 0.5 }, // Casablanca, Maroc
+]
+
 function AfricanContextSection() {
   const adaptations = [
     {
@@ -1340,28 +1362,52 @@ function AfricanContextSection() {
           </div>
         </FadeInSection>
 
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: '-80px' }}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
-        >
-          {adaptations.map((item) => (
-            <motion.div key={item.title} variants={itemVariants}>
-              <div className="flex items-start gap-4 p-6 bg-white rounded-xl border border-gray-100 hover:border-[#d4a85330] hover:shadow-md transition-all group relative overflow-hidden h-full">
-                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#1a2744] to-[#2d7a4f]" />
-                <div className="w-11 h-11 rounded-lg bg-[#d4a85320] flex items-center justify-center shrink-0 group-hover:bg-[#d4a85330] transition-colors">
-                  <item.icon className="size-5 text-[#7a5c1f]" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-[#1a2744] mb-1">{item.title}</h3>
-                  <p className="text-sm text-gray-500 leading-relaxed">{item.desc}</p>
-                </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
+          <FadeInSection>
+            <div className="relative rounded-2xl bg-white border border-gray-100 p-6 overflow-hidden shadow-sm">
+              <DottedMap
+                region={africaRegion}
+                markers={africaMarkers}
+                dotColor="#1a274420"
+                markerColor="#2d7a4f"
+                dotRadius={0.35}
+                pulse
+                width={200}
+                height={210}
+                className="w-full h-auto"
+              />
+              <div className="flex items-center justify-between text-xs text-gray-400 mt-2 pt-4 border-t border-gray-100">
+                <span className="font-medium text-[#1a2744]">15+ pays couverts</span>
+                <span className="flex items-center gap-1.5">
+                  <span className="size-1.5 rounded-full bg-[#2d7a4f] animate-pulse" />
+                  Presence multi-pays
+                </span>
               </div>
-            </motion.div>
-          ))}
-        </motion.div>
+            </div>
+          </FadeInSection>
+
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: '-80px' }}
+            className="grid grid-cols-1 sm:grid-cols-2 gap-4"
+          >
+            {adaptations.map((item) => (
+              <FadeInSection key={item.title}>
+                <div className="flex items-start gap-3 p-4 bg-white rounded-xl border border-gray-100 hover:border-[#d4a85330] hover:shadow-md transition-all h-full">
+                  <div className="w-9 h-9 rounded-lg bg-[#d4a85320] flex items-center justify-center shrink-0">
+                    <item.icon className="size-4 text-[#7a5c1f]" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-[#1a2744] text-sm mb-1">{item.title}</h3>
+                    <p className="text-xs text-gray-500 leading-relaxed">{item.desc}</p>
+                  </div>
+                </div>
+              </FadeInSection>
+            ))}
+          </motion.div>
+        </div>
       </div>
     </section>
   )
@@ -1443,6 +1489,9 @@ function PricingSection() {
                     : 'border-gray-100 bg-white hover:shadow-md'
                 }`}
               >
+                {plan.highlighted && (
+                  <BorderBeam size={100} duration={6} colorFrom="#2d7a4f" colorTo="#d4a853" />
+                )}
                 {plan.highlighted && (
                   <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-[#2d7a4f] text-white text-xs font-semibold">
                     Recommande
@@ -1584,15 +1633,12 @@ function CTASection() {
 
   return (
     <section className="py-20 md:py-28 bg-gradient-to-br from-[#1a2744] via-[#1f3158] to-[#2d7a4f] relative overflow-hidden">
-      <div className="absolute inset-0 pointer-events-none opacity-[0.08]">
-        <div
-          className="absolute inset-0"
-          style={{
-            backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.6) 1px, transparent 1px)',
-            backgroundSize: '24px 24px',
-          }}
-        />
-      </div>
+      <Ripple
+        style={{ '--foreground': '#ffffff' } as React.CSSProperties}
+        className="opacity-30"
+        mainCircleSize={180}
+        numCircles={6}
+      />
       <div className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
       <div className="absolute bottom-0 left-0 w-72 h-72 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
       <motion.div
@@ -1629,14 +1675,15 @@ function CTASection() {
           </div>
 
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Button
-              size="lg"
+            <ShimmerButton
               onClick={() => setView('login')}
-              className="bg-[#2d7a4f] hover:bg-[#236b40] text-white px-10 text-base h-12"
+              background="linear-gradient(135deg, #2d7a4f, #236b40)"
+              shimmerColor="#ffffff"
+              className="px-10 h-12 text-base font-medium shadow-lg shadow-[#2d7a4f]/30"
             >
               Demarrer gratuitement
               <ArrowRight className="ml-2 size-4" />
-            </Button>
+            </ShimmerButton>
             <Button
               variant="outline"
               size="lg"
