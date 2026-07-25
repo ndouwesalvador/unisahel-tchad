@@ -13,7 +13,10 @@ test('login redirects to the dashboard with the real session user', async ({ pag
   await page.getByPlaceholder('Entrez votre mot de passe').fill('password123')
   await page.getByRole('button', { name: 'Connexion', exact: true }).click()
 
-  await expect(page.getByText('Bonsoir, Admin Principal')).toBeVisible({ timeout: 15_000 })
+  // Greeting is time-of-day-dependent ("Bonjour"/"Bon apres-midi"/"Bonsoir",
+  // see getGreeting() in dashboard-home.tsx) - match on the name only so
+  // this test doesn't flake depending on when CI happens to run.
+  await expect(page.getByText('Admin Principal').first()).toBeVisible({ timeout: 15_000 })
 })
 
 test('document verification reports an honest "not found" for an unknown code', async ({ page }) => {
