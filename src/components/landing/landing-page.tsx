@@ -551,7 +551,7 @@ function DashboardPreview() {
         className="hidden lg:flex absolute -right-8 bottom-10 items-center gap-2 px-3 py-2 rounded-xl bg-white shadow-xl border border-gray-100 text-xs font-medium text-[#1a2744]"
       >
         <div className="size-6 rounded-lg bg-[#d4a85320] flex items-center justify-center">
-          <FileCheck className="size-3.5 text-[#d4a853]" />
+          <FileCheck className="size-3.5 text-[#7a5c1f]" />
         </div>
         QR code anti-fraude
       </motion.div>
@@ -811,7 +811,7 @@ const modules = [
     icon: GraduationCap,
     title: 'Notes & deliberations',
     description: 'Saisie, calcul automatique, jurys, proces-verbaux.',
-    color: '#d4a853',
+    color: '#7a5c1f',
     bgColor: '#d4a85320',
     borderColor: '#d4a853',
   },
@@ -851,7 +851,7 @@ const modules = [
     icon: Building2,
     title: 'Multi-etablissement',
     description: 'Architecture multi-tenant avec isolation stricte des donnees.',
-    color: '#d4a853',
+    color: '#7a5c1f',
     bgColor: '#d4a85320',
     borderColor: '#d4a853',
   },
@@ -953,7 +953,7 @@ function LMDSection() {
       duration: '3 ans',
       credits: 'Recherche',
       description: 'Production scientifique originale',
-      color: '#d4a853',
+      color: '#7a5c1f',
       bgColor: '#d4a85315',
     },
   ]
@@ -1244,7 +1244,7 @@ function SecuritySection() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <FadeInSection>
           <div className="text-center mb-16">
-            <span className="inline-block px-3 py-1 text-xs font-semibold text-[#3da66a] bg-[#2d7a4f25] rounded-full mb-4">
+            <span className="inline-block px-3 py-1 text-xs font-semibold text-[#5cc98d] bg-[#2d7a4f10] rounded-full mb-4">
               Securite
             </span>
             <h2 className="text-3xl sm:text-4xl font-bold text-white text-balance">
@@ -1328,7 +1328,7 @@ function AfricanContextSection() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <FadeInSection>
           <div className="text-center mb-16">
-            <span className="inline-block px-3 py-1 text-xs font-semibold text-[#d4a853] bg-[#d4a85315] rounded-full mb-4">
+            <span className="inline-block px-3 py-1 text-xs font-semibold text-[#7a5c1f] bg-[#d4a85320] rounded-full mb-4">
               Concu pour l&apos;Afrique
             </span>
             <h2 className="text-3xl sm:text-4xl font-bold text-[#1a2744] text-balance">
@@ -1351,8 +1351,8 @@ function AfricanContextSection() {
             <motion.div key={item.title} variants={itemVariants}>
               <div className="flex items-start gap-4 p-6 bg-white rounded-xl border border-gray-100 hover:border-[#d4a85330] hover:shadow-md transition-all group relative overflow-hidden h-full">
                 <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#1a2744] to-[#2d7a4f]" />
-                <div className="w-11 h-11 rounded-lg bg-[#d4a85315] flex items-center justify-center shrink-0 group-hover:bg-[#d4a85325] transition-colors">
-                  <item.icon className="size-5 text-[#d4a853]" />
+                <div className="w-11 h-11 rounded-lg bg-[#d4a85320] flex items-center justify-center shrink-0 group-hover:bg-[#d4a85330] transition-colors">
+                  <item.icon className="size-5 text-[#7a5c1f]" />
                 </div>
                 <div>
                   <h3 className="font-semibold text-[#1a2744] mb-1">{item.title}</h3>
