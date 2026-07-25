@@ -1,0 +1,7 @@
+-- This migration was applied directly to the database on 2026-07-19,
+-- before this repo had any local migration history (the project was
+-- db-push-only until 2026-07-24). Its recorded name and checksum exist in
+-- the database's _prisma_migrations table, but the original SQL was never
+-- captured anywhere. This placeholder exists only so `prisma migrate dev`
+-- can reconcile local history with the database without erroring - it
+-- intentionally contains no SQL to run (already applied).

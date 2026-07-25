@@ -2,7 +2,9 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
+import { toast } from 'sonner'
 import { useAppStore } from '@/lib/store'
+import { useInstitution, useStructure } from '@/lib/api-hooks'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -81,35 +83,80 @@ interface Department {
   programs: string[]
 }
 
+// ─── API Response Types (shape returned by GET /api/institution) ──────────
+//
+// Mirrors the TENANT_FIELDS / SETTINGS_FIELDS whitelists in
+// src/app/api/institution/route.ts. useInstitution() is untyped (returns
+// `any` from useSimpleGet), so we cast to this shape at the call site.
+
+interface TenantSettingsData {
+  creditsPerSemester: number
+  creditsPerYear: number
+  passingGrade: number
+  eliminationGrade: number
+  primaryColor: string
+  secondaryColor: string
+  accentColor: string
+}
+
+interface TenantData {
+  id: string
+  name: string
+  shortName: string | null
+  motto: string | null
+  ministry: string | null
+  country: string | null
+  city: string | null
+  address: string | null
+  phone: string | null
+  email: string | null
+  website: string | null
+  rectorName: string | null
+  rectorTitle: string | null
+  academicSystem: string
+  settings: TenantSettingsData | null
+}
+
+interface InstitutionResponse {
+  tenant: TenantData
+}
+
+// ─── API Response Types (shape returned by GET /api/structure) ────────────
+//
+// Only the fields StructureTab needs from the (much richer) /api/structure
+// payload already consumed by src/components/structure/structure-page.tsx.
+
+interface ApiProgram {
+  id: string
+  name: string
+}
+
+interface ApiDepartment {
+  id: string
+  name: string
+  programs: ApiProgram[]
+}
+
+interface ApiFaculty {
+  id: string
+  name: string
+  departments: ApiDepartment[]
+}
+
+function mapApiFaculty(faculty: ApiFaculty): Faculty {
+  return {
+    id: faculty.id,
+    name: faculty.name,
+    departments: faculty.departments.map((dept) => ({
+      id: dept.id,
+      name: dept.name,
+      programs: dept.programs.map((p) => p.name),
+    })),
+  }
+}
+
 // ─── Demo Data ───────────────────────────────────────────────────────────────
-const demoFaculties: Faculty[] = [
-  {
-    id: 'f1',
-    name: 'Faculte des Sciences',
-    departments: [
-      { id: 'd1', name: 'Informatique', programs: ['Licence Informatique', 'Master IA'] },
-      { id: 'd2', name: 'Mathematiques', programs: ['Licence Maths', 'Master Statistiques'] },
-      { id: 'd3', name: 'Physique', programs: ['Licence Physique'] },
-    ],
-  },
-  {
-    id: 'f2',
-    name: 'Faculte de Droit',
-    departments: [
-      { id: 'd4', name: 'Droit Prive', programs: ['Licence Droit Prive', 'Master Droit des Affaires'] },
-      { id: 'd5', name: 'Droit Public', programs: ['Licence Droit Public'] },
-    ],
-  },
-  {
-    id: 'f3',
-    name: 'Faculte des Sciences de la Sante',
-    departments: [
-      { id: 'd6', name: 'Medecine', programs: ['Doctorat en Medecine'] },
-      { id: 'd7', name: 'Pharmacie', programs: ['Doctorat en Pharmacie'] },
-      { id: 'd8', name: 'Soins Infirmiers', programs: ['Licence Soins Infirmiers'] },
-    ],
-  },
-]
+// (academicYears has no backing API in this batch — left as static demo data)
 
 const academicYears = [
   { id: 'ay1', label: '2025-2026', start: '2025-10-01', end: '2026-07-15', isCurrent: true },
@@ -213,23 +260,92 @@ function InstitutionHeader() {
 
 // ─── Informations Tab ────────────────────────────────────────────────────────
 function InformationsTab() {
+  const { data: institutionQuery, isLoading, refetch } = useInstitution() as {
+    data: InstitutionResponse | undefined
+    isLoading: boolean
+    refetch: () => void
+  }
+
   const [formData, setFormData] = useState({
-    nomOfficiel: 'Universite de N\'Djamena',
-    sigle: 'UND',
-    devise: 'Scientia - Labor - Progressus',
-    ministere: 'Ministere de l\'Enseignement Superieur',
-    pays: 'Tchad',
-    ville: 'N\'Djamena',
-    adresse: 'BP 1117, N\'Djamena',
-    telephone: '+235 66 00 00 00',
-    email: 'contact@und.td',
-    siteWeb: 'www.univ-ndjamena.td',
-    recteurNom: 'Prof. Mahamat Saleh YOUNSSOUF',
+    nomOfficiel: '',
+    sigle: '',
+    devise: '',
+    ministere: '',
+    pays: '',
+    ville: '',
+    adresse: '',
+    telephone: '',
+    email: '',
+    siteWeb: '',
+    recteurNom: '',
     recteurTitre: 'Recteur',
   })
+  const [initialized, setInitialized] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+
+  useEffect(() => {
+    if (institutionQuery?.tenant && !initialized) {
+      const t = institutionQuery.tenant
+      setFormData({
+        nomOfficiel: t.name || '',
+        sigle: t.shortName || '',
+        devise: t.motto || '',
+        ministere: t.ministry || '',
+        pays: t.country || '',
+        ville: t.city || '',
+        adresse: t.address || '',
+        telephone: t.phone || '',
+        email: t.email || '',
+        siteWeb: t.website || '',
+        recteurNom: t.rectorName || '',
+        recteurTitre: t.rectorTitle || 'Recteur',
+      })
+      setInitialized(true)
+    }
+  }, [institutionQuery, initialized])
 
   const handleChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const handleSave = async () => {
+    setIsSaving(true)
+    try {
+      const res = await fetch('/api/institution', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.nomOfficiel,
+          shortName: formData.sigle,
+          motto: formData.devise,
+          ministry: formData.ministere,
+          country: formData.pays,
+          city: formData.ville,
+          address: formData.adresse,
+          phone: formData.telephone,
+          email: formData.email,
+          website: formData.siteWeb,
+          rectorName: formData.recteurNom,
+          rectorTitle: formData.recteurTitre,
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || "Echec de l'enregistrement")
+      toast.success('Informations enregistrees')
+      refetch()
+    } catch (error) {
+      toast.error('Erreur', { description: error instanceof Error ? error.message : "Echec de l'enregistrement" })
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-16 text-sm text-gray-400">
+        Chargement...
+      </div>
+    )
   }
 
   return (
@@ -419,9 +535,13 @@ function InformationsTab() {
                 </div>
               </div>
               <div className="mt-6 flex justify-end">
-                <Button className="bg-[#2d7a4f] hover:bg-[#236b40] text-white">
+                <Button
+                  className="bg-[#2d7a4f] hover:bg-[#236b40] text-white"
+                  onClick={handleSave}
+                  disabled={isSaving}
+                >
                   <Save className="size-4 mr-2" />
-                  Enregistrer
+                  {isSaving ? 'Enregistrement...' : 'Enregistrer'}
                 </Button>
               </div>
             </CardContent>
@@ -434,19 +554,34 @@ function InformationsTab() {
 
 // ─── Structure Tab ───────────────────────────────────────────────────────────
 function StructureTab() {
-  const [expandedFaculties, setExpandedFaculties] = useState<Record<string, boolean>>({ f1: true, f2: false, f3: false })
+  const { data: structureQuery, isLoading } = useStructure() as {
+    data: { faculties?: ApiFaculty[] } | undefined
+    isLoading: boolean
+  }
+
+  const faculties: Faculty[] = ((structureQuery?.faculties || []) as ApiFaculty[]).map(mapApiFaculty)
+
+  const [expandedFaculties, setExpandedFaculties] = useState<Record<string, boolean>>({})
 
   const toggleFaculty = (id: string) => {
     setExpandedFaculties((prev) => ({ ...prev, [id]: !prev[id] }))
   }
 
-  const totalDepartments = demoFaculties.reduce((acc, f) => acc + f.departments.length, 0)
-  const totalPrograms = demoFaculties.reduce(
+  const totalDepartments = faculties.reduce((acc, f) => acc + f.departments.length, 0)
+  const totalPrograms = faculties.reduce(
     (acc, f) => acc + f.departments.reduce((a, d) => a + d.programs.length, 0),
     0
   )
 
   const facultyColors = ['#2d7a4f', '#1a2744', '#d4a853']
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-16 text-sm text-gray-400">
+        Chargement...
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -454,7 +589,7 @@ function StructureTab() {
       <div className="grid grid-cols-3 gap-4">
         <Card>
           <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-[#2d7a4f]">{demoFaculties.length}</div>
+            <div className="text-2xl font-bold text-[#2d7a4f]">{faculties.length}</div>
             <div className="text-xs text-gray-500 mt-1">Facultes</div>
           </CardContent>
         </Card>
@@ -473,70 +608,78 @@ function StructureTab() {
       </div>
 
       {/* Faculty hierarchy */}
-      <div className="space-y-3">
-        {demoFaculties.map((faculty, fi) => (
-          <Card key={faculty.id} className="overflow-hidden">
-            <div
-              className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 transition-colors"
-              onClick={() => toggleFaculty(faculty.id)}
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className="w-1 h-8 rounded-full"
-                  style={{ backgroundColor: facultyColors[fi % facultyColors.length] }}
-                />
-                <div>
-                  <h3 className="font-semibold text-[#1a2744]">{faculty.name}</h3>
-                  <p className="text-xs text-gray-500">
-                    {faculty.departments.length} departements, {faculty.departments.reduce((a, d) => a + d.programs.length, 0)} filieres
-                  </p>
+      {faculties.length === 0 ? (
+        <Card>
+          <CardContent className="p-8 text-center text-sm text-gray-400">
+            Aucune faculté configurée pour le moment.
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          {faculties.map((faculty, fi) => (
+            <Card key={faculty.id} className="overflow-hidden">
+              <div
+                className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                onClick={() => toggleFaculty(faculty.id)}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-1 h-8 rounded-full"
+                    style={{ backgroundColor: facultyColors[fi % facultyColors.length] }}
+                  />
+                  <div>
+                    <h3 className="font-semibold text-[#1a2744]">{faculty.name}</h3>
+                    <p className="text-xs text-gray-500">
+                      {faculty.departments.length} departements, {faculty.departments.reduce((a, d) => a + d.programs.length, 0)} filieres
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="text-xs">
+                    {faculty.departments.length} dept.
+                  </Badge>
+                  {expandedFaculties[faculty.id] ? (
+                    <ChevronDown className="size-4 text-gray-400" />
+                  ) : (
+                    <ChevronRight className="size-4 text-gray-400" />
+                  )}
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Badge variant="secondary" className="text-xs">
-                  {faculty.departments.length} dept.
-                </Badge>
-                {expandedFaculties[faculty.id] ? (
-                  <ChevronDown className="size-4 text-gray-400" />
-                ) : (
-                  <ChevronRight className="size-4 text-gray-400" />
-                )}
-              </div>
-            </div>
 
-            {expandedFaculties[faculty.id] && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                transition={{ duration: 0.2 }}
-              >
-                <div className="border-t border-gray-100 px-4 pb-4 pt-3 space-y-2 bg-gray-50/50">
-                  {faculty.departments.map((dept) => (
-                    <div
-                      key={dept.id}
-                      className="flex items-start gap-3 p-3 bg-white rounded-lg border border-gray-100"
-                    >
-                      <div className="w-6 h-6 rounded bg-gray-100 flex items-center justify-center shrink-0 mt-0.5">
-                        <BookOpen className="size-3 text-gray-500" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm text-[#1a2744]">{dept.name}</p>
-                        <div className="flex flex-wrap gap-1.5 mt-2">
-                          {dept.programs.map((prog) => (
-                            <Badge key={prog} variant="outline" className="text-xs font-normal">
-                              {prog}
-                            </Badge>
-                          ))}
+              {expandedFaculties[faculty.id] && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <div className="border-t border-gray-100 px-4 pb-4 pt-3 space-y-2 bg-gray-50/50">
+                    {faculty.departments.map((dept) => (
+                      <div
+                        key={dept.id}
+                        className="flex items-start gap-3 p-3 bg-white rounded-lg border border-gray-100"
+                      >
+                        <div className="w-6 h-6 rounded bg-gray-100 flex items-center justify-center shrink-0 mt-0.5">
+                          <BookOpen className="size-3 text-gray-500" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm text-[#1a2744]">{dept.name}</p>
+                          <div className="flex flex-wrap gap-1.5 mt-2">
+                            {dept.programs.map((prog) => (
+                              <Badge key={prog} variant="outline" className="text-xs font-normal">
+                                {prog}
+                              </Badge>
+                            ))}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-          </Card>
-        ))}
-      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </Card>
+          ))}
+        </div>
+      )}
 
       {/* Action buttons */}
       <div className="flex flex-col sm:flex-row gap-3">
@@ -554,12 +697,68 @@ function StructureTab() {
 }
 
 // ─── Academique Tab ──────────────────────────────────────────────────────────
+const VALID_ACADEMIC_SYSTEMS = ['lmd', 'classique', 'hybride', 'sante'] as const
+
 function AcademiqueTab() {
+  const { data: institutionQuery, isLoading, refetch } = useInstitution() as {
+    data: InstitutionResponse | undefined
+    isLoading: boolean
+    refetch: () => void
+  }
+
   const [system, setSystem] = useState('lmd')
   const [creditsSemester, setCreditsSemester] = useState('30')
   const [creditsYear, setCreditsYear] = useState('60')
   const [passingGrade, setPassingGrade] = useState('10')
   const [eliminationGrade, setEliminationGrade] = useState('7')
+  const [initialized, setInitialized] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+
+  useEffect(() => {
+    if (institutionQuery?.tenant && !initialized) {
+      const t = institutionQuery.tenant
+      const apiSystem = (t.academicSystem || '').toLowerCase()
+      setSystem((VALID_ACADEMIC_SYSTEMS as readonly string[]).includes(apiSystem) ? apiSystem : 'lmd')
+      setCreditsSemester(String(t.settings?.creditsPerSemester ?? 30))
+      setCreditsYear(String(t.settings?.creditsPerYear ?? 60))
+      setPassingGrade(String(t.settings?.passingGrade ?? 10))
+      setEliminationGrade(String(t.settings?.eliminationGrade ?? 7))
+      setInitialized(true)
+    }
+  }, [institutionQuery, initialized])
+
+  const handleSave = async () => {
+    setIsSaving(true)
+    try {
+      const res = await fetch('/api/institution', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          academicSystem: system,
+          creditsPerSemester: Number(creditsSemester),
+          creditsPerYear: Number(creditsYear),
+          passingGrade: Number(passingGrade),
+          eliminationGrade: Number(eliminationGrade),
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || "Echec de l'enregistrement")
+      toast.success('Configuration academique enregistree')
+      refetch()
+    } catch (error) {
+      toast.error('Erreur', { description: error instanceof Error ? error.message : "Echec de l'enregistrement" })
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-16 text-sm text-gray-400">
+        Chargement...
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -756,6 +955,17 @@ function AcademiqueTab() {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      <div className="flex justify-end">
+        <Button
+          className="bg-[#2d7a4f] hover:bg-[#236b40] text-white"
+          onClick={handleSave}
+          disabled={isSaving}
+        >
+          <Save className="size-4 mr-2" />
+          {isSaving ? 'Enregistrement...' : 'Enregistrer'}
+        </Button>
       </div>
     </div>
   )

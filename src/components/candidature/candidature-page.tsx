@@ -2,6 +2,9 @@
 
 import { exportToExcel } from '@/lib/export'
 import { useState, useEffect, useRef } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
+import { useCandidatures } from '@/lib/api-hooks'
 import { motion } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -77,25 +80,56 @@ interface Candidature {
   type: string
 }
 
-const demoCandidatures: Candidature[] = [
-  { id: '1', numero: 'CND-2025-001', candidat: 'Abakar Youssouf', filiere: 'Informatique', niveau: 'L1', date: '15/01/2025', statut: 'en_examen', email: 'abakar.y@email.com', telephone: '+235 66 12 34 56', type: 'Premiere inscription' },
-  { id: '2', numero: 'CND-2025-002', candidat: 'Hassan Fatime', filiere: 'Droit', niveau: 'L2', date: '16/01/2025', statut: 'admis', email: 'hassan.f@email.com', telephone: '+235 66 23 45 67', type: 'Reinscription' },
-  { id: '3', numero: 'CND-2025-003', candidat: 'Adam Brahim Mahamat', filiere: 'Economie', niveau: 'L3', date: '17/01/2025', statut: 'en_attente', email: 'adam.b@email.com', telephone: '+235 66 34 56 78', type: 'Premiere inscription' },
-  { id: '4', numero: 'CND-2025-004', candidat: 'Djibrine Amina', filiere: 'Medecine', niveau: 'L1', date: '18/01/2025', statut: 'refuse', email: 'djibrine.a@email.com', telephone: '+235 66 45 67 89', type: 'Premiere inscription' },
-  { id: '5', numero: 'CND-2025-005', candidat: 'Hissein Mariam', filiere: 'Informatique', niveau: 'M1', date: '19/01/2025', statut: 'en_examen', email: 'hissein.m@email.com', telephone: '+235 66 56 78 90', type: 'Transfert' },
-  { id: '6', numero: 'CND-2025-006', candidat: 'Mahamat Nour', filiere: 'Lettres', niveau: 'L2', date: '20/01/2025', statut: 'en_attente_pieces', email: 'mahamat.n@email.com', telephone: '+235 66 67 89 01', type: 'Premiere inscription' },
-  { id: '7', numero: 'CND-2025-007', candidat: 'Ngarndmi Halime', filiere: 'Gestion', niveau: 'L3', date: '21/01/2025', statut: 'admis', email: 'ngarndmi.h@email.com', telephone: '+235 66 78 90 12', type: 'Reinscription' },
-  { id: '8', numero: 'CND-2025-008', candidat: 'Saleh Hassana', filiere: 'Informatique', niveau: 'L1', date: '22/01/2025', statut: 'en_attente', email: 'saleh.h@email.com', telephone: '+235 66 89 01 23', type: 'Premiere inscription' },
-  { id: '9', numero: 'CND-2025-009', candidat: 'Bichara Hawa', filiere: 'Droit', niveau: 'M2', date: '23/01/2025', statut: 'en_examen', email: 'bichara.h@email.com', telephone: '+235 66 90 12 34', type: 'Equivalence' },
-  { id: '10', numero: 'CND-2025-010', candidat: 'Adoum Khadija', filiere: 'Economie', niveau: 'L1', date: '24/01/2025', statut: 'admis', email: 'adoum.k@email.com', telephone: '+235 66 01 23 45', type: 'Premiere inscription' },
-  { id: '11', numero: 'CND-2025-011', candidat: 'Ibrahim Seid', filiere: 'Medecine', niveau: 'L2', date: '25/01/2025', statut: 'en_attente_pieces', email: 'ibrahim.s@email.com', telephone: '+235 66 12 23 34', type: 'Transfert' },
-  { id: '12', numero: 'CND-2025-012', candidat: 'Zara Oumar', filiere: 'Gestion', niveau: 'M1', date: '26/01/2025', statut: 'refuse', email: 'zara.o@email.com', telephone: '+235 66 23 34 45', type: 'Premiere inscription' },
-  { id: '13', numero: 'CND-2025-013', candidat: 'Yaya Djibril', filiere: 'Lettres', niveau: 'Doctorat', date: '27/01/2025', statut: 'en_examen', email: 'yaya.d@email.com', telephone: '+235 66 34 45 56', type: 'Premiere inscription' },
-  { id: '14', numero: 'CND-2025-014', candidat: 'Falmata Ali', filiere: 'Informatique', niveau: 'L3', date: '28/01/2025', statut: 'admis', email: 'falmata.a@email.com', telephone: '+235 66 45 56 67', type: 'Reinscription' },
-  { id: '15', numero: 'CND-2025-015', candidat: 'Moussa Abdallah', filiere: 'Droit', niveau: 'L1', date: '29/01/2025', statut: 'en_attente', email: 'moussa.a@email.com', telephone: '+235 66 56 67 78', type: 'Premiere inscription' },
-  { id: '16', numero: 'CND-2025-016', candidat: 'Kaltouma Mahamat', filiere: 'Economie', niveau: 'M2', date: '30/01/2025', statut: 'en_attente_pieces', email: 'kaltouma.m@email.com', telephone: '+235 66 67 78 89', type: 'Equivalence' },
-  { id: '17', numero: 'CND-2025-017', candidat: 'Ousmane Djimé', filiere: 'Gestion', niveau: 'L2', date: '31/01/2025', statut: 'admis', email: 'ousmane.d@email.com', telephone: '+235 66 78 89 90', type: 'Premiere inscription' },
-]
+// ─── API mapping ────────────────────────────────────────────────────────────
+
+interface AdmissionRecord {
+  id: string
+  numero: string | null
+  candidateFirstName: string | null
+  candidateLastName: string | null
+  candidateEmail: string | null
+  candidatePhone: string | null
+  niveau: string | null
+  type: string | null
+  status: string
+  createdAt: string
+  program: { name: string } | null
+  bacSeries?: string | null
+  bacYear?: number | null
+}
+
+interface CandidaturesResponse {
+  candidatures: AdmissionRecord[]
+  stats: { total: number; admis: number; enAttente: number; refuse: number }
+}
+
+const VALID_STATUTS: CandidatureStatut[] = ['en_attente', 'en_examen', 'admis', 'refuse', 'en_attente_pieces']
+
+function isCandidatureStatut(value: string): value is CandidatureStatut {
+  return (VALID_STATUTS as string[]).includes(value)
+}
+
+const typeLabels: Record<string, string> = {
+  Premiere_inscription: 'Premiere inscription',
+  Reinscription: 'Reinscription',
+  Transfert: 'Transfert',
+  Equivalence: 'Equivalence',
+}
+
+function mapCandidature(r: AdmissionRecord): Candidature {
+  return {
+    id: r.id,
+    numero: r.numero || r.id,
+    candidat: `${r.candidateFirstName || ''} ${r.candidateLastName || ''}`.trim(),
+    filiere: r.program?.name || 'Non specifie',
+    niveau: r.niveau || '',
+    date: new Date(r.createdAt).toLocaleDateString('fr-FR'),
+    statut: isCandidatureStatut(r.status) ? r.status : 'en_attente',
+    email: r.candidateEmail || '',
+    telephone: r.candidatePhone || '',
+    type: typeLabels[r.type || ''] || 'Premiere inscription',
+  }
+}
 
 interface RequiredDoc {
   id: string
@@ -181,6 +215,11 @@ function useCountUp(target: number, duration: number = 1400) {
 export function CandidaturePage() {
   const candidaturesMoisCount = useCountUp(127, 1400)
   const tauxAdmissionCount = useCountUp(68, 1300)
+  const queryClient = useQueryClient()
+  const { data: candidaturesQuery, isLoading } = useCandidatures() as {
+    data: CandidaturesResponse | undefined
+    isLoading: boolean
+  }
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [showForm, setShowForm] = useState(false)
@@ -193,14 +232,16 @@ export function CandidaturePage() {
   const [formTelephone, setFormTelephone] = useState('')
   const [docs, setDocs] = useState<RequiredDoc[]>(defaultDocs)
 
+  const candidatures: Candidature[] = (candidaturesQuery?.candidatures || []).map(mapCandidature)
+
   // Stats
-  const totalRecues = demoCandidatures.length
-  const enExamen = demoCandidatures.filter(c => c.statut === 'en_examen').length
-  const admis = demoCandidatures.filter(c => c.statut === 'admis').length
-  const refuses = demoCandidatures.filter(c => c.statut === 'refuse').length
+  const totalRecues = candidatures.length
+  const enExamen = candidatures.filter(c => c.statut === 'en_examen').length
+  const admis = candidatures.filter(c => c.statut === 'admis').length
+  const refuses = candidatures.filter(c => c.statut === 'refuse').length
 
   // Filtered candidatures
-  const filteredCandidatures = demoCandidatures.filter(c => {
+  const filteredCandidatures = candidatures.filter(c => {
     const matchSearch = search === '' ||
       c.candidat.toLowerCase().includes(search.toLowerCase()) ||
       c.numero.toLowerCase().includes(search.toLowerCase()) ||
@@ -211,9 +252,9 @@ export function CandidaturePage() {
 
   // Chart calculations
   const maxProgramCount = Math.max(...programStats.map(p => p.count))
-  const admissionRate = Math.round((admis / totalRecues) * 100)
-  const refusalRate = Math.round((refuses / totalRecues) * 100)
-  const pendingRate = 100 - admissionRate - refusalRate
+  const admissionRate = totalRecues > 0 ? Math.round((admis / totalRecues) * 100) : 0
+  const refusalRate = totalRecues > 0 ? Math.round((refuses / totalRecues) * 100) : 0
+  const pendingRate = totalRecues > 0 ? 100 - admissionRate - refusalRate : 0
 
   const handleSubmit = () => {
     setShowForm(false)
@@ -223,6 +264,24 @@ export function CandidaturePage() {
     setFormNom('')
     setFormEmail('')
     setFormTelephone('')
+  }
+
+  const handleStatusChange = async (id: string, status: CandidatureStatut) => {
+    try {
+      const res = await fetch(`/api/candidature?id=${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Échec de la mise à jour')
+      toast.success(
+        status === 'admis' ? 'Candidature validée' : status === 'refuse' ? 'Candidature refusée' : 'Statut mis à jour'
+      )
+      queryClient.invalidateQueries({ queryKey: ['candidatures'] })
+    } catch (e) {
+      toast.error('Erreur', { description: e instanceof Error ? e.message : 'Échec de la mise à jour' })
+    }
   }
 
   return (
@@ -625,11 +684,11 @@ export function CandidaturePage() {
                                 <Eye className="size-3.5 mr-2 text-[#1a2744]" />
                                 Examiner
                               </DropdownMenuItem>
-                              <DropdownMenuItem className="text-xs">
+                              <DropdownMenuItem className="text-xs" onClick={() => handleStatusChange(c.id, 'admis')}>
                                 <CheckCircle className="size-3.5 mr-2 text-[#2d7a4f]" />
                                 Valider
                               </DropdownMenuItem>
-                              <DropdownMenuItem className="text-xs">
+                              <DropdownMenuItem className="text-xs" onClick={() => handleStatusChange(c.id, 'refuse')}>
                                 <XCircleIcon className="size-3.5 mr-2 text-[#c62828]" />
                                 Refuser
                               </DropdownMenuItem>
@@ -642,10 +701,17 @@ export function CandidaturePage() {
                         </TableCell>
                       </motion.tr>
                     ))}
+                    {isLoading && (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-8 text-sm text-gray-400">
+                          Chargement...
+                        </TableCell>
+                      </TableRow>
+                    )}
                   </TableBody>
                 </Table>
               </div>
-              {filteredCandidatures.length === 0 && (
+              {!isLoading && filteredCandidatures.length === 0 && (
                 <div className="py-10 text-center text-sm text-gray-400">
                   Aucune candidature trouvée
                 </div>

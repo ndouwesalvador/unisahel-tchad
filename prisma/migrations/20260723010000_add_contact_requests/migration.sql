@@ -1,0 +1,6 @@
+-- This migration was applied directly to the database on 2026-07-23, before
+-- this repo had any local migration history. It originally added a
+-- `contact_requests` table that was later dropped by `prisma db push`
+-- during the 2026-07-24 SQLite -> Postgres migration (it wasn't part of
+-- schema.prisma at the time). Placeholder only, for history reconciliation
+-- - contains no SQL to run (already applied, and later superseded).

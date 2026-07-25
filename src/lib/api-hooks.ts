@@ -122,3 +122,34 @@ export function useReports() {
 export function useCommunications() {
   return useSimpleGet('communications', '/api/communications');
 }
+
+export function useAnnouncements() {
+  return useSimpleGet('announcements', '/api/announcements');
+}
+
+export function useCandidatures() {
+  return useSimpleGet('candidatures', '/api/candidature');
+}
+
+export function useTimetable(params?: { programId?: string; levelId?: string }) {
+  return useQuery({
+    queryKey: ['timetable', params],
+    queryFn: async () => {
+      const url = new URL('/api/timetable', window.location.origin);
+      if (params) {
+        Object.entries(params).forEach(([key, value]) => {
+          if (value !== undefined && value !== '') url.searchParams.append(key, value.toString());
+        });
+      }
+      const res = await fetch(url.toString());
+      if (!res.ok) {
+        throw new Error('Failed to fetch timetable');
+      }
+      return res.json();
+    },
+  });
+}
+
+export function useInstitution() {
+  return useSimpleGet('institution', '/api/institution');
+}

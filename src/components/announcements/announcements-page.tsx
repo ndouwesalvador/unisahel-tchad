@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
+import { toast } from 'sonner'
+import { useAnnouncements } from '@/lib/api-hooks'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -135,166 +137,61 @@ const categoryTabs: { value: string; label: string; icon: React.ElementType; fil
   { value: 'evenement', label: 'Evenements', icon: PartyPopper, filter: 'evenement' },
 ]
 
-// ─── Demo Data ────────────────────────────────────────────────────────────────
+// ─── API Mapping ──────────────────────────────────────────────────────────────
 
-const demoAnnouncements: Announcement[] = [
-  {
-    id: '1',
-    title: 'Rentree academique 2024-2025',
-    content: 'La rentree academique pour l\'annee 2024-2025 est fixee au 15 septembre 2024. Tous les etudiants sont tenus de proceder a leur inscription en ligne avant le 10 septembre. Les cours debuteront officiellement le 20 septembre pour toutes les filieres. Les etudiants nouvellement admis devront se presenter au service de la scolarite muni des pieces requises.',
-    type: 'URGENT',
-    priority: 'urgent',
-    target: 'Tous',
-    category: 'academique',
-    date: '01/09/2024',
-    author: 'Administration Generale',
-    isRead: false,
-    isPinned: true,
-  },
-  {
-    id: '2',
-    title: 'Calendrier des examens du S1',
-    content: 'Le calendrier des examens du premier semestre est desormais disponible. Les examens debuteront le 15 janvier 2025. Les etudiants sont invites a consulter le planning detaille sur le portail. Toute demande de modification doit etre soumise au plus tard le 5 janvier.',
-    type: 'EXAM',
-    priority: 'important',
-    target: 'Etudiants',
-    category: 'academique',
-    date: '10/12/2024',
-    author: 'Service Scolarite',
+type ApiTargetAudience = 'ALL' | 'STUDENTS' | 'TEACHERS' | 'STAFF'
+
+interface AnnouncementRecord {
+  id: string
+  title: string
+  content: string
+  type: AnnouncementType
+  priority: Priority
+  category: Category
+  isPinned: boolean
+  target: ApiTargetAudience
+  targetId: string | null
+  isPublished: boolean
+  publishedAt: string | null
+  publishedBy: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+// Maps the API's English target values to the local French display labels.
+const apiTargetToLabel: Record<string, TargetAudience> = {
+  ALL: 'Tous',
+  STUDENTS: 'Etudiants',
+  TEACHERS: 'Enseignants',
+  STAFF: 'Scolarite',
+}
+
+// Maps the "new announcement" form's select values back to the API's target values.
+const formTargetToApi: Record<string, ApiTargetAudience> = {
+  tous: 'ALL',
+  etudiants: 'STUDENTS',
+  enseignants: 'TEACHERS',
+  scolarite: 'STAFF',
+}
+
+function mapAnnouncement(r: AnnouncementRecord): Announcement {
+  return {
+    id: r.id,
+    title: r.title,
+    content: r.content,
+    type: r.type,
+    priority: r.priority,
+    category: r.category,
+    isPinned: r.isPinned,
+    target: apiTargetToLabel[r.target] || 'Tous',
+    date: new Date(r.createdAt).toLocaleDateString('fr-FR'),
+    author: r.publishedBy || 'Administration',
+    // No per-user read-tracking exists in the database yet (would require a
+    // separate join table). Every fetched announcement is treated as read so
+    // we never fabricate unread badges that don't correspond to real state.
     isRead: true,
-    isPinned: true,
-  },
-  {
-    id: '3',
-    title: 'Inscription en ligne ouverte',
-    content: 'Le portail d\'inscription en ligne est desormais ouvert pour l\'annee academique 2024-2025. Les etudiants anciens peuvent se reinscrire en accedant a leur espace personnel. Les nouveaux bacheliers doivent creer un compte avant de proceder a leur pre-inscription.',
-    type: 'INFO',
-    priority: 'normal',
-    target: 'Etudiants',
-    category: 'administratif',
-    date: '15/08/2024',
-    author: 'Service Scolarite',
-    isRead: true,
-    isPinned: false,
-  },
-  {
-    id: '4',
-    title: 'Bourses disponibles',
-    content: 'Les dossiers de bourse pour l\'annee academique 2024-2025 sont ouverts. Les etudiants eligibles doivent soumettre leur dossier complet au service des bourses avant le 30 octobre 2024. Les criteres d\'eligibilite et la liste des pieces a fournir sont disponibles au secretariat.',
-    type: 'PAYMENT',
-    priority: 'important',
-    target: 'Etudiants',
-    category: 'administratif',
-    date: '20/09/2024',
-    author: 'Service des Bourses',
-    isRead: false,
-    isPinned: false,
-  },
-  {
-    id: '5',
-    title: 'Reunion du conseil de faculte',
-    content: 'Une reunion du conseil de la Faculte de Droit est convoquee le 25 novembre 2024 a 10h00 en salle de conference. L\'ordre du jour comprend la revision des maquettes pedagogiques et le planning des deliberations. La presence de tous les enseignants est obligatoire.',
-    type: 'INFO',
-    priority: 'important',
-    target: 'Enseignants',
-    category: 'administratif',
-    date: '18/11/2024',
-    author: 'Doyen Faculte de Droit',
-    isRead: true,
-    isPinned: false,
-  },
-  {
-    id: '6',
-    title: 'Resultats du premier semestre',
-    content: 'Les resultats du premier semestre de l\'annee academique 2024-2025 seront publies le 15 fevrier 2025. Les etudiants pourront consulter leurs notes sur le portail. Les demandes de recours devront etre deposees dans un delai de 5 jours ouvrables apres la publication.',
-    type: 'RESULT',
-    priority: 'normal',
-    target: 'Etudiants',
-    category: 'academique',
-    date: '10/02/2025',
-    author: 'Scolarite Filere Droit',
-    isRead: false,
-    isPinned: false,
-  },
-  {
-    id: '7',
-    title: 'Offres de stage disponibles',
-    content: 'Plusieurs entreprises partenaires proposent des stages pour le second semestre. Les offres concernent les domaines juridiques, administratifs et de gestion. Les etudiants en L3 et Master sont prioritaires. Les candidatures doivent etre transmises au service des stages.',
-    type: 'STAGE',
-    priority: 'normal',
-    target: 'Etudiants',
-    category: 'academique',
-    date: '05/01/2025',
-    author: 'Service des Stages',
-    isRead: true,
-    isPinned: false,
-  },
-  {
-    id: '8',
-    title: 'Maintenance du systeme informatique',
-    content: 'Une maintenance preventive du systeme informatique est programmee le week-end du 12 au 13 octobre. Les services en ligne seront temporairement indisponibles. Veuillez planifier vos travaux en consequence.',
-    type: 'INFO',
-    priority: 'normal',
-    target: 'Scolarite',
-    category: 'urgence',
-    date: '08/10/2024',
-    author: 'DSI',
-    isRead: true,
-    isPinned: false,
-  },
-  {
-    id: '9',
-    title: 'Journee portes ouvertes 2025',
-    content: 'L\'Universite organise sa journee portes ouvertes le 15 mars 2025. Les etudiants et le personnel sont invites a participer a l\'organisation. Les volontaires peuvent s\'inscrire aupres du service de communication.',
-    type: 'INFO',
-    priority: 'normal',
-    target: 'Tous',
-    category: 'evenement',
-    date: '20/02/2025',
-    author: 'Service Communication',
-    isRead: false,
-    isPinned: false,
-  },
-  {
-    id: '10',
-    title: 'Conference internationale sur le droit',
-    content: 'Une conference internationale sur le droit de l\'environnement en Afrique Centrale se tiendra le 10 avril 2025 a l\'amphitheatre A. Les inscriptions sont ouvertes jusqu\'au 25 mars.',
-    type: 'INFO',
-    priority: 'important',
-    target: 'Tous',
-    category: 'evenement',
-    date: '01/03/2025',
-    author: 'Faculte de Droit',
-    isRead: true,
-    isPinned: false,
-  },
-  {
-    id: '11',
-    title: 'Alerte : Fermeture exceptionnelle du campus',
-    content: 'En raison de conditions meteologiques exceptionnelles, le campus sera ferme le 18 aout 2024. Tous les cours et activites sont suspendus. La reprise est prevue le 19 aout. Restez informes via le portail.',
-    type: 'URGENT',
-    priority: 'urgent',
-    target: 'Tous',
-    category: 'urgence',
-    date: '17/08/2024',
-    author: 'Administration Generale',
-    isRead: false,
-    isPinned: true,
-  },
-  {
-    id: '12',
-    title: 'Semaine culturelle de l\'universite',
-    content: 'La semaine culturelle annuelle aura lieu du 20 au 25 avril 2025. Au programme : expositions, spectacles, concerts et debats. Les inscriptions pour les stands sont ouvertes au service culturel.',
-    type: 'INFO',
-    priority: 'normal',
-    target: 'Tous',
-    category: 'evenement',
-    date: '01/04/2025',
-    author: 'Service Culturel',
-    isRead: true,
-    isPinned: false,
-  },
-]
+  }
+}
 
 // ─── Announcement Card Component ──────────────────────────────────────────────
 
@@ -388,6 +285,9 @@ function AnnouncementCard({ announcement, index }: { announcement: Announcement;
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function AnnouncementsPage() {
+  const { data: announcementsQuery, isLoading, refetch } = useAnnouncements()
+  const announcements: Announcement[] = (announcementsQuery?.announcements || []).map(mapAnnouncement)
+
   const annoncesActives = useCountUp(12, 1400)
   const tauxLecture = useCountUp(94, 1300)
   const [search, setSearch] = useState('')
@@ -398,8 +298,9 @@ export function AnnouncementsPage() {
   const [newContent, setNewContent] = useState('')
   const [newTarget, setNewTarget] = useState('')
   const [scheduleMode, setScheduleMode] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const filteredAnnouncements = demoAnnouncements.filter(a => {
+  const filteredAnnouncements = announcements.filter(a => {
     const matchSearch = search === '' ||
       a.title.toLowerCase().includes(search.toLowerCase()) ||
       a.content.toLowerCase().includes(search.toLowerCase())
@@ -418,11 +319,52 @@ export function AnnouncementsPage() {
   })
 
   // Stats
-  const totalUrgentes = demoAnnouncements.filter(a => a.priority === 'urgent').length
+  const totalUrgentes = announcements.filter(a => a.priority === 'urgent').length
 
   const getCategoryCount = (cat: Category | null) => {
-    if (!cat) return demoAnnouncements.length
-    return demoAnnouncements.filter(a => a.category === cat).length
+    if (!cat) return announcements.length
+    return announcements.filter(a => a.category === cat).length
+  }
+
+  async function handleCreateAnnouncement() {
+    if (!newTitle.trim() || !newContent.trim()) {
+      toast.error('Titre et contenu requis', { description: 'Veuillez renseigner le titre et le contenu de l\'annonce.' })
+      return
+    }
+    setIsSubmitting(true)
+    try {
+      const res = await fetch('/api/announcements', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: newTitle,
+          content: newContent,
+          type: 'INFO',
+          priority: newPriority || 'normal',
+          category: newCategory || 'administratif',
+          target: formTargetToApi[newTarget] || 'ALL',
+          isPinned: false,
+        }),
+      })
+
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}))
+        throw new Error(errBody.error || 'Echec de la publication')
+      }
+
+      toast.success('Annonce publiee', { description: newTitle })
+      setNewTitle('')
+      setNewCategory('')
+      setNewPriority('')
+      setNewContent('')
+      setNewTarget('')
+      setScheduleMode(false)
+      refetch()
+    } catch (error) {
+      toast.error('Erreur', { description: error instanceof Error ? error.message : 'Echec de la publication' })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -580,42 +522,52 @@ export function AnnouncementsPage() {
 
             <TabsContent value={activeTab} className="mt-4">
               <div className="space-y-3">
-                {/* Pinned section */}
-                {sortedAnnouncements.some(a => a.isPinned) && (
-                  <div className="mb-2">
-                    <div className="flex items-center gap-1.5 mb-2">
-                      <Pin className="size-3 text-[#1a2744]" />
-                      <span className="text-[10px] font-semibold text-[#1a2744] uppercase">Epingles</span>
-                    </div>
-                    <div className="space-y-3">
-                      {sortedAnnouncements.filter(a => a.isPinned).map((announcement, idx) => (
-                        <AnnouncementCard key={announcement.id} announcement={announcement} index={idx} />
-                      ))}
-                    </div>
+                {isLoading && (
+                  <div className="py-12 text-center text-sm text-gray-400">
+                    Chargement...
                   </div>
                 )}
 
-                {/* Regular announcements */}
-                {sortedAnnouncements.filter(a => !a.isPinned).length > 0 && (
-                  <div>
+                {!isLoading && (
+                  <>
+                    {/* Pinned section */}
                     {sortedAnnouncements.some(a => a.isPinned) && (
-                      <div className="flex items-center gap-1.5 mb-2 mt-4">
-                        <Clock className="size-3 text-gray-400" />
-                        <span className="text-[10px] font-semibold text-gray-400 uppercase">Recentes</span>
+                      <div className="mb-2">
+                        <div className="flex items-center gap-1.5 mb-2">
+                          <Pin className="size-3 text-[#1a2744]" />
+                          <span className="text-[10px] font-semibold text-[#1a2744] uppercase">Epingles</span>
+                        </div>
+                        <div className="space-y-3">
+                          {sortedAnnouncements.filter(a => a.isPinned).map((announcement, idx) => (
+                            <AnnouncementCard key={announcement.id} announcement={announcement} index={idx} />
+                          ))}
+                        </div>
                       </div>
                     )}
-                    <div className="space-y-3">
-                      {sortedAnnouncements.filter(a => !a.isPinned).map((announcement, idx) => (
-                        <AnnouncementCard key={announcement.id} announcement={announcement} index={idx + sortedAnnouncements.filter(a => a.isPinned).length} />
-                      ))}
-                    </div>
-                  </div>
-                )}
 
-                {sortedAnnouncements.length === 0 && (
-                  <div className="py-12 text-center text-sm text-gray-400">
-                    Aucune annonce trouvee
-                  </div>
+                    {/* Regular announcements */}
+                    {sortedAnnouncements.filter(a => !a.isPinned).length > 0 && (
+                      <div>
+                        {sortedAnnouncements.some(a => a.isPinned) && (
+                          <div className="flex items-center gap-1.5 mb-2 mt-4">
+                            <Clock className="size-3 text-gray-400" />
+                            <span className="text-[10px] font-semibold text-gray-400 uppercase">Recentes</span>
+                          </div>
+                        )}
+                        <div className="space-y-3">
+                          {sortedAnnouncements.filter(a => !a.isPinned).map((announcement, idx) => (
+                            <AnnouncementCard key={announcement.id} announcement={announcement} index={idx + sortedAnnouncements.filter(a => a.isPinned).length} />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {sortedAnnouncements.length === 0 && (
+                      <div className="py-12 text-center text-sm text-gray-400">
+                        Aucune annonce trouvee
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </TabsContent>
@@ -710,9 +662,13 @@ export function AnnouncementsPage() {
                 {scheduleMode && (
                   <Input type="datetime-local" className="h-9 text-xs" />
                 )}
-                <Button className="w-full bg-[#2d7a4f] hover:bg-[#236b40] text-white h-9 text-xs">
+                <Button
+                  className="w-full bg-[#2d7a4f] hover:bg-[#236b40] text-white h-9 text-xs"
+                  onClick={handleCreateAnnouncement}
+                  disabled={isSubmitting}
+                >
                   <Send className="size-3.5 mr-1.5" />
-                  Publier
+                  {isSubmitting ? 'Publication...' : 'Publier'}
                 </Button>
               </CardContent>
             </Card>

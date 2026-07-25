@@ -500,6 +500,12 @@ model Admission {
   programId          String?
   program            Program?            @relation(fields: [programId], references: [id], onDelete: SetNull)
   levelId            String?
+  // Denormalized level label (not a relation) - a candidature record should
+  // keep the level name it was submitted for even if the Level is renamed
+  // or removed later.
+  niveau             String?
+  numero             String?
+  type               String              @default("Premiere_inscription")
   candidateFirstName String?
   candidateLastName  String?
   candidateEmail     String?
@@ -981,6 +987,9 @@ model Announcement {
   title       String
   content     String
   type        String   @default("INFO")
+  priority    String   @default("normal")
+  category    String   @default("administratif")
+  isPinned    Boolean  @default(false)
   target      String   @default("ALL")
   targetId    String?
   isPublished Boolean  @default(false)

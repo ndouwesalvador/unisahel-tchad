@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { useTimetable, useRooms } from '@/lib/api-hooks'
 import {
   Calendar,
   Plus,
@@ -33,7 +34,7 @@ import {
 
 // ─── Types & Config ───────────────────────────────────────────────────────────
 
-type CourseType = 'CM' | 'TD' | 'TP' | 'Stage'
+type CourseType = 'CM' | 'TD' | 'TP' | 'Stage' | 'EXAM'
 type SubjectArea = 'droit' | 'informatique' | 'lettres' | 'mathematiques'
 
 interface TimeSlot {
@@ -85,6 +86,7 @@ const typeConfig: Record<CourseType, { label: string; className: string; bgClass
   TD: { label: 'TD', className: 'text-white', bgClass: 'bg-[#2d7a4f]' },
   TP: { label: 'TP', className: 'text-white', bgClass: 'bg-[#e65100]' },
   Stage: { label: 'Stage', className: 'text-white', bgClass: 'bg-[#7b1fa2]' },
+  EXAM: { label: 'Examen', className: 'text-white', bgClass: 'bg-[#c0392b]' },
 }
 
 const days = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi']
@@ -99,48 +101,75 @@ const daysFrench: Record<string, string> = {
 }
 const hours = Array.from({ length: 11 }, (_, i) => i + 7) // 7h to 17h
 
-// ─── Demo Data ────────────────────────────────────────────────────────────────
+// ─── API Types & Mapping ────────────────────────────────────────────────────────
 
-const demoTimeSlots: TimeSlot[] = [
-  { id: '1', day: 'Lundi', startHour: 8, endHour: 10, course: 'Introduction au Droit', teacher: 'Pr. Youssouf Abakar Moussa', room: 'Amphitheatre A', type: 'CM', subjectArea: 'droit', group: 'Groupe A' },
-  { id: '2', day: 'Lundi', startHour: 10, endHour: 12, course: 'Droit Constitutionnel', teacher: 'Dr. Hassan Abakar Fatime', room: 'Salle 101', type: 'TD', subjectArea: 'droit', group: 'Groupe B' },
-  { id: '3', day: 'Lundi', startHour: 14, endHour: 16, course: 'Algorithmique', teacher: 'Dr. Khamis Zara', room: 'Labo Info 1', type: 'TP', subjectArea: 'informatique', group: 'Groupe A' },
-  { id: '4', day: 'Lundi', startHour: 16, endHour: 18, course: 'Methodologie', teacher: 'Mme Aboubakar Oumar Khadidja', room: 'Salle 102', type: 'TD', subjectArea: 'lettres', group: 'Groupe C' },
-  { id: '5', day: 'Mardi', startHour: 8, endHour: 10, course: 'Economie Politique', teacher: 'Dr. Mahamat Nour Adam', room: 'Amphitheatre A', type: 'CM', subjectArea: 'droit', group: 'Groupe A' },
-  { id: '6', day: 'Mardi', startHour: 10, endHour: 12, course: 'Droit Constitutionnel', teacher: 'Dr. Hassan Abakar Fatime', room: 'Salle 101', type: 'CM', subjectArea: 'droit', group: 'Groupe B' },
-  { id: '7', day: 'Mardi', startHour: 14, endHour: 16, course: 'Programmation Python', teacher: 'Dr. Khamis Zara', room: 'Labo Info 1', type: 'TP', subjectArea: 'informatique', group: 'Groupe A' },
-  { id: '8', day: 'Mardi', startHour: 14, endHour: 16, course: 'Bases de donnees', teacher: 'M. Adam Brahim', room: 'Labo Info 2', type: 'TP', subjectArea: 'informatique', group: 'Groupe B' },
-  { id: '9', day: 'Mercredi', startHour: 8, endHour: 10, course: 'Introduction au Droit', teacher: 'Pr. Youssouf Abakar Moussa', room: 'Salle 101', type: 'TD', subjectArea: 'droit', group: 'Groupe A' },
-  { id: '10', day: 'Mercredi', startHour: 10, endHour: 12, course: 'Statistiques', teacher: 'Dr. Adam Brahim Mahamat', room: 'Salle 102', type: 'TP', subjectArea: 'mathematiques', group: 'Groupe C' },
-  { id: '11', day: 'Mercredi', startHour: 14, endHour: 17, course: 'Stage Professionnel', teacher: 'M. Ngarndmi Halime', room: 'Exterieur', type: 'Stage', subjectArea: 'droit', group: 'Groupe A' },
-  { id: '12', day: 'Jeudi', startHour: 8, endHour: 10, course: 'Droit Constitutionnel', teacher: 'Pr. Bichara Youssouf', room: 'Amphitheatre A', type: 'CM', subjectArea: 'droit', group: 'Groupe B' },
-  { id: '13', day: 'Jeudi', startHour: 10, endHour: 12, course: 'Sociologie Politique', teacher: 'Mme Hissein Mariam', room: 'Salle de conference', type: 'CM', subjectArea: 'lettres', group: 'Groupe C' },
-  { id: '14', day: 'Jeudi', startHour: 14, endHour: 16, course: 'Langue Francaise', teacher: 'Mme Aboubakar Oumar Khadidja', room: 'Salle 101', type: 'TD', subjectArea: 'lettres', group: 'Groupe A' },
-  { id: '15', day: 'Jeudi', startHour: 14, endHour: 16, course: 'Analyse numerique', teacher: 'Dr. Adam Brahim Mahamat', room: 'Salle 102', type: 'TP', subjectArea: 'mathematiques', group: 'Groupe B' },
-  { id: '16', day: 'Vendredi', startHour: 8, endHour: 10, course: 'Statistiques', teacher: 'Dr. Adam Brahim Mahamat', room: 'Salle 101', type: 'TP', subjectArea: 'mathematiques', group: 'Groupe A' },
-  { id: '17', day: 'Vendredi', startHour: 10, endHour: 12, course: 'Economie Politique', teacher: 'Dr. Mahamat Nour Adam', room: 'Salle 102', type: 'TD', subjectArea: 'droit', group: 'Groupe B' },
-  { id: '18', day: 'Vendredi', startHour: 14, endHour: 16, course: 'Introduction au Droit', teacher: 'Dr. Djime Hawa', room: 'Salle de conference', type: 'TD', subjectArea: 'droit', group: 'Groupe C' },
-  { id: '19', day: 'Vendredi', startHour: 14, endHour: 16, course: 'Reseaux informatiques', teacher: 'M. Adam Brahim', room: 'Labo Info 1', type: 'TP', subjectArea: 'informatique', group: 'Groupe A' },
-  { id: '20', day: 'Lundi', startHour: 10, endHour: 12, course: 'Analyse numerique', teacher: 'Dr. Adam Brahim Mahamat', room: 'Salle 102', type: 'TD', subjectArea: 'mathematiques', group: 'Groupe A' },
-  { id: '21', day: 'Mardi', startHour: 16, endHour: 18, course: 'Methodologie juridique', teacher: 'Mme Hissein Mariam', room: 'Salle de conference', type: 'TD', subjectArea: 'droit', group: 'Groupe C' },
-  { id: '22', day: 'Mercredi', startHour: 10, endHour: 12, course: 'Programmation C++', teacher: 'M. Adam Brahim', room: 'Labo Info 2', type: 'TP', subjectArea: 'informatique', group: 'Groupe C' },
-  { id: '23', day: 'Jeudi', startHour: 16, endHour: 18, course: 'Analyse numerique', teacher: 'Dr. Adam Brahim Mahamat', room: 'Salle 101', type: 'TD', subjectArea: 'mathematiques', group: 'Groupe C' },
-  { id: '24', day: 'Vendredi', startHour: 16, endHour: 18, course: 'Langue Francaise', teacher: 'Mme Aboubakar Oumar Khadidja', room: 'Salle de conference', type: 'TD', subjectArea: 'lettres', group: 'Groupe B' },
-]
+// Shape returned by GET /api/timetable (`{ slots: TimetableSlotRecord[] }`).
+// course/teacher/room are already resolved server-side; the *Id fields are
+// raw FKs only useful for a future create/edit form, not for display.
+interface TimetableSlotRecord {
+  id: string
+  dayOfWeek: number
+  startTime: string
+  endTime: string
+  type: 'CM' | 'TD' | 'TP' | 'EXAM'
+  course: string
+  teacher: string
+  room: string
+  courseElementId: string | null
+  teacherId: string | null
+  roomId: string | null
+  programId: string | null
+  levelId: string | null
+}
+
+// API convention: dayOfWeek 0 = Monday ... 6 = Sunday, which lines up with
+// this page's own Monday-first week (see `days` above).
+const dayOfWeekNames = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
+
+// This page's grid only has whole-hour rows (7h-17h), so only the hour
+// portion of the "HH:MM" API strings is used.
+function parseHour(time: string): number {
+  const hour = parseInt(time.split(':')[0] ?? '', 10)
+  return Number.isNaN(hour) ? 0 : hour
+}
+
+// TimetableSlot has no subject-area/department or group concept, so every
+// mapped slot gets a single constant value for each - this only affects the
+// card color coding / group label and degrades gracefully with one value
+// rather than fabricating variety the data doesn't have.
+function mapSlot(record: TimetableSlotRecord): TimeSlot {
+  return {
+    id: record.id,
+    day: dayOfWeekNames[record.dayOfWeek] ?? dayOfWeekNames[0],
+    startHour: parseHour(record.startTime),
+    endHour: parseHour(record.endTime),
+    course: record.course || '',
+    teacher: record.teacher || '',
+    room: record.room || '',
+    type: record.type,
+    subjectArea: 'droit',
+    group: '',
+  }
+}
 
 interface RoomInfo {
   name: string
   capacity: string
 }
 
-const rooms: RoomInfo[] = [
-  { name: 'Salle 101', capacity: '40 places' },
-  { name: 'Salle 102', capacity: '35 places' },
-  { name: 'Amphitheatre A', capacity: '200 places' },
-  { name: 'Labo Info 1', capacity: '30 postes' },
-  { name: 'Labo Info 2', capacity: '30 postes' },
-  { name: 'Salle de conference', capacity: '80 places' },
-]
+// Shape returned by GET /api/rooms (`{ data: RoomApiRecord[] }`).
+interface RoomApiRecord {
+  id: string
+  name: string
+  capacity: number
+}
+
+function mapRoom(r: RoomApiRecord): RoomInfo {
+  return {
+    name: r.name,
+    capacity: `${r.capacity} places`,
+  }
+}
 
 // ─── Animated Count-Up Hook ──────────────────────────────────────────────────
 
@@ -256,6 +285,11 @@ export function TimetablePage() {
   const [selectedDay, setSelectedDay] = useState('Lundi')
   const [currentTime, setCurrentTime] = useState(new Date())
 
+  const { data: timetableQuery, isLoading } = useTimetable()
+  const { data: roomsQuery, isLoading: isRoomsLoading } = useRooms()
+  const timeSlots: TimeSlot[] = (timetableQuery?.slots || []).map(mapSlot)
+  const rooms: RoomInfo[] = (roomsQuery?.data || []).map(mapRoom)
+
   // Animated stats for header
   const animatedCours = useCountUp(48, 1400)
   const animatedSalles = useCountUp(12, 1200)
@@ -273,8 +307,8 @@ export function TimetablePage() {
   const todayFrench = daysFrench[todayEnglish] || ''
 
   const filteredSlots = useMemo(() => {
-    return demoTimeSlots
-  }, [])
+    return timeSlots
+  }, [timeSlots])
 
   const getSlotAtHour = (day: string, hour: number) =>
     filteredSlots.find(s => s.day === day && s.startHour === hour)
@@ -301,7 +335,7 @@ export function TimetablePage() {
 
   // Quick stats
   const hoursPerDay = Math.round((totalHours / days.length) * 10) / 10
-  const roomOccupancyRate = Math.round((occupiedRooms / rooms.length) * 100)
+  const roomOccupancyRate = rooms.length > 0 ? Math.round((occupiedRooms / rooms.length) * 100) : 0
   const upcomingSlot = filteredSlots.find(s => {
     if (s.day !== todayFrench) return false
     return s.startHour > currentHour || (s.startHour === currentHour && currentMinute < 30)
@@ -586,69 +620,80 @@ export function TimetablePage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
-                  <div className="overflow-x-auto">
-                    <div className="min-w-[900px]">
-                      {/* Header Row - with today highlight */}
-                      <div className="flex border-b border-gray-200 bg-[#1a2744]/5">
-                        <div className="w-16 shrink-0 p-2 text-center">
-                          <span className="text-[10px] font-semibold text-gray-400">Heure</span>
-                        </div>
-                        {days.map(day => {
-                          const isToday = day === todayFrench
-                          return (
-                            <div key={day} className={`flex-1 p-2 text-center border-l border-gray-200 ${isToday ? 'bg-[#2d7a4f10]' : ''}`}>
-                              <span className={`text-xs font-semibold ${isToday ? 'text-[#2d7a4f]' : 'text-[#1a2744]'}`}>
-                                {day}
-                              </span>
-                              {isToday && (
-                                <div className="mt-0.5">
-                                  <Badge className="text-[8px] px-1.5 py-0 bg-[#2d7a4f15] text-[#2d7a4f] border-0">
-                                    Aujourd&apos;hui
-                                  </Badge>
-                                </div>
-                              )}
-                            </div>
-                          )
-                        })}
-                      </div>
-
-                      {/* Time Rows */}
-                      <div className="relative">
-                        {hours.map(hour => (
-                          <div key={hour} className="flex border-b border-gray-100" style={{ minHeight: '60px' }}>
-                            <div className="w-16 shrink-0 p-2 text-center border-r border-gray-200 flex items-start justify-center">
-                              <span className="text-[10px] font-mono text-gray-400">{String(hour).padStart(2, '0')}:00</span>
-                            </div>
-                            {days.map(day => {
-                              const slot = getSlotAtHour(day, hour)
-                              const isToday = day === todayFrench
-                              return (
-                                <div key={`${day}-${hour}`} className={`flex-1 p-0.5 border-l border-gray-100 ${isToday ? 'bg-[#2d7a4f05]' : ''}`}>
-                                  {slot && <TimeSlotBlock slot={slot} />}
-                                </div>
-                              )
-                            })}
-                          </div>
-                        ))}
-                        {/* Animated current time indicator */}
-                        {currentHour >= 7 && currentHour < 18 && todayFrench && days.includes(todayFrench) && (
-                          <motion.div
-                            className="absolute left-16 right-0 h-0.5 bg-red-500 z-10 pointer-events-none"
-                            style={{ top: `${timeLinePosition}px` }}
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ duration: 0.5 }}
-                          >
-                            <motion.div
-                              className="absolute -left-1.5 -top-1 w-3 h-3 rounded-full bg-red-500"
-                              animate={{ scale: [1, 1.2, 1] }}
-                              transition={{ duration: 2, repeat: Infinity }}
-                            />
-                          </motion.div>
-                        )}
-                      </div>
+                  {isLoading ? (
+                    <div className="py-16 text-center text-sm text-gray-400">
+                      Chargement des creneaux...
                     </div>
-                  </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <div className="min-w-[900px]">
+                        {/* Header Row - with today highlight */}
+                        <div className="flex border-b border-gray-200 bg-[#1a2744]/5">
+                          <div className="w-16 shrink-0 p-2 text-center">
+                            <span className="text-[10px] font-semibold text-gray-400">Heure</span>
+                          </div>
+                          {days.map(day => {
+                            const isToday = day === todayFrench
+                            return (
+                              <div key={day} className={`flex-1 p-2 text-center border-l border-gray-200 ${isToday ? 'bg-[#2d7a4f10]' : ''}`}>
+                                <span className={`text-xs font-semibold ${isToday ? 'text-[#2d7a4f]' : 'text-[#1a2744]'}`}>
+                                  {day}
+                                </span>
+                                {isToday && (
+                                  <div className="mt-0.5">
+                                    <Badge className="text-[8px] px-1.5 py-0 bg-[#2d7a4f15] text-[#2d7a4f] border-0">
+                                      Aujourd&apos;hui
+                                    </Badge>
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
+
+                        {/* Time Rows */}
+                        <div className="relative">
+                          {hours.map(hour => (
+                            <div key={hour} className="flex border-b border-gray-100" style={{ minHeight: '60px' }}>
+                              <div className="w-16 shrink-0 p-2 text-center border-r border-gray-200 flex items-start justify-center">
+                                <span className="text-[10px] font-mono text-gray-400">{String(hour).padStart(2, '0')}:00</span>
+                              </div>
+                              {days.map(day => {
+                                const slot = getSlotAtHour(day, hour)
+                                const isToday = day === todayFrench
+                                return (
+                                  <div key={`${day}-${hour}`} className={`flex-1 p-0.5 border-l border-gray-100 ${isToday ? 'bg-[#2d7a4f05]' : ''}`}>
+                                    {slot && <TimeSlotBlock slot={slot} />}
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          ))}
+                          {/* Animated current time indicator */}
+                          {currentHour >= 7 && currentHour < 18 && todayFrench && days.includes(todayFrench) && (
+                            <motion.div
+                              className="absolute left-16 right-0 h-0.5 bg-red-500 z-10 pointer-events-none"
+                              style={{ top: `${timeLinePosition}px` }}
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              transition={{ duration: 0.5 }}
+                            >
+                              <motion.div
+                                className="absolute -left-1.5 -top-1 w-3 h-3 rounded-full bg-red-500"
+                                animate={{ scale: [1, 1.2, 1] }}
+                                transition={{ duration: 2, repeat: Infinity }}
+                              />
+                            </motion.div>
+                          )}
+                        </div>
+                      </div>
+                      {timeSlots.length === 0 && (
+                        <div className="py-8 text-center text-sm text-gray-400 border-t border-gray-100">
+                          Aucun creneau planifie
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </motion.div>
@@ -678,15 +723,23 @@ export function TimetablePage() {
                   </div>
                 </CardHeader>
                 <CardContent className="p-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {daySlots.map(slot => (
-                      <DaySlotCard key={slot.id} slot={slot} />
-                    ))}
-                  </div>
-                  {daySlots.length === 0 && (
+                  {isLoading ? (
                     <div className="py-12 text-center text-sm text-gray-400">
-                      Aucun cours programme ce jour
+                      Chargement des creneaux...
                     </div>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {daySlots.map(slot => (
+                          <DaySlotCard key={slot.id} slot={slot} />
+                        ))}
+                      </div>
+                      {daySlots.length === 0 && (
+                        <div className="py-12 text-center text-sm text-gray-400">
+                          Aucun cours programme ce jour
+                        </div>
+                      )}
+                    </>
                   )}
                 </CardContent>
               </Card>
@@ -705,6 +758,12 @@ export function TimetablePage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-4 pt-0">
+                {isRoomsLoading && (
+                  <div className="py-6 text-center text-xs text-gray-400">Chargement des salles...</div>
+                )}
+                {!isRoomsLoading && rooms.length === 0 && (
+                  <div className="py-6 text-center text-xs text-gray-400">Aucune salle enregistree</div>
+                )}
                 <div className="space-y-3">
                   {rooms.map(room => {
                     const status = getRoomStatus(room.name)
