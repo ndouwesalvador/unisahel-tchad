@@ -321,6 +321,16 @@ export function LoginPage() {
                 </motion.button>
               </div>
 
+              <p className="mt-4 text-center text-sm text-gray-500">
+                Nouvel etablissement ?{' '}
+                <button
+                  onClick={() => setView('signup')}
+                  className="text-[#2d7a4f] font-medium hover:underline"
+                >
+                  Creer un compte
+                </button>
+              </p>
+
               {process.env.NODE_ENV !== 'production' && (
                 <div className="mt-6 p-4 rounded-xl bg-gray-50 border border-gray-100">
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">

@@ -1,8 +1,9 @@
 import { create } from 'zustand'
 
-export type AppView = 
+export type AppView =
   | 'landing'
   | 'login'
+  | 'signup'
   | 'student-login'
   | 'dashboard'
   | 'students'

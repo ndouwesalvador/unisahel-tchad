@@ -282,7 +282,7 @@ function NavBar() {
             </Button>
             <Button
               size="sm"
-              onClick={() => setView('login')}
+              onClick={() => setView('signup')}
               className="bg-[#2d7a4f] hover:bg-[#236b40] text-white"
             >
               Essai gratuit
@@ -350,7 +350,7 @@ function NavBar() {
                   </Button>
                   <Button
                     className="w-full bg-[#2d7a4f] hover:bg-[#236b40] text-white"
-                    onClick={() => { setMobileOpen(false); setView('login') }}
+                    onClick={() => { setMobileOpen(false); setView('signup') }}
                   >
                     Essai gratuit
                   </Button>
@@ -649,7 +649,7 @@ function HeroSection() {
           className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4"
         >
           <ShimmerButton
-            onClick={() => setView('login')}
+            onClick={() => setView('signup')}
             background="linear-gradient(135deg, #2d7a4f, #236b40)"
             shimmerColor="#ffffff"
             className="px-8 h-12 text-base font-medium shadow-lg shadow-[#2d7a4f]/30"
@@ -1522,7 +1522,7 @@ function PricingSection() {
                       ? 'bg-[#2d7a4f] hover:bg-[#236b40] text-white'
                       : 'bg-[#1a2744] hover:bg-[#121c33] text-white'
                   }`}
-                  onClick={() => setView('login')}
+                  onClick={() => setView('signup')}
                 >
                   Demander un devis
                   <ArrowRight className="ml-2 size-4" />
@@ -1676,7 +1676,7 @@ function CTASection() {
 
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
             <ShimmerButton
-              onClick={() => setView('login')}
+              onClick={() => setView('signup')}
               background="linear-gradient(135deg, #2d7a4f, #236b40)"
               shimmerColor="#ffffff"
               className="px-10 h-12 text-base font-medium shadow-lg shadow-[#2d7a4f]/30"
@@ -1688,7 +1688,7 @@ function CTASection() {
               variant="outline"
               size="lg"
               className="border-white/30 text-white hover:bg-white/10 hover:text-white px-8 text-base h-12"
-              onClick={() => setView('login')}
+              onClick={() => document.querySelector('#footer')?.scrollIntoView({ behavior: 'smooth' })}
             >
               Nous contacter
             </Button>

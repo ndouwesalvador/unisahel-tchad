@@ -279,6 +279,7 @@ const roleLabels: Record<UserRole, string> = {
 const viewLabels: Record<AppView, string> = {
   landing: 'Accueil',
   login: 'Connexion',
+  signup: 'Créer un compte',
   'student-login': 'Connexion Étudiant',
   dashboard: 'Tableau de bord',
   students: 'Étudiants',
