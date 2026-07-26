@@ -153,3 +153,22 @@ export function useTimetable(params?: { programId?: string; levelId?: string }) 
 export function useInstitution() {
   return useSimpleGet('institution', '/api/institution');
 }
+
+export function useResults(params?: { academicYearId?: string; studentId?: string; session?: string }) {
+  return useQuery({
+    queryKey: ['results', params],
+    queryFn: async () => {
+      const url = new URL('/api/results', window.location.origin);
+      if (params) {
+        Object.entries(params).forEach(([key, value]) => {
+          if (value !== undefined && value !== '') url.searchParams.append(key, value.toString());
+        });
+      }
+      const res = await fetch(url.toString());
+      if (!res.ok) {
+        throw new Error('Failed to fetch results');
+      }
+      return res.json();
+    },
+  });
+}

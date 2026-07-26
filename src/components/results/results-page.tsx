@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { motion } from 'framer-motion'
+import { useResults } from '@/lib/api-hooks'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -183,28 +184,6 @@ const demoStudentResults: StudentResult[] = [
   { id: '17', name: 'NDJIKOUMBA Armel', matricule: 'UDN-2021-0250', moyenne: 15.2, mention: 'Bien', credits: 30, decision: 'Admis' },
 ]
 
-const demoTranscript: TranscriptStudent = {
-  id: '1',
-  name: 'MAHAMAT Ali',
-  matricule: 'UDN-2021-0234',
-  dateNaissance: '15/03/2002',
-  lieuNaissance: 'N\'Djamena, Tchad',
-  filiere: 'Informatique',
-  niveau: 'Licence 3',
-  semester: 'Semestre 1 - 2024-2025',
-  ueGrades: [
-    { code: 'UE301', name: 'Programmation avancee', credit: 6, note: 17 },
-    { code: 'UE302', name: 'Bases de donnees II', credit: 5, note: 15 },
-    { code: 'UE303', name: 'Reseaux informatiques', credit: 5, note: 16 },
-    { code: 'UE304', name: 'Intelligence artificielle', credit: 6, note: 18 },
-    { code: 'UE305', name: 'Genie logiciel', credit: 4, note: 14 },
-    { code: 'UE306', name: 'Anglais technique', credit: 4, note: 16 },
-  ],
-  moyenne: 16.5,
-  mention: 'Tres-Bien',
-  totalCredits: 30,
-}
-
 const demoAtRiskStudents: AtRiskStudent[] = [
   { id: '8', name: 'DJIMADOUM Adoum', matricule: 'UDN-2021-0241', moyenne: 9.2, creditDebt: 12, risk: 'critical' },
   { id: '10', name: 'MOUSSA Khadija', matricule: 'UDN-2021-0243', moyenne: 7.8, creditDebt: 18, risk: 'critical' },
@@ -281,6 +260,7 @@ export function ResultsPage() {
   const [selectedFiliere, setSelectedFiliere] = useState('all')
   const [searchStudent, setSearchStudent] = useState('')
   const [searchTranscript, setSearchTranscript] = useState('')
+  const [selectedTranscriptStudentId, setSelectedTranscriptStudentId] = useState('')
   const [searchProgression, setSearchProgression] = useState('')
   const [isPublished, setIsPublished] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -326,24 +306,57 @@ export function ResultsPage() {
     return total
   }, [ue1Note, ue2Note, ue3Note, ue4Note, ue5Note, ue6Note])
 
+  // ─── Real data: session results, built from the Grade model ────────────────
+  const resultsQuery = useResults()
+  const passingGrade: number = resultsQuery.data?.passingGrade ?? 10
+  const creditsPerYear: number = resultsQuery.data?.creditsPerYear ?? 60
+
+  const results: StudentResult[] = useMemo(() => {
+    const raw = resultsQuery.data?.results as StudentResult[] | undefined
+    return raw ?? []
+  }, [resultsQuery.data])
+
   // Filtered results
   const filteredResults = useMemo(() => {
-    return demoStudentResults.filter(r => {
+    return results.filter(r => {
       const matchSearch = searchStudent === '' ||
         r.name.toLowerCase().includes(searchStudent.toLowerCase()) ||
         r.matricule.toLowerCase().includes(searchStudent.toLowerCase())
       return matchSearch
     })
-  }, [searchStudent])
+  }, [results, searchStudent])
 
   // Session stats
   const sessionStats = useMemo(() => {
-    const admis = demoStudentResults.filter(r => r.decision === 'Admis').length
-    const ajournes = demoStudentResults.filter(r => r.decision === 'Ajourne').length
-    const compenses = demoStudentResults.filter(r => r.decision === 'Compense').length
-    const totalMoyenne = demoStudentResults.reduce((sum, r) => sum + r.moyenne, 0) / demoStudentResults.length
+    const admis = results.filter(r => r.decision === 'Admis').length
+    const ajournes = results.filter(r => r.decision === 'Ajourne').length
+    const compenses = results.filter(r => r.decision === 'Compense').length
+    const totalMoyenne = results.length > 0 ? results.reduce((sum, r) => sum + r.moyenne, 0) / results.length : 0
     return { admis, ajournes, compenses, moyenneGenerale: totalMoyenne.toFixed(1) }
-  }, [])
+  }, [results])
+
+  // ─── Real data: transcript for a selected student ───────────────────────────
+  const transcriptCandidates = useMemo(() => {
+    if (searchTranscript === '') return results
+    const q = searchTranscript.toLowerCase()
+    return results.filter(r => r.name.toLowerCase().includes(q) || r.matricule.toLowerCase().includes(q))
+  }, [results, searchTranscript])
+
+  // Derive the effective selection instead of syncing it via an effect: fall back to the
+  // first matching candidate whenever the explicit selection is empty or no longer matches.
+  const effectiveTranscriptStudentId = useMemo(() => {
+    if (selectedTranscriptStudentId && transcriptCandidates.some(c => c.id === selectedTranscriptStudentId)) {
+      return selectedTranscriptStudentId
+    }
+    return transcriptCandidates[0]?.id ?? ''
+  }, [transcriptCandidates, selectedTranscriptStudentId])
+
+  const transcriptQuery = useResults(effectiveTranscriptStudentId ? { studentId: effectiveTranscriptStudentId } : undefined)
+
+  const transcript: TranscriptStudent | null = useMemo(() => {
+    const raw = transcriptQuery.data?.transcript as TranscriptStudent | null | undefined
+    return raw ?? null
+  }, [transcriptQuery.data])
 
   // Stats for header
   const sessionsValidees = useCountUp(12, 1200)
@@ -539,7 +552,15 @@ export function ResultsPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {filteredResults.map((student, index) => {
+                        {resultsQuery.isLoading ? (
+                          <TableRow>
+                            <TableCell colSpan={7} className="text-center py-8 text-sm text-gray-400">Chargement...</TableCell>
+                          </TableRow>
+                        ) : filteredResults.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={7} className="text-center py-8 text-sm text-gray-400">Aucun resultat publie pour le moment</TableCell>
+                          </TableRow>
+                        ) : filteredResults.map((student, index) => {
                           const mConfig = mentionConfig[student.mention]
                           const dConfig = decisionConfig[student.decision]
                           const DecisionIcon = dConfig.icon
@@ -561,7 +582,7 @@ export function ResultsPage() {
                               </TableCell>
                               <TableCell className="py-2.5 text-xs text-gray-500 font-mono">{student.matricule}</TableCell>
                               <TableCell className="py-2.5 text-center">
-                                <span className={`text-sm font-bold ${student.moyenne >= 10 ? 'text-[#2d7a4f]' : student.moyenne >= 8 ? 'text-[#d4a853]' : 'text-[#c62828]'}`}>
+                                <span className={`text-sm font-bold ${student.moyenne >= passingGrade ? 'text-[#2d7a4f]' : student.moyenne >= passingGrade - 2 ? 'text-[#d4a853]' : 'text-[#c62828]'}`}>
                                   {student.moyenne.toFixed(1)}
                                 </span>
                               </TableCell>
@@ -571,8 +592,8 @@ export function ResultsPage() {
                                 </Badge>
                               </TableCell>
                               <TableCell className="py-2.5 text-center">
-                                <span className={`text-xs font-semibold ${student.credits >= 30 ? 'text-[#2d7a4f]' : student.credits >= 20 ? 'text-[#d4a853]' : 'text-[#c62828]'}`}>
-                                  {student.credits}/30
+                                <span className={`text-xs font-semibold ${student.credits >= creditsPerYear ? 'text-[#2d7a4f]' : student.credits >= creditsPerYear * 0.66 ? 'text-[#d4a853]' : 'text-[#c62828]'}`}>
+                                  {student.credits}/{creditsPerYear}
                                 </span>
                               </TableCell>
                               <TableCell className="py-2.5">
@@ -686,17 +707,29 @@ export function ResultsPage() {
 
             {/* ─── Tab 2: Releves de Notes ───────────────────────────────────────── */}
             <TabsContent value="transcripts" className="mt-4 space-y-4">
-              {/* Search */}
+              {/* Search + Student selection */}
               <Card className="border-l-4 border-l-[#2d7a4f]">
                 <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <Search className="size-4 text-gray-400 shrink-0" />
-                    <Input
-                      placeholder="Rechercher par nom ou matricule de l'etudiant..."
-                      className="h-9 text-sm flex-1"
-                      value={searchTranscript}
-                      onChange={(e) => setSearchTranscript(e.target.value)}
-                    />
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                    <div className="flex items-center gap-2 flex-1 w-full">
+                      <Search className="size-4 text-gray-400 shrink-0" />
+                      <Input
+                        placeholder="Rechercher par nom ou matricule de l'etudiant..."
+                        className="h-9 text-sm flex-1"
+                        value={searchTranscript}
+                        onChange={(e) => setSearchTranscript(e.target.value)}
+                      />
+                    </div>
+                    <Select value={effectiveTranscriptStudentId} onValueChange={setSelectedTranscriptStudentId}>
+                      <SelectTrigger className="w-full sm:w-[260px] h-9 text-sm">
+                        <SelectValue placeholder="Choisir un etudiant" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {transcriptCandidates.map((s) => (
+                          <SelectItem key={s.id} value={s.id}>{s.name} ({s.matricule})</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </CardContent>
               </Card>
@@ -710,11 +743,11 @@ export function ResultsPage() {
                       <CardTitle className="text-sm font-semibold text-[#1a2744]">Releve de Notes</CardTitle>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button size="sm" variant="outline" className="text-xs h-8">
+                      <Button size="sm" variant="outline" className="text-xs h-8" disabled={!transcript}>
                         <Printer className="size-3.5 mr-1.5" />
                         Imprimer
                       </Button>
-                      <Button size="sm" className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs h-8">
+                      <Button size="sm" className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs h-8" disabled={!transcript}>
                         <Download className="size-3.5 mr-1.5" />
                         Generer PDF
                       </Button>
@@ -722,6 +755,15 @@ export function ResultsPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="p-4 pt-0">
+                  {transcriptQuery.isLoading ? (
+                    <div className="border-2 border-gray-200 rounded-lg p-8 text-center text-sm text-gray-400">
+                      Chargement du releve...
+                    </div>
+                  ) : !transcript ? (
+                    <div className="border-2 border-gray-200 rounded-lg p-8 text-center text-sm text-gray-400">
+                      Aucun resultat publie pour le moment
+                    </div>
+                  ) : (
                   <div className="border-2 border-gray-200 rounded-lg p-5">
                     {/* University Header */}
                     <div className="text-center mb-4">
@@ -736,29 +778,29 @@ export function ResultsPage() {
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
                           <span className="text-[10px] font-semibold text-gray-500 w-24">Nom complet :</span>
-                          <span className="text-xs font-medium text-[#1a2744]">{demoTranscript.name}</span>
+                          <span className="text-xs font-medium text-[#1a2744]">{transcript.name}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="text-[10px] font-semibold text-gray-500 w-24">Matricule :</span>
-                          <span className="text-xs font-mono text-[#1a2744]">{demoTranscript.matricule}</span>
+                          <span className="text-xs font-mono text-[#1a2744]">{transcript.matricule}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="text-[10px] font-semibold text-gray-500 w-24">Date naissance :</span>
-                          <span className="text-xs text-gray-700">{demoTranscript.dateNaissance}</span>
+                          <span className="text-xs text-gray-700">{transcript.dateNaissance}</span>
                         </div>
                       </div>
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
                           <span className="text-[10px] font-semibold text-gray-500 w-24">Filiere :</span>
-                          <span className="text-xs font-medium text-[#1a2744]">{demoTranscript.filiere}</span>
+                          <span className="text-xs font-medium text-[#1a2744]">{transcript.filiere}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="text-[10px] font-semibold text-gray-500 w-24">Niveau :</span>
-                          <span className="text-xs text-gray-700">{demoTranscript.niveau}</span>
+                          <span className="text-xs text-gray-700">{transcript.niveau}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="text-[10px] font-semibold text-gray-500 w-24">Semestre :</span>
-                          <span className="text-xs text-gray-700">{demoTranscript.semester}</span>
+                          <span className="text-xs text-gray-700">{transcript.semester}</span>
                         </div>
                       </div>
                     </div>
@@ -775,18 +817,24 @@ export function ResultsPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {demoTranscript.ueGrades.map((ue) => (
+                        {transcript.ueGrades.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={5} className="text-center py-6 text-sm text-gray-400">
+                              Aucune note publiee pour cet etudiant sur cette periode
+                            </TableCell>
+                          </TableRow>
+                        ) : transcript.ueGrades.map((ue) => (
                           <TableRow key={ue.code} className="hover:bg-gray-50">
                             <TableCell className="py-2 text-xs font-mono text-gray-500">{ue.code}</TableCell>
                             <TableCell className="py-2 text-xs font-medium text-[#1a2744]">{ue.name}</TableCell>
                             <TableCell className="py-2 text-center text-xs font-semibold">{ue.credit}</TableCell>
                             <TableCell className="py-2 text-center">
-                              <span className={`text-sm font-bold ${ue.note >= 10 ? 'text-[#2d7a4f]' : 'text-[#c62828]'}`}>
+                              <span className={`text-sm font-bold ${ue.note >= passingGrade ? 'text-[#2d7a4f]' : 'text-[#c62828]'}`}>
                                 {ue.note}
                               </span>
                             </TableCell>
                             <TableCell className="py-2 text-center">
-                              {ue.note >= 10 ? (
+                              {ue.note >= passingGrade ? (
                                 <CheckCircle2 className="size-4 text-[#2d7a4f] inline" />
                               ) : (
                                 <XCircle className="size-4 text-[#c62828] inline" />
@@ -796,9 +844,9 @@ export function ResultsPage() {
                         ))}
                         <TableRow className="bg-gray-50 font-semibold">
                           <TableCell colSpan={2} className="py-2 text-xs text-[#1a2744]">TOTAL</TableCell>
-                          <TableCell className="py-2 text-center text-xs">{demoTranscript.totalCredits}</TableCell>
+                          <TableCell className="py-2 text-center text-xs">{transcript.totalCredits}</TableCell>
                           <TableCell className="py-2 text-center">
-                            <span className="text-sm font-bold text-[#2d7a4f]">{demoTranscript.moyenne}</span>
+                            <span className="text-sm font-bold text-[#2d7a4f]">{transcript.moyenne}</span>
                           </TableCell>
                           <TableCell />
                         </TableRow>
@@ -809,20 +857,21 @@ export function ResultsPage() {
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mt-4 gap-3">
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-semibold text-gray-500">Mention :</span>
-                        <Badge className={`text-xs ${mentionConfig[demoTranscript.mention].bgClass}`}>
+                        <Badge className={`text-xs ${mentionConfig[transcript.mention].bgClass}`}>
                           <Star className="size-3 mr-1" />
-                          {demoTranscript.mention}
+                          {transcript.mention}
                         </Badge>
                       </div>
                       <div className="flex items-center gap-2 bg-[#2d7a4f08] border border-[#2d7a4f20] rounded-lg px-3 py-1.5">
                         <Shield className="size-4 text-[#2d7a4f]" />
                         <div>
                           <p className="text-[9px] font-semibold text-[#2d7a4f] uppercase">Document verifiable</p>
-                          <p className="text-[9px] text-gray-500">QR Code: VRF-UDN-2024-S1-0234</p>
+                          <p className="text-[9px] text-gray-500">QR Code: VRF-{transcript.matricule}</p>
                         </div>
                       </div>
                     </div>
                   </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>

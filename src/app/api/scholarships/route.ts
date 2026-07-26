@@ -6,15 +6,21 @@ async function handleGet(_user: SessionUser, tenantId: string, _request: NextReq
   try {
     const where = { tenantId }
 
-    const [scholarships, active, totalBudget, totalBeneficiaries] = await Promise.all([
+    const [scholarships, active, totalBudget, totalBeneficiaries, beneficiaries] = await Promise.all([
       db.scholarship.findMany({ where, orderBy: { createdAt: 'desc' } }),
       db.scholarship.count({ where: { ...where, status: 'ACTIVE' } }),
       db.scholarship.aggregate({ where, _sum: { budget: true } }),
       db.scholarship.aggregate({ where, _sum: { currentCount: true } }),
+      db.scholarshipApplication.findMany({
+        where,
+        include: { scholarship: { select: { name: true, type: true } } },
+        orderBy: { createdAt: 'desc' },
+      }),
     ])
 
     return NextResponse.json({
       scholarships,
+      beneficiaries,
       stats: {
         total: scholarships.length,
         active,

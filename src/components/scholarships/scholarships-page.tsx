@@ -143,20 +143,48 @@ interface Beneficiary {
   date: string
 }
 
-const demoBeneficiaries: Beneficiary[] = [
-  { id: '1', name: 'ABAKAR Adam Hassane', matricule: 'UDN/L2/2024/001', program: "Bourse d'Excellence", level: 'L2', scholarshipType: 'Merite', amount: 300000, status: 'beneficiaire', date: '15/09/2024' },
-  { id: '2', name: 'KHAMIS Fatime', matricule: 'UDN/L3/2024/002', program: 'Bourse du Ministere', level: 'L3', scholarshipType: 'Gouvernemental', amount: 250000, status: 'beneficiaire', date: '12/09/2024' },
-  { id: '3', name: 'MAHAMAT Youssouf', matricule: 'UDN/M1/2024/003', program: 'Bourse Master AUF', level: 'M1', scholarshipType: 'International', amount: 500000, status: 'beneficiaire', date: '20/09/2024' },
-  { id: '4', name: 'NGARNDMI Halime', matricule: 'UDN/L1/2024/004', program: 'Fonds de Solidarite Africaine', level: 'L1', scholarshipType: 'Besoin', amount: 200000, status: 'beneficiaire', date: '08/09/2024' },
-  { id: '5', name: 'HISSEIN Mariam', matricule: 'UDN/L2/2024/005', program: "Bourse d'Excellence", level: 'L2', scholarshipType: 'Merite', amount: 300000, status: 'beneficiaire', date: '14/09/2024' },
-  { id: '6', name: 'ISSA Mahamat Nour', matricule: 'UDN/L3/2024/006', program: 'Bourse de Recherche', level: 'L3', scholarshipType: 'Recherche', amount: 350000, status: 'en_attente', date: '25/09/2024' },
-  { id: '7', name: 'ADAM Khadija', matricule: 'UDN/M2/2024/007', program: 'Programme Erasmus+', level: 'M2', scholarshipType: 'Echange', amount: 450000, status: 'en_attente', date: '28/09/2024' },
-  { id: '8', name: 'BICHARA Hawa', matricule: 'UDN/L1/2024/008', program: "Aide d'Urgence Humanitaire", level: 'L1', scholarshipType: 'Urgence', amount: 150000, status: 'beneficiaire', date: '05/09/2024' },
-  { id: '9', name: 'SEID Ibrahim', matricule: 'UDN/L2/2024/009', program: 'Bourse Sportive', level: 'L2', scholarshipType: 'Sportif', amount: 100000, status: 'beneficiaire', date: '10/09/2024' },
-  { id: '10', name: 'DJIMADOUMBER Deubong', matricule: 'UDN/M1/2024/010', program: 'Fonds de Solidarite Africaine', level: 'M1', scholarshipType: 'Besoin', amount: 200000, status: 'refusee', date: '18/09/2024' },
-  { id: '11', name: 'NASSERINGAR Lea', matricule: 'UDN/L3/2024/011', program: "Bourse d'Excellence", level: 'L3', scholarshipType: 'Merite', amount: 300000, status: 'beneficiaire', date: '16/09/2024' },
-  { id: '12', name: 'OUMAR Abdoulaye', matricule: 'UDN/L1/2024/012', program: 'Bourse du Ministere', level: 'L1', scholarshipType: 'Gouvernemental', amount: 250000, status: 'refusee', date: '22/09/2024' },
-]
+interface ScholarshipApplicationRecord {
+  id: string
+  applicantName: string
+  studentId: string | null
+  program: string | null
+  level: string | null
+  amount: number
+  status: string
+  createdAt: string
+  scholarship: { name: string; type: string } | null
+}
+
+function mapBeneficiaryStatus(status: string): Beneficiary['status'] {
+  const upper = (status || '').toUpperCase()
+  if (upper === 'ACCEPTE' || upper === 'APPROUVE') return 'beneficiaire'
+  if (upper === 'REFUSE') return 'refusee'
+  return 'en_attente'
+}
+
+function formatBeneficiaryDate(value: string) {
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return ''
+  return parsed.toLocaleDateString('fr-FR')
+}
+
+function mapBeneficiary(a: ScholarshipApplicationRecord): Beneficiary {
+  const rawType = a.scholarship?.type || ''
+  const lowerType = rawType.toLowerCase()
+  const scholarshipType = typeConfig[lowerType]?.label || rawType
+
+  return {
+    id: a.id,
+    name: a.applicantName,
+    matricule: a.studentId || '',
+    program: a.scholarship?.name || a.program || '',
+    level: a.level || '',
+    scholarshipType,
+    amount: a.amount,
+    status: mapBeneficiaryStatus(a.status),
+    date: formatBeneficiaryDate(a.createdAt),
+  }
+}
 
 const typeConfig: Record<string, { label: string; className: string }> = {
   merite: { label: 'Merite', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0' },
@@ -204,6 +232,7 @@ export function ScholarshipsPage() {
 
   const { data: scholarshipsQuery, isLoading } = useScholarships()
   const scholarships: Scholarship[] = (scholarshipsQuery?.scholarships || []).map(mapScholarship)
+  const beneficiaries: Beneficiary[] = (scholarshipsQuery?.beneficiaries || []).map(mapBeneficiary)
 
   // Stats
   const totalActive = scholarships.filter(s => s.status === 'active').length
@@ -220,7 +249,7 @@ export function ScholarshipsPage() {
   })
 
   // Filter beneficiaries
-  const filteredBeneficiaries = demoBeneficiaries.filter(b => {
+  const filteredBeneficiaries = beneficiaries.filter(b => {
     const matchSearch = search === '' ||
       b.name.toLowerCase().includes(search.toLowerCase()) ||
       b.matricule.toLowerCase().includes(search.toLowerCase())
@@ -245,9 +274,9 @@ export function ScholarshipsPage() {
     percent: totalBudget > 0 ? Math.round((item.amount / totalBudget) * 100) : 0,
   }))
 
-  const totalCommitted = demoBeneficiaries.filter(b => b.status === 'beneficiaire').reduce((acc, b) => acc + b.amount, 0)
+  const totalCommitted = beneficiaries.filter(b => b.status === 'beneficiaire').reduce((acc, b) => acc + b.amount, 0)
   const totalAvailable = scholarships.reduce((acc, s) => {
-    const committed = demoBeneficiaries.filter(b => b.status === 'beneficiaire' && b.program === s.name).reduce((sum, b) => sum + b.amount, 0)
+    const committed = beneficiaries.filter(b => b.status === 'beneficiaire' && b.program === s.name).reduce((sum, b) => sum + b.amount, 0)
     return acc + (s.budget - committed)
   }, 0)
 
@@ -679,7 +708,21 @@ export function ScholarshipsPage() {
                       </TableRow>
                     )
                   })}
-                  {filteredBeneficiaries.length === 0 && (
+                  {isLoading && (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8 text-sm text-gray-400">
+                        Chargement...
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {!isLoading && beneficiaries.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8 text-sm text-gray-400">
+                        Aucun beneficiaire pour le moment
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {!isLoading && beneficiaries.length > 0 && filteredBeneficiaries.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={7} className="text-center py-8 text-sm text-gray-400">
                         Aucun beneficiaire trouve

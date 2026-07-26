@@ -7,7 +7,7 @@ async function handleGet(_user: SessionUser, tenantId: string, _request: NextReq
   try {
     const where = { tenantId }
 
-    const [staff, total, active, onLeave, vacantPosts] = await Promise.all([
+    const [staff, total, active, onLeave, vacantPosts, leaveRequests] = await Promise.all([
       db.staff.findMany({
         where,
         orderBy: { createdAt: 'desc' },
@@ -17,6 +17,12 @@ async function handleGet(_user: SessionUser, tenantId: string, _request: NextReq
       db.staff.count({ where: { ...where, status: 'actif' } }),
       db.staff.count({ where: { ...where, status: 'en_conge' } }),
       db.staff.count({ where: { ...where, status: 'depart' } }),
+      db.leaveRequest.findMany({
+        where,
+        include: { staff: { select: { firstName: true, lastName: true } } },
+        orderBy: { createdAt: 'desc' },
+        take: 100,
+      }),
     ])
 
     const stats = {
@@ -26,7 +32,7 @@ async function handleGet(_user: SessionUser, tenantId: string, _request: NextReq
       vacantPosts,
     }
 
-    return NextResponse.json({ data: staff, stats })
+    return NextResponse.json({ data: staff, stats, leaveRequests })
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error('HR API error:', error)
@@ -118,5 +124,54 @@ async function handlePost(_user: SessionUser, tenantId: string, request: NextReq
   }
 }
 
+// PUT /api/hr?leaveRequestId=X - approve or refuse a leave request
+async function handlePutLeaveRequest(user: SessionUser, tenantId: string, request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const leaveRequestId = searchParams.get('leaveRequestId')
+    if (!leaveRequestId) {
+      return NextResponse.json(
+        { error: 'leaveRequestId query parameter is required' },
+        { status: 400 }
+      )
+    }
+
+    const existing = await db.leaveRequest.findFirst({ where: { id: leaveRequestId, tenantId } })
+    if (!existing) {
+      return NextResponse.json({ error: 'Leave request not found' }, { status: 404 })
+    }
+
+    const body = await request.json()
+    const { status } = body
+
+    const validStatuses = ['en_attente', 'approuve', 'refuse']
+    if (!status || !validStatuses.includes(status)) {
+      return NextResponse.json(
+        { error: `status must be one of: ${validStatuses.join(', ')}` },
+        { status: 400 }
+      )
+    }
+
+    const leaveRequest = await db.leaveRequest.update({
+      where: { id: leaveRequestId },
+      data: {
+        status,
+        approverId: ['approuve', 'refuse'].includes(status) ? user.id : existing.approverId,
+      },
+      include: { staff: { select: { firstName: true, lastName: true } } },
+    })
+
+    return NextResponse.json({ leaveRequest })
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('Update leave request error:', error)
+    return NextResponse.json(
+      { error: 'Failed to update leave request' },
+      { status: 500 }
+    )
+  }
+}
+
 export const GET = withTenantAuth(handleGet)
 export const POST = withTenantAuth(handlePost)
+export const PUT = withTenantAuth(handlePutLeaveRequest, ['SUPER_ADMIN', 'ADMIN_INSTITUTION'])

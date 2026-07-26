@@ -2,6 +2,8 @@
 
 import { exportToExcel } from '@/lib/export'
 import { useState, useEffect, useRef } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { useAttendance } from '@/lib/api-hooks'
 import { motion } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -123,20 +125,33 @@ interface JustificationEntry {
   id: string
   studentName: string
   matricule: string
-  dates: string
+  date: string
+  course: string
   reason: string
-  documentType: string
-  status: 'en_attente' | 'validee' | 'rejetee'
 }
 
-const demoJustifications: JustificationEntry[] = [
-  { id: '1', studentName: 'HAWA Ngarndmi', matricule: 'UDN/L1/2024/004', dates: '03-05 Mars 2025', reason: 'Maladie - certificat medical', documentType: 'Certificat', status: 'en_attente' },
-  { id: '2', studentName: 'OUMAR Abdoulaye', matricule: 'UDN/L2/2024/010', dates: '10 Mars 2025', reason: 'Deces dans la famille', documentType: 'Attestation', status: 'en_attente' },
-  { id: '3', studentName: 'ZENE Mahamat', matricule: 'UDN/L1/2024/016', dates: '07 Mars 2025', reason: 'Convocation officielle', documentType: 'Convocation', status: 'en_attente' },
-  { id: '4', studentName: 'ABDOULAYE Ibrahim', matricule: 'UDN/L2/2024/002', dates: '01-02 Mars 2025', reason: 'Probleme de transport', documentType: 'Attestation', status: 'en_attente' },
-  { id: '5', studentName: 'KHAMIS Fatime', matricule: 'UDN/L3/2024/014', dates: '25 Fev 2025', reason: 'Consultation medicale', documentType: 'Certificat', status: 'validee' },
-  { id: '6', studentName: 'SEID Ibrahim', matricule: 'UDN/L1/2024/012', dates: '20 Fev 2025', reason: 'Raison non justifiee', documentType: 'Aucun', status: 'rejetee' },
-]
+// A "pending justification" is derived from real Attendance data: an ABSENT
+// record for which a justification note was submitted but not yet reviewed
+// (i.e. not upgraded to status: 'JUSTIFIED'). See GET /api/attendance.
+interface ApiPendingJustification {
+  id: string
+  studentName: string
+  matricule: string
+  course: string
+  justification: string | null
+  date: string
+}
+
+function mapJustification(record: ApiPendingJustification): JustificationEntry {
+  return {
+    id: record.id,
+    studentName: record.studentName,
+    matricule: record.matricule,
+    date: new Date(record.date).toLocaleDateString('fr-FR'),
+    course: record.course,
+    reason: record.justification || 'Motif non precise',
+  }
+}
 
 interface SanctionEntry {
   id: string
@@ -200,12 +215,6 @@ const sanctionConfig: Record<string, { label: string; className: string; pulseCo
   'exclusion': { label: 'Exclusion', className: 'bg-[#c6282815] text-[#c62828] border-0', pulseColor: '#c62828' },
 }
 
-const justificationStatusConfig: Record<string, { label: string; className: string }> = {
-  'en_attente': { label: 'En attente', className: 'bg-[#d4a85315] text-[#d4a853] border-0' },
-  'validee': { label: 'Validee', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0' },
-  'rejetee': { label: 'Rejetee', className: 'bg-[#c6282815] text-[#c62828] border-0' },
-}
-
 // ─── useCountUp Hook ──────────────────────────────────────────────────────────
 
 function useCountUp(target: number, duration: number = 1400) {
@@ -237,10 +246,11 @@ export function AttendancePage() {
   const [filterCourse, setFilterCourse] = useState('tous')
   const [filterStatus, setFilterStatus] = useState('tous')
   const [filterLevel, setFilterLevel] = useState('tous')
+  const queryClient = useQueryClient()
   const { data: attendanceQuery, isLoading } = useAttendance()
   const attendanceRecords: AttendanceRecord[] = (attendanceQuery?.records || []).map(mapAttendance)
+  const justificationEntries: JustificationEntry[] = (attendanceQuery?.pendingJustifications || []).map(mapJustification)
   const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>([])
-  const [justificationData, setJustificationData] = useState(demoJustifications)
   const [offlineMode, setOfflineMode] = useState(false)
 
   useEffect(() => {
@@ -259,18 +269,39 @@ export function AttendancePage() {
     }))
   }
 
-  // Approve justification
-  const approveJustification = (id: string) => {
-    setJustificationData(prev => prev.map(j =>
-      j.id === id ? { ...j, status: 'validee' as const } : j
-    ))
+  // Approve a pending justification request (Attendance.status -> JUSTIFIED)
+  const approveJustification = async (id: string) => {
+    try {
+      const res = await fetch(`/api/attendance?id=${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'approve' }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Echec de la validation')
+      toast.success('Justification validee')
+      queryClient.invalidateQueries({ queryKey: ['attendance'] })
+    } catch (e) {
+      toast.error('Erreur', { description: e instanceof Error ? e.message : 'Echec de la validation' })
+    }
   }
 
-  // Reject justification
-  const rejectJustification = (id: string) => {
-    setJustificationData(prev => prev.map(j =>
-      j.id === id ? { ...j, status: 'rejetee' as const } : j
-    ))
+  // Reject a pending justification request (clears the submitted note; the
+  // absence remains unjustified since there is no "rejected" state in the schema)
+  const rejectJustification = async (id: string) => {
+    try {
+      const res = await fetch(`/api/attendance?id=${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'reject' }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Echec du rejet')
+      toast.success('Justification rejetee')
+      queryClient.invalidateQueries({ queryKey: ['attendance'] })
+    } catch (e) {
+      toast.error('Erreur', { description: e instanceof Error ? e.message : 'Echec du rejet' })
+    }
   }
 
   // Filter records
@@ -297,10 +328,11 @@ export function AttendancePage() {
   const totalWeeklyHours = weeklyData.reduce((sum, d) => sum + d.hours, 0)
   const avgWeeklyRate = Math.round(weeklyData.reduce((sum, d) => sum + d.rate, 0) / weeklyData.length)
 
-  // Justification stats
-  const justEnAttente = justificationData.filter(j => j.status === 'en_attente').length
-  const justValidees = justificationData.filter(j => j.status === 'validee').length
-  const justRejetees = justificationData.filter(j => j.status === 'rejetee').length
+  // Justification stats (validees = total records already marked JUSTIFIED;
+  // there is no "rejetees" concept since a rejected note just clears the
+  // justification and the row goes back to a plain unjustified absence)
+  const justEnAttente = justificationEntries.length
+  const justValidees = attendanceQuery?.stats?.justified ?? 0
 
   // Time slot analysis
   const morningRate = 91
@@ -791,81 +823,65 @@ export function AttendancePage() {
                       {justEnAttente} en attente
                     </Badge>
                     <Badge className="text-[10px] bg-[#2d7a4f15] text-[#2d7a4f] border-0">
-                      {justValidees} validees
-                    </Badge>
-                    <Badge className="text-[10px] bg-[#c6282815] text-[#c62828] border-0">
-                      {justRejetees} rejetees
+                      {justValidees} justifiees
                     </Badge>
                   </div>
                 </div>
               </CardHeader>
               <CardContent className="p-4 pt-0">
                 <div className="space-y-3 max-h-80 overflow-y-auto">
-                  {justificationData.map((just) => {
-                    const jConf = justificationStatusConfig[just.status]
-                    return (
-                      <div
-                        key={just.id}
-                        className="p-3 rounded-lg border border-gray-100 hover:border-gray-200 transition-colors"
-                      >
-                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <p className="text-sm font-medium text-[#1a2744] truncate">{just.studentName}</p>
-                              {jConf ? (
-                                <Badge className={`text-[10px] shrink-0 ${jConf.className}`}>{jConf.label}</Badge>
-                              ) : null}
-                            </div>
-                            <p className="text-[10px] text-gray-400 font-mono">{just.matricule}</p>
-                            <div className="flex items-center gap-3 mt-1">
-                              <span className="text-xs text-gray-500 flex items-center gap-1">
-                                <Calendar className="size-3" />
-                                {just.dates}
-                              </span>
-                              <Badge variant="outline" className="text-[10px] border-gray-200 text-gray-500 shrink-0">
-                                <FileText className="size-3 mr-1" />
-                                {just.documentType}
-                              </Badge>
-                            </div>
-                            <p className="text-xs text-gray-600 mt-1">{just.reason}</p>
+                  {isLoading && (
+                    <p className="text-center py-8 text-sm text-gray-400">Chargement...</p>
+                  )}
+                  {!isLoading && justificationEntries.length === 0 && (
+                    <p className="text-center py-8 text-sm text-gray-400">Aucune justification en attente</p>
+                  )}
+                  {justificationEntries.map((just) => (
+                    <div
+                      key={just.id}
+                      className="p-3 rounded-lg border border-gray-100 hover:border-gray-200 transition-colors"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium text-[#1a2744] truncate">{just.studentName}</p>
+                            <Badge className="text-[10px] shrink-0 bg-[#d4a85315] text-[#d4a853] border-0">En attente</Badge>
                           </div>
-                          {just.status === 'en_attente' && (
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              <Button
-                                size="sm"
-                                className="h-7 text-[10px] bg-[#2d7a4f] hover:bg-[#236b40] text-white px-2.5"
-                                onClick={() => approveJustification(just.id)}
-                              >
-                                <CheckCircle2 className="size-3 mr-1" />
-                                Valider
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-7 text-[10px] border-[#c6282830] text-[#c62828] hover:bg-[#c6282808] px-2.5"
-                                onClick={() => rejectJustification(just.id)}
-                              >
-                                <XCircle className="size-3 mr-1" />
-                                Rejeter
-                              </Button>
-                            </div>
-                          )}
-                          {just.status === 'validee' && (
-                            <div className="flex items-center gap-1 text-[#2d7a4f] shrink-0">
-                              <CheckCircle2 className="size-4" />
-                              <span className="text-[10px] font-medium">Approuvee</span>
-                            </div>
-                          )}
-                          {just.status === 'rejetee' && (
-                            <div className="flex items-center gap-1 text-[#c62828] shrink-0">
-                              <XCircle className="size-4" />
-                              <span className="text-[10px] font-medium">Rejetee</span>
-                            </div>
-                          )}
+                          <p className="text-[10px] text-gray-400 font-mono">{just.matricule}</p>
+                          <div className="flex items-center gap-3 mt-1">
+                            <span className="text-xs text-gray-500 flex items-center gap-1">
+                              <Calendar className="size-3" />
+                              {just.date}
+                            </span>
+                            <Badge variant="outline" className="text-[10px] border-gray-200 text-gray-500 shrink-0">
+                              <FileText className="size-3 mr-1" />
+                              {just.course}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-gray-600 mt-1">{just.reason}</p>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <Button
+                            size="sm"
+                            className="h-7 text-[10px] bg-[#2d7a4f] hover:bg-[#236b40] text-white px-2.5"
+                            onClick={() => approveJustification(just.id)}
+                          >
+                            <CheckCircle2 className="size-3 mr-1" />
+                            Valider
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-[10px] border-[#c6282830] text-[#c62828] hover:bg-[#c6282808] px-2.5"
+                            onClick={() => rejectJustification(just.id)}
+                          >
+                            <XCircle className="size-3 mr-1" />
+                            Rejeter
+                          </Button>
                         </div>
                       </div>
-                    )
-                  })}
+                    </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>

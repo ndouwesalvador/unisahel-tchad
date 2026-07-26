@@ -105,6 +105,26 @@ interface InternshipRecord {
   endDate: string | null
   evaluation: string | null
   evaluationDate: string | null
+  createdAt: string
+}
+
+interface PartnerRecord {
+  id: string
+  name: string
+  sector: string
+  hostedStudents: number
+  capacity: number
+  rating: number
+  contactEmail: string | null
+  contactPhone: string | null
+}
+
+// Formats an ISO date string as a French dd/mm/yyyy string, or a fallback when absent.
+function formatDateFr(value: string | null | undefined): string {
+  if (!value) return 'Non renseignee'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return 'Non renseignee'
+  return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
 const internshipTypeApiToUi: Record<InternshipRecord['type'], InternshipEntry['type']> = {
@@ -143,15 +163,23 @@ interface PendingConvention {
   currentStep: number
 }
 
-const demoPendingConventions: PendingConvention[] = [
-  { id: 'p1', studentName: 'HAWA Ngarndmi', entreprise: 'Ministere de la Sante', submittedDate: '12/03/2025', currentStep: 1 },
-  { id: 'p2', studentName: 'BICHARA Hawa', entreprise: "Hopital General de Reference N'Djamena", submittedDate: '15/03/2025', currentStep: 1 },
-  { id: 'p3', studentName: 'HISSEIN Mariam', entreprise: 'Total Energies Tchad', submittedDate: '10/03/2025', currentStep: 2 },
-  { id: 'p4', studentName: 'FATIME Khamis', entreprise: 'Orange Tchad', submittedDate: '08/03/2025', currentStep: 2 },
-  { id: 'p5', studentName: 'NGARNDMI Halime', entreprise: 'Bureau Veritas', submittedDate: '05/03/2025', currentStep: 1 },
-]
+// Derives the list of conventions awaiting validation from internships whose status is
+// EN_ATTENTE. The Internship model only tracks a single "pending" bucket (no per-step
+// actor/date columns), so every derived entry is honestly placed at step 1 (Soumission) —
+// we have no data to distinguish finer sub-steps of the approval workflow.
+function derivePendingConventions(records: InternshipRecord[]): PendingConvention[] {
+  return records
+    .filter((r) => r.status === 'EN_ATTENTE')
+    .map((r) => ({
+      id: r.id,
+      studentName: r.studentName,
+      entreprise: r.entreprise,
+      submittedDate: formatDateFr(r.createdAt),
+      currentStep: 1,
+    }))
+}
 
-interface PartnerSite {
+interface PartnerDisplay {
   id: string
   name: string
   sector: string
@@ -162,14 +190,18 @@ interface PartnerSite {
   phone: string
 }
 
-const demoPartners: PartnerSite[] = [
-  { id: 'pt1', name: "Hopital General de Reference N'Djamena", sector: 'Sante', hostedStudents: 24, capacity: 30, rating: 5, contact: 'Dr. KHAMIS Abdoulaye', phone: '+235 66 00 11 22' },
-  { id: 'pt2', name: 'Orange Tchad', sector: 'Telecom', hostedStudents: 8, capacity: 12, rating: 4, contact: 'M. DJIMARTINOUBA Robert', phone: '+235 66 33 44 55' },
-  { id: 'pt3', name: 'Banque Sahelo-Saharienne', sector: 'Finance', hostedStudents: 6, capacity: 10, rating: 4, contact: 'Mme. NASSERINGAR Fatime', phone: '+235 66 55 66 77' },
-  { id: 'pt4', name: 'UNICEF Tchad', sector: 'ONG', hostedStudents: 12, capacity: 15, rating: 5, contact: 'M. BICHARA Nathanael', phone: '+235 66 77 88 99' },
-  { id: 'pt5', name: 'Total Energies Tchad', sector: 'Energie', hostedStudents: 5, capacity: 8, rating: 4, contact: 'M. SEID Mahamat', phone: '+235 66 99 00 11' },
-  { id: 'pt6', name: 'Ministere de la Sante', sector: 'Public', hostedStudents: 18, capacity: 25, rating: 3, contact: 'Dr. HISSEIN Adam', phone: '+235 66 11 22 33' },
-]
+function mapPartner(p: PartnerRecord): PartnerDisplay {
+  return {
+    id: p.id,
+    name: p.name,
+    sector: p.sector,
+    hostedStudents: p.hostedStudents,
+    capacity: p.capacity,
+    rating: p.rating,
+    contact: p.contactEmail || 'Non renseigne',
+    phone: p.contactPhone || 'Non renseigne',
+  }
+}
 
 interface TimelineStep {
   label: string
@@ -177,14 +209,31 @@ interface TimelineStep {
   status: 'completed' | 'current' | 'upcoming'
 }
 
-const demoTimeline: TimelineStep[] = [
-  { label: 'Convention signee', date: '10/01/2025', status: 'completed' },
-  { label: 'Debut de stage', date: '15/01/2025', status: 'completed' },
-  { label: 'Visite de terrain', date: '15/03/2025', status: 'current' },
-  { label: 'Rapport remis', date: '15/06/2025', status: 'upcoming' },
-  { label: 'Soutenance', date: '30/06/2025', status: 'upcoming' },
-  { label: 'Validation', date: '15/07/2025', status: 'upcoming' },
-]
+const TIMELINE_LABELS = ['Convention signee', 'Stage en cours', 'Stage termine'] as const
+
+// The Internship model only exposes a coarse `status` field, not a dated multi-step
+// approval/monitoring workflow (no site-visit, report, or defense dates are captured).
+// We derive an honest 3-step status-based indicator instead of fabricating the richer
+// steps (visite de terrain, rapport remis, soutenance) that used to be hardcoded here.
+function buildTimelineSteps(internship: InternshipRecord): TimelineStep[] {
+  const stepIndexByStatus: Record<string, number> = {
+    EN_ATTENTE: 0,
+    CONVENTION_SIGNEE: 1,
+    EN_COURS: 1,
+    TERMINE: TIMELINE_LABELS.length,
+  }
+  const currentIndex = stepIndexByStatus[internship.status] ?? 0
+  const dates = [
+    formatDateFr(internship.startDate),
+    formatDateFr(internship.startDate),
+    formatDateFr(internship.endDate),
+  ]
+  return TIMELINE_LABELS.map((label, index) => ({
+    label,
+    date: dates[index],
+    status: index < currentIndex ? 'completed' : index === currentIndex ? 'current' : 'upcoming',
+  }))
+}
 
 interface EvaluationResult {
   id: string
@@ -193,14 +242,26 @@ interface EvaluationResult {
   date: string
 }
 
-const demoEvaluations: EvaluationResult[] = [
-  { id: 'e1', studentName: 'KHAMIS Fatime', grade: 'Excellent', date: '15/07/2024' },
-  { id: 'e2', studentName: 'ABAKAR Adam', grade: 'Tres bien', date: '12/07/2024' },
-  { id: 'e3', studentName: 'ISSA Mahamat Nour', grade: 'Bien', date: '18/07/2024' },
-  { id: 'e4', studentName: 'NASSERINGAR Lea', grade: 'Tres bien', date: '20/07/2024' },
-  { id: 'e5', studentName: 'OUMAR Abdoulaye', grade: 'Assez bien', date: '10/07/2024' },
-  { id: 'e6', studentName: 'HISSEIN Mariam', grade: 'Excellent', date: '22/07/2024' },
-]
+const evaluationGradeMap: Record<string, EvaluationResult['grade']> = {
+  EXCELLENT: 'Excellent',
+  TRES_BIEN: 'Tres bien',
+  BIEN: 'Bien',
+  ASSEZ_BIEN: 'Assez bien',
+  INSUFFISANT: 'Insuffisant',
+}
+
+// Derives recent evaluation results from internships that already carry a non-null
+// `evaluation` value — no new query needed, the field is already selected by /api/internships.
+function deriveEvaluations(records: InternshipRecord[]): EvaluationResult[] {
+  return records
+    .filter((r): r is InternshipRecord & { evaluation: string } => Boolean(r.evaluation && evaluationGradeMap[r.evaluation]))
+    .map((r) => ({
+      id: r.id,
+      studentName: r.studentName,
+      grade: evaluationGradeMap[r.evaluation],
+      date: formatDateFr(r.evaluationDate),
+    }))
+}
 
 // ─── Status & Type Configs ────────────────────────────────────────────────────
 
@@ -242,7 +303,19 @@ const workflowSteps = ['Soumission', 'Validation etablissement', 'Signature entr
 
 export function InternshipsPage() {
   const { data: internshipsQuery, isLoading } = useInternships()
-  const internships: InternshipEntry[] = (internshipsQuery?.internships || []).map(mapInternship)
+  const rawInternships: InternshipRecord[] = internshipsQuery?.internships || []
+  const internships: InternshipEntry[] = rawInternships.map(mapInternship)
+  const partners: PartnerDisplay[] = (internshipsQuery?.partners || []).map(mapPartner)
+  const pendingConventions: PendingConvention[] = derivePendingConventions(rawInternships)
+  const evaluations: EvaluationResult[] = deriveEvaluations(rawInternships)
+  const timelineInternship: InternshipRecord | null =
+    rawInternships.find((r) => r.status === 'EN_COURS') ||
+    rawInternships.find((r) => r.status === 'CONVENTION_SIGNEE') ||
+    rawInternships.find((r) => r.status === 'EN_ATTENTE') ||
+    rawInternships.find((r) => r.status === 'TERMINE') ||
+    rawInternships[0] ||
+    null
+  const timelineSteps: TimelineStep[] = timelineInternship ? buildTimelineSteps(timelineInternship) : []
 
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState('tous')
@@ -680,7 +753,7 @@ export function InternshipsPage() {
                   Workflow de validation des conventions
                 </CardTitle>
                 <Badge className="bg-[#d4a85315] text-[#d4a853] border-0 text-xs">
-                  {demoPendingConventions.length} en attente
+                  {pendingConventions.length} en attente
                 </Badge>
               </div>
             </CardHeader>
@@ -704,7 +777,13 @@ export function InternshipsPage() {
 
               {/* Pending conventions */}
               <div className="space-y-3">
-                {demoPendingConventions.map((conv) => {
+                {isLoading && (
+                  <p className="text-center py-8 text-sm text-gray-400">Chargement...</p>
+                )}
+                {!isLoading && pendingConventions.length === 0 && (
+                  <p className="text-center py-8 text-sm text-gray-400">Aucune convention en attente</p>
+                )}
+                {pendingConventions.map((conv) => {
                   const convStatus = conventionStatuses[conv.id]
                   return (
                     <div
@@ -908,8 +987,14 @@ export function InternshipsPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-4 pt-0">
+                {isLoading && (
+                  <p className="text-center py-8 text-sm text-gray-400">Chargement...</p>
+                )}
+                {!isLoading && evaluations.length === 0 && (
+                  <p className="text-center py-8 text-sm text-gray-400">Aucune evaluation disponible pour le moment</p>
+                )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {demoEvaluations.map((evalItem) => {
+                  {evaluations.map((evalItem) => {
                     const gConf = gradeConfig[evalItem.grade]
                     return (
                       <motion.div
@@ -952,8 +1037,14 @@ export function InternshipsPage() {
               </div>
             </CardHeader>
             <CardContent className="p-4 pt-0">
+              {isLoading && (
+                <p className="text-center py-8 text-sm text-gray-400">Chargement des partenaires...</p>
+              )}
+              {!isLoading && partners.length === 0 && (
+                <p className="text-center py-8 text-sm text-gray-400">Aucun partenaire enregistre pour le moment</p>
+              )}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {demoPartners.map((partner) => {
+                {partners.map((partner) => {
                   const sConf = sectorConfig[partner.sector]
                   const occupancyPercent = partner.capacity > 0 ? Math.round((partner.hostedStudents / partner.capacity) * 100) : 0
                   return (
@@ -1028,18 +1119,32 @@ export function InternshipsPage() {
                   <Calendar className="size-4" />
                   Timeline de stage
                 </CardTitle>
-                <Badge className="bg-[#2d7a4f15] text-[#2d7a4f] border-0 text-[10px]">
-                  ABAKAR Adam Hassane - UNICEF Tchad
-                </Badge>
+                {timelineInternship && (
+                  <Badge className="bg-[#2d7a4f15] text-[#2d7a4f] border-0 text-[10px]">
+                    {timelineInternship.studentName} - {timelineInternship.entreprise}
+                  </Badge>
+                )}
               </div>
             </CardHeader>
             <CardContent className="p-4 pt-0">
+              {isLoading && (
+                <p className="text-center py-8 text-sm text-gray-400">Chargement...</p>
+              )}
+              {!isLoading && !timelineInternship && (
+                <p className="text-center py-8 text-sm text-gray-400">Aucun stage a afficher</p>
+              )}
+              {!isLoading && timelineInternship && timelineInternship.status === 'ANNULE' && (
+                <p className="text-center py-8 text-sm text-gray-400">
+                  Ce stage a ete annule, aucune timeline a afficher
+                </p>
+              )}
+              {timelineInternship && timelineInternship.status !== 'ANNULE' && (
               <div className="relative pl-8">
                 {/* Vertical connecting line */}
                 <div className="absolute left-3 top-0 bottom-0 w-0.5 bg-gray-200" />
 
                 <div className="space-y-6">
-                  {demoTimeline.map((step, index) => (
+                  {timelineSteps.map((step, index) => (
                     <div key={step.label} className="relative">
                       {/* Dot on line */}
                       <div className="absolute -left-5 top-1">
@@ -1099,13 +1204,14 @@ export function InternshipsPage() {
                       </div>
 
                       {/* Connector to next step */}
-                      {index < demoTimeline.length - 1 && step.status === 'completed' && (
+                      {index < timelineSteps.length - 1 && step.status === 'completed' && (
                         <div className="absolute -left-[13px] top-[28px] w-0.5 h-[calc(100%-4px)] bg-[#2d7a4f]" />
                       )}
                     </div>
                   ))}
                 </div>
               </div>
+              )}
             </CardContent>
           </Card>
         </motion.div>

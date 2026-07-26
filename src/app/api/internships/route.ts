@@ -7,7 +7,7 @@ async function handleGet(_user: SessionUser, tenantId: string, _request: NextReq
   try {
     const where = { tenantId }
 
-    const [internships, total, enCours, conventionSignee, enAttente, termine, annule] = await Promise.all([
+    const [internships, total, enCours, conventionSignee, enAttente, termine, annule, partners] = await Promise.all([
       db.internship.findMany({
         where,
         orderBy: { createdAt: 'desc' },
@@ -19,6 +19,10 @@ async function handleGet(_user: SessionUser, tenantId: string, _request: NextReq
       db.internship.count({ where: { ...where, status: 'EN_ATTENTE' } }),
       db.internship.count({ where: { ...where, status: 'TERMINE' } }),
       db.internship.count({ where: { ...where, status: 'ANNULE' } }),
+      db.internshipPartner.findMany({
+        where: { tenantId },
+        orderBy: { name: 'asc' },
+      }),
     ])
 
     const stats = {
@@ -30,7 +34,7 @@ async function handleGet(_user: SessionUser, tenantId: string, _request: NextReq
       annule,
     }
 
-    return NextResponse.json({ internships, stats })
+    return NextResponse.json({ internships, stats, partners })
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error('Internships API error:', error)

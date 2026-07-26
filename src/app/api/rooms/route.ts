@@ -19,31 +19,66 @@ async function handleGet(_user: SessionUser, tenantId: string, _request: NextReq
       db.room.count({ where: { ...where, status: 'maintenance' } }),
     ])
 
-    // Count today's reservations
+    // Today's reservations (rows, so we can both count them and fill in
+    // each room's per-day schedule below)
     const todayStart = new Date()
     todayStart.setHours(0, 0, 0, 0)
     const todayEnd = new Date()
     todayEnd.setHours(23, 59, 59, 999)
 
-    const todayReservations = await db.roomReservation.count({
-      where: {
-        tenantId,
-        date: {
-          gte: todayStart,
-          lte: todayEnd,
+    const [todayReservationRows, reservations] = await Promise.all([
+      db.roomReservation.findMany({
+        where: {
+          tenantId,
+          date: { gte: todayStart, lte: todayEnd },
+          status: { in: ['confirmee', 'en_attente'] },
         },
-      },
-    })
+        orderBy: { startTime: 'asc' },
+      }),
+      // Recent/upcoming reservations across all rooms, for the booking
+      // table, conflict detection, and stats on the frontend.
+      db.roomReservation.findMany({
+        where: { tenantId },
+        include: { room: { select: { name: true } } },
+        orderBy: { date: 'desc' },
+        take: 100,
+      }),
+    ])
+
+    const todayScheduleByRoom = new Map<string, { start: string; end: string; purpose: string }[]>()
+    for (const r of todayReservationRows) {
+      const list = todayScheduleByRoom.get(r.roomId) || []
+      list.push({ start: r.startTime, end: r.endTime, purpose: r.purpose })
+      todayScheduleByRoom.set(r.roomId, list)
+    }
+
+    const roomsWithSchedule = rooms.map((room) => ({
+      ...room,
+      todaySchedule: todayScheduleByRoom.get(room.id) || [],
+    }))
+
+    const reservationsData = reservations.map((r) => ({
+      id: r.id,
+      roomId: r.roomId,
+      room: r.room.name,
+      date: r.date.toISOString().slice(0, 10),
+      startTime: r.startTime,
+      endTime: r.endTime,
+      purpose: r.purpose,
+      organizer: r.organizer,
+      participants: r.participants,
+      status: r.status,
+    }))
 
     const stats = {
       total,
       available,
       occupied,
       maintenance,
-      todayReservations,
+      todayReservations: todayReservationRows.length,
     }
 
-    return NextResponse.json({ data: rooms, stats })
+    return NextResponse.json({ data: roomsWithSchedule, stats, reservations: reservationsData })
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error('Rooms API error:', error)

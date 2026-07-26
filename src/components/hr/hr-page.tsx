@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { motion } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -164,14 +166,34 @@ interface LeaveRequest {
   status: 'en_attente' | 'approuve' | 'refuse'
 }
 
-const demoLeaveRequests: LeaveRequest[] = [
-  { id: '1', name: 'NGARNDMI Halime', type: 'Conge annuel', startDate: '01/03/2025', endDate: '15/03/2025', duration: '15 jours', status: 'en_attente' },
-  { id: '2', name: 'SEID Ibrahim', type: 'Conge maladie', startDate: '10/02/2025', endDate: '17/02/2025', duration: '7 jours', status: 'en_attente' },
-  { id: '3', name: 'HISSEIN Fatime', type: 'Conge annuel', startDate: '20/04/2025', endDate: '05/05/2025', duration: '15 jours', status: 'en_attente' },
-  { id: '4', name: 'DJIMADOUMBER Deubong', type: 'Permission', startDate: '15/03/2025', endDate: '17/03/2025', duration: '3 jours', status: 'en_attente' },
-  { id: '5', name: 'BICHARA Hawa', type: 'Conge maternite', startDate: '01/06/2025', endDate: '01/09/2025', duration: '90 jours', status: 'en_attente' },
-  { id: '6', name: 'HAROUN Djibrine', type: 'Conge annuel', startDate: '10/05/2025', endDate: '25/05/2025', duration: '15 jours', status: 'en_attente' },
-]
+interface ApiLeaveRequest {
+  id: string
+  type: string
+  startDate: string
+  endDate: string
+  duration: number
+  status: 'en_attente' | 'approuve' | 'refuse'
+  staff: { firstName: string; lastName: string } | null
+}
+
+const leaveTypeLabels: Record<string, string> = {
+  conge_annuel: 'Conge annuel',
+  conge_maladie: 'Conge maladie',
+  conge_maternite: 'Conge maternite',
+  permission: 'Permission',
+}
+
+function mapLeaveRequest(r: ApiLeaveRequest): LeaveRequest {
+  return {
+    id: r.id,
+    name: r.staff ? `${r.staff.lastName} ${r.staff.firstName}` : 'Inconnu',
+    type: leaveTypeLabels[r.type] || r.type,
+    startDate: new Date(r.startDate).toLocaleDateString('fr-FR'),
+    endDate: new Date(r.endDate).toLocaleDateString('fr-FR'),
+    duration: `${r.duration} jour${r.duration > 1 ? 's' : ''}`,
+    status: r.status,
+  }
+}
 
 interface Vacancy {
   id: string
@@ -307,11 +329,15 @@ export function HrPage() {
   const [departmentFilter, setDepartmentFilter] = useState('tous')
   const [contractFilter, setContractFilter] = useState('tous')
   const [statusFilter, setStatusFilter] = useState('tous')
-  const [leaveActions, setLeaveActions] = useState<Record<string, 'approuve' | 'refuse' | null>>({})
   const [showNewOffer, setShowNewOffer] = useState(false)
+  const queryClient = useQueryClient()
 
-  const { data: staffQuery, isLoading } = useHrStaff()
+  const { data: staffQuery, isLoading } = useHrStaff() as {
+    data: { data?: ApiStaff[]; leaveRequests?: ApiLeaveRequest[] } | undefined
+    isLoading: boolean
+  }
   const staff: StaffMember[] = (staffQuery?.data || []).map(mapStaff)
+  const leaveRequests: LeaveRequest[] = (staffQuery?.leaveRequests || []).map(mapLeaveRequest)
 
   // Count-up stats
   const totalPersonnel = useCountUp(staff.length, 1400)
@@ -372,13 +398,20 @@ export function HrPage() {
     { name: 'Hawa B.', start: 1, end: 30, month: 'Jun', color: '#1a2744' },
   ]
 
-  const handleLeaveAction = (id: string, action: 'approuve' | 'refuse') => {
-    setLeaveActions(prev => ({ ...prev, [id]: action }))
-  }
-
-  const getLeaveStatus = (request: LeaveRequest) => {
-    if (leaveActions[request.id]) return leaveActions[request.id]
-    return request.status
+  const handleLeaveAction = async (id: string, status: 'approuve' | 'refuse') => {
+    try {
+      const res = await fetch(`/api/hr?leaveRequestId=${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Echec de la mise a jour')
+      toast.success(status === 'approuve' ? 'Demande de conge approuvee' : 'Demande de conge refusee')
+      queryClient.invalidateQueries({ queryKey: ['hrStaff'] })
+    } catch (e) {
+      toast.error('Erreur', { description: e instanceof Error ? e.message : 'Echec de la mise a jour' })
+    }
   }
 
   return (
@@ -694,7 +727,7 @@ export function HrPage() {
                 <CardTitle className="text-sm font-semibold text-[#1a2744]">Gestion des conges</CardTitle>
               </div>
               <Badge className="text-[10px] bg-[#d4a85315] text-[#d4a853] border-0">
-                {demoLeaveRequests.filter(l => l.status === 'en_attente').length} en attente
+                {leaveRequests.filter(l => l.status === 'en_attente').length} en attente
               </Badge>
             </div>
           </CardHeader>
@@ -714,10 +747,9 @@ export function HrPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {demoLeaveRequests.map((req) => {
-                    const currentStatus = getLeaveStatus(req) || 'en_attente'
-                    const lsConf = leaveStatusConfig[currentStatus]
-                    const isPending = currentStatus === 'en_attente'
+                  {leaveRequests.map((req) => {
+                    const lsConf = leaveStatusConfig[req.status]
+                    const isPending = req.status === 'en_attente'
                     return (
                       <TableRow key={req.id} className="hover:bg-[#d4a85305] transition-colors">
                         <TableCell className="text-sm font-medium text-[#1a2744] py-2.5">{req.name}</TableCell>
@@ -758,6 +790,20 @@ export function HrPage() {
                       </TableRow>
                     )
                   })}
+                  {isLoading && (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8 text-sm text-gray-400">
+                        Chargement...
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {!isLoading && leaveRequests.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8 text-sm text-gray-400">
+                        Aucune demande de conge pour le moment
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </div>

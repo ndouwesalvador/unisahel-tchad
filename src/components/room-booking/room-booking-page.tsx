@@ -152,6 +152,7 @@ interface RoomRecord {
   equipment: string
   status: RoomStatus
   isActive: boolean
+  todaySchedule?: { start: string; end: string; purpose: string }[]
 }
 
 function mapRoom(r: RoomRecord): Room {
@@ -161,32 +162,49 @@ function mapRoom(r: RoomRecord): Room {
     capacity: r.capacity,
     equipment: r.equipment ? r.equipment.split(',').map(s => s.trim()).filter(Boolean) : [],
     status: r.status,
-    // The /api/rooms GET endpoint does not return per-room reservation slots,
-    // only an aggregate `todayReservations` count across all rooms. There is
-    // no data source for a per-room schedule, so it is left empty here.
-    todaySchedule: [],
+    todaySchedule: r.todaySchedule || [],
     building: r.building || '',
   }
 }
 
+interface ReservationRecord {
+  id: string
+  roomId: string
+  room: string
+  date: string
+  startTime: string
+  endTime: string
+  purpose: string
+  organizer: string
+  participants: number
+  status: string
+}
+
+function mapReservation(r: ReservationRecord): Reservation {
+  return {
+    id: r.id,
+    room: r.room,
+    date: r.date,
+    startTime: r.startTime,
+    endTime: r.endTime,
+    purpose: (r.purpose as ReservationPurpose) || 'Autre',
+    organizer: r.organizer,
+    participants: r.participants,
+    status: (r.status as ReservationStatus) || 'en_attente',
+  }
+}
+
 // ─── Demo Data ──────────────────────────────────────────────────────────────────
+// demoReservations was removed: reservations now come from the real
+// RoomReservation rows returned by GET /api/rooms (see `reservations` below).
 
-const demoReservations: Reservation[] = [
-  { id: '1', room: 'Amphi 500', date: '10/03/2025', startTime: '08:00', endTime: '10:00', purpose: 'Cours', organizer: 'Dr. MAHAMAT Ali', participants: 180, status: 'confirmee' },
-  { id: '2', room: 'Labo Informatique', date: '10/03/2025', startTime: '08:00', endTime: '12:00', purpose: 'Cours', organizer: 'Mme KHAMIS Fatime', participants: 35, status: 'confirmee' },
-  { id: '3', room: 'Salle Tchad', date: '10/03/2025', startTime: '10:00', endTime: '12:00', purpose: 'Reunion', organizer: 'Prof. ABDALLAH Fadoul', participants: 25, status: 'en_attente' },
-  { id: '4', room: 'Salle de conference', date: '11/03/2025', startTime: '09:00', endTime: '12:00', purpose: 'Conference', organizer: 'Dr. ISSA Mahamat', participants: 150, status: 'confirmee' },
-  { id: '5', room: 'Amphi 300', date: '11/03/2025', startTime: '14:00', endTime: '16:00', purpose: 'Examen', organizer: 'Mme AHMAT Achta', participants: 200, status: 'confirmee' },
-  { id: '6', room: 'Labo Informatique', date: '11/03/2025', startTime: '14:00', endTime: '18:00', purpose: 'Examen', organizer: 'Dr. BACHAR Ali', participants: 38, status: 'en_attente' },
-  { id: '7', room: 'Salle Logone', date: '12/03/2025', startTime: '08:00', endTime: '10:00', purpose: 'Cours', organizer: 'Prof. HAROUN Meriam', participants: 45, status: 'confirmee' },
-  { id: '8', room: 'Amphi 500', date: '12/03/2025', startTime: '14:00', endTime: '16:00', purpose: 'Conference', organizer: 'Dr. OUMAR Ibrahim', participants: 300, status: 'confirmee' },
-  { id: '9', room: 'Salle Tchad', date: '12/03/2025', startTime: '16:00', endTime: '18:00', purpose: 'Reunion', organizer: 'Mme FATIME Zenab', participants: 15, status: 'annulee' },
-  { id: '10', room: 'Labo Langues', date: '13/03/2025', startTime: '08:00', endTime: '12:00', purpose: 'Cours', organizer: 'Dr. ADAM Khadija', participants: 28, status: 'confirmee' },
-  { id: '11', room: 'Amphi 300', date: '13/03/2025', startTime: '10:00', endTime: '12:00', purpose: 'Examen', organizer: 'Prof. HASSAN Djibril', participants: 250, status: 'en_attente' },
-  { id: '12', room: 'Salle de conference', date: '14/03/2025', startTime: '09:00', endTime: '17:00', purpose: 'Conference', organizer: 'Dr. MOUSSA Adoum', participants: 180, status: 'confirmee' },
-  { id: '13', room: 'Salle Sahara', date: '14/03/2025', startTime: '14:00', endTime: '16:00', purpose: 'Reunion', organizer: 'Mme BICHARA Hawa', participants: 20, status: 'annulee' },
-]
-
+// demoEquipment stays hardcoded on purpose: it models a shared equipment pool
+// (total/available counts, condition, next maintenance date) that has no
+// backing Prisma model. `Room.equipment` is only a plain comma-separated
+// string field per room (parsed into badges in mapRoom above) — it carries no
+// quantities, availability, condition, or maintenance data, so there is
+// nothing honest to derive this table from. Left as-is rather than
+// fabricating tracking data that doesn't exist.
 const demoEquipment: EquipmentItem[] = [
   { id: '1', name: 'Video-projecteurs', total: 18, available: 12, condition: 'bon', nextMaintenance: '15/04/2025' },
   { id: '2', name: 'Ordinateurs portables', total: 45, available: 30, condition: 'bon', nextMaintenance: '20/04/2025' },
@@ -278,6 +296,7 @@ export function RoomBookingPage() {
 
   const { data: roomsQuery, isLoading } = useRooms()
   const rooms: Room[] = (roomsQuery?.data || []).map(mapRoom)
+  const reservations: Reservation[] = (roomsQuery?.reservations || []).map(mapReservation)
 
   // Weekly calendar demo data
   const weeklyReservations = useMemo(() => {
@@ -307,7 +326,7 @@ export function RoomBookingPage() {
 
   // Filter reservations
   const filteredReservations = useMemo(() => {
-    return demoReservations.filter(r => {
+    return reservations.filter(r => {
       const matchSearch = searchReserv === '' ||
         r.organizer.toLowerCase().includes(searchReserv.toLowerCase()) ||
         r.room.toLowerCase().includes(searchReserv.toLowerCase())
@@ -315,19 +334,19 @@ export function RoomBookingPage() {
       const matchStatus = filterStatus === 'all' || r.status === filterStatus
       return matchSearch && matchRoom && matchStatus
     })
-  }, [searchReserv, filterRoom, filterStatus])
+  }, [reservations, searchReserv, filterRoom, filterStatus])
 
   // Conflict detection
   const hasConflict = useMemo(() => {
     if (!selectedRoom || !reservDate || !reservStart || !reservEnd) return false
-    return demoReservations.some(r =>
+    return reservations.some(r =>
       r.room === selectedRoom &&
       r.date === reservDate &&
       r.status !== 'annulee' &&
       ((reservStart >= r.startTime && reservStart < r.endTime) ||
         (reservEnd > r.startTime && reservEnd <= r.endTime))
     )
-  }, [selectedRoom, reservDate, reservStart, reservEnd])
+  }, [reservations, selectedRoom, reservDate, reservStart, reservEnd])
 
   // Stats
   const availableCount = roomsQuery?.stats?.available ?? rooms.filter(r => r.status === 'libre').length
@@ -337,7 +356,7 @@ export function RoomBookingPage() {
   // Reservation stats
   const reservByRoom = useMemo(() => {
     const map: Record<string, number> = {}
-    demoReservations.forEach(r => {
+    reservations.forEach(r => {
       if (r.status !== 'annulee') {
         map[r.room] = (map[r.room] || 0) + 1
       }
@@ -345,13 +364,13 @@ export function RoomBookingPage() {
     return Object.entries(map)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5)
-  }, [])
+  }, [reservations])
 
   const maxReservByRoom = Math.max(...reservByRoom.map(r => r[1]), 1)
 
   const purposeDistribution = useMemo(() => {
     const map: Record<string, number> = {}
-    demoReservations.forEach(r => {
+    reservations.forEach(r => {
       if (r.status !== 'annulee') {
         map[r.purpose] = (map[r.purpose] || 0) + 1
       }
@@ -360,11 +379,9 @@ export function RoomBookingPage() {
     return Object.entries(map).map(([purpose, count]) => ({
       purpose,
       count,
-      percent: Math.round((count / total) * 100),
+      percent: total > 0 ? Math.round((count / total) * 100) : 0,
     }))
-  }, [])
-
-  void demoReservations.filter(r => r.status !== 'annulee').length
+  }, [reservations])
 
   // Animation variants
   const containerVariants = {
@@ -885,7 +902,14 @@ export function RoomBookingPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredReservations.map((reserv) => {
+                    {isLoading && (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-8 text-sm text-gray-400">
+                          Chargement des reservations...
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    {!isLoading && filteredReservations.map((reserv) => {
                       const sConfig = reservationStatusConfig[reserv.status]
                       const pConfig = purposeConfig[reserv.purpose]
                       return (
@@ -935,7 +959,14 @@ export function RoomBookingPage() {
                         </TableRow>
                       )
                     })}
-                    {filteredReservations.length === 0 && (
+                    {!isLoading && reservations.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-8 text-sm text-gray-400">
+                          Aucune reservation pour le moment
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    {!isLoading && reservations.length > 0 && filteredReservations.length === 0 && (
                       <TableRow>
                         <TableCell colSpan={8} className="text-center py-8 text-sm text-gray-400">
                           Aucune reservation trouvee
