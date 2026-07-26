@@ -88,6 +88,19 @@ model Tenant {
   leaveRequests      LeaveRequest[]
   rooms              Room[]
   roomReservations   RoomReservation[]
+  notifications      Notification[]
+  libraryResources   LibraryResource[]
+  libraryLoans       LibraryLoan[]
+  libraryRooms       LibraryRoom[]
+  transportVehicles  TransportVehicle[]
+  transportRoutes    TransportRoute[]
+  transportDepartures TransportDeparture[]
+  transportMaintenances TransportMaintenance[]
+  transportAlerts    TransportAlert[]
+  transportSubscriptions TransportSubscription[]
+  advisors           Advisor[]
+  advisingAppointments AdvisingAppointment[]
+  advisingWorkshops  AdvisingWorkshop[]
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 }
@@ -412,6 +425,7 @@ model Teacher {
   assignedElements CourseElement[]
   gradeImports     GradeImport[]
   evaluations      ClinicalEvaluation[]
+  advisorProfile   Advisor?
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
 }
@@ -463,6 +477,10 @@ model Student {
   clinicalSkills       StudentClinicalSkill[]
   clinicalAttendances  ClinicalAttendance[]
   guardDuties          GuardDuty[]
+  libraryLoans         LibraryLoan[]
+  transportSubscriptions TransportSubscription[]
+  advisingAppointments AdvisingAppointment[]
+  workshopEnrollments  AdvisingWorkshopEnrollment[]
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
 }
@@ -1343,4 +1361,269 @@ model RoomReservation {
   @@index([tenantId])
   @@index([roomId])
   @@map("room_reservations")
+}
+
+// ============================================
+// NOTIFICATIONS
+// ============================================
+
+model Notification {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  type        String   @default("info") // success, info, warning, mention, error
+  category    String   @default("Systeme") // Academique, Paiement, Administratif, Systeme
+  title       String
+  description String
+  link        String?
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([tenantId, isRead])
+  @@map("notifications")
+}
+
+// ============================================
+// LIBRARY
+// ============================================
+
+model LibraryResource {
+  id              String        @id @default(cuid())
+  tenantId        String
+  tenant          Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  title           String
+  type            String        @default("livre") // livre, revue, these, memoire, rapport, ebook
+  category        String        @default("sciences") // sciences, droit, lettres, medecine, economie
+  location        String?
+  totalCopies     Int           @default(1)
+  availableCopies Int           @default(1)
+  status          String        @default("disponible") // disponible, en_reservation, perdu (emprunte derive des exemplaires dispo)
+  loans           LibraryLoan[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([tenantId])
+  @@map("library_resources")
+}
+
+model LibraryLoan {
+  id          String          @id @default(cuid())
+  tenantId    String
+  tenant      Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  resourceId  String
+  resource    LibraryResource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  studentId   String
+  student     Student         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  borrowedAt  DateTime        @default(now())
+  dueAt       DateTime
+  returnedAt  DateTime?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([tenantId])
+  @@map("library_loans")
+}
+
+model LibraryRoom {
+  id         String   @id @default(cuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name       String
+  type       String   @default("lecture") // lecture, multimedia, these, periodiques, individuel
+  capacity   Int
+  occupancy  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([tenantId])
+  @@map("library_rooms")
+}
+
+// ============================================
+// TRANSPORT
+// ============================================
+
+model TransportVehicle {
+  id           String                 @id @default(cuid())
+  tenantId     String
+  tenant       Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name         String
+  plate        String
+  capacity     Int
+  driverName   String?
+  driverPhone  String?
+  status       String                 @default("en_service") // en_service, en_maintenance, en_panne
+  routeId      String?
+  route        TransportRoute?        @relation(fields: [routeId], references: [id], onDelete: SetNull)
+  departures   TransportDeparture[]
+  maintenances TransportMaintenance[]
+  alerts       TransportAlert[]
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+
+  @@index([tenantId])
+  @@map("transport_vehicles")
+}
+
+model TransportRoute {
+  id            String                   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name          String
+  departure     String
+  arrival       String
+  distanceKm    Float?
+  durationLabel String?
+  stops         String[]
+  frequency     String?
+  vehicles      TransportVehicle[]
+  departures    TransportDeparture[]
+  subscriptions TransportSubscription[]
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+
+  @@index([tenantId])
+  @@map("transport_routes")
+}
+
+model TransportDeparture {
+  id            String           @id @default(cuid())
+  tenantId      String
+  tenant        Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  vehicleId     String
+  vehicle       TransportVehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  routeId       String
+  route         TransportRoute   @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  departureTime String // "06:00"
+  label         String? // Aller, Retour
+  status        String           @default("a_l_heure") // a_l_heure, en_retard, annule, complet
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@index([tenantId])
+  @@map("transport_departures")
+}
+
+model TransportMaintenance {
+  id          String           @id @default(cuid())
+  tenantId    String
+  tenant      Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  vehicleId   String
+  vehicle     TransportVehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  type        String
+  cost        Float            @default(0)
+  performedAt DateTime         @default(now())
+  createdAt   DateTime         @default(now())
+
+  @@index([tenantId])
+  @@map("transport_maintenances")
+}
+
+model TransportAlert {
+  id        String            @id @default(cuid())
+  tenantId  String
+  tenant    Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  vehicleId String?
+  vehicle   TransportVehicle? @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  severity  String            @default("info") // critique, avertissement, info
+  message   String
+  createdAt DateTime          @default(now())
+
+  @@index([tenantId])
+  @@map("transport_alerts")
+}
+
+model TransportSubscription {
+  id        String         @id @default(cuid())
+  tenantId  String
+  tenant    Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  studentId String
+  student   Student        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  routeId   String
+  route     TransportRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  startDate DateTime       @default(now())
+  endDate   DateTime?
+  status    String         @default("actif") // actif, expire, suspendu
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@index([tenantId])
+  @@map("transport_subscriptions")
+}
+
+// ============================================
+// ADVISING (conseil pedagogique)
+// ============================================
+
+model Advisor {
+  id           String                 @id @default(cuid())
+  tenantId     String
+  tenant       Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  teacherId    String?                @unique
+  teacher      Teacher?               @relation(fields: [teacherId], references: [id], onDelete: SetNull)
+  name         String
+  title        String?
+  department   String?
+  specialties  String[]
+  availability String                 @default("Libre") // Libre, Occupe, En RDV
+  appointments AdvisingAppointment[]
+  workshops    AdvisingWorkshop[]
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+
+  @@index([tenantId])
+  @@map("advisors")
+}
+
+model AdvisingAppointment {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  studentId   String
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  advisorId   String
+  advisor     Advisor  @relation(fields: [advisorId], references: [id], onDelete: Cascade)
+  type        String   @default("Suivi pedagogique") // Orientation, Suivi pedagogique, Projet professionnel, Reorientation, Probleme personnel
+  scheduledAt DateTime
+  status      String   @default("Planifie") // Planifie, En cours, Termine, Annule
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId])
+  @@map("advising_appointments")
+}
+
+model AdvisingWorkshop {
+  id          String                        @id @default(cuid())
+  tenantId    String
+  tenant      Tenant                        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  title       String
+  room        String?
+  scheduledAt DateTime
+  duration    String?
+  capacity    Int                           @default(30)
+  advisorId   String?
+  advisor     Advisor?                      @relation(fields: [advisorId], references: [id], onDelete: SetNull)
+  enrollments AdvisingWorkshopEnrollment[]
+  createdAt   DateTime                      @default(now())
+  updatedAt   DateTime                      @updatedAt
+
+  @@index([tenantId])
+  @@map("advising_workshops")
+}
+
+model AdvisingWorkshopEnrollment {
+  id         String           @id @default(cuid())
+  tenantId   String
+  workshopId String
+  workshop   AdvisingWorkshop @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+  studentId  String
+  student    Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  createdAt  DateTime         @default(now())
+
+  @@unique([workshopId, studentId])
+  @@index([tenantId])
+  @@map("advising_workshop_enrollments")
 }
