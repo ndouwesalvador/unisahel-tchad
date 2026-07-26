@@ -321,31 +321,33 @@ export function LoginPage() {
                 </motion.button>
               </div>
 
-              <div className="mt-6 p-4 rounded-xl bg-gray-50 border border-gray-100">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
-                  Mode demonstration
-                </p>
-                <div className="grid grid-cols-2 gap-2">
-                  {demoRoles.map((demo) => (
-                    <motion.div
-                      key={demo.role}
-                      whileHover={{ scale: 1.03 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="justify-start text-xs h-9 border-gray-200 hover:border-l-2 hover:border-l-[#2d7a4f] hover:bg-[#2d7a4f08] transition-all duration-200 w-full"
-                        onClick={() => handleDemoLogin(demo)}
-                        disabled={isLoading}
+              {process.env.NODE_ENV !== 'production' && (
+                <div className="mt-6 p-4 rounded-xl bg-gray-50 border border-gray-100">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+                    Mode demonstration (dev uniquement)
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {demoRoles.map((demo) => (
+                      <motion.div
+                        key={demo.role}
+                        whileHover={{ scale: 1.03 }}
+                        transition={{ duration: 0.2 }}
                       >
-                        <demo.icon className="size-3.5 mr-1.5 text-[#2d7a4f]" />
-                        {demo.label}
-                      </Button>
-                    </motion.div>
-                  ))}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="justify-start text-xs h-9 border-gray-200 hover:border-l-2 hover:border-l-[#2d7a4f] hover:bg-[#2d7a4f08] transition-all duration-200 w-full"
+                          onClick={() => handleDemoLogin(demo)}
+                          disabled={isLoading}
+                        >
+                          <demo.icon className="size-3.5 mr-1.5 text-[#2d7a4f]" />
+                          {demo.label}
+                        </Button>
+                      </motion.div>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </div>

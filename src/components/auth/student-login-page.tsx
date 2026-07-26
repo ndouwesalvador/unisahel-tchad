@@ -145,20 +145,22 @@ export function StudentLoginPage() {
             </div>
 
             {/* Demo Section */}
-            <div className="mt-5 p-4 rounded-xl bg-gray-50 border border-gray-100">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
-                Mode demonstration
-              </p>
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full justify-center text-xs h-9 border-gray-200 hover:border-[#2d7a4f40] hover:bg-[#2d7a4f08]"
-                onClick={handleDemoLogin}
-              >
-                <GraduationCap className="size-3.5 mr-1.5 text-[#2d7a4f]" />
-                Connexion en tant qu&apos;etudiant
-              </Button>
-            </div>
+            {process.env.NODE_ENV !== 'production' && (
+              <div className="mt-5 p-4 rounded-xl bg-gray-50 border border-gray-100">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+                  Mode demonstration (dev uniquement)
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full justify-center text-xs h-9 border-gray-200 hover:border-[#2d7a4f40] hover:bg-[#2d7a4f08]"
+                  onClick={handleDemoLogin}
+                >
+                  <GraduationCap className="size-3.5 mr-1.5 text-[#2d7a4f]" />
+                  Connexion en tant qu&apos;etudiant
+                </Button>
+              </div>
+            )}
 
             {/* Back to landing */}
             <button
