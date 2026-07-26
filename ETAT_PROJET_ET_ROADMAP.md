@@ -9,6 +9,8 @@
 ## 🚨 RÉSUMÉ EXÉCUTIF — à lire en premier
 
 > **Mise à jour du 2026-07-25 (suite session, batch 2) :** Chantiers 0 (build cassé), 1 (sécurité API), l'essentiel de 2 (migration Postgres), 3 (branchement frontend, **désormais complet** pour tous les modules avec modèle Prisma), et l'essentiel de 5 (CI/tests) sont **terminés**. Chantier 4 (fonctionnalités mockées) reste **partiel** — voir détail. Refonte complète de la landing page effectuée en plus (hors chantiers). Détail complet en fin de document, section [Journal des correctifs appliqués](#journal-des-correctifs-appliqués).
+>
+> **Mise à jour du 2026-07-26 : Chantier 6 (« mode réel ») démarré.** L'utilisateur a demandé de sortir du mode démo : audit complet de ce qui reste factice fait (voir [Chantier 6](#chantier-6--sortir-du-mode-démo-vers-un-vrai-saas)), boutons de connexion démo retirés de la production, et le tableau de bord principal (premier écran vu après connexion, jusqu'ici 100% inventé) branché sur de vraies données de bout en bout. Reste : inscription de nouveaux établissements (n'existe pas du tout), ~9 modules encore sur données de démo, `RESEND_API_KEY` à fournir.
 
 **Diagnostic initial** (avant correctifs) : le build était cassé. Le commit `95bd31c` (export xlsx) avait corrompu **12 fichiers `.tsx`** avec une édition automatique ratée (ligne d'import dupliquée 14 à 34 fois, texte français mal encodé). Résultat à l'époque :
 - `npx tsc --noEmit` → **232 erreurs**
@@ -211,6 +213,18 @@ Aucune clé Mobile Money, email ou SMS nulle part — cohérent avec le fait que
 | 5.5 | Config de déploiement Vercel propre (`vercel.ts`, cf. skill `vercel:deployment-expert` disponible) |
 | 5.6 | Nettoyage : supprimer `src/app/api/route.ts` (scaffold), consolider/archiver les 5 anciens docs de planning |
 
+### Chantier 6 — Sortir du mode démo vers un vrai SaaS (démarré 2026-07-26)
+Demande explicite utilisateur : "tout était en démo, l'objectif c'est d'avoir un vrai site fonctionnel 100% en mode réel." Audit complet fait (voir journal ci-dessous pour le détail par fichier) ; tâches restantes par ordre de priorité proposé (l'utilisateur a validé la première) :
+
+| # | Tâche | État |
+|---|---|---|
+| 6.1 | Retirer les boutons de connexion démo (« Mode démonstration ») de la production | ✅ fait |
+| 6.2 | Brancher le tableau de bord principal (`dashboard-home.tsx`) sur de vraies données | ✅ fait |
+| 6.3 | Inscription/onboarding de nouveaux établissements — **n'existe pas du tout** aujourd'hui. Seul moyen de créer un tenant : `/api/seed` (semeur de démo à usage unique, pas un flux réutilisable). C'est le plus gros manque structurel pour un vrai SaaS multi-clients | ⏳ à faire |
+| 6.4 | Brancher les ~9 modules encore 100% sur données `demo...` sans API : `results-page.tsx`, `advising-page.tsx`, `library-page.tsx`, `transport-page.tsx`, `hr-page.tsx` (partiel), `room-booking-page.tsx` (partiel), `online-exam-page.tsx` (partiel), `internships-page.tsx` (partiel), `scholarships-page.tsx` (partiel), `attendance-page.tsx` (justificatifs/sanctions), `import-export-page.tsx`, `notification-panel.tsx`. `results`/`advising`/`library`/`transport` n'ont aucun backend — nécessitent de nouveaux modèles Prisma + migrations | ⏳ à faire |
+| 6.5 | Configurer `RESEND_API_KEY` pour que les emails de reçu de paiement partent réellement (actuellement silencieusement no-op) | ⏳ en attente de la clé utilisateur |
+| 6.6 | Mobile Money réel — nécessite un compte fournisseur (déjà différé au Chantier 4, inchangé) | ⏳ en attente utilisateur |
+
 ---
 
 ## 10. Définition de "100% fonctionnel et robuste"
@@ -317,7 +331,23 @@ Deux vraies erreurs de lint (règles ESLint React Compiler strictes de ce projet
 - **5.3 E2E ✅** : Playwright installé, `e2e/login-and-verify.spec.ts` — connexion réelle → tableau de bord, vérification de document (code inconnu → réponse honnête "non trouvé"), et scan QR (`?code=`) qui auto-vérifie. 3/3 verts en local **et maintenant branché dans le CI** (job `e2e` séparé dans `ci.yml`, utilise les vraies credentials Neon stockées en secrets GitHub Actions `DATABASE_URL`/`DIRECT_URL`/`NEXTAUTH_SECRET`). **Effet de bord accepté** : chaque run CI se connecte à la vraie base et fait un vrai login, ce qui écrit une ligne `AuditLog` réelle à chaque fois — rien de destructif, juste une accumulation d'entrées d'audit liées aux runs CI.
 - **5.4 `.env.example` ✅** : documente toutes les variables réellement utilisées. Au passage, `.gitignore` excluait `.env*` sans exception — `.env.example` n'aurait donc jamais pu être commité ; corrigé.
 - **5.6 Nettoyage ✅** : scaffold `src/app/api/route.ts` supprimé, 5 anciens docs de planning archivés dans `archive/`.
-- **5.5 `vercel.ts`** : non fait — le déploiement fonctionne déjà correctement via l'intégration GitHub-Vercel existante ; valeur ajoutée faible pour l'effort, laissé de côté sauf besoin explicite plus tard.
+- **5.5 `vercel.ts`** : non fait — non prioritaire. **Correction a posteriori (2026-07-25/26)** : l'affirmation ci-dessus comme quoi "le déploiement fonctionne déjà via l'intégration GitHub-Vercel" était **fausse** — voir Chantier 6 ci-dessous, le projet n'a aucune intégration Git configurée.
+
+### Chantier 6 — sortir du mode démo 🟡 démarré
+**Audit complet effectué** (fichiers/lignes exacts) avant de commencer, pour scoper avec l'utilisateur plutôt que deviner :
+- Boutons "Mode démonstration" (connexion en un clic, identifiants seedés en dur) visibles par tout visiteur sur `login-page.tsx` (panel L324-348) et `student-login-page.tsx` (L147-161) — vraie faille de crédibilité/sécurité sur un site en prod, pas juste un détail esthétique.
+- Aucun flux d'inscription/onboarding nulle part dans le code. `/api/seed` est le seul créateur de tenant — un semeur de démo à usage unique (idempotent, ~1000 lignes de données fabriquées), pas une API d'inscription réutilisable.
+- `dashboard-home.tsx` (945 lignes) : zéro appel réseau dans tout le fichier — premier écran vu par chaque utilisateur, 100% inventé.
+- Deux variables déjà nommées `dynamicRecentActivity`/`dynamicAlerts` existaient dans `dashboard-home.tsx` mais n'étaient **jamais utilisées** dans le JSX (confirmé par deux warnings ESLint `no-unused-vars` déjà présents) — une tentative de branchement laissée inachevée.
+- ~9 modules encore purement sur données `demo...` sans aucun appel API : `results`, `advising`, `library`, `transport` (aucun backend du tout), plus `hr`/`room-booking`/`online-exam`/`internships`/`scholarships`/`attendance`/`import-export`/`notification-panel` (backend partiel selon le module).
+- `RESEND_API_KEY` absent de `.env.local` — les emails de reçu de paiement échouent silencieusement (`sendEmail()` log un warning et renvoie `{success:false}`).
+- Aucune clé Mobile Money/Stripe/paiement nulle part, jamais même templatée dans `.env.example` au-delà des placeholders Mobile Money déjà connus.
+
+**6.1 Boutons démo retirés en prod ✅** : gated derrière `process.env.NODE_ENV !== 'production'` dans les deux fichiers — toujours utilisables en dev local, complètement absents du bundle de production (vérifié par `grep` sur `.next/static/chunks/` après build : zéro occurrence de la chaîne, donc tree-shaké, pas juste masqué en CSS ; confirmé aussi en direct sur `unisahel-tchad.vercel.app/login`).
+
+**6.2 Tableau de bord branché sur de vraies données ✅** : `/api/dashboard` étendu avec des requêtes 100% réelles — répartition par cycle (Licence/Master/Doctorat), taux de réussite par filière (notes saisies ≥ seuil de passage configuré du tenant, groupées par programme), alertes honnêtes (notes non verrouillées, paiements en attente de validation, étudiants inscrits sans aucun paiement validé — pas de "retard" fabriqué puisqu'aucun modèle d'échéance n'existe dans le schéma), événements à venir (vraies sessions d'examen + délibérations à venir). Côté frontend : suppression des flèches de tendance/%/sparklines fabriquées (aucune table d'historique n'existe pour les calculer honnêtement), simplification de la carte "État du système" pour ne garder que ce qui est trivialement vrai si la page a chargé (serveur/BDD, suppression du stockage/uptime inventés), bannière/branding université lue depuis la vraie session au lieu de "Université de N'Djamena 2024-2025" codé en dur, état vide ajouté sur chaque graphique/liste pour un tenant fraîchement créé avec peu de données. Testé en direct avec un appel API authentifié réel et une session navigateur connectée, contre la vraie base (actuellement peu peuplée : 5 étudiants, 1 enseignant, 1 programme) — tout s'affiche honnêtement, y compris les états vides (ex. "Aucune note saisie pour le moment").
+
+**Reste à faire** : voir tableau Chantier 6 plus haut (6.3-6.6) — priorité confirmée par l'utilisateur : tableau de bord (fait) d'abord, ordre des chantiers suivants pas encore tranché.
 
 ### Accès Vercel
 Un token Vercel a été fourni en session (durée de vie : 1 semaine annoncée par l'utilisateur). Stocké uniquement dans `.env.local` (ignoré par git, jamais commité). Projet Vercel identifié : `unisahel-tchad` (compte `ndouwesalvadors-projects`), lié en local via `vercel link`. Aucun cron Vercel n'était configuré au moment de l'inspection — à clarifier avec l'utilisateur si un cron spécifique est souhaité (ex. sauvegardes automatisées, cf. Chantier 4.9).
