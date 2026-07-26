@@ -6,6 +6,8 @@ import type { SessionUser } from '@/lib/auth/helpers'
 
 async function getDashboardHandler(user: SessionUser, tenantId: string, _request: NextRequest) {
   try {
+    const now = new Date()
+
     // Parallel fetch all stats
     const [
       totalStudents,
@@ -22,6 +24,14 @@ async function getDashboardHandler(user: SessionUser, tenantId: string, _request
       recentStudents,
       recentAnnouncements,
       currentAcademicYear,
+      studentsForCycle,
+      gradesForSuccessRate,
+      tenantSettings,
+      unvalidatedGradesCount,
+      pendingPaymentsCount,
+      studentsWithoutPaymentCount,
+      upcomingExamSessions,
+      upcomingDeliberations,
     ] = await Promise.all([
       // Total students
       db.student.count({ where: { tenantId } }),
@@ -116,6 +126,46 @@ async function getDashboardHandler(user: SessionUser, tenantId: string, _request
         where: { tenantId, isCurrent: true },
         include: { sessions: true },
       }),
+
+      // Students with their program's cycle (Licence/Master/Doctorat)
+      db.student.findMany({
+        where: { tenantId, currentProgramId: { not: null } },
+        select: { currentProgram: { select: { cycle: true } } },
+      }),
+
+      // Entered grades with the student's program, to compute a real pass rate
+      db.grade.findMany({
+        where: { student: { tenantId }, finalGrade: { not: null } },
+        select: { finalGrade: true, student: { select: { currentProgram: { select: { name: true } } } } },
+      }),
+
+      // Passing grade threshold
+      db.tenantSettings.findUnique({ where: { tenantId }, select: { passingGrade: true } }),
+
+      // Grades entered but not yet locked/validated
+      db.grade.count({ where: { student: { tenantId }, isLocked: false, finalGrade: { not: null } } }),
+
+      // Payments awaiting validation
+      db.payment.count({ where: { tenantId, status: 'PENDING' } }),
+
+      // Active students with no validated payment at all (honest proxy for "en dette" — no fee-due-date model exists)
+      db.student.count({
+        where: { tenantId, status: 'INSCRIT', payments: { none: { status: 'VALIDATED' } } },
+      }),
+
+      // Upcoming exam sessions
+      db.examSession.findMany({
+        where: { academicYear: { tenantId }, startDate: { gte: now } },
+        orderBy: { startDate: 'asc' },
+        take: 5,
+      }),
+
+      // Upcoming deliberations
+      db.deliberation.findMany({
+        where: { tenantId, date: { gte: now } },
+        orderBy: { date: 'asc' },
+        take: 5,
+      }),
     ])
 
     // Process students by program for chart
@@ -123,6 +173,23 @@ async function getDashboardHandler(user: SessionUser, tenantId: string, _request
     for (const s of studentsByProgram) {
       const progName = s.currentProgram?.name || 'Non assigné'
       programCounts[progName] = (programCounts[progName] || 0) + 1
+    }
+
+    // Students by cycle (Licence/Master/Doctorat)
+    const cycleCounts: Record<string, number> = {}
+    for (const s of studentsForCycle) {
+      const cycle = s.currentProgram?.cycle || 'AUTRE'
+      cycleCounts[cycle] = (cycleCounts[cycle] || 0) + 1
+    }
+
+    // Success rate per program, from real entered grades vs the tenant's passing threshold
+    const passingGrade = tenantSettings?.passingGrade ?? 10
+    const successByProgram: Record<string, { total: number; passed: number }> = {}
+    for (const g of gradesForSuccessRate) {
+      const progName = g.student.currentProgram?.name || 'Non assigné'
+      if (!successByProgram[progName]) successByProgram[progName] = { total: 0, passed: 0 }
+      successByProgram[progName].total += 1
+      if ((g.finalGrade ?? 0) >= passingGrade) successByProgram[progName].passed += 1
     }
 
     const chartData = {
@@ -139,7 +206,37 @@ async function getDashboardHandler(user: SessionUser, tenantId: string, _request
         count: p._count.status,
         total: p._sum.amount || 0,
       })),
+      studentsByCycle: Object.entries(cycleCounts).map(([cycle, count]) => ({ cycle, count })),
+      successRateByProgram: Object.entries(successByProgram).map(([name, { total, passed }]) => ({
+        name,
+        rate: total > 0 ? Math.round((passed / total) * 100) : 0,
+      })),
     }
+
+    // Real alerts (no fabricated numbers — each is a direct, honest DB count)
+    const alerts = {
+      unvalidatedGrades: unvalidatedGradesCount,
+      pendingPayments: pendingPaymentsCount,
+      studentsWithoutPayment: studentsWithoutPaymentCount,
+    }
+
+    // Upcoming events, merged from real exam sessions and deliberations
+    const upcomingEvents = [
+      ...upcomingExamSessions.map((e) => ({
+        id: `exam-${e.id}`,
+        date: e.startDate,
+        title: e.name,
+        type: 'exam' as const,
+      })),
+      ...upcomingDeliberations.map((d) => ({
+        id: `deliberation-${d.id}`,
+        date: d.date,
+        title: d.name,
+        type: 'deliberation' as const,
+      })),
+    ]
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      .slice(0, 5)
 
     // Build recent activity feed
     const recentActivity = [
@@ -185,6 +282,8 @@ async function getDashboardHandler(user: SessionUser, tenantId: string, _request
       statsCards,
       chartData,
       recentActivity,
+      alerts,
+      upcomingEvents,
       currentAcademicYear: currentAcademicYear
         ? {
             id: currentAcademicYear.id,

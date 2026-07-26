@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion'
 import { useAppStore } from '@/lib/store'
+import { useDashboardStats } from '@/lib/api-hooks'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -10,8 +11,6 @@ import {
   GraduationCap,
   BookOpen,
   CreditCard,
-  TrendingUp,
-  TrendingDown,
   UserPlus,
   FileCheck,
   FileText,
@@ -20,13 +19,12 @@ import {
   Gavel,
   Megaphone,
   AlertTriangle,
-  ArrowRight,
   Timer,
   Server,
   Database,
-  HardDrive,
   Wifi,
   Shield,
+  Inbox,
 } from 'lucide-react'
 import {
   BarChart,
@@ -42,114 +40,7 @@ import {
   Legend,
 } from 'recharts'
 
-// ─── Demo Data ────────────────────────────────────────────────────────────────
-
-const statsCards = [
-  {
-    title: 'Etudiants inscrits',
-    value: '2 847',
-    change: '+12.5%',
-    previousYear: '2 530',
-    trend: 'up' as const,
-    icon: Users,
-    color: '#2d7a4f',
-    bgColor: '#2d7a4f15',
-    sparkline: [30, 40, 35, 50, 49, 60, 70, 65, 80, 75, 85, 90],
-  },
-  {
-    title: 'Enseignants',
-    value: '156',
-    change: '+3.2%',
-    previousYear: '151',
-    trend: 'up' as const,
-    icon: GraduationCap,
-    color: '#1a2744',
-    bgColor: '#1a274415',
-    sparkline: [20, 22, 21, 23, 22, 24, 23, 25, 24, 26, 25, 27],
-  },
-  {
-    title: 'UE ce semestre',
-    value: '84',
-    change: '-2.1%',
-    previousYear: '86',
-    trend: 'down' as const,
-    icon: BookOpen,
-    color: '#d4a853',
-    bgColor: '#d4a85315',
-    sparkline: [50, 48, 49, 47, 46, 48, 45, 44, 46, 43, 44, 42],
-  },
-  {
-    title: 'Paiements recus',
-    value: '45.2M FCFA',
-    change: '+18.7%',
-    previousYear: '38.1M FCFA',
-    trend: 'up' as const,
-    icon: CreditCard,
-    color: '#2d7a4f',
-    bgColor: '#2d7a4f15',
-    sparkline: [20, 30, 25, 40, 45, 50, 55, 60, 58, 70, 75, 80],
-  },
-]
-
-const filiereData = [
-  { name: 'Droit', etudiants: 620, color: '#2d7a4f' },
-  { name: 'Sciences', etudiants: 480, color: '#1a2744' },
-  { name: 'Lettres', etudiants: 350, color: '#d4a853' },
-  { name: 'Economie', etudiants: 410, color: '#5b8c5a' },
-  { name: 'Medecine', etudiants: 290, color: '#c62828' },
-  { name: 'Informatique', etudiants: 380, color: '#4a6fa5' },
-  { name: 'Agronomie', etudiants: 317, color: '#8d6e63' },
-]
-
-const studentStatusData = [
-  { name: 'Inscrits', value: 1840, color: '#2d7a4f' },
-  { name: 'Pre-inscrits', value: 420, color: '#d4a853' },
-  { name: 'Suspendus', value: 85, color: '#ef6c00' },
-  { name: 'Exclus', value: 22, color: '#c62828' },
-  { name: 'Diplomes', value: 480, color: '#1a2744' },
-]
-
-const cycleData = [
-  { name: 'Licence', value: 1680, color: '#2d7a4f' },
-  { name: 'Master', value: 820, color: '#1a2744' },
-  { name: 'Doctorat', value: 347, color: '#d4a853' },
-]
-
-const reussiteData = [
-  { name: 'Droit', taux: 72, color: '#2d7a4f' },
-  { name: 'Sciences', taux: 65, color: '#1a2744' },
-  { name: 'Lettres', taux: 78, color: '#d4a853' },
-  { name: 'Economie', taux: 69, color: '#5b8c5a' },
-  { name: 'Medecine', taux: 58, color: '#c62828' },
-  { name: 'Informatique', taux: 74, color: '#4a6fa5' },
-]
-
-const recentActivities = [
-  { id: 1, type: 'inscription', description: 'Inscription de Adam Hassane Abakar', time: 'Il y a 5 min', user: 'Scolarite' },
-  { id: 2, type: 'notes', description: 'Saisie des notes - Algorithmique L2', time: 'Il y a 12 min', user: 'Dr. Mahamat Ali' },
-  { id: 3, type: 'paiement', description: 'Paiement de 175 000 FCFA - Fatime Khamis', time: 'Il y a 25 min', user: 'Caisse' },
-  { id: 4, type: 'inscription', description: 'Inscription de Amina Djibrine', time: 'Il y a 32 min', user: 'Scolarite' },
-  { id: 5, type: 'document', description: 'Releve de notes genere - Youssouf Mahamat', time: 'Il y a 45 min', user: 'Scolarite' },
-  { id: 6, type: 'jury', description: 'Deliberation L3 Droit validee', time: 'Il y a 1h', user: 'Pr. Khadija Adam' },
-  { id: 7, type: 'paiement', description: 'Paiement de 200 000 FCFA - Ibrahim Seid', time: 'Il y a 1h 15', user: 'Caisse' },
-  { id: 8, type: 'inscription', description: 'Reinscription de Halime Ngarndmi', time: 'Il y a 1h 30', user: 'Scolarite' },
-  { id: 9, type: 'document', description: 'Attestation generee - Zakaria Doumngar', time: 'Il y a 2h', user: 'Scolarite' },
-  { id: 10, type: 'notes', description: 'Saisie des notes - Physique L1', time: 'Il y a 2h 15', user: 'Dr. Abdoulaye Adoum' },
-]
-
-const upcomingEvents = [
-  { date: '15 Juil', title: 'Deliberation L3 Droit', type: 'deliberation', countdown: '9 jours' },
-  { date: '18 Juil', title: 'Examens rattrapage S2', type: 'exam', countdown: '12 jours' },
-  { date: '22 Juil', title: 'Deliberation L2 Sciences', type: 'deliberation', countdown: '16 jours' },
-  { date: '25 Juil', title: 'Conseil de faculte', type: 'council', countdown: '19 jours' },
-  { date: '01 Aout', title: 'Rentree S1 2025-2026', type: 'academic', countdown: '26 jours' },
-]
-
-const alerts = [
-  { id: 1, title: 'Etudiants en dette', count: 147, severity: 'high' as const, icon: AlertTriangle, description: 'Etudiants avec des UE non validees' },
-  { id: 2, title: 'Notes non validees', count: 23, severity: 'medium' as const, icon: FileText, description: 'Enseignants n\'ont pas encore valide' },
-  { id: 3, title: 'Paiements en retard', count: 89, severity: 'high' as const, icon: CreditCard, description: 'Echeances depassees non reglees' },
-]
+// ─── Quick actions (navigation shortcuts, not data — fine to stay static) ─────
 
 const quickActions = [
   { label: 'Nouvelle inscription', icon: UserPlus, color: '#2d7a4f', bgColor: '#2d7a4f15', view: 'students' as const },
@@ -160,6 +51,65 @@ const quickActions = [
   { label: 'Envoyer une annonce', icon: Megaphone, color: '#d4a853', bgColor: '#d4a85315', view: 'announcements' as const },
 ]
 
+// ─── Real-data label/color mappings (matches students-list.tsx conventions) ──
+
+const statusLabels: Record<string, { label: string; color: string }> = {
+  INSCRIT: { label: 'Inscrits', color: '#2d7a4f' },
+  PRE_INSCRIT: { label: 'Pré-inscrits', color: '#d4a853' },
+  SUSPENDU: { label: 'Suspendus', color: '#ef6c00' },
+  EXCLU: { label: 'Exclus', color: '#c62828' },
+  DIPLOME: { label: 'Diplômés', color: '#1a2744' },
+}
+
+const cycleLabels: Record<string, { label: string; color: string }> = {
+  LICENCE: { label: 'Licence', color: '#2d7a4f' },
+  MASTER: { label: 'Master', color: '#1a2744' },
+  DOCTORAT: { label: 'Doctorat', color: '#d4a853' },
+  AUTRE: { label: 'Non classé', color: '#9ca3af' },
+}
+
+const chartPalette = ['#2d7a4f', '#1a2744', '#d4a853', '#5b8c5a', '#4a6fa5', '#c62828', '#8d6e63', '#0ea5e9']
+
+const alertConfig = {
+  unvalidatedGrades: {
+    title: 'Notes non validées',
+    description: 'Notes saisies en attente de verrouillage',
+    icon: FileText,
+    severity: 'medium' as const,
+  },
+  pendingPayments: {
+    title: 'Paiements en attente',
+    description: 'Paiements saisis non encore validés par la caisse',
+    icon: CreditCard,
+    severity: 'medium' as const,
+  },
+  studentsWithoutPayment: {
+    title: 'Étudiants sans paiement',
+    description: 'Étudiants inscrits sans aucun paiement validé',
+    icon: AlertTriangle,
+    severity: 'high' as const,
+  },
+}
+
+interface DashboardApiResponse {
+  statsCards: {
+    totalStudents: number
+    totalTeachers: number
+    totalPrograms: number
+    totalPaymentsAmount: number
+  }
+  chartData: {
+    studentsByStatus: { status: string; count: number }[]
+    studentsByProgram: { name: string; count: number }[]
+    studentsByCycle: { cycle: string; count: number }[]
+    successRateByProgram: { name: string; rate: number }[]
+  }
+  recentActivity: { id: string; type: 'inscription' | 'paiement' | 'annonce'; description: string; time: string; user: string }[]
+  alerts: { unvalidatedGrades: number; pendingPayments: number; studentsWithoutPayment: number }
+  upcomingEvents: { id: string; date: string; title: string; type: 'exam' | 'deliberation' }[]
+  currentAcademicYear: { id: string; name: string; startDate: string; endDate: string; examSessions: number } | null
+}
+
 // ─── Time-of-day greeting ─────────────────────────────────────────────────────
 
 function getGreeting(): string {
@@ -169,45 +119,29 @@ function getGreeting(): string {
   return 'Bonsoir'
 }
 
-// ─── Enhanced Mini Sparkline with gradient fill ───────────────────────────────
+function formatDateShort(iso: string): string {
+  const d = new Date(iso)
+  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })
+}
 
-function MiniSparkline({ data, color }: { data: number[]; color: string }) {
-  const max = Math.max(...data)
-  const min = Math.min(...data)
-  const range = max - min || 1
-  const width = 90
-  const height = 32
-  const points = data.map((v, i) => {
-    const x = (i / (data.length - 1)) * width
-    const y = height - ((v - min) / range) * height
-    return `${x},${y}`
-  }).join(' ')
+function formatCountdown(iso: string): string {
+  const diffMs = new Date(iso).getTime() - Date.now()
+  const days = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)))
+  if (days === 0) return "aujourd'hui"
+  if (days === 1) return 'demain'
+  return `${days} jours`
+}
 
-  const fillPoints = `0,${height} ${points} ${width},${height}`
+// ─── Empty state ──────────────────────────────────────────────────────────────
 
-  const gradientId = `spark-grad-${color.replace('#', '')}`
-
+function EmptyState({ label }: { label: string }) {
   return (
-    <svg width={width} height={height} className="opacity-80">
-      <defs>
-        <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.3" />
-          <stop offset="100%" stopColor={color} stopOpacity="0.02" />
-        </linearGradient>
-      </defs>
-      <polygon
-        points={fillPoints}
-        fill={`url(#${gradientId})`}
-      />
-      <polyline
-        points={points}
-        fill="none"
-        stroke={color}
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
+    <div className="flex flex-col items-center justify-center py-10 text-center">
+      <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center mb-2">
+        <Inbox className="size-5 text-gray-400" />
+      </div>
+      <p className="text-sm text-gray-400">{label}</p>
+    </div>
   )
 }
 
@@ -252,13 +186,11 @@ function PulsingDot({ color = '#2d7a4f' }: { color?: string }) {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-import { useDashboardStats } from '@/lib/api-hooks'
-
 export function DashboardHome() {
   const { user, setView } = useAppStore()
-  const { data, isLoading } = useDashboardStats()
+  const { data, isLoading } = useDashboardStats() as { data: DashboardApiResponse | undefined; isLoading: boolean }
 
-  if (isLoading) {
+  if (isLoading || !data) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="animate-pulse flex flex-col items-center">
@@ -269,23 +201,45 @@ export function DashboardHome() {
     )
   }
 
-  const dynamicStats = data?.statsCards ? [
-    { ...statsCards[0], value: data.statsCards.totalStudents.toString() },
-    { ...statsCards[1], value: data.statsCards.totalTeachers.toString() },
-    { ...statsCards[2], value: data.statsCards.totalPrograms.toString(), title: 'Programmes' },
-    { ...statsCards[3], value: (data.statsCards.totalPaymentsAmount || 0).toLocaleString() + ' FCFA' },
-  ] : statsCards;
+  const statsCards = [
+    { title: 'Etudiants inscrits', value: data.statsCards.totalStudents.toLocaleString('fr-FR'), icon: Users, color: '#2d7a4f', bgColor: '#2d7a4f15' },
+    { title: 'Enseignants', value: data.statsCards.totalTeachers.toLocaleString('fr-FR'), icon: GraduationCap, color: '#1a2744', bgColor: '#1a274415' },
+    { title: 'Programmes', value: data.statsCards.totalPrograms.toLocaleString('fr-FR'), icon: BookOpen, color: '#d4a853', bgColor: '#d4a85315' },
+    { title: 'Paiements recus', value: `${data.statsCards.totalPaymentsAmount.toLocaleString('fr-FR')} FCFA`, icon: CreditCard, color: '#2d7a4f', bgColor: '#2d7a4f15' },
+  ]
 
-  const dynamicRecentActivity = data?.recentActivity?.length > 0 ? data.recentActivity : recentActivities;
-  const dynamicAlerts = alerts; // Keep static for now
-  
+  const filiereData = data.chartData.studentsByProgram.map((p, i) => ({
+    name: p.name,
+    etudiants: p.count,
+    color: chartPalette[i % chartPalette.length],
+  }))
+
+  const studentStatusData = data.chartData.studentsByStatus.map((s) => ({
+    name: statusLabels[s.status]?.label ?? s.status,
+    value: s.count,
+    color: statusLabels[s.status]?.color ?? '#9ca3af',
+  }))
+
+  const cycleData = data.chartData.studentsByCycle.map((c) => ({
+    name: cycleLabels[c.cycle]?.label ?? c.cycle,
+    value: c.count,
+    color: cycleLabels[c.cycle]?.color ?? '#9ca3af',
+  }))
+
+  const reussiteData = data.chartData.successRateByProgram.map((p, i) => ({
+    name: p.name,
+    taux: p.rate,
+    color: chartPalette[i % chartPalette.length],
+  }))
+
+  const alerts = (Object.entries(data.alerts) as [keyof typeof alertConfig, number][])
+    .map(([key, count]) => ({ key, count, ...alertConfig[key] }))
+
   const getActivityIcon = (type: string) => {
     switch (type) {
       case 'inscription': return <UserPlus className="size-4 text-[#2d7a4f]" />
-      case 'notes': return <FileCheck className="size-4 text-[#1a2744]" />
       case 'paiement': return <CreditCard className="size-4 text-[#d4a853]" />
-      case 'document': return <FileText className="size-4 text-[#5b8c5a]" />
-      case 'jury': return <Gavel className="size-4 text-[#c62828]" />
+      case 'annonce': return <Megaphone className="size-4 text-[#1a2744]" />
       default: return <div className="size-4 rounded-full bg-gray-300" />
     }
   }
@@ -293,10 +247,8 @@ export function DashboardHome() {
   const getActivityBgColor = (type: string) => {
     switch (type) {
       case 'inscription': return 'bg-[#2d7a4f15]'
-      case 'notes': return 'bg-[#1a274415]'
       case 'paiement': return 'bg-[#d4a85315]'
-      case 'document': return 'bg-[#5b8c5a15]'
-      case 'jury': return 'bg-[#c6282815]'
+      case 'annonce': return 'bg-[#1a274415]'
       default: return 'bg-gray-100'
     }
   }
@@ -304,10 +256,8 @@ export function DashboardHome() {
   const getActivityBadge = (type: string) => {
     switch (type) {
       case 'inscription': return <Badge className="bg-[#2d7a4f15] text-[#2d7a4f] text-[10px] border-0 hover:bg-[#2d7a4f15]">Inscription</Badge>
-      case 'notes': return <Badge className="bg-[#1a274415] text-[#1a2744] text-[10px] border-0 hover:bg-[#1a274415]">Note</Badge>
       case 'paiement': return <Badge className="bg-[#d4a85315] text-[#d4a853] text-[10px] border-0 hover:bg-[#d4a85315]">Paiement</Badge>
-      case 'document': return <Badge className="bg-[#5b8c5a15] text-[#5b8c5a] text-[10px] border-0 hover:bg-[#5b8c5a15]">Document</Badge>
-      case 'jury': return <Badge className="bg-[#c6282815] text-[#c62828] text-[10px] border-0 hover:bg-[#c6282815]">Jury</Badge>
+      case 'annonce': return <Badge className="bg-[#1a274415] text-[#1a2744] text-[10px] border-0 hover:bg-[#1a274415]">Annonce</Badge>
       default: return null
     }
   }
@@ -316,8 +266,6 @@ export function DashboardHome() {
     switch (type) {
       case 'deliberation': return <Badge className="bg-[#1a274415] text-[#1a2744] text-[10px] border-0 hover:bg-[#1a274415]">Deliberation</Badge>
       case 'exam': return <Badge className="bg-[#c6282815] text-[#c62828] text-[10px] border-0 hover:bg-[#c6282815]">Examen</Badge>
-      case 'council': return <Badge className="bg-[#d4a85315] text-[#d4a853] text-[10px] border-0 hover:bg-[#d4a85315]">Conseil</Badge>
-      case 'academic': return <Badge className="bg-[#2d7a4f15] text-[#2d7a4f] text-[10px] border-0 hover:bg-[#2d7a4f15]">Academique</Badge>
       default: return null
     }
   }
@@ -356,8 +304,7 @@ export function DashboardHome() {
               <div className="w-14 h-14 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center mb-2 border border-white/20">
                 <Shield className="size-7 text-[#d4a853]" />
               </div>
-              <h3 className="text-sm font-bold leading-tight">Universite de N&apos;Djamena</h3>
-              <p className="text-[10px] text-white/60 mt-0.5">Unite - Travail - Progres</p>
+              <h3 className="text-sm font-bold leading-tight">{user?.tenantName || 'Votre établissement'}</h3>
             </div>
           </Card>
         </motion.div>
@@ -416,24 +363,33 @@ export function DashboardHome() {
                   Voici un apercu de votre etablissement
                 </p>
                 <div className="flex flex-wrap items-center gap-2 mt-3">
-                  <motion.div
-                    animate={{ scale: [1, 1.03, 1] }}
-                    transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-                  >
+                  {data.currentAcademicYear ? (
+                    <>
+                      <motion.div
+                        animate={{ scale: [1, 1.03, 1] }}
+                        transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                      >
+                        <Badge className="bg-white/20 text-white border-0 hover:bg-white/20 text-xs backdrop-blur-sm">
+                          <Calendar className="size-3 mr-1" />
+                          Annee academique {data.currentAcademicYear.name}
+                        </Badge>
+                      </motion.div>
+                      <motion.div
+                        animate={{ scale: [1, 1.03, 1] }}
+                        transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
+                      >
+                        <Badge className="bg-white/20 text-white border-0 hover:bg-white/20 text-xs backdrop-blur-sm">
+                          <GraduationCap className="size-3 mr-1" />
+                          {data.currentAcademicYear.examSessions} session(s) d&apos;examen
+                        </Badge>
+                      </motion.div>
+                    </>
+                  ) : (
                     <Badge className="bg-white/20 text-white border-0 hover:bg-white/20 text-xs backdrop-blur-sm">
                       <Calendar className="size-3 mr-1" />
-                      Annee academique 2024-2025
+                      Aucune annee academique active — configurez-en une dans Structure
                     </Badge>
-                  </motion.div>
-                  <motion.div
-                    animate={{ scale: [1, 1.03, 1] }}
-                    transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
-                  >
-                    <Badge className="bg-white/20 text-white border-0 hover:bg-white/20 text-xs backdrop-blur-sm">
-                      <GraduationCap className="size-3 mr-1" />
-                      Semestre 2 en cours
-                    </Badge>
-                  </motion.div>
+                  )}
                 </div>
               </div>
 
@@ -453,7 +409,7 @@ export function DashboardHome() {
             <CardContent className="p-4 pt-2">
               <h3 className="text-sm font-semibold text-[#1a2744] mb-3">Actions rapides</h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-                {quickActions.map((action, _idx) => (
+                {quickActions.map((action) => (
                   <motion.div
                     key={action.label}
                     whileHover={{ scale: 1.04 }}
@@ -484,9 +440,9 @@ export function DashboardHome() {
         </motion.div>
       </div>
 
-      {/* ── Enhanced Stats Cards with Sparklines ── */}
+      {/* ── Stats Cards ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {dynamicStats.map((stat, i) => (
+        {statsCards.map((stat, i) => (
           <motion.div
             key={stat.title}
             initial={{ opacity: 0, y: 20 }}
@@ -511,33 +467,19 @@ export function DashboardHome() {
                 }}
               />
               <CardContent className="p-4 relative">
-                <div className="flex items-start justify-between">
+                <div className="flex items-center justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-1.5">
                       <PulsingDot color={stat.color} />
                       <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">{stat.title}</p>
                     </div>
-                    <p className="text-2xl font-bold text-[#1a2744] mt-1">{stat.value}</p>
-                    <div className="flex items-center gap-1 mt-1.5">
-                      {stat.trend === 'up' ? (
-                        <TrendingUp className="size-3 text-[#2d7a4f]" />
-                      ) : (
-                        <TrendingDown className="size-3 text-red-500" />
-                      )}
-                      <span className={`text-xs font-medium ${stat.trend === 'up' ? 'text-[#2d7a4f]' : 'text-red-500'}`}>
-                        {stat.change}
-                      </span>
-                      <span className="text-[10px] text-gray-400">vs {stat.previousYear}</span>
-                    </div>
+                    <p className="text-2xl font-bold text-[#1a2744] mt-1.5">{stat.value}</p>
                   </div>
-                  <div className="flex flex-col items-end gap-2">
-                    <div
-                      className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                      style={{ backgroundColor: stat.bgColor }}
-                    >
-                      <stat.icon className="size-5" style={{ color: stat.color }} />
-                    </div>
-                    <MiniSparkline data={stat.sparkline} color={stat.color} />
+                  <div
+                    className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                    style={{ backgroundColor: stat.bgColor }}
+                  >
+                    <stat.icon className="size-5" style={{ color: stat.color }} />
                   </div>
                 </div>
               </CardContent>
@@ -554,32 +496,36 @@ export function DashboardHome() {
             <CardTitle className="text-base font-semibold text-[#1a2744]">
               Repartition par filiere
             </CardTitle>
-            <p className="text-xs text-gray-400">Effectif etudiant par departement</p>
+            <p className="text-xs text-gray-400">Effectif etudiant par programme</p>
           </CardHeader>
           <CardContent>
             <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={filiereData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#6b7280' }} />
-                  <YAxis tick={{ fontSize: 11, fill: '#6b7280' }} />
-                  <Tooltip
-                    contentStyle={{
-                      borderRadius: '8px',
-                      border: '1px solid #e5e7eb',
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-                      fontSize: '12px',
-                    }}
-                    formatter={(value: number) => [`${value} etudiants`, 'Effectif']}
-                  />
-                  <Legend />
-                  <Bar dataKey="etudiants" name="Etudiants" radius={[4, 4, 0, 0]}>
-                    {filiereData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+              {filiereData.length === 0 ? (
+                <EmptyState label="Aucun etudiant affecte a un programme pour le moment." />
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={filiereData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#6b7280' }} />
+                    <YAxis tick={{ fontSize: 11, fill: '#6b7280' }} allowDecimals={false} />
+                    <Tooltip
+                      contentStyle={{
+                        borderRadius: '8px',
+                        border: '1px solid #e5e7eb',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                        fontSize: '12px',
+                      }}
+                      formatter={(value: number) => [`${value} etudiants`, 'Effectif']}
+                    />
+                    <Legend />
+                    <Bar dataKey="etudiants" name="Etudiants" radius={[4, 4, 0, 0]}>
+                      {filiereData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -594,34 +540,38 @@ export function DashboardHome() {
           </CardHeader>
           <CardContent>
             <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={studentStatusData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={100}
-                    paddingAngle={3}
-                    dataKey="value"
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  >
-                    {studentStatusData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      borderRadius: '8px',
-                      border: '1px solid #e5e7eb',
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-                      fontSize: '12px',
-                    }}
-                    formatter={(value: number) => [`${value}`, 'Etudiants']}
-                  />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
+              {studentStatusData.length === 0 ? (
+                <EmptyState label="Aucun etudiant enregistre pour le moment." />
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={studentStatusData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={100}
+                      paddingAngle={3}
+                      dataKey="value"
+                      label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
+                    >
+                      {studentStatusData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        borderRadius: '8px',
+                        border: '1px solid #e5e7eb',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                        fontSize: '12px',
+                      }}
+                      formatter={(value: number) => [`${value}`, 'Etudiants']}
+                    />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -639,34 +589,38 @@ export function DashboardHome() {
           </CardHeader>
           <CardContent>
             <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={cycleData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={100}
-                    paddingAngle={3}
-                    dataKey="value"
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  >
-                    {cycleData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      borderRadius: '8px',
-                      border: '1px solid #e5e7eb',
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-                      fontSize: '12px',
-                    }}
-                    formatter={(value: number) => [`${value}`, 'Etudiants']}
-                  />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
+              {cycleData.length === 0 ? (
+                <EmptyState label="Aucun etudiant affecte a un programme pour le moment." />
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={cycleData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={100}
+                      paddingAngle={3}
+                      dataKey="value"
+                      label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
+                    >
+                      {cycleData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        borderRadius: '8px',
+                        border: '1px solid #e5e7eb',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                        fontSize: '12px',
+                      }}
+                      formatter={(value: number) => [`${value}`, 'Etudiants']}
+                    />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -677,38 +631,42 @@ export function DashboardHome() {
             <CardTitle className="text-base font-semibold text-[#1a2744]">
               Taux de reussite par filiere
             </CardTitle>
-            <p className="text-xs text-gray-400">Pourcentage d&apos;etudiants admis par departement</p>
+            <p className="text-xs text-gray-400">Part des notes saisies au-dessus du seuil de passage, par programme</p>
           </CardHeader>
           <CardContent>
             <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={reussiteData} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
-                  <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11, fill: '#6b7280' }} tickFormatter={(v: number) => `${v}%`} />
-                  <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: '#6b7280' }} width={80} />
-                  <Tooltip
-                    contentStyle={{
-                      borderRadius: '8px',
-                      border: '1px solid #e5e7eb',
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-                      fontSize: '12px',
-                    }}
-                    formatter={(value: number) => [`${value}%`, 'Taux de reussite']}
-                  />
-                  <Legend />
-                  <Bar dataKey="taux" name="Taux (%)" radius={[0, 4, 4, 0]} barSize={20}>
-                    {reussiteData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+              {reussiteData.length === 0 ? (
+                <EmptyState label="Aucune note saisie pour le moment." />
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={reussiteData} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
+                    <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11, fill: '#6b7280' }} tickFormatter={(v: number) => `${v}%`} />
+                    <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: '#6b7280' }} width={80} />
+                    <Tooltip
+                      contentStyle={{
+                        borderRadius: '8px',
+                        border: '1px solid #e5e7eb',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                        fontSize: '12px',
+                      }}
+                      formatter={(value: number) => [`${value}%`, 'Taux de reussite']}
+                    />
+                    <Legend />
+                    <Bar dataKey="taux" name="Taux (%)" radius={[0, 4, 4, 0]} barSize={20}>
+                      {reussiteData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* ── Enhanced Alerts/Notifications Section ── */}
+      {/* ── Alerts Section ── */}
       <div>
         <h2 className="text-base font-semibold text-[#1a2744] mb-3 flex items-center gap-2">
           <AlertTriangle className="size-4 text-[#d4a853]" />
@@ -719,7 +677,7 @@ export function DashboardHome() {
             const style = getAlertStyle(alert.severity)
             return (
               <motion.div
-                key={alert.id}
+                key={alert.key}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: alertIdx * 0.1 }}
@@ -744,24 +702,13 @@ export function DashboardHome() {
                           <p className="text-sm font-semibold text-[#1a2744]">{alert.title}</p>
                           <motion.span
                             className={`text-2xl font-bold ${style.countColor}`}
-                            animate={alert.severity === 'high' ? { scale: [1, 1.08, 1] } : {}}
-                            transition={alert.severity === 'high' ? { duration: 2, repeat: Infinity, ease: 'easeInOut' } : {}}
+                            animate={alert.count > 0 && alert.severity === 'high' ? { scale: [1, 1.08, 1] } : {}}
+                            transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
                           >
                             {alert.count}
                           </motion.span>
                         </div>
                         <p className="text-xs text-gray-400 mt-0.5">{alert.description}</p>
-                        <Button variant="ghost" size="sm" className="h-6 text-[10px] mt-2 p-0 text-[#1a2744] hover:text-[#2d7a4f] group/btn">
-                          Voir les details
-                          <motion.span
-                            className="inline-block ml-0.5"
-                            initial={{ x: 0 }}
-                            whileHover={{ x: 3 }}
-                            transition={{ duration: 0.2 }}
-                          >
-                            <ArrowRight className="size-3" />
-                          </motion.span>
-                        </Button>
                       </div>
                     </div>
                   </CardContent>
@@ -774,7 +721,7 @@ export function DashboardHome() {
 
       {/* ── System Status Card + Recent Activity + Upcoming Events ── */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* System Status Card */}
+        {/* System Status Card — only shows facts that are true if this page rendered */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -812,41 +759,9 @@ export function DashboardHome() {
                 </div>
               </div>
 
-              {/* Storage */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <HardDrive className="size-4 text-gray-400" />
-                    <span className="text-sm text-gray-600">Stockage</span>
-                  </div>
-                  <span className="text-xs font-medium text-[#d4a853]">45% utilise</span>
-                </div>
-                <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <motion.div
-                    className="h-full rounded-full"
-                    style={{ background: 'linear-gradient(90deg, #2d7a4f, #d4a853)' }}
-                    initial={{ width: 0 }}
-                    animate={{ width: '45%' }}
-                    transition={{ duration: 1, delay: 0.5, ease: 'easeOut' }}
-                  />
-                </div>
-                <div className="flex justify-between text-[10px] text-gray-400">
-                  <span>2.7 Go / 6 Go</span>
-                  <span>3.3 Go libre</span>
-                </div>
-              </div>
-
-              {/* Uptime */}
-              <div className="pt-2 border-t border-gray-100">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-400">Uptime</span>
-                  <span className="text-xs font-medium text-[#2d7a4f]">99.8%</span>
-                </div>
-                <div className="flex items-center justify-between mt-1">
-                  <span className="text-xs text-gray-400">Derniere maj</span>
-                  <span className="text-xs font-medium text-gray-500">Il y a 2 min</span>
-                </div>
-              </div>
+              <p className="text-[10px] text-gray-400 pt-2 border-t border-gray-100">
+                Ces indicateurs reflètent l&apos;état au chargement de cette page.
+              </p>
             </CardContent>
           </Card>
         </motion.div>
@@ -857,34 +772,38 @@ export function DashboardHome() {
             <CardTitle className="text-base font-semibold text-[#1a2744]">Activite recente</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="max-h-96 overflow-y-auto relative">
-              {/* Timeline connecting line */}
-              <div className="absolute left-[33px] top-4 bottom-4 w-px bg-gradient-to-b from-[#1a274415] via-[#2d7a4f20] to-[#d4a85315]" />
-              {recentActivities.map((activity, i) => (
-                <motion.div
-                  key={activity.id}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.25, delay: i * 0.05 }}
-                  className={`flex items-start gap-3 px-6 py-3 hover:bg-gray-50/80 transition-colors relative ${i < recentActivities.length - 1 ? 'border-b border-gray-100' : ''}`}
-                >
-                  {/* Timeline dot */}
-                  <div className="absolute left-[30px] top-4 w-2 h-2 rounded-full bg-white border-2 border-[#1a274430] z-10" />
-                  <div className={`w-8 h-8 rounded-lg ${getActivityBgColor(activity.type)} flex items-center justify-center shrink-0 mt-0.5 ml-6`}>
-                    {getActivityIcon(activity.type)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-[#1a2744] truncate">{activity.description}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      {getActivityBadge(activity.type)}
-                      <span className="text-xs text-gray-400">{activity.user}</span>
-                      <span className="text-xs text-gray-300">·</span>
-                      <span className="text-xs text-gray-400">{activity.time}</span>
+            {data.recentActivity.length === 0 ? (
+              <EmptyState label="Aucune activite recente." />
+            ) : (
+              <div className="max-h-96 overflow-y-auto relative">
+                {/* Timeline connecting line */}
+                <div className="absolute left-[33px] top-4 bottom-4 w-px bg-gradient-to-b from-[#1a274415] via-[#2d7a4f20] to-[#d4a85315]" />
+                {data.recentActivity.map((activity, i) => (
+                  <motion.div
+                    key={activity.id}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.25, delay: i * 0.05 }}
+                    className={`flex items-start gap-3 px-6 py-3 hover:bg-gray-50/80 transition-colors relative ${i < data.recentActivity.length - 1 ? 'border-b border-gray-100' : ''}`}
+                  >
+                    {/* Timeline dot */}
+                    <div className="absolute left-[30px] top-4 w-2 h-2 rounded-full bg-white border-2 border-[#1a274430] z-10" />
+                    <div className={`w-8 h-8 rounded-lg ${getActivityBgColor(activity.type)} flex items-center justify-center shrink-0 mt-0.5 ml-6`}>
+                      {getActivityIcon(activity.type)}
                     </div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-[#1a2744] truncate">{activity.description}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        {getActivityBadge(activity.type)}
+                        <span className="text-xs text-gray-400">{activity.user}</span>
+                        <span className="text-xs text-gray-300">·</span>
+                        <span className="text-xs text-gray-400">{formatDateShort(activity.time)}</span>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -897,32 +816,36 @@ export function DashboardHome() {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="max-h-96 overflow-y-auto">
-              {upcomingEvents.map((event, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.3, delay: i * 0.08 }}
-                  className={`flex items-start gap-3 px-6 py-3 hover:bg-gray-50/80 transition-colors ${i < upcomingEvents.length - 1 ? 'border-b border-gray-100' : ''}`}
-                >
-                  <div className="w-10 h-10 rounded-lg bg-[#1a274408] flex flex-col items-center justify-center shrink-0">
-                    <Calendar className="size-3 text-[#1a2744]" />
-                    <span className="text-[9px] font-bold text-[#1a2744] mt-0.5">{event.date}</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-[#1a2744] font-medium truncate">{event.title}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      {getEventBadge(event.type)}
-                      <span className="text-[10px] text-[#d4a853] font-medium flex items-center gap-0.5">
-                        <Clock className="size-2.5" />
-                        {event.countdown}
-                      </span>
+            {data.upcomingEvents.length === 0 ? (
+              <EmptyState label="Aucun evenement planifie." />
+            ) : (
+              <div className="max-h-96 overflow-y-auto">
+                {data.upcomingEvents.map((event, i) => (
+                  <motion.div
+                    key={event.id}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3, delay: i * 0.08 }}
+                    className={`flex items-start gap-3 px-6 py-3 hover:bg-gray-50/80 transition-colors ${i < data.upcomingEvents.length - 1 ? 'border-b border-gray-100' : ''}`}
+                  >
+                    <div className="w-10 h-10 rounded-lg bg-[#1a274408] flex flex-col items-center justify-center shrink-0">
+                      <Calendar className="size-3 text-[#1a2744]" />
+                      <span className="text-[9px] font-bold text-[#1a2744] mt-0.5">{formatDateShort(event.date)}</span>
                     </div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-[#1a2744] font-medium truncate">{event.title}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        {getEventBadge(event.type)}
+                        <span className="text-[10px] text-[#d4a853] font-medium flex items-center gap-0.5">
+                          <Clock className="size-2.5" />
+                          {formatCountdown(event.date)}
+                        </span>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
