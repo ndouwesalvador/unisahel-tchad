@@ -3,6 +3,8 @@
 import { exportToExcel } from '@/lib/export'
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { useOnlineExams } from '@/lib/api-hooks'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -178,24 +180,6 @@ interface StudentResult {
   grade: string
 }
 
-const demoStudentResults: StudentResult[] = [
-  { id: '1', name: 'ABAKAR Adam', matricule: 'UDN/L3/2024/001', score: 16.5, maxScore: 20, timeTaken: '1h 45min', status: 'Reussi', grade: 'Tres Bien' },
-  { id: '2', name: 'KHAMIS Fatime', matricule: 'UDN/L3/2024/002', score: 14.2, maxScore: 20, timeTaken: '1h 52min', status: 'Reussi', grade: 'Bien' },
-  { id: '3', name: 'MAHAMAT Youssouf', matricule: 'UDN/L3/2024/003', score: 11.8, maxScore: 20, timeTaken: '1h 58min', status: 'Reussi', grade: 'Assez Bien' },
-  { id: '4', name: 'NGARNDMI Halime', matricule: 'UDN/L2/2024/004', score: 9.5, maxScore: 20, timeTaken: '2h 00min', status: 'Echoue', grade: 'Insuffisant' },
-  { id: '5', name: 'HISSEIN Mariam', matricule: 'UDN/L2/2024/005', score: 15.0, maxScore: 20, timeTaken: '1h 30min', status: 'Reussi', grade: 'Bien' },
-  { id: '6', name: 'ISSA Mahamat Nour', matricule: 'UDN/M1/2024/006', score: 17.8, maxScore: 20, timeTaken: '1h 20min', status: 'Reussi', grade: 'Tres Bien' },
-  { id: '7', name: 'ADAM Khadija', matricule: 'UDN/L3/2024/007', score: 12.5, maxScore: 20, timeTaken: '1h 55min', status: 'Reussi', grade: 'Assez Bien' },
-  { id: '8', name: 'BICHARA Hawa', matricule: 'UDN/L2/2024/008', score: 8.2, maxScore: 20, timeTaken: '1h 50min', status: 'Echoue', grade: 'Insuffisant' },
-  { id: '9', name: 'SEID Ibrahim', matricule: 'UDN/M1/2024/009', score: 13.2, maxScore: 20, timeTaken: '1h 40min', status: 'Reussi', grade: 'Assez Bien' },
-  { id: '10', name: 'DJIMADOUMBER Deubong', matricule: 'UDN/L2/2024/010', score: 10.0, maxScore: 20, timeTaken: '2h 00min', status: 'Reussi', grade: 'Passable' },
-  { id: '11', name: 'NASSERINGAR Lea', matricule: 'UDN/L3/2024/011', score: 18.5, maxScore: 20, timeTaken: '1h 15min', status: 'Reussi', grade: 'Excellent' },
-  { id: '12', name: 'OUMAR Abdoulaye', matricule: 'UDN/M2/2024/012', score: 7.0, maxScore: 20, timeTaken: '1h 30min', status: 'Echoue', grade: 'Insuffisant' },
-  { id: '13', name: 'RAMADAN Halime', matricule: 'UDN/L2/2024/013', score: 14.8, maxScore: 20, timeTaken: '1h 48min', status: 'Reussi', grade: 'Bien' },
-  { id: '14', name: 'ZENE Mahamat', matricule: 'UDN/M1/2024/014', score: 0, maxScore: 20, timeTaken: '-', status: 'En correction', grade: '-' },
-  { id: '15', name: 'MALLAH Adoum', matricule: 'UDN/L1/2024/015', score: 11.2, maxScore: 20, timeTaken: '1h 59min', status: 'Reussi', grade: 'Assez Bien' },
-]
-
 interface FlaggedIncident {
   id: string
   studentName: string
@@ -204,14 +188,6 @@ interface FlaggedIncident {
   timestamp: string
   severity: 'Critique' | 'Elevee' | 'Moyenne'
 }
-
-const demoIncidents: FlaggedIncident[] = [
-  { id: '1', studentName: 'ABAKAR Adam', exam: 'Examen Final - Algorithmique', type: 'Changement onglet', timestamp: '18/03/2025 09:12:34', severity: 'Elevee' },
-  { id: '2', studentName: 'NGARNDMI Halime', exam: 'Examen Final - Algorithmique', type: 'Tentative copie', timestamp: '18/03/2025 09:25:17', severity: 'Critique' },
-  { id: '3', studentName: 'BICHARA Hawa', exam: 'Examen TP - Programmation', type: 'Changement onglet', timestamp: '14/03/2025 14:45:22', severity: 'Moyenne' },
-  { id: '4', studentName: 'OUMAR Abdoulaye', exam: 'Examen Final - Reseau', type: 'Anomalie temps', timestamp: '15/03/2025 08:10:05', severity: 'Elevee' },
-  { id: '5', studentName: 'ZENE Mahamat', exam: 'Examen Final - Algorithmique', type: 'IP differente', timestamp: '18/03/2025 09:05:41', severity: 'Critique' },
-]
 
 interface BankQuestion {
   id: string
@@ -222,19 +198,6 @@ interface BankQuestion {
   usageCount: number
   course: string
 }
-
-const demoBankQuestions: BankQuestion[] = [
-  { id: '1', text: 'Quelle est la complexite du tri rapide en moyenne ?', type: 'QCM', difficulty: 'Moyen', points: 2, usageCount: 45, course: 'Algorithmique' },
-  { id: '2', text: 'Demontrer que le probleme du sac a dos est NP-complet', type: 'Dissertation', difficulty: 'Difficile', points: 5, usageCount: 12, course: 'Algorithmique' },
-  { id: '3', text: 'Un arbre binaire de recherche equilibre a une hauteur en O(log n)', type: 'Vrai-Faux', difficulty: 'Facile', points: 1, usageCount: 78, course: 'Algorithmique' },
-  { id: '4', text: 'Quelle est la difference entre pile et file ?', type: 'Dissertation', difficulty: 'Facile', points: 3, usageCount: 56, course: 'Structures de donnees' },
-  { id: '5', text: 'L\'algorithme de Dijkstra fonctionne avec des poids negatifs', type: 'Vrai-Faux', difficulty: 'Moyen', points: 1, usageCount: 34, course: 'Graphe' },
-  { id: '6', text: 'Parmi ces algorithmes, lequel est stable ?', type: 'QCM', difficulty: 'Moyen', points: 2, usageCount: 29, course: 'Algorithmique' },
-  { id: '7', text: 'Expliquer le principe de la programmation dynamique', type: 'Dissertation', difficulty: 'Difficile', points: 4, usageCount: 67, course: 'Algorithmique' },
-  { id: '8', text: 'Un tas est toujours un arbre complet', type: 'Vrai-Faux', difficulty: 'Facile', points: 1, usageCount: 42, course: 'Structures de donnees' },
-  { id: '9', text: 'Quel algorithme de tri a la meilleure complexite dans le pire cas ?', type: 'QCM', difficulty: 'Difficile', points: 3, usageCount: 51, course: 'Algorithmique' },
-  { id: '10', text: 'Comparer les approches gloutonnes et la programmation dynamique', type: 'Dissertation', difficulty: 'Difficile', points: 5, usageCount: 23, course: 'Algorithmique' },
-]
 
 // ─── Config Maps ──────────────────────────────────────────────────────────────
 
@@ -282,8 +245,71 @@ const difficultyConfig: Record<string, { label: string; className: string }> = {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function OnlineExamPage() {
+  const queryClient = useQueryClient()
   const { data: examsQuery, isLoading: examsLoading } = useOnlineExams()
   const upcomingExams: UpcomingExam[] = (examsQuery?.exams || []).map(mapExam)
+  const bankQuestions: BankQuestion[] = (examsQuery?.bankQuestions || []).map((q: any) => ({
+    id: q.id,
+    text: q.text,
+    type: q.type,
+    difficulty: q.difficulty,
+    points: q.points,
+    usageCount: q.usageCount,
+    course: q.course || '—',
+  }))
+  const studentResults: StudentResult[] = (examsQuery?.results || []).map((r: any) => ({
+    id: r.id,
+    name: r.name,
+    matricule: r.matricule,
+    score: r.score ?? 0,
+    maxScore: r.maxScore,
+    timeTaken: r.timeTaken,
+    status: r.status === 'REUSSI' ? 'Reussi' : r.status === 'ECHOUE' ? 'Echoue' : 'En correction',
+    grade: r.grade,
+  }))
+  const incidents: FlaggedIncident[] = (examsQuery?.incidents || []).map((i: any) => ({
+    id: i.id,
+    studentName: i.studentName,
+    exam: i.exam,
+    type: i.type,
+    timestamp: i.timestamp,
+    severity: i.severity,
+  }))
+
+  const [newQuestionText, setNewQuestionText] = useState('')
+  const [newQuestionCourse, setNewQuestionCourse] = useState('')
+  const [newQuestionType, setNewQuestionType] = useState<'QCM' | 'Dissertation' | 'Vrai-Faux'>('QCM')
+  const [newQuestionDifficulty, setNewQuestionDifficulty] = useState<'Facile' | 'Moyen' | 'Difficile'>('Moyen')
+  const [isAddingQuestion, setIsAddingQuestion] = useState(false)
+
+  const handleAddQuestion = async () => {
+    if (!newQuestionText.trim()) {
+      toast.error('Le texte de la question est requis.')
+      return
+    }
+    setIsAddingQuestion(true)
+    try {
+      const res = await fetch('/api/online-exams?entity=question', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: newQuestionText.trim(),
+          type: newQuestionType,
+          difficulty: newQuestionDifficulty,
+          course: newQuestionCourse.trim() || undefined,
+        }),
+      })
+      if (!res.ok) throw new Error('failed')
+      toast.success('Question ajoutee a la banque.')
+      setNewQuestionText('')
+      setNewQuestionCourse('')
+      queryClient.invalidateQueries({ queryKey: ['onlineExams'] })
+    } catch {
+      toast.error("Echec de l'ajout de la question.")
+    } finally {
+      setIsAddingQuestion(false)
+    }
+  }
 
   const examensPrevus = useCountUp(12, 1400)
   const tauxCompletion = useCountUp(87, 1300)
@@ -295,6 +321,7 @@ export function OnlineExamPage() {
   const [showConfirmSubmit, setShowConfirmSubmit] = useState(false)
 
   // Question bank state
+  const [showAddQuestionForm, setShowAddQuestionForm] = useState(false)
   const [bankSearch, setBankSearch] = useState('')
   const [bankCourseFilter, setBankCourseFilter] = useState('tous')
   const [bankTypeFilter, setBankTypeFilter] = useState('tous')
@@ -323,7 +350,7 @@ export function OnlineExamPage() {
   const flaggedCount = flagged.size
 
   // Results statistics
-  const validResults = demoStudentResults.filter(r => r.status !== 'En correction')
+  const validResults = studentResults.filter(r => r.status !== 'En correction')
   const scores = validResults.map(r => r.score)
   const moyenne = scores.length > 0 ? (scores.reduce((a, b) => a + b, 0) / scores.length) : 0
   const sortedScores = [...scores].sort((a, b) => a - b)
@@ -333,20 +360,25 @@ export function OnlineExamPage() {
   const variance = scores.length > 0 ? scores.reduce((sum, s) => sum + Math.pow(s - moyenne, 2), 0) / scores.length : 0
   const ecartType = Math.sqrt(variance)
 
-  // Grade distribution
-  const gradeDistribution = [
-    { range: '0-4', count: 1, color: '#c62828' },
-    { range: '4-8', count: 2, color: '#ea580c' },
-    { range: '8-10', count: 1, color: '#d4a853' },
-    { range: '10-12', count: 3, color: '#1a2744' },
-    { range: '12-14', count: 3, color: '#2d7a4f' },
-    { range: '14-16', count: 3, color: '#2d7a4f' },
-    { range: '16-20', count: 2, color: '#1a2744' },
+  // Grade distribution - real histogram bucketed from validResults, not fabricated
+  const distBuckets = [
+    { range: '0-4', min: 0, max: 4, color: '#c62828' },
+    { range: '4-8', min: 4, max: 8, color: '#ea580c' },
+    { range: '8-10', min: 8, max: 10, color: '#d4a853' },
+    { range: '10-12', min: 10, max: 12, color: '#1a2744' },
+    { range: '12-14', min: 12, max: 14, color: '#2d7a4f' },
+    { range: '14-16', min: 14, max: 16, color: '#2d7a4f' },
+    { range: '16-20', min: 16, max: 20.01, color: '#1a2744' },
   ]
-  const maxDistCount = Math.max(...gradeDistribution.map(d => d.count))
+  const gradeDistribution = distBuckets.map(b => ({
+    range: b.range,
+    color: b.color,
+    count: scores.filter(s => s >= b.min && s < b.max).length,
+  }))
+  const maxDistCount = Math.max(1, ...gradeDistribution.map(d => d.count))
 
   // Filter bank questions
-  const filteredBankQuestions = demoBankQuestions.filter(q => {
+  const filteredBankQuestions = bankQuestions.filter(q => {
     const matchSearch = bankSearch === '' || q.text.toLowerCase().includes(bankSearch.toLowerCase())
     const matchCourse = bankCourseFilter === 'tous' || q.course === bankCourseFilter
     const matchType = bankTypeFilter === 'tous' || q.type === bankTypeFilter
@@ -355,7 +387,7 @@ export function OnlineExamPage() {
   })
 
   // Filter results
-  const filteredResults = demoStudentResults.filter(r => {
+  const filteredResults = studentResults.filter(r => {
     const matchSearch = resultSearch === '' ||
       r.name.toLowerCase().includes(resultSearch.toLowerCase()) ||
       r.matricule.toLowerCase().includes(resultSearch.toLowerCase())
@@ -668,7 +700,16 @@ export function OnlineExamPage() {
           </Card>
         </motion.div>
 
-        {/* ── Active Exam Interface Card ──────────────────────────────────────── */}
+        {/* ── Active Exam Interface Card ──────────────────────────────────────────
+            Apercu de l'interface de passation cote etudiant (navigation, minuteur,
+            carte des questions, confirmation de soumission). Delibere hors perimetre
+            pour cette passe : brancher ceci sur de vraies donnees demanderait un vrai
+            systeme de passation en temps reel (session d'examen par etudiant, correction
+            automatique des QCM, persistance des reponses, declenchement reel des
+            incidents de surveillance) — un chantier a part entiere, pas un simple
+            remplacement de tableau demo. `demoQuestions` reste donc en l'etat comme
+            exemple de mise en page. Les 3 autres blocs de cette page (banque de
+            questions, resultats, incidents) sont eux branches sur de vraies donnees. */}
         <motion.div variants={itemVariants}>
           <Card className="border-l-4 border-l-[#2d7a4f]">
             <div className="h-1 bg-gradient-to-r from-[#2d7a4f] to-[#3da66a]" />
@@ -965,7 +1006,15 @@ export function OnlineExamPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredResults.map((result) => {
+                    {examsLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-6 text-xs text-gray-400">Chargement...</TableCell>
+                      </TableRow>
+                    ) : filteredResults.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-6 text-xs text-gray-400">Aucun resultat publie pour le moment</TableCell>
+                      </TableRow>
+                    ) : filteredResults.map((result) => {
                       const rsc = resultStatusConfig[result.status]
                       const gc = gradeConfig[result.grade]
                       return (
@@ -1106,7 +1155,10 @@ export function OnlineExamPage() {
                 <div>
                   <p className="text-xs font-semibold text-[#1a2744] mb-2">Incidents signales</p>
                   <div className="space-y-2 max-h-48 overflow-y-auto">
-                    {demoIncidents.map((incident) => {
+                    {incidents.length === 0 && (
+                      <p className="text-xs text-gray-400 text-center py-4">Aucun incident signale</p>
+                    )}
+                    {incidents.map((incident) => {
                       const sevConf = severityConfig[incident.severity]
                       return (
                         <div key={incident.id} className="flex items-start gap-2 p-2 rounded-lg border border-gray-100 bg-white">
@@ -1144,13 +1196,58 @@ export function OnlineExamPage() {
                     <BookOpen className="size-4" />
                     Banque de questions
                   </CardTitle>
-                  <Button size="sm" className="h-7 text-[10px] bg-[#2d7a4f] hover:bg-[#236b40] text-white">
+                  <Button
+                    size="sm"
+                    className="h-7 text-[10px] bg-[#2d7a4f] hover:bg-[#236b40] text-white"
+                    onClick={() => setShowAddQuestionForm((v) => !v)}
+                  >
                     <Plus className="size-3 mr-1" />
                     Ajouter une question
                   </Button>
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
+                {showAddQuestionForm && (
+                  <div className="p-3 rounded-lg border border-gray-200 bg-gray-50 space-y-2">
+                    <Input
+                      placeholder="Texte de la question"
+                      className="h-8 text-xs bg-white"
+                      value={newQuestionText}
+                      onChange={(e) => setNewQuestionText(e.target.value)}
+                    />
+                    <div className="flex gap-2 flex-wrap">
+                      <Input
+                        placeholder="Cours (optionnel)"
+                        className="h-8 text-xs bg-white flex-1 min-w-[140px]"
+                        value={newQuestionCourse}
+                        onChange={(e) => setNewQuestionCourse(e.target.value)}
+                      />
+                      <Select value={newQuestionType} onValueChange={(v) => setNewQuestionType(v as typeof newQuestionType)}>
+                        <SelectTrigger className="w-[110px] h-8 text-xs bg-white">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="QCM">QCM</SelectItem>
+                          <SelectItem value="Dissertation">Dissertation</SelectItem>
+                          <SelectItem value="Vrai-Faux">Vrai-Faux</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Select value={newQuestionDifficulty} onValueChange={(v) => setNewQuestionDifficulty(v as typeof newQuestionDifficulty)}>
+                        <SelectTrigger className="w-[110px] h-8 text-xs bg-white">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Facile">Facile</SelectItem>
+                          <SelectItem value="Moyen">Moyen</SelectItem>
+                          <SelectItem value="Difficile">Difficile</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button size="sm" className="h-7 text-[10px] bg-[#1a2744] hover:bg-[#1a2744]/90 text-white" onClick={handleAddQuestion} disabled={isAddingQuestion}>
+                      {isAddingQuestion ? 'Ajout...' : 'Enregistrer'}
+                    </Button>
+                  </div>
+                )}
                 {/* Search + filters */}
                 <div className="flex flex-col gap-2">
                   <div className="relative">
@@ -1201,6 +1298,9 @@ export function OnlineExamPage() {
 
                 {/* Questions list */}
                 <div className="space-y-2 max-h-72 overflow-y-auto">
+                  {filteredBankQuestions.length === 0 && (
+                    <p className="text-xs text-gray-400 text-center py-6">Aucune question dans la banque pour le moment</p>
+                  )}
                   {filteredBankQuestions.map((q) => {
                     const tc = examTypeConfig[q.type]
                     const dc = difficultyConfig[q.difficulty]

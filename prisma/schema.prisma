@@ -102,6 +102,9 @@ model Tenant {
   advisors           Advisor[]
   advisingAppointments AdvisingAppointment[]
   advisingWorkshops  AdvisingWorkshop[]
+  examBankQuestions  ExamBankQuestion[]
+  examResults        ExamResult[]
+  examIncidents      ExamIncident[]
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 }
@@ -482,6 +485,8 @@ model Student {
   transportSubscriptions TransportSubscription[]
   advisingAppointments AdvisingAppointment[]
   workshopEnrollments  AdvisingWorkshopEnrollment[]
+  examResults          ExamResult[]
+  examIncidents        ExamIncident[]
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
 }
@@ -1230,9 +1235,63 @@ model OnlineExam {
   updatedAt   DateTime @updatedAt
   
   tenant      Tenant   @relation(fields: [tenantId], references: [id])
-  
+  results     ExamResult[]
+  incidents   ExamIncident[]
+
   @@index([tenantId])
   @@map("online_exams")
+}
+
+model ExamBankQuestion {
+  id         String   @id @default(cuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  text       String
+  type       String   @default("QCM") // QCM, Dissertation, Vrai-Faux
+  difficulty String   @default("Moyen") // Facile, Moyen, Difficile
+  points     Int      @default(1)
+  course     String?
+  usageCount Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([tenantId])
+  @@map("exam_bank_questions")
+}
+
+model ExamResult {
+  id               String     @id @default(cuid())
+  tenantId         String
+  tenant           Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  examId           String
+  exam             OnlineExam @relation(fields: [examId], references: [id], onDelete: Cascade)
+  studentId        String
+  student          Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  score            Float?
+  maxScore         Float      @default(20)
+  timeTakenMinutes Int?
+  status           String     @default("EN_CORRECTION") // REUSSI, ECHOUE, EN_CORRECTION
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  @@index([tenantId])
+  @@map("exam_results")
+}
+
+model ExamIncident {
+  id         String      @id @default(cuid())
+  tenantId   String
+  tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  examId     String?
+  exam       OnlineExam? @relation(fields: [examId], references: [id], onDelete: SetNull)
+  studentId  String?
+  student    Student?    @relation(fields: [studentId], references: [id], onDelete: SetNull)
+  type       String // Changement onglet, Tentative copie, Anomalie temps, IP differente, Fenetre perdue
+  severity   String      @default("Moyenne") // Critique, Elevee, Moyenne
+  occurredAt DateTime    @default(now())
+
+  @@index([tenantId])
+  @@map("exam_incidents")
 }
 
 // ============================================
