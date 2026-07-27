@@ -1228,12 +1228,13 @@ model OnlineExam {
   examDate    DateTime
   duration    String
   questions   Int
+  questionIds String[] @default([]) // ordered ExamBankQuestion ids actually attached to this exam instance
   type        String   // QCM, DISSERTATION, MIXTE
   status      String   @default("PLANNED") // PLANNED, IN_PROGRESS, COMPLETED
   progress    Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  
+
   tenant      Tenant   @relation(fields: [tenantId], references: [id])
   results     ExamResult[]
   incidents   ExamIncident[]
@@ -1243,17 +1244,19 @@ model OnlineExam {
 }
 
 model ExamBankQuestion {
-  id         String   @id @default(cuid())
-  tenantId   String
-  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  text       String
-  type       String   @default("QCM") // QCM, Dissertation, Vrai-Faux
-  difficulty String   @default("Moyen") // Facile, Moyen, Difficile
-  points     Int      @default(1)
-  course     String?
-  usageCount Int      @default(0)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  text          String
+  type          String   @default("QCM") // QCM, Dissertation, Vrai-Faux
+  difficulty    String   @default("Moyen") // Facile, Moyen, Difficile
+  points        Int      @default(1)
+  course        String?
+  usageCount    Int      @default(0)
+  options       String[] @default([]) // QCM/Vrai-Faux only; empty for Dissertation
+  correctAnswer Int? // index into options; null for Dissertation (never auto-graded)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   @@index([tenantId])
   @@map("exam_bank_questions")
@@ -1267,6 +1270,9 @@ model ExamResult {
   exam             OnlineExam @relation(fields: [examId], references: [id], onDelete: Cascade)
   studentId        String
   student          Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  startedAt        DateTime?
+  submittedAt      DateTime?
+  answers          Json? // { [bankQuestionId]: selectedOptionIndex }
   score            Float?
   maxScore         Float      @default(20)
   timeTakenMinutes Int?

@@ -280,11 +280,20 @@ export function OnlineExamPage() {
   const [newQuestionCourse, setNewQuestionCourse] = useState('')
   const [newQuestionType, setNewQuestionType] = useState<'QCM' | 'Dissertation' | 'Vrai-Faux'>('QCM')
   const [newQuestionDifficulty, setNewQuestionDifficulty] = useState<'Facile' | 'Moyen' | 'Difficile'>('Moyen')
+  const [newQuestionOptions, setNewQuestionOptions] = useState(['', '', '', ''])
+  const [newQuestionCorrectAnswer, setNewQuestionCorrectAnswer] = useState(0)
   const [isAddingQuestion, setIsAddingQuestion] = useState(false)
+
+  const isAutoGradableType = newQuestionType === 'QCM' || newQuestionType === 'Vrai-Faux'
 
   const handleAddQuestion = async () => {
     if (!newQuestionText.trim()) {
       toast.error('Le texte de la question est requis.')
+      return
+    }
+    const filledOptions = newQuestionOptions.map((o) => o.trim()).filter(Boolean)
+    if (isAutoGradableType && filledOptions.length < 2) {
+      toast.error('Au moins 2 options sont requises pour une question a correction automatique.')
       return
     }
     setIsAddingQuestion(true)
@@ -297,17 +306,63 @@ export function OnlineExamPage() {
           type: newQuestionType,
           difficulty: newQuestionDifficulty,
           course: newQuestionCourse.trim() || undefined,
+          options: isAutoGradableType ? filledOptions : undefined,
+          correctAnswer: isAutoGradableType ? newQuestionCorrectAnswer : undefined,
         }),
       })
       if (!res.ok) throw new Error('failed')
       toast.success('Question ajoutee a la banque.')
       setNewQuestionText('')
       setNewQuestionCourse('')
+      setNewQuestionOptions(['', '', '', ''])
+      setNewQuestionCorrectAnswer(0)
       queryClient.invalidateQueries({ queryKey: ['onlineExams'] })
     } catch {
       toast.error("Echec de l'ajout de la question.")
     } finally {
       setIsAddingQuestion(false)
+    }
+  }
+
+  const [showNewExam, setShowNewExam] = useState(false)
+  const [isCreatingExam, setIsCreatingExam] = useState(false)
+  const [newExam, setNewExam] = useState({ name: '', course: '', examDate: '', duration: '1h00', type: 'QCM' as 'QCM' | 'DISSERTATION' | 'MIXTE' })
+  const [newExamQuestionIds, setNewExamQuestionIds] = useState<string[]>([])
+
+  const handleCreateExam = async () => {
+    if (!newExam.name.trim() || !newExam.course.trim() || !newExam.examDate) {
+      toast.error('Nom, cours et date sont requis.')
+      return
+    }
+    if (newExamQuestionIds.length === 0) {
+      toast.error('Selectionnez au moins une question de la banque.')
+      return
+    }
+    setIsCreatingExam(true)
+    try {
+      const res = await fetch('/api/online-exams', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newExam.name.trim(),
+          course: newExam.course.trim(),
+          examDate: new Date(newExam.examDate).toISOString(),
+          duration: newExam.duration,
+          type: newExam.type,
+          questionIds: newExamQuestionIds,
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Echec de la creation')
+      toast.success('Examen cree avec succes')
+      setShowNewExam(false)
+      setNewExam({ name: '', course: '', examDate: '', duration: '1h00', type: 'QCM' })
+      setNewExamQuestionIds([])
+      queryClient.invalidateQueries({ queryKey: ['onlineExams'] })
+    } catch (e) {
+      toast.error('Erreur', { description: e instanceof Error ? e.message : 'Echec de la creation' })
+    } finally {
+      setIsCreatingExam(false)
     }
   }
 
@@ -453,7 +508,7 @@ export function OnlineExamPage() {
                   <p className="text-sm text-white/70 mt-1">Passation, surveillance et correction automatisee</p>
                 </div>
                 <div className="flex gap-2 flex-wrap">
-                  <Button size="sm" className="bg-white/10 backdrop-blur border border-white/20 hover:bg-white/20 text-white text-xs">
+                  <Button size="sm" className="bg-white/10 backdrop-blur border border-white/20 hover:bg-white/20 text-white text-xs" onClick={() => setShowNewExam(true)}>
                     <Plus className="size-3.5 mr-1.5" />
                     Creer un examen
                   </Button>
@@ -1243,6 +1298,28 @@ export function OnlineExamPage() {
                         </SelectContent>
                       </Select>
                     </div>
+                    {isAutoGradableType && (
+                      <div className="space-y-1.5">
+                        <p className="text-[10px] text-gray-500">Options (selectionnez la bonne reponse) :</p>
+                        {newQuestionOptions.map((opt, idx) => (
+                          <div key={idx} className="flex items-center gap-2">
+                            <input
+                              type="radio"
+                              name="correct-answer"
+                              checked={newQuestionCorrectAnswer === idx}
+                              onChange={() => setNewQuestionCorrectAnswer(idx)}
+                              className="accent-[#2d7a4f]"
+                            />
+                            <Input
+                              placeholder={`Option ${idx + 1}`}
+                              className="h-7 text-xs bg-white"
+                              value={opt}
+                              onChange={(e) => setNewQuestionOptions((prev) => prev.map((o, i) => i === idx ? e.target.value : o))}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     <Button size="sm" className="h-7 text-[10px] bg-[#1a2744] hover:bg-[#1a2744]/90 text-white" onClick={handleAddQuestion} disabled={isAddingQuestion}>
                       {isAddingQuestion ? 'Ajout...' : 'Enregistrer'}
                     </Button>
@@ -1461,6 +1538,84 @@ export function OnlineExamPage() {
           </Card>
         </motion.div>
       </motion.div>
+
+      {showNewExam && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowNewExam(false)}>
+          <div className="bg-white rounded-xl p-6 max-w-lg w-full shadow-2xl max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-[#1a2744] mb-4">Creer un examen</h3>
+            <div className="space-y-3">
+              <Input
+                placeholder="Nom de l'examen"
+                className="h-9 text-sm"
+                value={newExam.name}
+                onChange={(e) => setNewExam((f) => ({ ...f, name: e.target.value }))}
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <Input
+                  placeholder="Cours"
+                  className="h-9 text-sm"
+                  value={newExam.course}
+                  onChange={(e) => setNewExam((f) => ({ ...f, course: e.target.value }))}
+                />
+                <Input
+                  type="datetime-local"
+                  className="h-9 text-sm"
+                  value={newExam.examDate}
+                  onChange={(e) => setNewExam((f) => ({ ...f, examDate: e.target.value }))}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Input
+                  placeholder="Duree (ex: 1h30)"
+                  className="h-9 text-sm"
+                  value={newExam.duration}
+                  onChange={(e) => setNewExam((f) => ({ ...f, duration: e.target.value }))}
+                />
+                <Select value={newExam.type} onValueChange={(v) => setNewExam((f) => ({ ...f, type: v as typeof newExam.type }))}>
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="QCM">QCM</SelectItem>
+                    <SelectItem value="DISSERTATION">Dissertation</SelectItem>
+                    <SelectItem value="MIXTE">Mixte</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-gray-500 mb-2">
+                  Questions de la banque ({newExamQuestionIds.length} selectionnee(s)) :
+                </p>
+                {bankQuestions.length === 0 ? (
+                  <p className="text-xs text-gray-400">Ajoutez d&apos;abord des questions a la banque ci-dessous.</p>
+                ) : (
+                  <div className="space-y-1.5 max-h-52 overflow-y-auto border border-gray-100 rounded-lg p-2">
+                    {bankQuestions.map((q) => (
+                      <label key={q.id} className="flex items-start gap-2 p-1.5 rounded hover:bg-gray-50 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={newExamQuestionIds.includes(q.id)}
+                          onChange={() => setNewExamQuestionIds((prev) =>
+                            prev.includes(q.id) ? prev.filter((id) => id !== q.id) : [...prev, q.id]
+                          )}
+                          className="mt-0.5 accent-[#2d7a4f]"
+                        />
+                        <span className="text-xs text-gray-700">{q.text}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="flex gap-2 mt-5">
+              <Button variant="outline" className="flex-1 text-xs" onClick={() => setShowNewExam(false)}>Annuler</Button>
+              <Button className="flex-1 text-xs bg-[#1a2744] hover:bg-[#1a2744]/90 text-white" onClick={handleCreateExam} disabled={isCreatingExam}>
+                {isCreatingExam ? 'Creation...' : "Creer l'examen"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </TooltipProvider>
   )
 }

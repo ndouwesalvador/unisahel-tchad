@@ -100,6 +100,7 @@ import { RoomBookingPage } from '@/components/room-booking/room-booking-page'
 import { ResultsPage } from '@/components/results/results-page'
 import { TransportPage } from '@/components/transport/transport-page'
 import { NotificationPanel } from '@/components/notifications/notification-panel'
+import { StudentExamPage } from '@/components/online-exam/student-exam-page'
 import { AIAssistantWidget } from '@/components/ai-assistant/ai-assistant-widget'
 
 // ─── Navigation Config ────────────────────────────────────────────────────────
@@ -238,6 +239,7 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
     { icon: CreditCard, label: 'Mes Paiements', view: 'payments' },
     { icon: ClipboardList, label: 'Mes Absences', view: 'health' },
     { icon: Calendar, label: 'Emploi du temps', view: 'timetable' },
+    { icon: Monitor, label: 'Mes Examens', view: 'student-exam' },
   ],
   ETUDIANT_SANTE: [
     { icon: LayoutDashboard, label: 'Tableau de bord', view: 'dashboard' },
@@ -314,6 +316,7 @@ const viewLabels: Record<AppView, string> = {
   attendance: 'Presences & Absences',
   communication: 'Communication & Messagerie',
   'online-exam': 'Examens en Ligne',
+  'student-exam': 'Mes Examens',
   reports: 'Rapports & Analyses',
   hr: 'Gestion du Personnel',
   'room-booking': 'Reservation des Salles',
@@ -524,6 +527,8 @@ function MainContent({ view }: { view: AppView }) {
       return <CommunicationPage />
     case 'online-exam':
       return <OnlineExamPage />
+    case 'student-exam':
+      return <StudentExamPage />
     case 'reports':
       return <ReportsPage />
     case 'hr':

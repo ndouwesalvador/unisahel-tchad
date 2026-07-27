@@ -127,6 +127,10 @@ export function useOnlineExams() {
   return useSimpleGet('onlineExams', '/api/online-exams');
 }
 
+export function useMyExams() {
+  return useSimpleGet('myExams', '/api/online-exams?scope=me');
+}
+
 export function useReports() {
   return useSimpleGet('reports', '/api/reports');
 }

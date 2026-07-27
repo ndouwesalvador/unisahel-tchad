@@ -37,6 +37,7 @@ export type AppView =
   | 'attendance'
   | 'communication'
   | 'online-exam'
+  | 'student-exam'
   | 'reports'
   | 'hr'
   | 'room-booking'
