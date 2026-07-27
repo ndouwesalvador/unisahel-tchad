@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
+import { createNotification } from '@/lib/notifications'
 
 const VALID_STATUSES = ['en_attente', 'en_examen', 'admis', 'refuse', 'en_attente_pieces']
 const VALID_TYPES = ['Premiere_inscription', 'Reinscription', 'Transfert', 'Equivalence']
@@ -105,6 +106,14 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
         entityId: candidature.id,
         details: JSON.stringify({ numero: candidature.numero }),
       },
+    })
+
+    await createNotification(tenantId, {
+      type: 'info',
+      category: 'Academique',
+      title: 'Nouvelle inscription reçue',
+      description: `${candidature.candidateFirstName} ${candidature.candidateLastName} - Dossier ${candidature.numero}${candidature.program ? ` (${candidature.program.name})` : ''}`,
+      link: `/dashboard/candidature?id=${candidature.id}`,
     })
 
     return NextResponse.json({ candidature }, { status: 201 })

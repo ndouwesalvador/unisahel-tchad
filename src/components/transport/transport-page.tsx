@@ -61,6 +61,7 @@ import {
   Navigation,
   Timer,
 } from 'lucide-react'
+import { useTransport } from '@/lib/api-hooks'
 
 // ─── Custom useCountUp Hook ────────────────────────────────────────────────────
 
@@ -114,6 +115,8 @@ interface RouteInfo {
   stops: string[]
   frequency: string
   avgOccupancy: number
+  vehicleCount: number
+  subscriptionCount: number
 }
 
 interface ScheduleEntry {
@@ -141,149 +144,148 @@ interface AlertEntry {
   time: string
 }
 
-// ─── Demo Data ──────────────────────────────────────────────────────────────────
+// ─── API Mapping ────────────────────────────────────────────────────────────────
+// GET /api/transport returns real vehicles/routes/departures/maintenance/alerts
+// for this tenant. Occupancy and avgOccupancy are computed server-side from
+// active TransportSubscription rows (never fabricated). The functions below
+// adapt that shape to the UI types above, the same pattern used by
+// room-booking-page.tsx's mapRoom/mapReservation.
 
-const demoBuses: BusVehicle[] = [
-  {
-    id: '1', name: 'Navette Campus Nord', plate: 'NDJ-2847-TD', capacity: 52,
-    route: 'Campus Nord - Centre-ville', status: 'en_service', occupancy: 38,
-    driver: 'M. HASSAN Djibril',
-    schedule: [
-      { start: '07:00', end: '07:45', label: 'Aller' },
-      { start: '12:00', end: '12:45', label: 'Retour' },
-      { start: '17:00', end: '17:45', label: 'Aller' },
-    ],
-  },
-  {
-    id: '2', name: 'Bus Centre-Ville', plate: 'NDJ-1563-TD', capacity: 68,
-    route: 'Gare routiere - Campus', status: 'en_service', occupancy: 55,
-    driver: 'M. MAHAMAT Adam',
-    schedule: [
-      { start: '06:30', end: '07:15', label: 'Aller' },
-      { start: '11:30', end: '12:15', label: 'Retour' },
-      { start: '16:30', end: '17:15', label: 'Aller' },
-    ],
-  },
-  {
-    id: '3', name: 'Minibus Logone', plate: 'NDJ-4091-TD', capacity: 32,
-    route: 'Quartier Logone - Campus', status: 'en_maintenance', occupancy: 0,
-    driver: 'Mme KHAMIS Fatime',
-    schedule: [],
-  },
-  {
-    id: '4', name: 'Navette CHU', plate: 'NDJ-3256-TD', capacity: 45,
-    route: 'Campus - CHU', status: 'en_service', occupancy: 28,
-    driver: 'M. OUMAR Ibrahim',
-    schedule: [
-      { start: '07:30', end: '07:50', label: 'Aller' },
-      { start: '13:00', end: '13:20', label: 'Retour' },
-    ],
-  },
-  {
-    id: '5', name: 'Bus Sahara', plate: 'NDJ-5872-TD', capacity: 60,
-    route: 'Campus - Quartier Sahara', status: 'en_service', occupancy: 42,
-    driver: 'M. ABDALLAH Fadoul',
-    schedule: [
-      { start: '06:45', end: '07:30', label: 'Aller' },
-      { start: '12:15', end: '13:00', label: 'Retour' },
-      { start: '17:30', end: '18:15', label: 'Aller' },
-    ],
-  },
-  {
-    id: '6', name: 'Navette Aeroport', plate: 'NDJ-6104-TD', capacity: 40,
-    route: 'Campus - Aeroport', status: 'en_panne', occupancy: 0,
-    driver: 'M. ISSA Mahamat',
-    schedule: [],
-  },
-  {
-    id: '7', name: 'Minibus Quartier 7', plate: 'NDJ-7389-TD', capacity: 28,
-    route: 'Quartier 7 - Campus Sud', status: 'en_service', occupancy: 22,
-    driver: 'Mme AHMAT Achta',
-    schedule: [
-      { start: '07:00', end: '07:30', label: 'Aller' },
-      { start: '12:30', end: '13:00', label: 'Retour' },
-    ],
-  },
-  {
-    id: '8', name: 'Bus Marche Central', plate: 'NDJ-8215-TD', capacity: 55,
-    route: 'Marche central - Campus', status: 'en_service', occupancy: 48,
-    driver: 'M. BACHAR Ali',
-    schedule: [
-      { start: '06:00', end: '06:40', label: 'Aller' },
-      { start: '11:00', end: '11:40', label: 'Retour' },
-      { start: '16:00', end: '16:40', label: 'Aller' },
-    ],
-  },
-]
+interface ApiVehicle {
+  id: string
+  name: string
+  plate: string
+  capacity: number
+  driverName: string | null
+  driverPhone: string | null
+  status: string
+  routeId: string | null
+  routeName: string | null
+  occupancy: number
+  schedule: { start: string; end: string; label: string }[]
+}
 
-const demoRoutes: RouteInfo[] = [
-  {
-    id: '1', name: 'Campus Nord - Centre-ville', departure: 'Campus Nord', arrival: 'Centre-ville',
-    distance: 12, duration: '45 min', stops: ['Campus Nord', 'Rond-point Chagoua', 'Marche central', 'Gare routiere', 'Centre-ville'],
-    frequency: 'Quotidien', avgOccupancy: 73,
-  },
-  {
-    id: '2', name: 'Gare routiere - Campus', departure: 'Gare routiere', arrival: 'Campus principal',
-    distance: 8, duration: '30 min', stops: ['Gare routiere', 'Quartier Moursal', 'Hopital general', 'Campus principal'],
-    frequency: 'Quotidien', avgOccupancy: 81,
-  },
-  {
-    id: '3', name: 'Campus - CHU', departure: 'Campus principal', arrival: 'CHU',
-    distance: 5, duration: '20 min', stops: ['Campus principal', 'Pharmacie centrale', 'CHU'],
-    frequency: 'Quotidien', avgOccupancy: 62,
-  },
-  {
-    id: '4', name: 'Campus - Quartier Sahara', departure: 'Campus principal', arrival: 'Quartier Sahara',
-    distance: 15, duration: '50 min', stops: ['Campus principal', 'Carrefour Diguel', 'Quartier Atrone', 'Quartier Sahara'],
-    frequency: 'Quotidien', avgOccupancy: 70,
-  },
-  {
-    id: '5', name: 'Campus - Aeroport', departure: 'Campus principal', arrival: 'Aeroport',
-    distance: 20, duration: '1h', stops: ['Campus principal', 'Rond-point de la liberte', 'Zone industrielle', 'Aeroport'],
-    frequency: 'Semaine', avgOccupancy: 35,
-  },
-  {
-    id: '6', name: 'Quartier 7 - Campus Sud', departure: 'Quartier 7', arrival: 'Campus Sud',
-    distance: 6, duration: '25 min', stops: ['Quartier 7', 'Ecole normale', 'Campus Sud'],
-    frequency: 'Week-end', avgOccupancy: 45,
-  },
-]
+interface ApiRoute {
+  id: string
+  name: string
+  departure: string
+  arrival: string
+  distanceKm: number | null
+  durationLabel: string | null
+  stops: string[]
+  frequency: string | null
+  avgOccupancy: number
+  vehicleCount: number
+  subscriptionCount: number
+}
 
-const demoSchedule: ScheduleEntry[] = [
-  { id: '1', departure: '06:00', bus: 'Bus Marche Central', route: 'Marche central - Campus', driver: 'M. BACHAR Ali', availableSeats: 7, status: 'a_l_heure' },
-  { id: '2', departure: '06:30', bus: 'Bus Centre-Ville', route: 'Gare routiere - Campus', driver: 'M. MAHAMAT Adam', availableSeats: 13, status: 'a_l_heure' },
-  { id: '3', departure: '06:45', bus: 'Bus Sahara', route: 'Campus - Quartier Sahara', driver: 'M. ABDALLAH Fadoul', availableSeats: 18, status: 'a_l_heure' },
-  { id: '4', departure: '07:00', bus: 'Navette Campus Nord', route: 'Campus Nord - Centre-ville', driver: 'M. HASSAN Djibril', availableSeats: 14, status: 'a_l_heure' },
-  { id: '5', departure: '07:00', bus: 'Minibus Quartier 7', route: 'Quartier 7 - Campus Sud', driver: 'Mme AHMAT Achta', availableSeats: 6, status: 'en_retard' },
-  { id: '6', departure: '07:30', bus: 'Navette CHU', route: 'Campus - CHU', driver: 'M. OUMAR Ibrahim', availableSeats: 17, status: 'a_l_heure' },
-  { id: '7', departure: '08:00', bus: 'Bus Marche Central', route: 'Marche central - Campus', driver: 'M. BACHAR Ali', availableSeats: 0, status: 'complet' },
-  { id: '8', departure: '09:00', bus: 'Bus Centre-Ville', route: 'Gare routiere - Campus', driver: 'M. MAHAMAT Adam', availableSeats: 22, status: 'a_l_heure' },
-  { id: '9', departure: '10:00', bus: 'Navette Campus Nord', route: 'Campus Nord - Centre-ville', driver: 'M. HASSAN Djibril', availableSeats: 20, status: 'a_l_heure' },
-  { id: '10', departure: '11:00', bus: 'Bus Marche Central', route: 'Marche central - Campus', driver: 'M. BACHAR Ali', availableSeats: 10, status: 'a_l_heure' },
-  { id: '11', departure: '11:30', bus: 'Bus Centre-Ville', route: 'Gare routiere - Campus', driver: 'M. MAHAMAT Adam', availableSeats: 5, status: 'en_retard' },
-  { id: '12', departure: '12:00', bus: 'Navette Campus Nord', route: 'Campus Nord - Centre-ville', driver: 'M. HASSAN Djibril', availableSeats: 12, status: 'a_l_heure' },
-  { id: '13', departure: '12:30', bus: 'Minibus Quartier 7', route: 'Quartier 7 - Campus Sud', driver: 'Mme AHMAT Achta', availableSeats: 8, status: 'a_l_heure' },
-  { id: '14', departure: '13:00', bus: 'Navette CHU', route: 'Campus - CHU', driver: 'M. OUMAR Ibrahim', availableSeats: 0, status: 'complet' },
-  { id: '15', departure: '14:00', bus: 'Bus Sahara', route: 'Campus - Quartier Sahara', driver: 'M. ABDALLAH Fadoul', availableSeats: 15, status: 'a_l_heure' },
-  { id: '16', departure: '15:00', bus: 'Bus Centre-Ville', route: 'Gare routiere - Campus', driver: 'M. MAHAMAT Adam', availableSeats: 0, status: 'annule' },
-  { id: '17', departure: '16:00', bus: 'Bus Marche Central', route: 'Marche central - Campus', driver: 'M. BACHAR Ali', availableSeats: 3, status: 'a_l_heure' },
-  { id: '18', departure: '16:30', bus: 'Bus Centre-Ville', route: 'Gare routiere - Campus', driver: 'M. MAHAMAT Adam', availableSeats: 18, status: 'a_l_heure' },
-  { id: '19', departure: '17:00', bus: 'Navette Campus Nord', route: 'Campus Nord - Centre-ville', driver: 'M. HASSAN Djibril', availableSeats: 9, status: 'a_l_heure' },
-  { id: '20', departure: '17:30', bus: 'Bus Sahara', route: 'Campus - Quartier Sahara', driver: 'M. ABDALLAH Fadoul', availableSeats: 0, status: 'complet' },
-]
+interface ApiScheduleEntry {
+  id: string
+  departureTime: string
+  label: string | null
+  status: string
+  vehicleId: string
+  vehicleName: string
+  routeId: string
+  routeName: string
+  driverName: string | null
+  availableSeats: number
+}
 
-const demoMaintenance: MaintenanceEntry[] = [
-  { id: '1', bus: 'Minibus Logone', type: 'Reparation moteur', date: '08/03/2025', cost: 450000 },
-  { id: '2', bus: 'Navette Aeroport', type: 'Remplacement pneus', date: '10/03/2025', cost: 320000 },
-  { id: '3', bus: 'Bus Centre-Ville', type: 'Vidange + filtres', date: '05/03/2025', cost: 85000 },
-  { id: '4', bus: 'Bus Sahara', type: 'Climatisation', date: '12/03/2025', cost: 175000 },
-]
+interface ApiMaintenanceEntry {
+  id: string
+  vehicleId: string
+  vehicleName: string
+  type: string
+  cost: number
+  performedAt: string
+}
 
-const demoAlerts: AlertEntry[] = [
-  { id: '1', severity: 'critique', message: 'Navette Aeroport en panne sur la route - remplacement en cours', time: 'Il y a 25 min' },
-  { id: '2', severity: 'avertissement', message: 'Minibus Logone : maintenance prolongee de 2 jours supplementaires', time: 'Il y a 2h' },
-  { id: '3', severity: 'info', message: 'Nouveau trajet Quartier 7 - Campus Sud disponible le week-end', time: 'Il y a 5h' },
-]
+interface ApiAlertEntry {
+  id: string
+  vehicleId: string | null
+  vehicleName: string | null
+  severity: string
+  message: string
+  createdAt: string
+  timeLabel: string
+}
+
+const VALID_BUS_STATUSES: BusStatus[] = ['en_service', 'en_panne', 'en_maintenance']
+function isBusStatus(s: string): s is BusStatus {
+  return (VALID_BUS_STATUSES as string[]).includes(s)
+}
+
+const VALID_SCHEDULE_STATUSES: ScheduleEntry['status'][] = ['a_l_heure', 'en_retard', 'annule', 'complet']
+function isScheduleStatus(s: string): s is ScheduleEntry['status'] {
+  return (VALID_SCHEDULE_STATUSES as string[]).includes(s)
+}
+
+const VALID_SEVERITIES: AlertEntry['severity'][] = ['critique', 'avertissement', 'info']
+function isSeverity(s: string): s is AlertEntry['severity'] {
+  return (VALID_SEVERITIES as string[]).includes(s)
+}
+
+function mapVehicle(v: ApiVehicle): BusVehicle {
+  return {
+    id: v.id,
+    name: v.name,
+    plate: v.plate,
+    capacity: v.capacity,
+    route: v.routeName || 'Aucun trajet assigne',
+    status: isBusStatus(v.status) ? v.status : 'en_service',
+    occupancy: v.occupancy,
+    driver: v.driverName || 'Non renseigne',
+    schedule: v.schedule,
+  }
+}
+
+function mapRoute(r: ApiRoute): RouteInfo {
+  return {
+    id: r.id,
+    name: r.name,
+    departure: r.departure,
+    arrival: r.arrival,
+    distance: r.distanceKm ?? 0,
+    duration: r.durationLabel || 'Non renseignee',
+    stops: r.stops,
+    frequency: r.frequency || 'Non renseignee',
+    avgOccupancy: r.avgOccupancy,
+    vehicleCount: r.vehicleCount,
+    subscriptionCount: r.subscriptionCount,
+  }
+}
+
+function mapScheduleEntry(s: ApiScheduleEntry): ScheduleEntry {
+  return {
+    id: s.id,
+    departure: s.departureTime,
+    bus: s.vehicleName,
+    route: s.routeName,
+    driver: s.driverName || 'Non renseigne',
+    availableSeats: s.availableSeats,
+    status: isScheduleStatus(s.status) ? s.status : 'a_l_heure',
+  }
+}
+
+function mapMaintenanceEntry(m: ApiMaintenanceEntry): MaintenanceEntry {
+  return {
+    id: m.id,
+    bus: m.vehicleName,
+    type: m.type,
+    date: new Date(m.performedAt).toLocaleDateString('fr-FR'),
+    cost: m.cost,
+  }
+}
+
+function mapAlertEntry(a: ApiAlertEntry): AlertEntry {
+  return {
+    id: a.id,
+    severity: isSeverity(a.severity) ? a.severity : 'info',
+    message: a.message,
+    time: a.timeLabel,
+  }
+}
 
 // ─── Config Maps ────────────────────────────────────────────────────────────────
 
@@ -346,9 +348,26 @@ export function TransportPage() {
   const [filterBus, setFilterBus] = useState('all')
   const [filterPeriod, setFilterPeriod] = useState('all')
 
+  const { data: transportQuery, isLoading } = useTransport() as {
+    data: {
+      vehicles?: ApiVehicle[]
+      routes?: ApiRoute[]
+      schedule?: ApiScheduleEntry[]
+      maintenance?: ApiMaintenanceEntry[]
+      alerts?: ApiAlertEntry[]
+    } | undefined
+    isLoading: boolean
+  }
+
+  const buses: BusVehicle[] = (transportQuery?.vehicles || []).map(mapVehicle)
+  const routes: RouteInfo[] = (transportQuery?.routes || []).map(mapRoute)
+  const schedule: ScheduleEntry[] = (transportQuery?.schedule || []).map(mapScheduleEntry)
+  const maintenance: MaintenanceEntry[] = (transportQuery?.maintenance || []).map(mapMaintenanceEntry)
+  const alerts: AlertEntry[] = (transportQuery?.alerts || []).map(mapAlertEntry)
+
   // Filtered schedule
   const filteredSchedule = useMemo(() => {
-    return demoSchedule.filter(s => {
+    return schedule.filter(s => {
       const matchSearch = searchSchedule === '' ||
         s.bus.toLowerCase().includes(searchSchedule.toLowerCase()) ||
         s.driver.toLowerCase().includes(searchSchedule.toLowerCase()) ||
@@ -361,19 +380,36 @@ export function TransportPage() {
         (filterPeriod === 'soir' && parseInt(s.departure) >= 18)
       return matchSearch && matchRoute && matchBus && matchPeriod
     })
-  }, [searchSchedule, filterRoute, filterBus, filterPeriod])
+  }, [schedule, searchSchedule, filterRoute, filterBus, filterPeriod])
 
-  // Stats
-  const activeBuses = demoBuses.filter(b => b.status === 'en_service').length
-  const todayTrips = demoSchedule.filter(s => s.status !== 'annule').length
-  const studentsTransported = demoBuses.reduce((acc, b) => acc + b.occupancy, 0)
-  const occupancyRate = Math.round((studentsTransported / demoBuses.reduce((acc, b) => acc + b.capacity, 0)) * 100)
+  // Stats - all derived from real vehicles/schedule (no fabricated numbers)
+  const activeBuses = buses.filter(b => b.status === 'en_service').length
+  const maintenanceBuses = buses.filter(b => b.status === 'en_maintenance').length
+  const brokenBuses = buses.filter(b => b.status === 'en_panne').length
+  const todayTrips = schedule.filter(s => s.status !== 'annule').length
+  const studentsTransported = buses.reduce((acc, b) => acc + b.occupancy, 0)
+  const totalCapacity = buses.reduce((acc, b) => acc + b.capacity, 0)
+  const occupancyRate = totalCapacity > 0 ? Math.round((studentsTransported / totalCapacity) * 100) : 0
 
   // Transport statistics
   const topRoutesByRidership = useMemo(() => {
-    return demoRoutes.slice().sort((a, b) => b.avgOccupancy - a.avgOccupancy).slice(0, 5)
-  }, [])
+    return routes.slice().sort((a, b) => b.avgOccupancy - a.avgOccupancy).slice(0, 5)
+  }, [routes])
   const maxOccupancy = Math.max(...topRoutesByRidership.map(r => r.avgOccupancy), 1)
+
+  // Departures by period of day - real counts from the departures board
+  const morningDepartures = schedule.filter(s => parseInt(s.departure) < 12).length
+  const afternoonDepartures = schedule.filter(s => {
+    const h = parseInt(s.departure)
+    return h >= 12 && h < 18
+  }).length
+  const eveningDepartures = schedule.filter(s => parseInt(s.departure) >= 18).length
+
+  // Route coverage: how many configured routes actually have a vehicle assigned
+  const routesWithVehicle = routes.filter(r => r.vehicleCount > 0).length
+
+  const totalMaintenanceCost = maintenance.reduce((acc, m) => acc + m.cost, 0)
+  const lastMaintenance = maintenance[0] || null
 
   // Animation variants
   const containerVariants = {
@@ -429,9 +465,9 @@ export function TransportPage() {
         {/* ─── 2. 4 Stats Cards ────────────────────────────────────────────────────── */}
         <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { label: 'Bus actifs', value: activeBuses, color: '#1a2744', icon: Bus, trend: '+1', trendUp: true },
-            { label: 'Trajets du jour', value: todayTrips, color: '#2d7a4f', icon: Route, trend: '+3', trendUp: true },
-            { label: 'Etudiants transportes', value: studentsTransported, color: '#d4a853', icon: Users, trend: '+12%', trendUp: true },
+            { label: 'Bus actifs', value: activeBuses, color: '#1a2744', icon: Bus, trend: '', trendUp: true },
+            { label: 'Trajets du jour', value: todayTrips, color: '#2d7a4f', icon: Route, trend: '', trendUp: true },
+            { label: 'Etudiants transportes', value: studentsTransported, color: '#d4a853', icon: Users, trend: '', trendUp: true },
             { label: 'Taux remplissage', value: occupancyRate, color: '#2d7a4f', icon: TrendingUp, trend: `${occupancyRate}%`, trendUp: true },
           ].map((stat) => (
             <motion.div
@@ -471,10 +507,29 @@ export function TransportPage() {
         <motion.div variants={itemVariants}>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold text-[#1a2744] uppercase tracking-wide">Parc de bus</h2>
-            <Badge className="text-[10px] bg-[#1a274410] text-[#1a2744] border-0">{demoBuses.length} vehicules</Badge>
+            <Badge className="text-[10px] bg-[#1a274410] text-[#1a2744] border-0">{buses.length} vehicules</Badge>
           </div>
+          {isLoading && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Card key={i} className="h-56 animate-pulse">
+                  <CardContent className="p-4">
+                    <div className="h-full flex items-center justify-center text-xs text-gray-400">Chargement...</div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+          {!isLoading && buses.length === 0 && (
+            <Card>
+              <CardContent className="py-10 text-center text-sm text-gray-400">
+                Aucun vehicule enregistre. Ajoutez un vehicule pour commencer a suivre votre flotte.
+              </CardContent>
+            </Card>
+          )}
+          {!isLoading && buses.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {demoBuses.map((bus) => {
+            {buses.map((bus) => {
               const sConfig = busStatusConfig[bus.status]
               const occupancyPercent = bus.capacity > 0 ? Math.round((bus.occupancy / bus.capacity) * 100) : 0
               return (
@@ -577,6 +632,7 @@ export function TransportPage() {
               )
             })}
           </div>
+          )}
         </motion.div>
 
         {/* ─── 4. Route Management Card ─────────────────────────────────────────── */}
@@ -586,12 +642,27 @@ export function TransportPage() {
               <div className="flex items-center gap-2">
                 <Route className="size-4 text-[#1a2744]" />
                 <CardTitle className="text-sm font-semibold text-[#1a2744]">Gestion des trajets</CardTitle>
-                <Badge className="text-[10px] bg-[#1a274415] text-[#1a2744] border-0">{demoRoutes.length} trajets</Badge>
+                <Badge className="text-[10px] bg-[#1a274415] text-[#1a2744] border-0">{routes.length} trajets</Badge>
               </div>
             </CardHeader>
             <CardContent>
+              {isLoading && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {Array.from({ length: 2 }).map((_, i) => (
+                    <div key={i} className="h-32 rounded-lg border border-gray-100 animate-pulse flex items-center justify-center text-xs text-gray-400">
+                      Chargement...
+                    </div>
+                  ))}
+                </div>
+              )}
+              {!isLoading && routes.length === 0 && (
+                <div className="text-center py-8 text-sm text-gray-400">
+                  Aucune route configuree. Ajoutez un trajet pour organiser vos navettes.
+                </div>
+              )}
+              {!isLoading && routes.length > 0 && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {demoRoutes.map((route, idx) => {
+                {routes.map((route, idx) => {
                   const fConfig = frequencyConfig[route.frequency] || frequencyConfig['Quotidien']
                   const routeColor = routeColors[idx % routeColors.length]
                   return (
@@ -670,6 +741,7 @@ export function TransportPage() {
                   )
                 })}
               </div>
+              )}
             </CardContent>
           </Card>
         </motion.div>
@@ -712,7 +784,7 @@ export function TransportPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Tous les trajets</SelectItem>
-                    {demoRoutes.map(r => (
+                    {routes.map(r => (
                       <SelectItem key={r.id} value={r.name}>{r.name}</SelectItem>
                     ))}
                   </SelectContent>
@@ -723,7 +795,7 @@ export function TransportPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Tous les bus</SelectItem>
-                    {demoBuses.map(b => (
+                    {buses.map(b => (
                       <SelectItem key={b.id} value={b.name}>{b.name}</SelectItem>
                     ))}
                   </SelectContent>
@@ -756,7 +828,14 @@ export function TransportPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredSchedule.map((entry) => {
+                    {isLoading && (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-8 text-sm text-gray-400">
+                          Chargement de la programmation...
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    {!isLoading && filteredSchedule.map((entry) => {
                       const sConfig = scheduleStatusConfig[entry.status]
                       return (
                         <TableRow key={entry.id} className="hover:bg-gray-50/50">
@@ -796,6 +875,20 @@ export function TransportPage() {
                         </TableRow>
                       )
                     })}
+                    {!isLoading && schedule.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-8 text-sm text-gray-400">
+                          Aucun trajet programme pour le moment.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    {!isLoading && schedule.length > 0 && filteredSchedule.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-8 text-sm text-gray-400">
+                          Aucun trajet ne correspond a votre recherche.
+                        </TableCell>
+                      </TableRow>
+                    )}
                   </TableBody>
                 </Table>
               </ScrollArea>
@@ -817,89 +910,108 @@ export function TransportPage() {
                 {/* Top 5 routes by ridership - CSS animated bar chart */}
                 <div className="lg:col-span-2">
                   <p className="text-xs font-semibold text-gray-600 mb-3">Top 5 trajets par affluence</p>
-                  <div className="space-y-3">
-                    {topRoutesByRidership.map((route, idx) => {
-                      const routeColor = routeColors[demoRoutes.indexOf(route) % routeColors.length]
-                      const barWidth = Math.round((route.avgOccupancy / maxOccupancy) * 100)
-                      return (
-                        <div key={route.id}>
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-[11px] font-medium text-[#1a2744] truncate max-w-[200px]">{route.name}</span>
-                            <span className="text-[11px] font-bold" style={{ color: routeColor }}>{route.avgOccupancy}%</span>
+                  {topRoutesByRidership.length === 0 ? (
+                    <div className="text-xs text-gray-400 py-8 text-center border border-dashed border-gray-200 rounded-lg">
+                      Aucune donnee de frequentation disponible pour le moment.
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {topRoutesByRidership.map((route, idx) => {
+                        const routeColor = routeColors[routes.indexOf(route) % routeColors.length]
+                        const barWidth = Math.round((route.avgOccupancy / maxOccupancy) * 100)
+                        return (
+                          <div key={route.id}>
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-[11px] font-medium text-[#1a2744] truncate max-w-[200px]">{route.name}</span>
+                              <span className="text-[11px] font-bold" style={{ color: routeColor }}>{route.avgOccupancy}%</span>
+                            </div>
+                            <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
+                              <motion.div
+                                className="h-full rounded-full"
+                                style={{ backgroundColor: routeColor }}
+                                initial={{ width: 0 }}
+                                animate={{ width: `${barWidth}%` }}
+                                transition={{ duration: 1, ease: 'easeOut', delay: idx * 0.15 }}
+                              />
+                            </div>
                           </div>
-                          <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
-                            <motion.div
-                              className="h-full rounded-full"
-                              style={{ backgroundColor: routeColor }}
-                              initial={{ width: 0 }}
-                              animate={{ width: `${barWidth}%` }}
-                              transition={{ duration: 1, ease: 'easeOut', delay: idx * 0.15 }}
-                            />
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
+                        )
+                      })}
+                    </div>
+                  )}
                 </div>
 
-                {/* Right side stats */}
+                {/* Right side stats - all derived from real data. The previous
+                    revenue-tracking and fuel-consumption widgets are gone: no
+                    Transport model carries a fare or fuel field, so there was
+                    nothing honest to show there. These three boxes surface
+                    real numbers instead. */}
                 <div className="space-y-4">
-                  {/* Peak hours */}
+                  {/* Departures by period of day */}
                   <div className="border border-gray-100 rounded-lg p-3">
                     <div className="flex items-center gap-2 mb-2">
                       <Zap className="size-3.5 text-[#d4a853]" />
-                      <p className="text-xs font-semibold text-gray-600">Heures de pointe</p>
+                      <p className="text-xs font-semibold text-gray-600">Repartition des departs</p>
                     </div>
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-gray-500">Matin</span>
-                        <span className="text-[10px] font-bold text-[#1a2744]">06:30 - 08:00</span>
+                        <span className="text-[10px] text-gray-500">Matin (avant 12h)</span>
+                        <span className="text-[10px] font-bold text-[#1a2744]">{morningDepartures}</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-gray-500">Midi</span>
-                        <span className="text-[10px] font-bold text-[#1a2744]">11:30 - 13:00</span>
+                        <span className="text-[10px] text-gray-500">Apres-midi (12h-18h)</span>
+                        <span className="text-[10px] font-bold text-[#1a2744]">{afternoonDepartures}</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-gray-500">Soir</span>
-                        <span className="text-[10px] font-bold text-[#1a2744]">16:30 - 18:00</span>
+                        <span className="text-[10px] text-gray-500">Soir (apres 18h)</span>
+                        <span className="text-[10px] font-bold text-[#1a2744]">{eveningDepartures}</span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Revenue tracking */}
+                  {/* Fleet status breakdown */}
                   <div className="border border-gray-100 rounded-lg p-3">
                     <div className="flex items-center gap-2 mb-2">
-                      <TrendingUp className="size-3.5 text-[#2d7a4f]" />
-                      <p className="text-xs font-semibold text-gray-600">Revenus du mois</p>
+                      <Bus className="size-3.5 text-[#2d7a4f]" />
+                      <p className="text-xs font-semibold text-gray-600">Etat du parc</p>
                     </div>
-                    <p className="text-lg font-bold text-[#2d7a4f]">2,450,000 <span className="text-xs font-normal text-gray-400">FCFA</span></p>
-                    <div className="flex items-center gap-1 mt-1">
-                      <TrendingUp className="size-3 text-[#2d7a4f]" />
-                      <span className="text-[10px] text-[#2d7a4f] font-medium">+8% vs mois precedent</span>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-gray-500">En service</span>
+                        <span className="text-[10px] font-bold text-[#2d7a4f]">{activeBuses}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-gray-500">En maintenance</span>
+                        <span className="text-[10px] font-bold text-[#d4a853]">{maintenanceBuses}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-gray-500">En panne</span>
+                        <span className="text-[10px] font-bold text-[#c62828]">{brokenBuses}</span>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Fuel consumption */}
+                  {/* Route coverage + cumulative maintenance cost */}
                   <div className="border border-gray-100 rounded-lg p-3">
                     <div className="flex items-center gap-2 mb-2">
-                      <Fuel className="size-3.5 text-[#d4a853]" />
-                      <p className="text-xs font-semibold text-gray-600">Consommation carburant</p>
+                      <Route className="size-3.5 text-[#d4a853]" />
+                      <p className="text-xs font-semibold text-gray-600">Couverture des trajets</p>
                     </div>
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-[10px] text-gray-500">Ce mois</span>
-                      <span className="text-xs font-bold text-[#1a2744]">3,200 L</span>
+                      <span className="text-[10px] text-gray-500">Trajets avec vehicule assigne</span>
+                      <span className="text-xs font-bold text-[#1a2744]">{routesWithVehicle}/{routes.length}</span>
                     </div>
                     <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden mb-1">
                       <motion.div
                         className="h-full rounded-full bg-[#d4a853]"
                         initial={{ width: 0 }}
-                        animate={{ width: '72%' }}
+                        animate={{ width: `${routes.length > 0 ? Math.round((routesWithVehicle / routes.length) * 100) : 0}%` }}
                         transition={{ duration: 0.8, ease: 'easeOut' }}
                       />
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-[9px] text-gray-400">Budget: 4,400 L</span>
-                      <span className="text-[9px] text-[#d4a853] font-medium">72%</span>
+                      <span className="text-[9px] text-gray-400">Cout maintenance cumule</span>
+                      <span className="text-[9px] text-[#d4a853] font-medium">{totalMaintenanceCost.toLocaleString('fr-FR')} FCFA</span>
                     </div>
                   </div>
                 </div>
@@ -922,65 +1034,85 @@ export function TransportPage() {
                 {/* Maintenance entries */}
                 <div>
                   <p className="text-xs font-semibold text-gray-600 mb-3">Historique de maintenance</p>
-                  <div className="space-y-2">
-                    {demoMaintenance.map((entry) => (
-                      <div key={entry.id} className="flex items-center justify-between border border-gray-100 rounded-lg p-3 hover:bg-gray-50/50 transition-colors">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 rounded-lg bg-[#1a274410]">
-                            <Bus className="size-4 text-[#1a2744]" />
+                  {maintenance.length === 0 ? (
+                    <div className="text-center py-6 text-xs text-gray-400 border border-dashed border-gray-200 rounded-lg">
+                      Aucune maintenance enregistree pour le moment.
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {maintenance.map((entry) => (
+                        <div key={entry.id} className="flex items-center justify-between border border-gray-100 rounded-lg p-3 hover:bg-gray-50/50 transition-colors">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-[#1a274410]">
+                              <Bus className="size-4 text-[#1a2744]" />
+                            </div>
+                            <div>
+                              <p className="text-xs font-medium text-[#1a2744]">{entry.bus}</p>
+                              <p className="text-[10px] text-gray-500">{entry.type} - {entry.date}</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-xs font-medium text-[#1a2744]">{entry.bus}</p>
-                            <p className="text-[10px] text-gray-500">{entry.type} - {entry.date}</p>
-                          </div>
+                          <span className="text-xs font-bold text-[#1a2744]">{entry.cost.toLocaleString('fr-FR')} FCFA</span>
                         </div>
-                        <span className="text-xs font-bold text-[#1a2744]">{entry.cost.toLocaleString('fr-FR')} FCFA</span>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )}
 
-                  {/* Next scheduled maintenance */}
+                  {/* Most recently recorded maintenance. There is no "next
+                      scheduled maintenance" concept in the schema - only
+                      completed interventions with a performedAt date - so
+                      this shows the real latest record instead of a
+                      fabricated upcoming date. */}
                   <div className="mt-3 p-3 rounded-lg bg-[#2d7a4f08] border border-[#2d7a4f20]">
                     <div className="flex items-center gap-2">
                       <Clock className="size-3.5 text-[#2d7a4f]" />
-                      <p className="text-xs font-medium text-[#2d7a4f]">Prochaine maintenance programmee</p>
+                      <p className="text-xs font-medium text-[#2d7a4f]">Derniere maintenance enregistree</p>
                     </div>
-                    <p className="text-[10px] text-gray-600 mt-1">Bus Sahara - Controle technique le 20/03/2025</p>
+                    <p className="text-[10px] text-gray-600 mt-1">
+                      {lastMaintenance
+                        ? `${lastMaintenance.bus} - ${lastMaintenance.type} le ${lastMaintenance.date}`
+                        : 'Aucune maintenance enregistree pour le moment.'}
+                    </p>
                   </div>
                 </div>
 
                 {/* Alerts */}
                 <div>
                   <p className="text-xs font-semibold text-gray-600 mb-3">Alertes actives</p>
-                  <div className="space-y-2">
-                    {demoAlerts.map((alert) => {
-                      const sevConfig = severityConfig[alert.severity]
-                      return (
-                        <div key={alert.id} className="flex items-start gap-3 border border-gray-100 rounded-lg p-3 hover:bg-gray-50/50 transition-colors">
-                          <motion.div
-                            className="w-2.5 h-2.5 rounded-full shrink-0 mt-0.5"
-                            style={{ backgroundColor: sevConfig.dotColor }}
-                            animate={alert.severity === 'critique' ? { scale: [1, 1.3, 1], opacity: [1, 0.6, 1] } : {}}
-                            transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
-                          />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-0.5">
-                              <Badge className={`text-[8px] ${sevConfig.className}`}>
-                                {alert.severity === 'critique' ? 'Critique' : alert.severity === 'avertissement' ? 'Attention' : 'Info'}
-                              </Badge>
-                              <span className="text-[9px] text-gray-400">{alert.time}</span>
+                  {alerts.length === 0 ? (
+                    <div className="text-center py-6 text-xs text-gray-400 border border-dashed border-gray-200 rounded-lg">
+                      Aucune alerte active.
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {alerts.map((alert) => {
+                        const sevConfig = severityConfig[alert.severity]
+                        return (
+                          <div key={alert.id} className="flex items-start gap-3 border border-gray-100 rounded-lg p-3 hover:bg-gray-50/50 transition-colors">
+                            <motion.div
+                              className="w-2.5 h-2.5 rounded-full shrink-0 mt-0.5"
+                              style={{ backgroundColor: sevConfig.dotColor }}
+                              animate={alert.severity === 'critique' ? { scale: [1, 1.3, 1], opacity: [1, 0.6, 1] } : {}}
+                              transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-0.5">
+                                <Badge className={`text-[8px] ${sevConfig.className}`}>
+                                  {alert.severity === 'critique' ? 'Critique' : alert.severity === 'avertissement' ? 'Attention' : 'Info'}
+                                </Badge>
+                                <span className="text-[9px] text-gray-400">{alert.time}</span>
+                              </div>
+                              <p className="text-[11px] text-gray-700 leading-relaxed">{alert.message}</p>
                             </div>
-                            <p className="text-[11px] text-gray-700 leading-relaxed">{alert.message}</p>
                           </div>
-                        </div>
-                      )
-                    })}
-                  </div>
+                        )
+                      })}
+                    </div>
+                  )}
 
                   {/* Maintenance cost summary */}
                   <div className="mt-3 p-3 rounded-lg bg-[#1a274408] border border-[#1a274420]">
-                    <p className="text-xs font-medium text-[#1a2744] mb-1">Cout total maintenance ce mois</p>
-                    <p className="text-lg font-bold text-[#1a2744]">{demoMaintenance.reduce((acc, m) => acc + m.cost, 0).toLocaleString('fr-FR')} <span className="text-xs font-normal text-gray-400">FCFA</span></p>
+                    <p className="text-xs font-medium text-[#1a2744] mb-1">Cout total maintenance</p>
+                    <p className="text-lg font-bold text-[#1a2744]">{totalMaintenanceCost.toLocaleString('fr-FR')} <span className="text-xs font-normal text-gray-400">FCFA</span></p>
                   </div>
                 </div>
               </div>
@@ -989,6 +1121,15 @@ export function TransportPage() {
         </motion.div>
 
         {/* ─── 8. New Reservation Dialog ─────────────────────────────────────────── */}
+        {/* NOTE: this dialog models an ad-hoc single-passenger booking on a
+            specific trip. There is no backing Prisma model for that (only a
+            recurring TransportDeparture time slot and route-level
+            TransportSubscription, and student-facing route subscription is
+            explicitly out of scope for this admin/ops page). The dropdowns
+            below now source real buses/routes, but - as in the original
+            demo build - the confirm button is decorative: there is no
+            endpoint to wire it to without inventing a reservation model that
+            doesn't exist in the schema. */}
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent className="sm:max-w-[520px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
@@ -1006,7 +1147,7 @@ export function TransportPage() {
                       <SelectValue placeholder="Choisir un bus" />
                     </SelectTrigger>
                     <SelectContent>
-                      {demoBuses.filter(b => b.status === 'en_service').map(bus => (
+                      {buses.filter(b => b.status === 'en_service').map(bus => (
                         <SelectItem key={bus.id} value={bus.name}>{bus.name} ({bus.capacity} pl.)</SelectItem>
                       ))}
                     </SelectContent>
@@ -1038,7 +1179,7 @@ export function TransportPage() {
                       <SelectValue placeholder="Choisir un trajet" />
                     </SelectTrigger>
                     <SelectContent>
-                      {demoRoutes.map(r => (
+                      {routes.map(r => (
                         <SelectItem key={r.id} value={r.name}>{r.name}</SelectItem>
                       ))}
                     </SelectContent>

@@ -75,6 +75,7 @@ model Tenant {
   announcements    Announcement[]
   auditLogs        AuditLog[]
   importLogs       ImportLog[]
+  exportLogs       ExportLog[]
   scholarships     Scholarship[]
   alumni           Alumni[]
   reports          Report[]
@@ -1049,6 +1050,21 @@ model ImportLog {
   createdBy   String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model ExportLog {
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  type          String
+  format        String // PDF, Excel, CSV
+  rowCount      Int      @default(0)
+  fileSizeLabel String?
+  createdBy     String?
+  createdAt     DateTime @default(now())
+
+  @@index([tenantId])
+  @@map("export_logs")
 }
 
 // ============================================

@@ -1,13 +1,17 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { motion } from 'framer-motion'
+import { useAdvising, useStudents } from '@/lib/api-hooks'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
-import { Checkbox } from '@/components/ui/checkbox'
 import {
   Table,
   TableBody,
@@ -23,6 +27,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,7 +52,6 @@ import {
   Phone,
   Clock,
   MapPin,
-  Star,
   BookOpen,
   Target,
   CheckCircle2,
@@ -52,39 +62,55 @@ import {
   Heart,
   ChevronDown,
   ChevronUp,
+  Plus,
+  PlayCircle,
+  Ban,
 } from 'lucide-react'
 
-// ─── Demo Data ────────────────────────────────────────────────────────────────
-
-type AppointmentType = 'Orientation' | 'Suivi pedagogique' | 'Reorientation' | 'Probleme personnel' | 'Projet professionnel'
+// ─── API Types ──────────────────────────────────────────────────────────────
+// Shapes returned by GET /api/advising - see src/app/api/advising/route.ts.
 
 type AppointmentStatus = 'Planifie' | 'En cours' | 'Termine' | 'Annule'
-
-interface Appointment {
-  id: string
-  studentName: string
-  matricule: string
-  type: AppointmentType
-  date: string
-  time: string
-  conseiller: string
-  status: AppointmentStatus
-}
-
-const demoAppointments: Appointment[] = [
-  { id: '1', studentName: 'ABAKAR Adam', matricule: 'UDN/L2/2024/001', type: 'Orientation', date: '10/03/2025', time: '09:00', conseiller: 'Dr. Ngarba', status: 'Planifie' },
-  { id: '2', studentName: 'KHAMIS Fatime', matricule: 'UDN/L3/2024/002', type: 'Suivi pedagogique', date: '10/03/2025', time: '10:30', conseiller: 'Mme. Lea', status: 'Planifie' },
-  { id: '3', studentName: 'MAHAMAT Youssouf', matricule: 'UDN/M1/2024/003', type: 'Projet professionnel', date: '10/03/2025', time: '14:00', conseiller: 'Dr. Djimé', status: 'En cours' },
-  { id: '4', studentName: 'NGARNDMI Halime', matricule: 'UDN/L1/2024/004', type: 'Reorientation', date: '11/03/2025', time: '08:30', conseiller: 'M. Hassan', status: 'Planifie' },
-  { id: '5', studentName: 'HISSEIN Mariam', matricule: 'UDN/L2/2024/005', type: 'Probleme personnel', date: '11/03/2025', time: '11:00', conseiller: 'Mme. Lea', status: 'Planifie' },
-  { id: '6', studentName: 'ISSA Mahamat Nour', matricule: 'UDN/L3/2024/006', type: 'Suivi pedagogique', date: '11/03/2025', time: '15:00', conseiller: 'Dr. Ngarba', status: 'Termine' },
-  { id: '7', studentName: 'ADAM Khadija', matricule: 'UDN/M2/2024/007', type: 'Orientation', date: '12/03/2025', time: '09:30', conseiller: 'Dr. Saleh', status: 'Planifie' },
-  { id: '8', studentName: 'BICHARA Hawa', matricule: 'UDN/L1/2024/008', type: 'Suivi pedagogique', date: '12/03/2025', time: '14:30', conseiller: 'M. Hassan', status: 'Annule' },
-]
-
 type AlertLevel = 'Vert' | 'Jaune' | 'Orange' | 'Rouge'
 
-interface MonitoredStudent {
+interface ApiAppointment {
+  id: string
+  studentId: string
+  advisorId: string
+  studentName: string
+  matricule: string
+  type: string
+  date: string
+  time: string
+  scheduledAtIso: string
+  createdAtIso: string
+  conseiller: string
+  status: string
+  notes: string | null
+}
+
+interface ApiAdvisor {
+  id: string
+  name: string
+  title: string
+  department: string
+  specialties: string[]
+  etudiantsSuivis: number
+  disponibilite: string
+}
+
+interface ApiWorkshop {
+  id: string
+  title: string
+  inscrits: number
+  places: number
+  salle: string
+  date: string
+  time: string
+  instructor: string
+}
+
+interface ApiMonitoredStudent {
   id: string
   name: string
   matricule: string
@@ -99,77 +125,20 @@ interface MonitoredStudent {
   dernierEntretien: string
 }
 
-const demoMonitoredStudents: MonitoredStudent[] = [
-  { id: '1', name: 'ABAKAR Adam', matricule: 'UDN/L2/2024/001', program: 'Informatique', level: 'L2', moyenne: 14.5, creditsAcquis: 58, creditsTotal: 60, dettes: 0, alertLevel: 'Vert', conseiller: 'Dr. Ngarba', dernierEntretien: '05/03/2025' },
-  { id: '2', name: 'KHAMIS Fatime', matricule: 'UDN/L3/2024/002', program: 'Droit', level: 'L3', moyenne: 11.2, creditsAcquis: 48, creditsTotal: 60, dettes: 2, alertLevel: 'Jaune', conseiller: 'Mme. Lea', dernierEntretien: '28/02/2025' },
-  { id: '3', name: 'MAHAMAT Youssouf', matricule: 'UDN/M1/2024/003', program: 'Economie', level: 'M1', moyenne: 9.8, creditsAcquis: 36, creditsTotal: 60, dettes: 4, alertLevel: 'Orange', conseiller: 'Dr. Djimé', dernierEntretien: '20/02/2025' },
-  { id: '4', name: 'NGARNDMI Halime', matricule: 'UDN/L1/2024/004', program: 'Medecine', level: 'L1', moyenne: 7.5, creditsAcquis: 18, creditsTotal: 60, dettes: 6, alertLevel: 'Rouge', conseiller: 'M. Hassan', dernierEntretien: '15/02/2025' },
-  { id: '5', name: 'HISSEIN Mariam', matricule: 'UDN/L2/2024/005', program: 'Informatique', level: 'L2', moyenne: 15.2, creditsAcquis: 60, creditsTotal: 60, dettes: 0, alertLevel: 'Vert', conseiller: 'Dr. Saleh', dernierEntretien: '04/03/2025' },
-  { id: '6', name: 'ISSA Mahamat Nour', matricule: 'UDN/L3/2024/006', program: 'Mathematiques', level: 'L3', moyenne: 10.5, creditsAcquis: 45, creditsTotal: 60, dettes: 3, alertLevel: 'Jaune', conseiller: 'Mme. Lea', dernierEntretien: '01/03/2025' },
-  { id: '7', name: 'ADAM Khadija', matricule: 'UDN/M2/2024/007', program: 'Gestion', level: 'M2', moyenne: 13.8, creditsAcquis: 55, creditsTotal: 60, dettes: 1, alertLevel: 'Vert', conseiller: 'Dr. Ngarba', dernierEntretien: '06/03/2025' },
-  { id: '8', name: 'BICHARA Hawa', matricule: 'UDN/L1/2024/008', program: 'Lettres', level: 'L1', moyenne: 8.9, creditsAcquis: 30, creditsTotal: 60, dettes: 5, alertLevel: 'Orange', conseiller: 'M. Hassan', dernierEntretien: '22/02/2025' },
-  { id: '9', name: 'SEID Ibrahim', matricule: 'UDN/L2/2024/009', program: 'Physique', level: 'L2', moyenne: 6.8, creditsAcquis: 12, creditsTotal: 60, dettes: 8, alertLevel: 'Rouge', conseiller: 'Dr. Djimé', dernierEntretien: '10/02/2025' },
-  { id: '10', name: 'DJIMADOUMBER Deubong', matricule: 'UDN/M1/2024/010', program: 'Informatique', level: 'M1', moyenne: 12.4, creditsAcquis: 50, creditsTotal: 60, dettes: 1, alertLevel: 'Vert', conseiller: 'Dr. Saleh', dernierEntretien: '03/03/2025' },
-  { id: '11', name: 'NASSERINGAR Lea', matricule: 'UDN/L3/2024/011', program: 'Droit', level: 'L3', moyenne: 10.1, creditsAcquis: 42, creditsTotal: 60, dettes: 3, alertLevel: 'Jaune', conseiller: 'Mme. Lea', dernierEntretien: '27/02/2025' },
-  { id: '12', name: 'OUMAR Abdoulaye', matricule: 'UDN/L1/2024/012', program: 'Economie', level: 'L1', moyenne: 9.2, creditsAcquis: 33, creditsTotal: 60, dettes: 4, alertLevel: 'Orange', conseiller: 'Dr. Ngarba', dernierEntretien: '18/02/2025' },
-]
-
-interface Conseiller {
-  id: string
-  name: string
-  title: string
-  department: string
-  initials: string
-  specialties: string[]
-  etudiantsSuivis: number
-  disponibilite: 'Libre' | 'Occupe' | 'En RDV'
-  gradientFrom: string
-  gradientTo: string
+interface ApiMotif {
+  motif: string
+  percent: number
+  color: string
 }
 
-const demoConseillers: Conseiller[] = [
-  { id: '1', name: 'Dr. Ngarba Michel', title: 'Conseiller principal', department: 'Sciences', initials: 'NM', specialties: ['Orientation', 'Pedagogie'], etudiantsSuivis: 42, disponibilite: 'En RDV', gradientFrom: '#1a2744', gradientTo: '#2d7a4f' },
-  { id: '2', name: 'Mme. Lea Nadjinda', title: 'Psychologue scolaire', department: 'Sante', initials: 'LN', specialties: ['Psychologique', 'Pedagogie'], etudiantsSuivis: 38, disponibilite: 'Libre', gradientFrom: '#2d7a4f', gradientTo: '#3da66a' },
-  { id: '3', name: 'Dr. Djimé Soumaine', title: 'Directeur orientation', department: 'Orientation', initials: 'DS', specialties: ['Orientation', 'Professionnel'], etudiantsSuivis: 35, disponibilite: 'Occupe', gradientFrom: '#d4a853', gradientTo: '#c4933e' },
-  { id: '4', name: 'M. Hassan Ali', title: 'Conseiller pedagogique', department: 'Lettres', initials: 'HA', specialties: ['Pedagogie'], etudiantsSuivis: 45, disponibilite: 'Libre', gradientFrom: '#1a2744', gradientTo: '#d4a853' },
-  { id: '5', name: 'Dr. Saleh Mahamat', title: 'Conseiller professionnel', department: 'Economie', initials: 'SM', specialties: ['Professionnel', 'Orientation'], etudiantsSuivis: 30, disponibilite: 'Occupe', gradientFrom: '#2d7a4f', gradientTo: '#d4a853' },
-  { id: '6', name: 'Mme. Fatime Khamis', title: 'Psychologue', department: 'Sciences', initials: 'FK', specialties: ['Psychologique', 'Pedagogie'], etudiantsSuivis: 28, disponibilite: 'Libre', gradientFrom: '#d4a853', gradientTo: '#1a2744' },
-]
-
-interface Workshop {
+interface StudentOption {
   id: string
-  title: string
-  inscrits: number
-  places: number
-  salle: string
-  date: string
-  time: string
-  instructor: string
+  firstName: string
+  lastName: string
+  matricule: string | null
+  currentProgram: { name: string } | null
+  currentLevel: { name: string } | null
 }
-
-const demoWorkshops: Workshop[] = [
-  { id: '1', title: 'Methodologie de recherche bibliographique', inscrits: 30, places: 40, salle: 'Salle B12', date: '15/03/2025', time: '09:00 - 12:00', instructor: 'Dr. Ngarba' },
-  { id: '2', title: 'Preparation aux examens: techniques de revision', inscrits: 45, places: 50, salle: 'Amphi 3', date: '18/03/2025', time: '14:00 - 17:00', instructor: 'Mme. Lea' },
-  { id: '3', title: 'Orientation professionnelle: metiers du numerique', inscrits: 20, places: 30, salle: 'Salle C5', date: '20/03/2025', time: '10:00 - 12:30', instructor: 'Dr. Saleh' },
-  { id: '4', title: 'Gestion du stress et du temps', inscrits: 25, places: 30, salle: 'Salle A8', date: '22/03/2025', time: '09:00 - 11:30', instructor: 'Mme. Fatime' },
-]
-
-const motifData = [
-  { motif: 'Suivi pedagogique', percent: 35, color: '#2d7a4f' },
-  { motif: 'Orientation professionnelle', percent: 25, color: '#1a2744' },
-  { motif: 'Problemes personnels', percent: 15, color: '#d4a853' },
-  { motif: 'Reorientation', percent: 15, color: '#ea580c' },
-  { motif: "Projet d'etudes", percent: 10, color: '#8b5cf6' },
-]
-
-const monthlyData = [
-  { month: 'Oct', count: 12 },
-  { month: 'Nov', count: 18 },
-  { month: 'Dec', count: 22 },
-  { month: 'Jan', count: 28 },
-  { month: 'Fev', count: 35 },
-  { month: 'Mar', count: 42 },
-]
 
 // ─── Custom useCountUp Hook ────────────────────────────────────────────────────
 
@@ -196,6 +165,81 @@ function useCountUp(target: number, duration = 1400) {
 
   return value
 }
+
+// ─── Derived-data helpers (all computed from real appointment timestamps) ──────
+
+const MONTH_LABELS = ['Jan', 'Fev', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aou', 'Sep', 'Oct', 'Nov', 'Dec']
+const WEEK_DAYS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven']
+
+function buildMonthlyTrend(appointments: ApiAppointment[]) {
+  const now = new Date()
+  const months: { key: string; label: string }[] = []
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    months.push({ key: `${d.getFullYear()}-${d.getMonth()}`, label: MONTH_LABELS[d.getMonth()] })
+  }
+  const counts = new Map<string, number>()
+  for (const a of appointments) {
+    const d = new Date(a.scheduledAtIso)
+    if (Number.isNaN(d.getTime())) continue
+    const key = `${d.getFullYear()}-${d.getMonth()}`
+    counts.set(key, (counts.get(key) ?? 0) + 1)
+  }
+  return months.map((m) => ({ month: m.label, count: counts.get(m.key) ?? 0 }))
+}
+
+function buildWeekSchedule(appointments: ApiAppointment[]): Record<string, ApiAppointment[]> {
+  const now = new Date()
+  const diffToMonday = (now.getDay() + 6) % 7
+  const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diffToMonday)
+  const buckets: Record<string, ApiAppointment[]> = { Lun: [], Mar: [], Mer: [], Jeu: [], Ven: [] }
+  for (const a of appointments) {
+    const d = new Date(a.scheduledAtIso)
+    if (Number.isNaN(d.getTime())) continue
+    const diffDays = Math.floor((d.getTime() - monday.getTime()) / 86400000)
+    if (diffDays >= 0 && diffDays < 5) {
+      buckets[WEEK_DAYS[diffDays]].push(a)
+    }
+  }
+  return buckets
+}
+
+function getInitials(name: string): string {
+  const cleaned = name.replace(/^(Dr\.|Mme\.|M\.)\s*/i, '').trim()
+  const parts = cleaned.split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return '—'
+  return parts.slice(0, 2).map((p) => p.charAt(0).toUpperCase()).join('')
+}
+
+const AVATAR_GRADIENTS: [string, string][] = [
+  ['#1a2744', '#2d7a4f'],
+  ['#2d7a4f', '#3da66a'],
+  ['#d4a853', '#c4933e'],
+  ['#1a2744', '#d4a853'],
+  ['#2d7a4f', '#d4a853'],
+  ['#d4a853', '#1a2744'],
+]
+
+function getAvatarGradient(index: number): [string, string] {
+  return AVATAR_GRADIENTS[index % AVATAR_GRADIENTS.length]
+}
+
+const ALERT_GRADIENTS: Record<AlertLevel, [string, string]> = {
+  Vert: ['#2d7a4f', '#3da66a'],
+  Jaune: ['#d4a853', '#c4933e'],
+  Orange: ['#ea580c', '#c2410c'],
+  Rouge: ['#c62828', '#8f1d1d'],
+}
+
+const ALERT_SEVERITY: Record<AlertLevel, number> = { Rouge: 0, Orange: 1, Jaune: 2, Vert: 3 }
+
+const APPOINTMENT_TYPE_OPTIONS = [
+  'Orientation',
+  'Suivi pedagogique',
+  'Projet professionnel',
+  'Reorientation',
+  'Probleme personnel',
+]
 
 // ─── Config Maps ──────────────────────────────────────────────────────────────
 
@@ -237,6 +281,18 @@ const specialtyConfig: Record<string, { label: string; className: string }> = {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function AdvisingPage() {
+  const queryClient = useQueryClient()
+  const { data: advisingData, isLoading } = useAdvising()
+  const { data: studentsData } = useStudents({ limit: 1000 })
+
+  const appointments: ApiAppointment[] = advisingData?.appointments || []
+  const advisors: ApiAdvisor[] = advisingData?.advisors || []
+  const workshops: ApiWorkshop[] = advisingData?.workshops || []
+  const monitoredStudents: ApiMonitoredStudent[] = advisingData?.monitoredStudents || []
+  const motifData: ApiMotif[] = advisingData?.motifData || []
+  const passingGrade: number = advisingData?.passingGrade ?? 10
+  const studentOptions: StudentOption[] = studentsData?.data || []
+
   const [showSchedule, setShowSchedule] = useState(false)
   const [searchMonitored, setSearchMonitored] = useState('')
   const [filterNiveau, setFilterNiveau] = useState('tous')
@@ -244,8 +300,66 @@ export function AdvisingPage() {
   const [filterAlerte, setFilterAlerte] = useState('tous')
   const [filterConseiller, setFilterConseiller] = useState('tous')
 
+  const [showNewAppointment, setShowNewAppointment] = useState(false)
+  const [isSubmittingAppt, setIsSubmittingAppt] = useState(false)
+  const [newAppt, setNewAppt] = useState({ studentId: '', advisorId: '', type: 'Suivi pedagogique', date: '', time: '', notes: '' })
+
+  // ── Real derived aggregates (no fabricated numbers) ──────────────────────
+  const now = new Date()
+
+  const distinctAdvisedStudents = new Set(appointments.map((a) => a.studentId))
+  const etudiantsAccompagnes = distinctAdvisedStudents.size
+
+  const sessionsThisMonth = appointments.filter((a) => {
+    const d = new Date(a.scheduledAtIso)
+    return a.status !== 'Annule' && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
+  }).length
+
+  const diffToMonday = (now.getDay() + 6) % 7
+  const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diffToMonday)
+  const endOfWeek = new Date(startOfWeek.getTime() + 7 * 86400000)
+  const sessionsThisWeek = appointments.filter((a) => {
+    const d = new Date(a.scheduledAtIso)
+    return a.status !== 'Annule' && d >= startOfWeek && d < endOfWeek
+  }).length
+
+  const reorientationCount = appointments.filter((a) => a.type === 'Reorientation').length
+  const tauxReorientation = appointments.length > 0 ? Math.round((reorientationCount / appointments.length) * 100) : 0
+
+  const successCount = monitoredStudents.filter((s) => s.moyenne >= passingGrade).length
+  const tauxReussite = monitoredStudents.length > 0 ? Math.round((successCount / monitoredStudents.length) * 100) : 0
+
+  const advisorsDisponibles = advisors.filter((a) => a.disponibilite === 'Libre').length
+
+  const advisedMonitoredCount = monitoredStudents.filter((s) => s.conseiller !== '—').length
+  const coverageRate = monitoredStudents.length > 0 ? Math.round((advisedMonitoredCount / monitoredStudents.length) * 100) : 0
+
+  const cancelledCount = appointments.filter((a) => a.status === 'Annule').length
+  const cancellationRate = appointments.length > 0 ? Math.round((cancelledCount / appointments.length) * 100) : 0
+
+  const leadTimes = appointments
+    .map((a) => (new Date(a.scheduledAtIso).getTime() - new Date(a.createdAtIso).getTime()) / 86400000)
+    .filter((v) => Number.isFinite(v) && v >= 0)
+  const avgLeadTimeDays = leadTimes.length > 0 ? leadTimes.reduce((sum, v) => sum + v, 0) / leadTimes.length : 0
+
+  const apptCountByStudent = new Map<string, number>()
+  for (const a of appointments) {
+    apptCountByStudent.set(a.studentId, (apptCountByStudent.get(a.studentId) ?? 0) + 1)
+  }
+  const returningStudents = Array.from(apptCountByStudent.values()).filter((c) => c >= 2).length
+  const returnRate = apptCountByStudent.size > 0 ? Math.round((returningStudents / apptCountByStudent.size) * 100) : 0
+
+  const monthlyData = buildMonthlyTrend(appointments)
+  const maxMonthly = Math.max(1, ...monthlyData.map((m) => m.count))
+  const weekSchedule = buildWeekSchedule(appointments)
+
+  // Filter dropdown options derived from real monitored-student / advisor data
+  const niveauOptions = Array.from(new Set(monitoredStudents.map((s) => s.level).filter((l) => l && l !== '—'))).sort()
+  const filiereOptions = Array.from(new Set(monitoredStudents.map((s) => s.program).filter((p) => p && p !== '—'))).sort()
+  const conseillerOptions = Array.from(new Set(advisors.map((a) => a.name)))
+
   // Filter monitored students
-  const filteredStudents = demoMonitoredStudents.filter(s => {
+  const filteredStudents = monitoredStudents.filter(s => {
     const matchSearch = searchMonitored === '' ||
       s.name.toLowerCase().includes(searchMonitored.toLowerCase()) ||
       s.matricule.toLowerCase().includes(searchMonitored.toLowerCase())
@@ -256,14 +370,93 @@ export function AdvisingPage() {
     return matchSearch && matchNiveau && matchFiliere && matchAlerte && matchConseiller
   })
 
-  // Stats (commented stats are kept for reference)
-  void demoMonitoredStudents.length
-  void demoAppointments.filter(a => a.status !== 'Annule').length
+  // Plan d'accompagnement: the most urgent monitored student (Rouge > Orange > Jaune > Vert)
+  const priorityStudent = monitoredStudents.length > 0
+    ? [...monitoredStudents].sort((a, b) => ALERT_SEVERITY[a.alertLevel] - ALERT_SEVERITY[b.alertLevel])[0]
+    : null
 
-  const maxMonthly = Math.max(...monthlyData.map(m => m.count))
+  const objectifs = priorityStudent ? [
+    {
+      objectif: `Atteindre la moyenne minimale de ${passingGrade}/20`,
+      progress: Math.max(0, Math.min(100, Math.round((priorityStudent.moyenne / passingGrade) * 100))),
+      color: '#2d7a4f',
+    },
+    {
+      objectif: `Valider les ${priorityStudent.creditsTotal} credits de l'annee`,
+      progress: priorityStudent.creditsTotal > 0 ? Math.round((priorityStudent.creditsAcquis / priorityStudent.creditsTotal) * 100) : 0,
+      color: '#1a2744',
+    },
+    {
+      objectif: 'Regulariser les paiements en attente',
+      progress: priorityStudent.dettes === 0 ? 100 : Math.max(0, 100 - priorityStudent.dettes * 25),
+      color: '#d4a853',
+    },
+  ] : []
 
-  // Plan d'accompagnement demo student
-  const demoStudent = demoMonitoredStudents[2] // MAHAMAT Youssouf - Orange level
+  const priorityStudentAppointments = priorityStudent
+    ? appointments
+        .filter((a) => a.studentId === priorityStudent.id)
+        .slice()
+        .sort((a, b) => new Date(b.scheduledAtIso).getTime() - new Date(a.scheduledAtIso).getTime())
+    : []
+
+  // ── Mutations ─────────────────────────────────────────────────────────────
+
+  const openNewAppointment = (prefill?: { studentId?: string; advisorId?: string }) => {
+    setNewAppt((f) => ({ ...f, studentId: prefill?.studentId ?? f.studentId, advisorId: prefill?.advisorId ?? f.advisorId }))
+    setShowNewAppointment(true)
+  }
+
+  const createAppointment = async () => {
+    if (!newAppt.studentId || !newAppt.advisorId || !newAppt.date || !newAppt.time) {
+      toast.error('Champs requis manquants', { description: 'Etudiant, conseiller, date et heure sont obligatoires' })
+      return
+    }
+    setIsSubmittingAppt(true)
+    try {
+      const scheduledAt = new Date(`${newAppt.date}T${newAppt.time}`)
+      if (Number.isNaN(scheduledAt.getTime())) {
+        throw new Error('Date ou heure invalide')
+      }
+      const res = await fetch('/api/advising', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentId: newAppt.studentId,
+          advisorId: newAppt.advisorId,
+          type: newAppt.type,
+          scheduledAt: scheduledAt.toISOString(),
+          notes: newAppt.notes || undefined,
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Echec de la planification')
+      toast.success('Rendez-vous planifie')
+      queryClient.invalidateQueries({ queryKey: ['advising'] })
+      setShowNewAppointment(false)
+      setNewAppt({ studentId: '', advisorId: '', type: 'Suivi pedagogique', date: '', time: '', notes: '' })
+    } catch (e) {
+      toast.error('Erreur', { description: e instanceof Error ? e.message : 'Echec de la planification' })
+    } finally {
+      setIsSubmittingAppt(false)
+    }
+  }
+
+  const updateAppointmentStatus = async (id: string, status: AppointmentStatus) => {
+    try {
+      const res = await fetch(`/api/advising?id=${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Echec de la mise a jour')
+      toast.success('Statut mis a jour')
+      queryClient.invalidateQueries({ queryKey: ['advising'] })
+    } catch (e) {
+      toast.error('Erreur', { description: e instanceof Error ? e.message : 'Echec de la mise a jour' })
+    }
+  }
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -277,6 +470,109 @@ export function AdvisingPage() {
     hidden: { opacity: 0, y: 12 },
     visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: 'easeOut' as const } },
   } as const
+
+  const noAdvisors = !isLoading && advisors.length === 0
+
+  const newAppointmentDialog = (
+    <Dialog open={showNewAppointment} onOpenChange={setShowNewAppointment}>
+      <DialogTrigger asChild>
+        <Button
+          size="sm"
+          className="text-xs bg-[#2d7a4f] hover:bg-[#236b40] text-white"
+          disabled={noAdvisors}
+          onClick={() => openNewAppointment()}
+        >
+          <Plus className="size-3.5 mr-1.5" />
+          Nouveau rendez-vous
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Planifier un rendez-vous de conseil</DialogTitle>
+        </DialogHeader>
+        {noAdvisors ? (
+          <div className="py-6 text-center">
+            <p className="text-sm text-gray-500">
+              Aucun conseiller enregistre — contactez un administrateur pour en ajouter avant de pouvoir planifier un rendez-vous.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label className="text-sm">Etudiant</Label>
+              <Select value={newAppt.studentId} onValueChange={(v) => setNewAppt((f) => ({ ...f, studentId: v }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selectionner un etudiant" />
+                </SelectTrigger>
+                <SelectContent>
+                  {studentOptions.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.lastName.toUpperCase()} {s.firstName} {s.matricule ? `(${s.matricule})` : ''}
+                    </SelectItem>
+                  ))}
+                  {studentOptions.length === 0 && (
+                    <div className="px-2 py-1.5 text-xs text-gray-400">Aucun etudiant trouve</div>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm">Conseiller</Label>
+              <Select value={newAppt.advisorId} onValueChange={(v) => setNewAppt((f) => ({ ...f, advisorId: v }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selectionner un conseiller" />
+                </SelectTrigger>
+                <SelectContent>
+                  {advisors.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm">Motif</Label>
+              <Select value={newAppt.type} onValueChange={(v) => setNewAppt((f) => ({ ...f, type: v }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Motif" />
+                </SelectTrigger>
+                <SelectContent>
+                  {APPOINTMENT_TYPE_OPTIONS.map((t) => (
+                    <SelectItem key={t} value={t}>{typeConfig[t]?.label || t}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label className="text-sm">Date</Label>
+                <Input type="date" value={newAppt.date} onChange={(e) => setNewAppt((f) => ({ ...f, date: e.target.value }))} />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm">Heure</Label>
+                <Input type="time" value={newAppt.time} onChange={(e) => setNewAppt((f) => ({ ...f, time: e.target.value }))} />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm">Notes (optionnel)</Label>
+              <Textarea
+                placeholder="Contexte, objectifs de la rencontre..."
+                value={newAppt.notes}
+                onChange={(e) => setNewAppt((f) => ({ ...f, notes: e.target.value }))}
+              />
+            </div>
+            <div className="flex gap-2 pt-2">
+              <Button className="flex-1 bg-[#2d7a4f] hover:bg-[#236b40] text-white" disabled={isSubmittingAppt} onClick={createAppointment}>
+                {isSubmittingAppt ? 'Planification...' : 'Planifier'}
+              </Button>
+              <Button variant="outline" className="flex-1" onClick={() => setShowNewAppointment(false)}>
+                Annuler
+              </Button>
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  )
 
   return (
     <motion.div
@@ -307,21 +603,21 @@ export function AdvisingPage() {
               <div className="bg-white/10 backdrop-blur-sm border border-white/15 rounded-xl px-4 py-3 flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-white/10"><Users className="size-5 text-white" /></div>
                 <div>
-                  <p className="text-xl font-bold text-white">{useCountUp(456, 1400)}</p>
+                  <p className="text-xl font-bold text-white">{useCountUp(etudiantsAccompagnes, 1400)}</p>
                   <p className="text-[10px] text-white/70">Etudiants accompagnes</p>
                 </div>
               </div>
               <div className="bg-white/10 backdrop-blur-sm border border-white/15 rounded-xl px-4 py-3 flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-white/10"><CalendarCheck className="size-5 text-white" /></div>
                 <div>
-                  <p className="text-xl font-bold text-white">{useCountUp(89, 1200)}</p>
+                  <p className="text-xl font-bold text-white">{useCountUp(sessionsThisMonth, 1200)}</p>
                   <p className="text-[10px] text-white/70">Sessions ce mois</p>
                 </div>
               </div>
               <div className="bg-white/10 backdrop-blur-sm border border-white/15 rounded-xl px-4 py-3 flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-white/10"><TrendingUp className="size-5 text-white" /></div>
                 <div>
-                  <p className="text-xl font-bold text-white">{useCountUp(18, 1300)}%</p>
+                  <p className="text-xl font-bold text-white">{useCountUp(tauxReorientation, 1300)}%</p>
                   <p className="text-[10px] text-white/70">Taux de reorientation</p>
                 </div>
               </div>
@@ -341,15 +637,15 @@ export function AdvisingPage() {
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Etudiants suivis</p>
-                <p className="text-xl font-bold text-[#2d7a4f] mt-1">{useCountUp(456, 1400)}</p>
-                <p className="text-xs text-[#2d7a4f] mt-1 font-medium">+8.3%</p>
+                <p className="text-xl font-bold text-[#2d7a4f] mt-1">{useCountUp(monitoredStudents.length, 1400)}</p>
+                <p className="text-xs text-gray-400 mt-1">{advisedMonitoredCount} avec conseiller assigne</p>
               </div>
               <div className="w-10 h-10 rounded-xl bg-[#2d7a4f15] flex items-center justify-center">
                 <Users className="size-5 text-[#2d7a4f]" />
               </div>
             </div>
             <div className="mt-3">
-              <Progress value={76} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#2d7a4f]" />
+              <Progress value={coverageRate} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#2d7a4f]" />
             </div>
           </CardContent>
         </Card>
@@ -364,15 +660,15 @@ export function AdvisingPage() {
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Rendez-vous ce mois</p>
-                <p className="text-xl font-bold text-[#1a2744] mt-1">{useCountUp(89, 1200)}</p>
-                <p className="text-xs text-gray-400 mt-1">7 cette semaine</p>
+                <p className="text-xl font-bold text-[#1a2744] mt-1">{useCountUp(sessionsThisMonth, 1200)}</p>
+                <p className="text-xs text-gray-400 mt-1">{sessionsThisWeek} cette semaine</p>
               </div>
               <div className="w-10 h-10 rounded-xl bg-[#1a274415] flex items-center justify-center">
                 <CalendarCheck className="size-5 text-[#1a2744]" />
               </div>
             </div>
             <div className="mt-3">
-              <Progress value={65} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#1a2744]" />
+              <Progress value={appointments.length > 0 ? Math.round((sessionsThisMonth / appointments.length) * 100) : 0} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#1a2744]" />
             </div>
           </CardContent>
         </Card>
@@ -387,15 +683,15 @@ export function AdvisingPage() {
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Taux de reussite</p>
-                <p className="text-xl font-bold text-[#d4a853] mt-1">{useCountUp(78, 1300)}%</p>
-                <p className="text-xs text-[#2d7a4f] mt-1 font-medium">+5% vs precedent</p>
+                <p className="text-xl font-bold text-[#d4a853] mt-1">{useCountUp(tauxReussite, 1300)}%</p>
+                <p className="text-xs text-gray-400 mt-1">{successCount}/{monitoredStudents.length} suivis au-dessus de {passingGrade}/20</p>
               </div>
               <div className="w-10 h-10 rounded-xl bg-[#d4a85315] flex items-center justify-center">
                 <TrendingUp className="size-5 text-[#d4a853]" />
               </div>
             </div>
             <div className="mt-3">
-              <Progress value={78} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#d4a853]" />
+              <Progress value={tauxReussite} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#d4a853]" />
             </div>
           </CardContent>
         </Card>
@@ -410,15 +706,15 @@ export function AdvisingPage() {
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Conseillers actifs</p>
-                <p className="text-xl font-bold text-[#1a2744] mt-1">{useCountUp(12, 1000)}</p>
-                <p className="text-xs text-gray-400 mt-1">3 disponibles</p>
+                <p className="text-xl font-bold text-[#1a2744] mt-1">{useCountUp(advisors.length, 1000)}</p>
+                <p className="text-xs text-gray-400 mt-1">{advisorsDisponibles} disponibles</p>
               </div>
               <div className="w-10 h-10 rounded-xl bg-[#1a274415] flex items-center justify-center">
                 <UserCheck className="size-5 text-[#1a2744]" />
               </div>
             </div>
             <div className="mt-3">
-              <Progress value={85} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#1a2744]" />
+              <Progress value={advisors.length > 0 ? Math.round((advisorsDisponibles / advisors.length) * 100) : 0} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#1a2744]" />
             </div>
           </CardContent>
         </Card>
@@ -432,40 +728,49 @@ export function AdvisingPage() {
           <CardHeader className="pb-3">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <CardTitle className="text-sm font-semibold text-[#1a2744]">Rendez-vous de conseils</CardTitle>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="text-xs text-[#2d7a4f] hover:text-[#236b40] hover:bg-[#2d7a4f10]"
-                onClick={() => setShowSchedule(!showSchedule)}
-              >
-                {showSchedule ? (
-                  <>
-                    <ChevronUp className="size-3.5 mr-1.5" />
-                    Masquer emploi du temps
-                  </>
-                ) : (
-                  <>
-                    <ChevronDown className="size-3.5 mr-1.5" />
-                    Voir emploi du temps
-                  </>
-                )}
-              </Button>
+              <div className="flex items-center gap-2">
+                {newAppointmentDialog}
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-xs text-[#2d7a4f] hover:text-[#236b40] hover:bg-[#2d7a4f10]"
+                  onClick={() => setShowSchedule(!showSchedule)}
+                >
+                  {showSchedule ? (
+                    <>
+                      <ChevronUp className="size-3.5 mr-1.5" />
+                      Masquer emploi du temps
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="size-3.5 mr-1.5" />
+                      Voir emploi du temps
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
+            {noAdvisors && (
+              <p className="text-xs text-gray-400 mt-1">
+                Aucun conseiller enregistre — contactez un administrateur pour en ajouter avant de planifier un rendez-vous.
+              </p>
+            )}
           </CardHeader>
           <CardContent className="p-4 pt-0">
-            <div className="overflow-x-auto rounded-lg border border-gray-100">
+            <div className="overflow-x-auto rounded-lg border border-gray-100 max-h-96 overflow-y-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-gray-50">
+                  <TableRow className="bg-gray-50 sticky top-0 z-10">
                     <TableHead className="text-xs font-semibold">Etudiant</TableHead>
                     <TableHead className="text-xs font-semibold">Type</TableHead>
                     <TableHead className="text-xs font-semibold">Date &amp; Heure</TableHead>
                     <TableHead className="text-xs font-semibold">Conseiller</TableHead>
                     <TableHead className="text-xs font-semibold">Statut</TableHead>
+                    <TableHead className="text-xs font-semibold text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {demoAppointments.map((appt) => {
+                  {appointments.map((appt) => {
                     const tConf = typeConfig[appt.type]
                     const sConf = statusConfig[appt.status]
                     return (
@@ -479,7 +784,9 @@ export function AdvisingPage() {
                         <TableCell className="py-2.5">
                           {tConf ? (
                             <Badge className={`text-[10px] ${tConf.className}`}>{tConf.label}</Badge>
-                          ) : null}
+                          ) : (
+                            <Badge variant="outline" className="text-[10px]">{appt.type}</Badge>
+                          )}
                         </TableCell>
                         <TableCell className="py-2.5">
                           <div className="flex items-center gap-1.5">
@@ -504,11 +811,56 @@ export function AdvisingPage() {
                                 {sConf.label}
                               </Badge>
                             </div>
-                          ) : null}
+                          ) : (
+                            <Badge variant="outline" className="text-[10px]">{appt.status}</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right py-2.5">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0 hover:bg-gray-100" disabled={appt.status === 'Termine' || appt.status === 'Annule'}>
+                                <MoreHorizontal className="size-4 text-gray-600" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-44">
+                              {appt.status === 'Planifie' && (
+                                <DropdownMenuItem className="text-xs" onClick={() => updateAppointmentStatus(appt.id, 'En cours')}>
+                                  <PlayCircle className="size-3.5 mr-2" />
+                                  Demarrer
+                                </DropdownMenuItem>
+                              )}
+                              {appt.status === 'En cours' && (
+                                <DropdownMenuItem className="text-xs" onClick={() => updateAppointmentStatus(appt.id, 'Termine')}>
+                                  <CheckCircle2 className="size-3.5 mr-2" />
+                                  Terminer
+                                </DropdownMenuItem>
+                              )}
+                              {(appt.status === 'Planifie' || appt.status === 'En cours') && (
+                                <DropdownMenuItem className="text-xs text-red-600" onClick={() => updateAppointmentStatus(appt.id, 'Annule')}>
+                                  <Ban className="size-3.5 mr-2" />
+                                  Annuler
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </TableCell>
                       </TableRow>
                     )
                   })}
+                  {isLoading && (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8 text-sm text-gray-400">
+                        Chargement...
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {!isLoading && appointments.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8 text-sm text-gray-400">
+                        Aucun rendez-vous planifie pour le moment
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </div>
@@ -521,15 +873,16 @@ export function AdvisingPage() {
                 exit={{ opacity: 0, height: 0 }}
                 className="mt-4 p-4 rounded-lg bg-gray-50 border border-gray-100"
               >
-                <p className="text-xs font-semibold text-[#1a2744] mb-3">Emploi du temps de la semaine</p>
+                <p className="text-xs font-semibold text-[#1a2744] mb-3">Emploi du temps de la semaine en cours</p>
                 <div className="grid grid-cols-5 gap-2">
-                  {['Lun', 'Mar', 'Mer', 'Jeu', 'Ven'].map(day => (
+                  {WEEK_DAYS.map(day => (
                     <div key={day} className="text-center">
                       <p className="text-[10px] font-semibold text-gray-500 mb-2">{day}</p>
                       <div className="space-y-1">
-                        {demoAppointments
-                          .filter((_, i) => i % 5 === ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven'].indexOf(day))
-                          .map(appt => (
+                        {weekSchedule[day].length === 0 && (
+                          <p className="text-[9px] text-gray-300 italic">Aucun RV</p>
+                        )}
+                        {weekSchedule[day].map(appt => (
                             <div key={appt.id} className="p-1.5 rounded bg-white border border-gray-100 text-left">
                               <p className="text-[9px] font-medium text-[#1a2744] truncate">{appt.studentName}</p>
                               <p className="text-[8px] text-gray-400">{appt.time}</p>
@@ -572,27 +925,20 @@ export function AdvisingPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="tous">Tous niveaux</SelectItem>
-                    <SelectItem value="L1">L1</SelectItem>
-                    <SelectItem value="L2">L2</SelectItem>
-                    <SelectItem value="L3">L3</SelectItem>
-                    <SelectItem value="M1">M1</SelectItem>
-                    <SelectItem value="M2">M2</SelectItem>
+                    {niveauOptions.map((n) => (
+                      <SelectItem key={n} value={n}>{n}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <Select value={filterFiliere} onValueChange={setFilterFiliere}>
-                  <SelectTrigger className="w-[130px] h-9 text-xs">
+                  <SelectTrigger className="w-[150px] h-9 text-xs">
                     <SelectValue placeholder="Filiere" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="tous">Toutes filieres</SelectItem>
-                    <SelectItem value="Informatique">Informatique</SelectItem>
-                    <SelectItem value="Droit">Droit</SelectItem>
-                    <SelectItem value="Economie">Economie</SelectItem>
-                    <SelectItem value="Medecine">Medecine</SelectItem>
-                    <SelectItem value="Mathematiques">Mathematiques</SelectItem>
-                    <SelectItem value="Gestion">Gestion</SelectItem>
-                    <SelectItem value="Lettres">Lettres</SelectItem>
-                    <SelectItem value="Physique">Physique</SelectItem>
+                    {filiereOptions.map((f) => (
+                      <SelectItem key={f} value={f}>{f}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <Select value={filterAlerte} onValueChange={setFilterAlerte}>
@@ -613,11 +959,9 @@ export function AdvisingPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="tous">Tous conseillers</SelectItem>
-                    <SelectItem value="Dr. Ngarba">Dr. Ngarba</SelectItem>
-                    <SelectItem value="Mme. Lea">Mme. Lea</SelectItem>
-                    <SelectItem value="Dr. Djimé">Dr. Djime</SelectItem>
-                    <SelectItem value="M. Hassan">M. Hassan</SelectItem>
-                    <SelectItem value="Dr. Saleh">Dr. Saleh</SelectItem>
+                    {conseillerOptions.map((c) => (
+                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -662,8 +1006,8 @@ export function AdvisingPage() {
                         </TableCell>
                         <TableCell className="text-center py-2.5">
                           <span className={`text-sm font-semibold ${
-                            student.moyenne >= 12 ? 'text-[#2d7a4f]' :
-                            student.moyenne >= 10 ? 'text-[#d4a853]' :
+                            student.moyenne >= passingGrade + 2 ? 'text-[#2d7a4f]' :
+                            student.moyenne >= passingGrade ? 'text-[#d4a853]' :
                             'text-[#c62828]'
                           }`}>
                             {student.moyenne.toFixed(1)}
@@ -706,7 +1050,11 @@ export function AdvisingPage() {
                                 <Eye className="size-3.5 mr-2" />
                                 Voir fiche
                               </DropdownMenuItem>
-                              <DropdownMenuItem className="text-xs">
+                              <DropdownMenuItem
+                                className="text-xs"
+                                disabled={noAdvisors}
+                                onClick={() => openNewAppointment({ studentId: student.id })}
+                              >
                                 <Calendar className="size-3.5 mr-2" />
                                 Planifier RV
                               </DropdownMenuItem>
@@ -720,10 +1068,24 @@ export function AdvisingPage() {
                       </TableRow>
                     )
                   })}
-                  {filteredStudents.length === 0 && (
+                  {isLoading && (
                     <TableRow>
                       <TableCell colSpan={10} className="text-center py-8 text-sm text-gray-400">
-                        Aucun etudiant trouve
+                        Chargement...
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {!isLoading && monitoredStudents.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={10} className="text-center py-8 text-sm text-gray-400">
+                        Aucun etudiant suivi pour le moment (aucune note enregistree pour l&apos;annee en cours)
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {!isLoading && monitoredStudents.length > 0 && filteredStudents.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={10} className="text-center py-8 text-sm text-gray-400">
+                        Aucun etudiant trouve avec ces filtres
                       </TableCell>
                     </TableRow>
                   )}
@@ -741,148 +1103,129 @@ export function AdvisingPage() {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-semibold text-[#1a2744]">Plan d&apos;accompagnement</CardTitle>
-              <Badge className="text-[10px] bg-[#d4a85315] text-[#d4a853] border-0">
-                <Target className="size-3 mr-1" />
-                Suivi en cours
-              </Badge>
+              {priorityStudent && (
+                <Badge className="text-[10px] bg-[#d4a85315] text-[#d4a853] border-0">
+                  <Target className="size-3 mr-1" />
+                  Suivi prioritaire
+                </Badge>
+              )}
             </div>
           </CardHeader>
           <CardContent className="p-4 pt-0 space-y-5">
-            {/* Student Info Header */}
-            <div className="p-3 rounded-lg bg-gray-50 border border-gray-100">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div
-                    className="w-11 h-11 rounded-full flex items-center justify-center text-white font-bold text-sm"
-                    style={{ background: `linear-gradient(135deg, #ea580c, #c62828)` }}
-                  >
-                    MY
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-[#1a2744]">{demoStudent.name}</p>
-                    <p className="text-[10px] text-gray-400 font-mono">{demoStudent.matricule} - {demoStudent.program} - {demoStudent.level}</p>
+            {!priorityStudent ? (
+              <p className="text-sm text-gray-400 text-center py-6">
+                Aucun etudiant suivi pour le moment — un plan d&apos;accompagnement apparaitra ici des qu&apos;un etudiant aura des notes enregistrees.
+              </p>
+            ) : (
+              <>
+                {/* Student Info Header */}
+                <div className="p-3 rounded-lg bg-gray-50 border border-gray-100">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-11 h-11 rounded-full flex items-center justify-center text-white font-bold text-sm"
+                        style={{ background: `linear-gradient(135deg, ${ALERT_GRADIENTS[priorityStudent.alertLevel][0]}, ${ALERT_GRADIENTS[priorityStudent.alertLevel][1]})` }}
+                      >
+                        {getInitials(priorityStudent.name)}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-[#1a2744]">{priorityStudent.name}</p>
+                        <p className="text-[10px] text-gray-400 font-mono">{priorityStudent.matricule} - {priorityStudent.program} - {priorityStudent.level}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="text-center">
+                        <p className="text-[10px] text-gray-400 uppercase">Moyenne</p>
+                        <p className="text-sm font-bold" style={{ color: ALERT_GRADIENTS[priorityStudent.alertLevel][0] }}>{priorityStudent.moyenne.toFixed(1)}</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-[10px] text-gray-400 uppercase">Credits</p>
+                        <p className="text-sm font-bold text-[#1a2744]">{priorityStudent.creditsAcquis}/{priorityStudent.creditsTotal}</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-[10px] text-gray-400 uppercase">Dettes</p>
+                        <p className="text-sm font-bold text-[#c62828]">{priorityStudent.dettes}</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-4">
-                  <div className="text-center">
-                    <p className="text-[10px] text-gray-400 uppercase">Moyenne</p>
-                    <p className="text-sm font-bold text-[#ea580c]">{demoStudent.moyenne.toFixed(1)}</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-[10px] text-gray-400 uppercase">Credits</p>
-                    <p className="text-sm font-bold text-[#1a2744]">{demoStudent.creditsAcquis}/{demoStudent.creditsTotal}</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-[10px] text-gray-400 uppercase">Dettes</p>
-                    <p className="text-sm font-bold text-[#c62828]">{demoStudent.dettes}</p>
+
+                {/* Objectifs definis */}
+                <div>
+                  <p className="text-xs font-semibold text-[#1a2744] mb-3">Objectifs definis</p>
+                  <div className="space-y-3">
+                    {objectifs.map((obj, idx) => (
+                      <div key={idx} className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-gray-600">{obj.objectif}</span>
+                          <span className="text-[10px] font-semibold" style={{ color: obj.color }}>{obj.progress}%</span>
+                        </div>
+                        <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                          <motion.div
+                            className="h-full rounded-full"
+                            style={{ backgroundColor: obj.color }}
+                            initial={{ width: 0 }}
+                            animate={{ width: `${Math.min(100, obj.progress)}%` }}
+                            transition={{ duration: 0.8, delay: 0.1 * idx, ease: 'easeOut' }}
+                          />
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              </div>
-            </div>
 
-            {/* Objectifs definis */}
-            <div>
-              <p className="text-xs font-semibold text-[#1a2744] mb-3">Objectifs definis</p>
-              <div className="space-y-3">
-                {[
-                  { objectif: 'Remonter la moyenne au-dessus de 10/20', progress: 45, color: '#2d7a4f' },
-                  { objectif: 'Valider au moins 45 credits ce semestre', progress: 60, color: '#1a2744' },
-                  { objectif: 'Reduire les dettes a moins de 2 UE', progress: 30, color: '#d4a853' },
-                ].map((obj, idx) => (
-                  <div key={idx} className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-gray-600">{obj.objectif}</span>
-                      <span className="text-[10px] font-semibold" style={{ color: obj.color }}>{obj.progress}%</span>
-                    </div>
-                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                      <motion.div
-                        className="h-full rounded-full"
-                        style={{ backgroundColor: obj.color }}
-                        initial={{ width: 0 }}
-                        animate={{ width: `${obj.progress}%` }}
-                        transition={{ duration: 0.8, delay: 0.1 * idx, ease: 'easeOut' }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Actions planifiees */}
-            <div>
-              <p className="text-xs font-semibold text-[#1a2744] mb-3">Actions planifiees</p>
-              <div className="space-y-2">
-                {[
-                  { action: 'Rencontre hebdomadaire avec le conseiller', date: 'Chaque lundi', done: true },
-                  { action: 'Participation aux tutorats de mathematiques', date: 'Mercredi 14h-16h', done: true },
-                  { action: 'Inscription atelier methodologie', date: '15/03/2025', done: false },
-                  { action: 'Suivi avec psychologue scolaire', date: '20/03/2025', done: false },
-                  { action: 'Evaluation point mi-semestre', date: '01/04/2025', done: false },
-                ].map((item, idx) => (
-                  <div key={idx} className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors">
-                    <Checkbox checked={item.done} className={item.done ? 'data-[state=checked]:bg-[#2d7a4f] data-[state=checked]:border-[#2d7a4f]' : ''} />
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-xs ${item.done ? 'text-gray-400 line-through' : 'text-gray-700'}`}>{item.action}</p>
-                    </div>
-                    <span className="text-[10px] text-gray-400 shrink-0">{item.date}</span>
-                    {item.done ? (
-                      <Badge className="text-[9px] bg-[#2d7a4f15] text-[#2d7a4f] border-0">Fait</Badge>
-                    ) : (
-                      <Badge className="text-[9px] bg-[#1a274415] text-[#1a2744] border-0">A faire</Badge>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Ressources recommandees */}
-            <div>
-              <p className="text-xs font-semibold text-[#1a2744] mb-3">Ressources recommandees</p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                {[
-                  { title: 'Tutorat individuel', desc: 'Renforcement en UE deficitaires', icon: GraduationCap, color: '#2d7a4f' },
-                  { title: 'Atelier methode', desc: 'Techniques de travail efficaces', icon: BookOpen, color: '#1a2744' },
-                  { title: 'Suivi psychologique', desc: 'Accompagnement personnel', icon: Heart, color: '#d4a853' },
-                ].map((res, idx) => (
-                  <div key={idx} className="p-3 rounded-lg bg-gray-50 border border-gray-100 hover:border-gray-200 transition-colors">
-                    <div className="flex items-center gap-2 mb-1">
-                      <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${res.color}15` }}>
-                        <res.icon className="size-3.5" style={{ color: res.color }} />
+                {/* Ressources recommandees */}
+                <div>
+                  <p className="text-xs font-semibold text-[#1a2744] mb-3">Ressources recommandees</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    {[
+                      { title: 'Tutorat individuel', desc: 'Renforcement en UE deficitaires', icon: GraduationCap, color: '#2d7a4f' },
+                      { title: 'Atelier methode', desc: 'Techniques de travail efficaces', icon: BookOpen, color: '#1a2744' },
+                      { title: 'Suivi psychologique', desc: 'Accompagnement personnel', icon: Heart, color: '#d4a853' },
+                    ].map((res, idx) => (
+                      <div key={idx} className="p-3 rounded-lg bg-gray-50 border border-gray-100 hover:border-gray-200 transition-colors">
+                        <div className="flex items-center gap-2 mb-1">
+                          <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${res.color}15` }}>
+                            <res.icon className="size-3.5" style={{ color: res.color }} />
+                          </div>
+                          <span className="text-xs font-semibold text-[#1a2744]">{res.title}</span>
+                        </div>
+                        <p className="text-[10px] text-gray-500">{res.desc}</p>
                       </div>
-                      <span className="text-xs font-semibold text-[#1a2744]">{res.title}</span>
-                    </div>
-                    <p className="text-[10px] text-gray-500">{res.desc}</p>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </div>
+                </div>
 
-            {/* Historique des entretiens */}
-            <div>
-              <p className="text-xs font-semibold text-[#1a2744] mb-3">Historique des entretiens</p>
-              <div className="space-y-3">
-                {[
-                  { date: '05/03/2025', notes: 'Point sur les resultats du S1. 3 dettes identifiees. Plan de rattrapage mis en place. Etudiant motive mais besoin de soutien en methodologie.', conseiller: 'Dr. Djimé' },
-                  { date: '19/02/2025', notes: 'Premier entretien. Evaluation de la situation academique. Etudiant en difficulte depuis le debut du semestre. Orientation vers tutorat.', conseiller: 'Dr. Djimé' },
-                  { date: '10/02/2025', notes: 'Discussion sur les motivations et les obstacles. Problemes de concentration en cours. Recommandation suivi psychologique.', conseiller: 'Mme. Lea' },
-                  { date: '28/01/2025', notes: 'Accueil et evaluation initiale. Identification des besoins: soutien pedagogique, gestion du temps, orientation professionnelle.', conseiller: 'Dr. Djimé' },
-                ].map((entretien, idx) => (
-                  <div key={idx} className="flex gap-3">
-                    <div className="flex flex-col items-center">
-                      <div className="w-2.5 h-2.5 rounded-full bg-[#2d7a4f] mt-1 shrink-0" />
-                      {idx < 3 && <div className="w-0.5 flex-1 bg-gray-200 mt-1" />}
+                {/* Historique des entretiens */}
+                <div>
+                  <p className="text-xs font-semibold text-[#1a2744] mb-3">Historique des entretiens</p>
+                  {priorityStudentAppointments.length === 0 ? (
+                    <p className="text-xs text-gray-400">Aucun entretien enregistre pour cet etudiant.</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {priorityStudentAppointments.map((entretien, idx) => (
+                        <div key={entretien.id} className="flex gap-3">
+                          <div className="flex flex-col items-center">
+                            <div className="w-2.5 h-2.5 rounded-full bg-[#2d7a4f] mt-1 shrink-0" />
+                            {idx < priorityStudentAppointments.length - 1 && <div className="w-0.5 flex-1 bg-gray-200 mt-1" />}
+                          </div>
+                          <div className="flex-1 pb-3">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-xs font-semibold text-[#1a2744]">{entretien.date}</span>
+                              <Badge variant="outline" className="text-[9px] border-gray-200 text-gray-500 py-0">{entretien.conseiller}</Badge>
+                              {statusConfig[entretien.status] && (
+                                <Badge className={`text-[9px] py-0 ${statusConfig[entretien.status].className}`}>{statusConfig[entretien.status].label}</Badge>
+                              )}
+                            </div>
+                            <p className="text-xs text-gray-600 leading-relaxed">{entretien.notes || 'Aucune note enregistree pour cet entretien.'}</p>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                    <div className="flex-1 pb-3">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-semibold text-[#1a2744]">{entretien.date}</span>
-                        <Badge variant="outline" className="text-[9px] border-gray-200 text-gray-500 py-0">{entretien.conseiller}</Badge>
-                      </div>
-                      <p className="text-xs text-gray-600 leading-relaxed">{entretien.notes}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+                  )}
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
       </motion.div>
@@ -894,63 +1237,75 @@ export function AdvisingPage() {
             <CardTitle className="text-sm font-semibold text-[#1a2744]">Equipe de conseillers</CardTitle>
           </CardHeader>
           <CardContent className="p-4 pt-0">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {demoConseillers.map((conseiller) => {
-                const dConf = disponibiliteConfig[conseiller.disponibilite]
-                return (
-                  <motion.div
-                    key={conseiller.id}
-                    whileHover={{ scale: 1.01 }}
-                    className="p-4 rounded-lg border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all"
-                  >
-                    <div className="flex items-start gap-3 mb-3">
-                      <div
-                        className="w-11 h-11 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0"
-                        style={{ background: `linear-gradient(135deg, ${conseiller.gradientFrom}, ${conseiller.gradientTo})` }}
-                      >
-                        {conseiller.initials}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-[#1a2744] truncate">{conseiller.name}</p>
-                        <p className="text-[10px] text-gray-400">{conseiller.title}</p>
-                        <p className="text-[10px] text-gray-400">{conseiller.department}</p>
-                      </div>
-                    </div>
-
-                    {/* Specialties */}
-                    <div className="flex flex-wrap gap-1 mb-3">
-                      {conseiller.specialties.map(spec => {
-                        const sConf = specialtyConfig[spec]
-                        return sConf ? (
-                          <Badge key={spec} className={`text-[9px] ${sConf.className}`}>
-                            {sConf.label}
-                          </Badge>
-                        ) : null
-                      })}
-                    </div>
-
-                    {/* Stats row */}
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-1.5">
-                        <Users className="size-3 text-gray-400" />
-                        <span className="text-xs text-gray-600">{conseiller.etudiantsSuivis} suivis</span>
-                      </div>
-                      {dConf ? (
-                        <div className="flex items-center gap-1.5">
-                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: dConf.dotColor }} />
-                          <Badge className={`text-[9px] ${dConf.className}`}>{dConf.label}</Badge>
+            {noAdvisors ? (
+              <p className="text-sm text-gray-400 text-center py-6">
+                Aucun conseiller enregistre — contactez un administrateur pour en ajouter.
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {advisors.map((conseiller, index) => {
+                  const dConf = disponibiliteConfig[conseiller.disponibilite]
+                  const [gradFrom, gradTo] = getAvatarGradient(index)
+                  return (
+                    <motion.div
+                      key={conseiller.id}
+                      whileHover={{ scale: 1.01 }}
+                      className="p-4 rounded-lg border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all"
+                    >
+                      <div className="flex items-start gap-3 mb-3">
+                        <div
+                          className="w-11 h-11 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0"
+                          style={{ background: `linear-gradient(135deg, ${gradFrom}, ${gradTo})` }}
+                        >
+                          {getInitials(conseiller.name)}
                         </div>
-                      ) : null}
-                    </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-[#1a2744] truncate">{conseiller.name}</p>
+                          <p className="text-[10px] text-gray-400">{conseiller.title}</p>
+                          <p className="text-[10px] text-gray-400">{conseiller.department}</p>
+                        </div>
+                      </div>
 
-                    <Button size="sm" variant="outline" className="w-full text-xs border-[#1a274420] text-[#1a2744] hover:bg-[#1a274408]">
-                      <Calendar className="size-3 mr-1.5" />
-                      Prendre rendez-vous
-                    </Button>
-                  </motion.div>
-                )
-              })}
-            </div>
+                      {/* Specialties */}
+                      <div className="flex flex-wrap gap-1 mb-3">
+                        {conseiller.specialties.map(spec => {
+                          const sConf = specialtyConfig[spec]
+                          return (
+                            <Badge key={spec} className={`text-[9px] ${sConf ? sConf.className : 'bg-gray-100 text-gray-600 border-0'}`}>
+                              {sConf ? sConf.label : spec}
+                            </Badge>
+                          )
+                        })}
+                      </div>
+
+                      {/* Stats row */}
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-1.5">
+                          <Users className="size-3 text-gray-400" />
+                          <span className="text-xs text-gray-600">{conseiller.etudiantsSuivis} suivis</span>
+                        </div>
+                        {dConf ? (
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: dConf.dotColor }} />
+                            <Badge className={`text-[9px] ${dConf.className}`}>{dConf.label}</Badge>
+                          </div>
+                        ) : null}
+                      </div>
+
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full text-xs border-[#1a274420] text-[#1a2744] hover:bg-[#1a274408]"
+                        onClick={() => openNewAppointment({ advisorId: conseiller.id })}
+                      >
+                        <Calendar className="size-3 mr-1.5" />
+                        Prendre rendez-vous
+                      </Button>
+                    </motion.div>
+                  )
+                })}
+              </div>
+            )}
           </CardContent>
         </Card>
       </motion.div>
@@ -962,76 +1317,81 @@ export function AdvisingPage() {
             <CardTitle className="text-sm font-semibold text-[#1a2744]">Ateliers &amp; Seances collectives</CardTitle>
           </CardHeader>
           <CardContent className="p-4 pt-0">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {demoWorkshops.map((workshop) => {
-                const occupancyPercent = workshop.places > 0 ? Math.round((workshop.inscrits / workshop.places) * 100) : 0
-                const isFull = occupancyPercent >= 90
-                return (
-                  <motion.div
-                    key={workshop.id}
-                    whileHover={{ scale: 1.005 }}
-                    className="p-4 rounded-lg border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all"
-                  >
-                    <div className="flex items-start gap-3 mb-3">
-                      <div className="w-10 h-10 rounded-xl bg-[#2d7a4f15] flex items-center justify-center shrink-0">
-                        <BookOpen className="size-5 text-[#2d7a4f]" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-[#1a2744]">{workshop.title}</p>
-                        <div className="flex items-center gap-3 mt-1">
-                          <div className="flex items-center gap-1">
-                            <Calendar className="size-3 text-gray-400" />
-                            <span className="text-[10px] text-gray-500">{workshop.date}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Clock className="size-3 text-gray-400" />
-                            <span className="text-[10px] text-gray-500">{workshop.time}</span>
+            {!isLoading && workshops.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-6">Aucun atelier planifie pour le moment.</p>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {workshops.map((workshop) => {
+                  const occupancyPercent = workshop.places > 0 ? Math.round((workshop.inscrits / workshop.places) * 100) : 0
+                  const isFull = occupancyPercent >= 90
+                  return (
+                    <motion.div
+                      key={workshop.id}
+                      whileHover={{ scale: 1.005 }}
+                      className="p-4 rounded-lg border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all"
+                    >
+                      <div className="flex items-start gap-3 mb-3">
+                        <div className="w-10 h-10 rounded-xl bg-[#2d7a4f15] flex items-center justify-center shrink-0">
+                          <BookOpen className="size-5 text-[#2d7a4f]" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-[#1a2744]">{workshop.title}</p>
+                          <div className="flex items-center gap-3 mt-1">
+                            <div className="flex items-center gap-1">
+                              <Calendar className="size-3 text-gray-400" />
+                              <span className="text-[10px] text-gray-500">{workshop.date}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Clock className="size-3 text-gray-400" />
+                              <span className="text-[10px] text-gray-500">{workshop.time}</span>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
 
-                    <div className="flex items-center gap-4 mb-3">
-                      <div className="flex items-center gap-1.5">
-                        <MapPin className="size-3 text-gray-400" />
-                        <span className="text-xs text-gray-600">{workshop.salle}</span>
+                      <div className="flex items-center gap-4 mb-3">
+                        <div className="flex items-center gap-1.5">
+                          <MapPin className="size-3 text-gray-400" />
+                          <span className="text-xs text-gray-600">{workshop.salle}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <GraduationCap className="size-3 text-gray-400" />
+                          <span className="text-xs text-gray-600">{workshop.instructor}</span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1.5">
-                        <GraduationCap className="size-3 text-gray-400" />
-                        <span className="text-xs text-gray-600">{workshop.instructor}</span>
-                      </div>
-                    </div>
 
-                    {/* Capacity progress */}
-                    <div className="mb-3">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-[10px] text-gray-400">Inscriptions</span>
-                        <span className="text-[10px] font-semibold text-[#1a2744]">{workshop.inscrits}/{workshop.places} places</span>
+                      {/* Capacity progress */}
+                      <div className="mb-3">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-[10px] text-gray-400">Inscriptions</span>
+                          <span className="text-[10px] font-semibold text-[#1a2744]">{workshop.inscrits}/{workshop.places} places</span>
+                        </div>
+                        <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                          <motion.div
+                            className="h-full rounded-full"
+                            style={{ backgroundColor: isFull ? '#ea580c' : '#2d7a4f' }}
+                            initial={{ width: 0 }}
+                            animate={{ width: `${occupancyPercent}%` }}
+                            transition={{ duration: 0.6, ease: 'easeOut' }}
+                          />
+                        </div>
                       </div>
-                      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                        <motion.div
-                          className="h-full rounded-full"
-                          style={{ backgroundColor: isFull ? '#ea580c' : '#2d7a4f' }}
-                          initial={{ width: 0 }}
-                          animate={{ width: `${occupancyPercent}%` }}
-                          transition={{ duration: 0.6, ease: 'easeOut' }}
-                        />
-                      </div>
-                    </div>
 
-                    <Button
-                      size="sm"
-                      variant={isFull ? 'outline' : 'default'}
-                      className={`w-full text-xs ${isFull ? 'border-[#ea580c30] text-[#ea580c] hover:bg-[#ea580c08]' : 'bg-[#2d7a4f] hover:bg-[#236b40] text-white'}`}
-                      disabled={isFull}
-                    >
-                      {isFull ? 'Complet' : "S'inscrire"}
-                      {!isFull && <ArrowRight className="size-3 ml-1.5" />}
-                    </Button>
-                  </motion.div>
-                )
-              })}
-            </div>
+                      <Button
+                        size="sm"
+                        variant={isFull ? 'outline' : 'default'}
+                        className={`w-full text-xs ${isFull ? 'border-[#ea580c30] text-[#ea580c] hover:bg-[#ea580c08]' : 'bg-[#2d7a4f] hover:bg-[#236b40] text-white'}`}
+                        disabled={isFull}
+                        onClick={() => toast.info('Inscription en ligne bientot disponible', { description: 'Contactez le conseiller responsable pour inscrire un etudiant a cet atelier.' })}
+                      >
+                        {isFull ? 'Complet' : "S'inscrire"}
+                        {!isFull && <ArrowRight className="size-3 ml-1.5" />}
+                      </Button>
+                    </motion.div>
+                  )
+                })}
+              </div>
+            )}
           </CardContent>
         </Card>
       </motion.div>
@@ -1044,56 +1404,52 @@ export function AdvisingPage() {
           </CardHeader>
           <CardContent className="p-4 pt-0">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Left column: Motifs + Satisfaction */}
+              {/* Left column: Motifs + Delais */}
               <div className="space-y-5">
                 {/* Distribution des motifs */}
                 <div>
                   <p className="text-xs font-semibold text-[#1a2744] mb-3">Distribution des motifs de consultation</p>
-                  <div className="space-y-3">
-                    {motifData.map((item, idx) => (
-                      <div key={item.motif} className="space-y-1.5">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div
-                              className="w-2.5 h-2.5 rounded-full shrink-0"
-                              style={{ backgroundColor: item.color }}
-                            />
-                            <span className="text-xs font-medium text-[#1a2744]">{item.motif}</span>
+                  {motifData.length === 0 ? (
+                    <p className="text-xs text-gray-400">Aucune consultation enregistree pour le moment.</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {motifData.map((item, idx) => (
+                        <div key={item.motif} className="space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div
+                                className="w-2.5 h-2.5 rounded-full shrink-0"
+                                style={{ backgroundColor: item.color }}
+                              />
+                              <span className="text-xs font-medium text-[#1a2744]">{typeConfig[item.motif]?.label || item.motif}</span>
+                            </div>
+                            <span className="text-xs font-semibold" style={{ color: item.color }}>{item.percent}%</span>
                           </div>
-                          <span className="text-xs font-semibold" style={{ color: item.color }}>{item.percent}%</span>
+                          <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                            <motion.div
+                              className="h-full rounded-full"
+                              style={{ backgroundColor: item.color }}
+                              initial={{ width: 0 }}
+                              animate={{ width: `${item.percent}%` }}
+                              transition={{ duration: 0.8, delay: 0.1 * idx, ease: 'easeOut' }}
+                            />
+                          </div>
                         </div>
-                        <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                          <motion.div
-                            className="h-full rounded-full"
-                            style={{ backgroundColor: item.color }}
-                            initial={{ width: 0 }}
-                            animate={{ width: `${item.percent}%` }}
-                            transition={{ duration: 0.8, delay: 0.1 * idx, ease: 'easeOut' }}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Satisfaction + Temps moyen */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="p-3 rounded-lg bg-gray-50 border border-gray-100 text-center">
-                    <p className="text-[10px] text-gray-400 uppercase mb-1">Satisfaction etudiants</p>
-                    <div className="flex items-center justify-center gap-0.5 mb-1">
-                      {[1, 2, 3, 4, 5].map(star => (
-                        <Star
-                          key={star}
-                          className={`size-4 ${star <= 4 ? 'text-[#d4a853] fill-[#d4a853]' : star <= 4.2 ? 'text-[#d4a853] fill-[#d4a853]/20' : 'text-gray-200'}`}
-                        />
                       ))}
                     </div>
-                    <p className="text-lg font-bold text-[#1a2744]">4.2<span className="text-xs text-gray-400">/5</span></p>
+                  )}
+                </div>
+
+                {/* Delai moyen + Taux d'annulation */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 rounded-lg bg-gray-50 border border-gray-100 text-center">
+                    <p className="text-[10px] text-gray-400 uppercase mb-1">Delai moyen demande-RV</p>
+                    <p className="text-lg font-bold text-[#2d7a4f]">{appointments.length > 0 ? avgLeadTimeDays.toFixed(1) : '—'}<span className="text-xs text-gray-400"> jours</span></p>
                   </div>
                   <div className="p-3 rounded-lg bg-gray-50 border border-gray-100 text-center">
-                    <p className="text-[10px] text-gray-400 uppercase mb-1">Temps moyen demande-RV</p>
-                    <p className="text-lg font-bold text-[#2d7a4f]">2.3<span className="text-xs text-gray-400"> jours</span></p>
-                    <p className="text-[10px] text-[#2d7a4f] font-medium">-0.5j vs precedent</p>
+                    <p className="text-[10px] text-gray-400 uppercase mb-1">Taux d&apos;annulation</p>
+                    <p className="text-lg font-bold text-[#1a2744]">{cancellationRate}%</p>
+                    <p className="text-[10px] text-gray-400">{cancelledCount} rendez-vous annules</p>
                   </div>
                 </div>
               </div>
@@ -1101,39 +1457,44 @@ export function AdvisingPage() {
               {/* Right column: Evolution mensuelle */}
               <div>
                 <p className="text-xs font-semibold text-[#1a2744] mb-3">Evolution mensuelle des consultations</p>
-                <div className="p-3 rounded-lg bg-gray-50 border border-gray-100">
-                  <div className="flex items-end justify-between gap-3 h-40">
-                    {monthlyData.map((item, idx) => {
-                      const heightPercent = maxMonthly > 0 ? (item.count / maxMonthly) * 100 : 0
-                      return (
-                        <div key={item.month} className="flex-1 flex flex-col items-center justify-end h-full">
-                          <span className="text-[10px] font-semibold text-[#1a2744] mb-1">{item.count}</span>
-                          <motion.div
-                            className="w-full rounded-t-md max-w-[40px]"
-                            style={{
-                              background: `linear-gradient(to top, #1a2744, #2d7a4f)`,
-                              height: 0,
-                            }}
-                            animate={{ height: `${heightPercent}%` }}
-                            transition={{ duration: 0.6, delay: 0.1 * idx, ease: 'easeOut' }}
-                          />
-                          <span className="text-[10px] text-gray-500 mt-1.5">{item.month}</span>
-                        </div>
-                      )
-                    })}
+                {appointments.length === 0 ? (
+                  <div className="p-3 rounded-lg bg-gray-50 border border-gray-100 h-40 flex items-center justify-center">
+                    <p className="text-xs text-gray-400">Aucune consultation enregistree</p>
                   </div>
-                </div>
+                ) : (
+                  <div className="p-3 rounded-lg bg-gray-50 border border-gray-100">
+                    <div className="flex items-end justify-between gap-3 h-40">
+                      {monthlyData.map((item, idx) => {
+                        const heightPercent = maxMonthly > 0 ? (item.count / maxMonthly) * 100 : 0
+                        return (
+                          <div key={item.month} className="flex-1 flex flex-col items-center justify-end h-full">
+                            <span className="text-[10px] font-semibold text-[#1a2744] mb-1">{item.count}</span>
+                            <motion.div
+                              className="w-full rounded-t-md max-w-[40px]"
+                              style={{
+                                background: `linear-gradient(to top, #1a2744, #2d7a4f)`,
+                                height: 0,
+                              }}
+                              animate={{ height: `${heightPercent}%` }}
+                              transition={{ duration: 0.6, delay: 0.1 * idx, ease: 'easeOut' }}
+                            />
+                            <span className="text-[10px] text-gray-500 mt-1.5">{item.month}</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 {/* Summary stats */}
                 <div className="grid grid-cols-2 gap-3 mt-3">
                   <div className="p-3 rounded-lg bg-[#2d7a4f08] border border-[#2d7a4f15]">
                     <p className="text-[10px] text-gray-500">Total consultations</p>
-                    <p className="text-sm font-bold text-[#1a2744]">157</p>
-                    <p className="text-[10px] text-[#2d7a4f] font-medium">+23% ce semestre</p>
+                    <p className="text-sm font-bold text-[#1a2744]">{appointments.length}</p>
                   </div>
                   <div className="p-3 rounded-lg bg-[#d4a85308] border border-[#d4a85315]">
                     <p className="text-[10px] text-gray-500">Taux de retour</p>
-                    <p className="text-sm font-bold text-[#1a2744]">62%</p>
+                    <p className="text-sm font-bold text-[#1a2744]">{returnRate}%</p>
                     <p className="text-[10px] text-[#d4a853] font-medium">Etudiants revenus</p>
                   </div>
                 </div>

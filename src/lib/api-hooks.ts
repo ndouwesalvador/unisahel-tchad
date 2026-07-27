@@ -95,6 +95,10 @@ export function useScholarships() {
   return useSimpleGet('scholarships', '/api/scholarships');
 }
 
+export function useNotifications() {
+  return useSimpleGet('notifications', '/api/notifications');
+}
+
 export function useAlumni() {
   return useSimpleGet('alumni', '/api/alumni');
 }
@@ -109,6 +113,14 @@ export function useStructure() {
 
 export function useRooms() {
   return useSimpleGet('rooms', '/api/rooms');
+}
+
+export function useLibrary() {
+  return useSimpleGet('library', '/api/library');
+}
+
+export function useTransport() {
+  return useSimpleGet('transport', '/api/transport');
 }
 
 export function useOnlineExams() {
@@ -154,6 +166,10 @@ export function useInstitution() {
   return useSimpleGet('institution', '/api/institution');
 }
 
+export function useImportExport() {
+  return useSimpleGet('importExport', '/api/import-export');
+}
+
 export function useResults(params?: { academicYearId?: string; studentId?: string; session?: string }) {
   return useQuery({
     queryKey: ['results', params],
@@ -171,4 +187,8 @@ export function useResults(params?: { academicYearId?: string; studentId?: strin
       return res.json();
     },
   });
+}
+
+export function useAdvising() {
+  return useSimpleGet('advising', '/api/advising');
 }

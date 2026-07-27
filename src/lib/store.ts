@@ -93,7 +93,6 @@ interface AppState {
   selectedProgramId: string | null
   selectedTeacherId: string | null
   notificationsOpen: boolean
-  unreadCount: number
   chatOpen: boolean
   chatMessages: ChatMessage[]
   
@@ -127,7 +126,6 @@ export const useAppStore = create<AppState>((set, _get) => ({
   selectedProgramId: null,
   selectedTeacherId: null,
   notificationsOpen: false,
-  unreadCount: 5,
   chatOpen: false,
   chatMessages: [
     {

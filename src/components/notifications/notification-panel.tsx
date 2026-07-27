@@ -1,8 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { useAppStore } from '@/lib/store'
+import { useNotifications } from '@/lib/api-hooks'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -23,12 +26,13 @@ import {
   Shield,
   BookOpen,
   Calendar,
+  Loader2,
 } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type NotificationType = 'info' | 'success' | 'warning' | 'error' | 'mention'
-type NotificationCategory = 'Academique' | 'Paiement' | 'Systeme' | 'Document'
+type NotificationCategory = 'Academique' | 'Paiement' | 'Systeme' | 'Document' | 'Administratif'
 
 interface Notification {
   id: string
@@ -38,174 +42,72 @@ interface Notification {
   description: string
   time: string
   read: boolean
+  createdAt: Date
 }
 
-// ─── Demo Data ────────────────────────────────────────────────────────────────
+interface ApiNotification {
+  id: string
+  type: string
+  category: string
+  title: string
+  description: string
+  link: string | null
+  isRead: boolean
+  createdAt: string
+}
 
-const demoNotifications: Notification[] = [
-  {
-    id: '1',
-    type: 'success',
-    category: 'Academique',
-    title: 'Nouvelle inscription recue',
-    description: 'Un nouvel etudiant s\'est inscrit en L1 Informatique pour l\'annee 2024-2025.',
-    time: 'Il y a 5 min',
-    read: false,
-  },
-  {
-    id: '2',
-    type: 'success',
-    category: 'Paiement',
-    title: 'Paiement de 75,000 FCFA recu',
-    description: 'Amina Djibrine a effectue un paiement de 75,000 FCFA pour les frais d\'inscription.',
-    time: 'Il y a 15 min',
-    read: false,
-  },
-  {
-    id: '3',
-    type: 'info',
-    category: 'Academique',
-    title: 'Notes validees pour L2 Droit',
-    description: 'Les notes du semestre 1 pour la L2 Droit ont ete validees par le jury.',
-    time: 'Il y a 30 min',
-    read: false,
-  },
-  {
-    id: '4',
-    type: 'mention',
-    category: 'Academique',
-    title: '@Scolarite a commente votre dossier',
-    description: 'Le service de la scolarite a laisse un commentaire sur le dossier d\'inscription de Moussa Saleh.',
-    time: 'Il y a 1h',
-    read: false,
-  },
-  {
-    id: '5',
-    type: 'warning',
-    category: 'Paiement',
-    title: 'Paiement en retard - 3 etudiants',
-    description: 'Trois etudiants de L3 Economie n\'ont pas encore regle leurs frais pour ce semestre.',
-    time: 'Il y a 2h',
-    read: false,
-  },
-  {
-    id: '6',
-    type: 'info',
-    category: 'Systeme',
-    title: 'Mise a jour systeme prevue ce weekend',
-    description: 'Une maintenance planifiee aura lieu samedi de 22h a 06h. Le systeme sera indisponible.',
-    time: 'Il y a 3h',
-    read: true,
-  },
-  {
-    id: '7',
-    type: 'success',
-    category: 'Document',
-    title: 'Releve de notes signe (A. Hassane)',
-    description: 'Le releve de notes d\'Abdou Hassane a ete signe numeriquement et est pret pour distribution.',
-    time: 'Il y a 4h',
-    read: true,
-  },
-  {
-    id: '8',
-    type: 'success',
-    category: 'Paiement',
-    title: 'Recu de paiement genere',
-    description: 'Un recu de paiement a ete genere automatiquement pour l\'etudiant Fatim Oumar.',
-    time: 'Il y a 5h',
-    read: true,
-  },
-  {
-    id: '9',
-    type: 'success',
-    category: 'Systeme',
-    title: 'Sauvegarde automatique reussie',
-    description: 'La sauvegarde quotidienne des donnees s\'est terminee avec succes. Taille: 2.4 GB.',
-    time: 'Hier',
-    read: true,
-  },
-  {
-    id: '10',
-    type: 'info',
-    category: 'Systeme',
-    title: 'Nouveau module disponible: Emploi du temps',
-    description: 'Le module de gestion de l\'emploi du temps est maintenant disponible dans votre espace.',
-    time: 'Hier',
-    read: true,
-  },
-  {
-    id: '11',
-    type: 'warning',
-    category: 'Document',
-    title: 'Certificat de scolarite expire (2 docs)',
-    description: 'Deux certificats de scolarite sont arrives a expiration et doivent etre renouveles.',
-    time: 'Hier',
-    read: true,
-  },
-  {
-    id: '12',
-    type: 'info',
-    category: 'Academique',
-    title: 'Jury planifie pour le 15/03',
-    description: 'Une session de jury est planifiee le 15 mars 2025 pour la validation des notes de L1.',
-    time: 'Il y a 2 jours',
-    read: true,
-  },
-  {
-    id: '13',
-    type: 'success',
-    category: 'Document',
-    title: 'Document verifie par QR code',
-    description: 'Le diplome de Ousmane Diop a ete verifie avec succes via le systeme QR code.',
-    time: 'Il y a 2 jours',
-    read: true,
-  },
-  {
-    id: '14',
-    type: 'mention',
-    category: 'Academique',
-    title: '@Admin vous a mentionne dans la deliberation',
-    description: 'L\'administrateur vous a mentionne dans la deliberation de la filiere Informatique.',
-    time: 'Il y a 3 jours',
-    read: true,
-  },
-  {
-    id: '15',
-    type: 'error',
-    category: 'Systeme',
-    title: 'Erreur d\'import detectee',
-    description: 'L\'import du fichier etudiants.csv a echoue. 12 lignes contiennent des erreurs de format.',
-    time: 'Il y a 3 jours',
-    read: true,
-  },
-  {
-    id: '16',
-    type: 'warning',
-    category: 'Academique',
-    title: 'Capacite max atteinte - L1 Droit',
-    description: 'La filiere L1 Droit a atteint sa capacite maximale de 150 etudiants.',
-    time: 'Il y a 4 jours',
-    read: true,
-  },
-]
+// ─── Mapping helpers ────────────────────────────────────────────────────────
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+const KNOWN_TYPES: readonly NotificationType[] = ['info', 'success', 'warning', 'error', 'mention']
+const KNOWN_CATEGORIES: readonly NotificationCategory[] = ['Academique', 'Paiement', 'Systeme', 'Document', 'Administratif']
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function getNotificationIcon(type: NotificationType) {
-  switch (type) {
-    case 'info':
-      return Info
-    case 'success':
-      return CheckCircle
-    case 'warning':
-      return AlertTriangle
-    case 'error':
-      return XCircle
-    case 'mention':
-      return AtSign
+function resolveType(type: string): NotificationType {
+  return (KNOWN_TYPES as readonly string[]).includes(type) ? (type as NotificationType) : 'info'
+}
+
+function resolveCategory(category: string): NotificationCategory {
+  return (KNOWN_CATEGORIES as readonly string[]).includes(category) ? (category as NotificationCategory) : 'Systeme'
+}
+
+// Computes a short, human relative-time label ("Il y a 5 min", "Hier", ...)
+// from a real createdAt timestamp. No date library - just arithmetic.
+function formatRelativeTime(date: Date): string {
+  const diffMs = Date.now() - date.getTime()
+  const diffMin = Math.floor(diffMs / 60000)
+  if (diffMin < 1) return "À l'instant"
+  if (diffMin < 60) return `Il y a ${diffMin} min`
+  const diffHours = Math.floor(diffMin / 60)
+  if (diffHours < 24) return `Il y a ${diffHours}h`
+  const diffDays = Math.floor(diffHours / 24)
+  if (diffDays === 1) return 'Hier'
+  if (diffDays < 7) return `Il y a ${diffDays} jours`
+  return date.toLocaleDateString('fr-FR')
+}
+
+function mapNotification(n: ApiNotification): Notification {
+  const createdAt = new Date(n.createdAt)
+  return {
+    id: n.id,
+    type: resolveType(n.type),
+    category: resolveCategory(n.category),
+    title: n.title,
+    description: n.description,
+    time: formatRelativeTime(createdAt),
+    read: n.isRead,
+    createdAt,
   }
 }
+
+function isToday(date: Date): boolean {
+  const now = new Date()
+  return (
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate()
+  )
+}
+
+// ─── Icon / color helpers ──────────────────────────────────────────────────────
 
 function getNotificationIconColor(type: NotificationType) {
   switch (type) {
@@ -222,20 +124,6 @@ function getNotificationIconColor(type: NotificationType) {
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function getCategoryIcon(category: NotificationCategory) {
-  switch (category) {
-    case 'Academique':
-      return BookOpen
-    case 'Paiement':
-      return CreditCard
-    case 'Systeme':
-      return Shield
-    case 'Document':
-      return FileText
-  }
-}
-
 function getCategoryColor(category: NotificationCategory) {
   switch (category) {
     case 'Academique':
@@ -245,6 +133,8 @@ function getCategoryColor(category: NotificationCategory) {
     case 'Systeme':
       return 'bg-[#1a2744]/10 text-[#1a2744] border-[#1a2744]/20'
     case 'Document':
+      return 'bg-[#6b7280]/10 text-[#6b7280] border-[#6b7280]/20'
+    case 'Administratif':
       return 'bg-[#6b7280]/10 text-[#6b7280] border-[#6b7280]/20'
   }
 }
@@ -276,10 +166,20 @@ function CategoryTypeIcon({ category, className }: { category: NotificationCateg
       return <Shield className={className} />
     case 'Document':
       return <FileText className={className} />
+    case 'Administratif':
+      return <FileText className={className} />
   }
 }
 
-function NotificationItem({ notification, index }: { notification: Notification; index: number }) {
+function NotificationItem({
+  notification,
+  index,
+  onMarkRead,
+}: {
+  notification: Notification
+  index: number
+  onMarkRead: (id: string) => void
+}) {
   const iconColor = getNotificationIconColor(notification.type)
   const catColor = getCategoryColor(notification.category)
 
@@ -288,6 +188,7 @@ function NotificationItem({ notification, index }: { notification: Notification;
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.2, delay: index * 0.03 }}
+      onClick={() => !notification.read && onMarkRead(notification.id)}
       className={`relative flex gap-3 p-3 rounded-lg transition-colors hover:bg-gray-50 cursor-pointer ${
         !notification.read ? 'bg-[#2d7a4f]/[0.03]' : ''
       }`}
@@ -330,9 +231,16 @@ function NotificationItem({ notification, index }: { notification: Notification;
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function NotificationPanel() {
-  const { notificationsOpen, toggleNotifications, unreadCount } = useAppStore()
+  const { notificationsOpen, toggleNotifications } = useAppStore()
   const [activeTab, setActiveTab] = useState('tout')
-  const [notifications, setNotifications] = useState<Notification[]>(demoNotifications)
+  const queryClient = useQueryClient()
+  const { data, isLoading } = useNotifications()
+
+  const notifications: Notification[] = useMemo(
+    () => ((data?.notifications || []) as ApiNotification[]).map(mapNotification),
+    [data]
+  )
+  const unreadCount: number = data?.unreadCount ?? 0
 
   const unreadNotifications = notifications.filter((n) => !n.read)
   const mentionNotifications = notifications.filter((n) => n.type === 'mention')
@@ -351,12 +259,39 @@ export function NotificationPanel() {
     }
   })()
 
-  const todayCount = notifications.filter((n) =>
-    n.time.includes('min') || n.time.includes('h') && !n.time.includes('jours')
-  ).length
+  const todayCount = notifications.filter((n) => isToday(n.createdAt)).length
 
-  const handleMarkAllRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['notifications'] })
+
+  const handleMarkRead = async (id: string) => {
+    try {
+      const res = await fetch(`/api/notifications?id=${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'read' }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.error || 'Echec de la mise a jour')
+      invalidate()
+    } catch (e) {
+      toast.error('Erreur', { description: e instanceof Error ? e.message : 'Echec de la mise a jour' })
+    }
+  }
+
+  const handleMarkAllRead = async () => {
+    try {
+      const res = await fetch('/api/notifications', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'read-all' }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.error || 'Echec de la mise a jour')
+      toast.success('Toutes les notifications ont été marquées comme lues')
+      invalidate()
+    } catch (e) {
+      toast.error('Erreur', { description: e instanceof Error ? e.message : 'Echec de la mise a jour' })
+    }
   }
 
   return (
@@ -381,6 +316,7 @@ export function NotificationPanel() {
                 size="sm"
                 className="text-xs text-[#2d7a4f] hover:text-[#236b40] h-7 px-2"
                 onClick={handleMarkAllRead}
+                disabled={unreadCount === 0}
               >
                 <Check className="size-3.5 mr-1" />
                 Tout marquer comme lu
@@ -399,88 +335,107 @@ export function NotificationPanel() {
           </SheetDescription>
         </SheetHeader>
 
-        {/* Filter Tabs */}
-        <div className="px-4 pt-3">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="w-full h-8 p-0.5 bg-gray-100">
-              <TabsTrigger value="tout" className="text-[11px] h-7 px-2 flex-1">
-                Tout
-                <Badge variant="secondary" className="ml-1 text-[9px] px-1 h-4 bg-gray-200 text-gray-600 font-medium">
-                  {notifications.length}
-                </Badge>
-              </TabsTrigger>
-              <TabsTrigger value="non-lues" className="text-[11px] h-7 px-2 flex-1">
-                Non lues
-                <Badge variant="secondary" className="ml-1 text-[9px] px-1 h-4 bg-[#2d7a4f]/10 text-[#2d7a4f] font-medium">
-                  {unreadNotifications.length}
-                </Badge>
-              </TabsTrigger>
-              <TabsTrigger value="mentions" className="text-[11px] h-7 px-2 flex-1">
-                Mentions
-                <Badge variant="secondary" className="ml-1 text-[9px] px-1 h-4 bg-gray-200 text-gray-600 font-medium">
-                  {mentionNotifications.length}
-                </Badge>
-              </TabsTrigger>
-              <TabsTrigger value="systeme" className="text-[11px] h-7 px-2 flex-1">
-                Systeme
-                <Badge variant="secondary" className="ml-1 text-[9px] px-1 h-4 bg-gray-200 text-gray-600 font-medium">
-                  {systemNotifications.length}
-                </Badge>
-              </TabsTrigger>
-            </TabsList>
+        {isLoading ? (
+          <div className="flex-1 flex flex-col items-center justify-center py-16 text-gray-400">
+            <Loader2 className="size-6 mb-3 animate-spin" />
+            <p className="text-sm">Chargement des notifications...</p>
+          </div>
+        ) : (
+          <>
+            {/* Filter Tabs */}
+            <div className="px-4 pt-3">
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <TabsList className="w-full h-8 p-0.5 bg-gray-100">
+                  <TabsTrigger value="tout" className="text-[11px] h-7 px-2 flex-1">
+                    Tout
+                    <Badge variant="secondary" className="ml-1 text-[9px] px-1 h-4 bg-gray-200 text-gray-600 font-medium">
+                      {notifications.length}
+                    </Badge>
+                  </TabsTrigger>
+                  <TabsTrigger value="non-lues" className="text-[11px] h-7 px-2 flex-1">
+                    Non lues
+                    <Badge variant="secondary" className="ml-1 text-[9px] px-1 h-4 bg-[#2d7a4f]/10 text-[#2d7a4f] font-medium">
+                      {unreadNotifications.length}
+                    </Badge>
+                  </TabsTrigger>
+                  <TabsTrigger value="mentions" className="text-[11px] h-7 px-2 flex-1">
+                    Mentions
+                    <Badge variant="secondary" className="ml-1 text-[9px] px-1 h-4 bg-gray-200 text-gray-600 font-medium">
+                      {mentionNotifications.length}
+                    </Badge>
+                  </TabsTrigger>
+                  <TabsTrigger value="systeme" className="text-[11px] h-7 px-2 flex-1">
+                    Systeme
+                    <Badge variant="secondary" className="ml-1 text-[9px] px-1 h-4 bg-gray-200 text-gray-600 font-medium">
+                      {systemNotifications.length}
+                    </Badge>
+                  </TabsTrigger>
+                </TabsList>
 
-            {/* Notification Lists */}
-            {['tout', 'non-lues', 'mentions', 'systeme'].map((tab) => (
-              <TabsContent key={tab} value={tab} className="mt-0">
-                <ScrollArea className="h-[calc(100vh-260px)]">
-                  <div className="py-2 space-y-0.5">
-                    <AnimatePresence mode="popLayout">
-                      {filteredNotifications.length > 0 ? (
-                        filteredNotifications.map((notification, index) => (
-                          <NotificationItem
-                            key={notification.id}
-                            notification={notification}
-                            index={index}
-                          />
-                        ))
-                      ) : (
-                        <div className="flex flex-col items-center justify-center py-12 text-gray-400">
-                          <Bell className="size-10 mb-3 opacity-30" />
-                          <p className="text-sm font-medium">Aucune notification</p>
-                          <p className="text-xs mt-1">Vous etes a jour !</p>
-                        </div>
-                      )}
-                    </AnimatePresence>
+                {/* Notification Lists */}
+                {['tout', 'non-lues', 'mentions', 'systeme'].map((tab) => (
+                  <TabsContent key={tab} value={tab} className="mt-0">
+                    <ScrollArea className="h-[calc(100vh-260px)]">
+                      <div className="py-2 space-y-0.5">
+                        <AnimatePresence mode="popLayout">
+                          {filteredNotifications.length > 0 ? (
+                            filteredNotifications.map((notification, index) => (
+                              <NotificationItem
+                                key={notification.id}
+                                notification={notification}
+                                index={index}
+                                onMarkRead={handleMarkRead}
+                              />
+                            ))
+                          ) : (
+                            <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+                              <Bell className="size-10 mb-3 opacity-30" />
+                              {notifications.length === 0 ? (
+                                <>
+                                  <p className="text-sm font-medium">Aucune notification pour le moment</p>
+                                  <p className="text-xs mt-1">Vous serez averti ici des évènements importants.</p>
+                                </>
+                              ) : (
+                                <>
+                                  <p className="text-sm font-medium">Aucune notification</p>
+                                  <p className="text-xs mt-1">Vous êtes à jour !</p>
+                                </>
+                              )}
+                            </div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    </ScrollArea>
+                  </TabsContent>
+                ))}
+              </Tabs>
+            </div>
+
+            {/* Footer */}
+            <div className="mt-auto border-t border-gray-100">
+              <div className="p-4 space-y-3">
+                <Button
+                  variant="outline"
+                  className="w-full text-[#2d7a4f] border-[#2d7a4f]/30 hover:bg-[#2d7a4f]/5 hover:border-[#2d7a4f]/50 text-sm font-medium"
+                >
+                  <Bell className="size-4 mr-2" />
+                  Voir toutes les notifications
+                </Button>
+                <div className="flex items-center justify-center gap-4 text-[11px] text-gray-400">
+                  <div className="flex items-center gap-1">
+                    <div className="w-1.5 h-1.5 rounded-full bg-[#2d7a4f]" />
+                    <span>{unreadNotifications.length} non lues</span>
                   </div>
-                </ScrollArea>
-              </TabsContent>
-            ))}
-          </Tabs>
-        </div>
-
-        {/* Footer */}
-        <div className="mt-auto border-t border-gray-100">
-          <div className="p-4 space-y-3">
-            <Button
-              variant="outline"
-              className="w-full text-[#2d7a4f] border-[#2d7a4f]/30 hover:bg-[#2d7a4f]/5 hover:border-[#2d7a4f]/50 text-sm font-medium"
-            >
-              <Bell className="size-4 mr-2" />
-              Voir toutes les notifications
-            </Button>
-            <div className="flex items-center justify-center gap-4 text-[11px] text-gray-400">
-              <div className="flex items-center gap-1">
-                <div className="w-1.5 h-1.5 rounded-full bg-[#2d7a4f]" />
-                <span>{unreadNotifications.length} non lues</span>
-              </div>
-              <Separator orientation="vertical" className="h-3" />
-              <div className="flex items-center gap-1">
-                <Calendar className="size-3" />
-                <span>{todayCount} aujourd&apos;hui</span>
+                  <Separator orientation="vertical" className="h-3" />
+                  <div className="flex items-center gap-1">
+                    <Calendar className="size-3" />
+                    <span>{todayCount} aujourd&apos;hui</span>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
+          </>
+        )}
       </SheetContent>
     </Sheet>
   )

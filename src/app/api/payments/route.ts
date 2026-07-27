@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
 import { paymentQuerySchema, createPaymentSchema, updatePaymentSchema, validateQuery, validateBody, formatZodError } from '@/lib/validations/api'
 import { Prisma } from '@prisma/client'
+import { createNotification } from '@/lib/notifications'
 
 async function getPaymentsHandler(user: SessionUser, tenantId: string, request: NextRequest) {
   try {
@@ -257,24 +258,36 @@ async function updatePaymentHandler(user: SessionUser, tenantId: string, request
       },
     })
 
-    // Best-effort receipt email on validation - never fails the payment update itself
-    if (data.status === 'VALIDATED' && existing.status !== 'VALIDATED' && payment.student?.email) {
-      const { sendEmail } = await import('@/lib/email')
+    // Payment just transitioned to VALIDATED - notify the tenant team and,
+    // best-effort, email the student a receipt. Neither ever fails the update itself.
+    if (data.status === 'VALIDATED' && existing.status !== 'VALIDATED') {
       const amountLabel = `${payment.amount.toLocaleString('fr-FR')} ${payment.currency}`
-      await sendEmail({
-        to: payment.student.email,
-        subject: `Reçu de paiement ${payment.receiptNumber}`,
-        html: `
-          <p>Bonjour ${payment.student.firstName},</p>
-          <p>Votre paiement a été validé.</p>
-          <ul>
-            <li>Reçu N° : ${payment.receiptNumber}</li>
-            <li>Montant : ${amountLabel}</li>
-            <li>Date de validation : ${new Date().toLocaleDateString('fr-FR')}</li>
-          </ul>
-          <p>— UniSahel</p>
-        `,
+
+      await createNotification(tenantId, {
+        type: 'success',
+        category: 'Paiement',
+        title: `Paiement validé - ${amountLabel}`,
+        description: `${payment.student.firstName} ${payment.student.lastName} - Reçu N° ${payment.receiptNumber}`,
+        link: `/dashboard/payments?paymentId=${payment.id}`,
       })
+
+      if (payment.student?.email) {
+        const { sendEmail } = await import('@/lib/email')
+        await sendEmail({
+          to: payment.student.email,
+          subject: `Reçu de paiement ${payment.receiptNumber}`,
+          html: `
+            <p>Bonjour ${payment.student.firstName},</p>
+            <p>Votre paiement a été validé.</p>
+            <ul>
+              <li>Reçu N° : ${payment.receiptNumber}</li>
+              <li>Montant : ${amountLabel}</li>
+              <li>Date de validation : ${new Date().toLocaleDateString('fr-FR')}</li>
+            </ul>
+            <p>— UniSahel</p>
+          `,
+        })
+      }
     }
 
     return NextResponse.json({ data: payment })

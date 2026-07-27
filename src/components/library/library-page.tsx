@@ -2,10 +2,14 @@
 
 import { exportToExcel } from '@/lib/export'
 import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { motion } from 'framer-motion'
+import { useLibrary, useStudents } from '@/lib/api-hooks'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import {
@@ -24,11 +28,12 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
 import {
   BookOpen,
   BookMarked,
@@ -37,12 +42,7 @@ import {
   Plus,
   Search,
   Download,
-  MoreHorizontal,
   Eye,
-  Edit3,
-  Trash2,
-  TrendingUp,
-  Clock,
   ArrowRightLeft,
   Globe,
   ExternalLink,
@@ -58,9 +58,12 @@ import {
   AlertTriangle,
   CheckCircle2,
   XCircle,
+  Clock,
+  Loader2,
+  Save,
 } from 'lucide-react'
 
-// ─── Demo Data ────────────────────────────────────────────────────────────────
+// ─── Types ──────────────────────────────────────────────────────────────────
 
 interface CatalogItem {
   id: string
@@ -70,26 +73,10 @@ interface CatalogItem {
   status: 'disponible' | 'emprunte' | 'en_reservation' | 'perdu'
   borrowCount: number
   location: string
+  totalCopies: number
+  availableCopies: number
   returnDate?: string
 }
-
-const demoCatalog: CatalogItem[] = [
-  { id: '1', title: 'Droit Civil Dalloz 2024', type: 'livre', category: 'droit', status: 'disponible', borrowCount: 42, location: 'Rayon A3' },
-  { id: '2', title: "Introduction a l'Algorithmique", type: 'livre', category: 'sciences', status: 'emprunte', borrowCount: 67, location: 'Rayon B1', returnDate: '15/07' },
-  { id: '3', title: 'Litterature Africaine Francophone', type: 'livre', category: 'lettres', status: 'disponible', borrowCount: 31, location: 'Rayon C2' },
-  { id: '4', title: 'Medecine Interne - Harrison', type: 'livre', category: 'medecine', status: 'emprunte', borrowCount: 89, location: 'Rayon D1', returnDate: '20/07' },
-  { id: '5', title: 'Economie du Developpement', type: 'revue', category: 'economie', status: 'disponible', borrowCount: 23, location: 'Rayon E2' },
-  { id: '6', title: 'These: Impact du changement climatique au Sahel', type: 'these', category: 'sciences', status: 'disponible', borrowCount: 15, location: 'Rayon B3' },
-  { id: '7', title: 'Constitution de la Republique du Tchad', type: 'rapport', category: 'droit', status: 'en_reservation', borrowCount: 56, location: 'Rayon A1' },
-  { id: '8', title: 'Physique Quantique - Feynman', type: 'livre', category: 'sciences', status: 'disponible', borrowCount: 78, location: 'Rayon B2' },
-  { id: '9', title: 'Philosophie Africaine Contemporaine', type: 'livre', category: 'lettres', status: 'emprunte', borrowCount: 34, location: 'Rayon C1', returnDate: '18/07' },
-  { id: '10', title: 'Mathematiques Appliquees - Tome 2', type: 'livre', category: 'sciences', status: 'disponible', borrowCount: 45, location: 'Rayon B4' },
-  { id: '11', title: 'Journal of African Law 2024', type: 'revue', category: 'droit', status: 'disponible', borrowCount: 19, location: 'Rayon A2' },
-  { id: '12', title: 'Sante Publique en Afrique Centrale', type: 'rapport', category: 'medecine', status: 'disponible', borrowCount: 27, location: 'Rayon D2' },
-  { id: '13', title: 'Histoire du Tchad Contemporain', type: 'livre', category: 'lettres', status: 'disponible', borrowCount: 52, location: 'Rayon C3' },
-  { id: '14', title: 'Master IA & Data Science', type: 'ebook', category: 'sciences', status: 'disponible', borrowCount: 38, location: 'Numerique' },
-  { id: '15', title: 'Droit International Humanitaire', type: 'livre', category: 'droit', status: 'perdu', borrowCount: 12, location: 'Rayon A4' },
-]
 
 interface BorrowRecord {
   id: string
@@ -101,51 +88,188 @@ interface BorrowRecord {
   status: 'en_retard' | 'a_l_heure'
 }
 
-const demoBorrows: BorrowRecord[] = [
-  { id: '1', studentName: 'ABAKAR Adam', matricule: 'UDN/L3/2024/001', bookTitle: "Introduction a l'Algorithmique", dateEmprunt: '01/07/2025', dateRetourPrevue: '15/07/2025', status: 'en_retard' },
-  { id: '2', studentName: 'KHAMIS Fatime', matricule: 'UDN/M1/2024/002', bookTitle: 'Medecine Interne - Harrison', dateEmprunt: '05/07/2025', dateRetourPrevue: '20/07/2025', status: 'a_l_heure' },
-  { id: '3', studentName: 'MAHAMAT Youssouf', matricule: 'UDN/L2/2024/003', bookTitle: 'Philosophie Africaine Contemporaine', dateEmprunt: '03/07/2025', dateRetourPrevue: '18/07/2025', status: 'a_l_heure' },
-  { id: '4', studentName: 'NGARNDMI Halime', matricule: 'UDN/L1/2024/004', bookTitle: 'Droit Civil Dalloz 2024', dateEmprunt: '10/06/2025', dateRetourPrevue: '25/06/2025', status: 'en_retard' },
-  { id: '5', studentName: 'HISSEIN Mariam', matricule: 'UDN/L3/2024/005', bookTitle: 'Economie du Developpement', dateEmprunt: '08/07/2025', dateRetourPrevue: '23/07/2025', status: 'a_l_heure' },
-  { id: '6', studentName: 'ISSA Mahamat Nour', matricule: 'UDN/M2/2024/006', bookTitle: 'Physique Quantique - Feynman', dateEmprunt: '15/06/2025', dateRetourPrevue: '30/06/2025', status: 'en_retard' },
-  { id: '7', studentName: 'ADAM Khadija', matricule: 'UDN/L2/2024/007', bookTitle: 'Mathematiques Appliquees - Tome 2', dateEmprunt: '12/07/2025', dateRetourPrevue: '27/07/2025', status: 'a_l_heure' },
-  { id: '8', studentName: 'BICHARA Hawa', matricule: 'UDN/L1/2024/008', bookTitle: 'Histoire du Tchad Contemporain', dateEmprunt: '20/06/2025', dateRetourPrevue: '05/07/2025', status: 'en_retard' },
-]
+interface RoomSpace {
+  id: string
+  name: string
+  type: string
+  capacity: number
+  occupancy: number
+}
 
 interface DigitalResource {
   id: string
   name: string
   description: string
-  count: string
+  href: string
   icon: React.ElementType
   color: string
-  accessCount: number
 }
 
-const demoDigitalResources: DigitalResource[] = [
-  { id: '1', name: 'Base de donnees Cairn.info', description: 'Revues scientifiques', count: '2,400 titres', icon: Database, color: '#1a2744', accessCount: 1245 },
-  { id: '2', name: 'JSTOR Africa', description: 'Archives academiques', count: '1,200 documents', icon: Library, color: '#2d7a4f', accessCount: 876 },
-  { id: '3', name: 'Google Scholar', description: 'Moteur de recherche', count: 'Acces libre', icon: Search, color: '#d4a853', accessCount: 3450 },
-  { id: '4', name: 'UNESCO Digital Library', description: 'Publications internationales', count: '560 docs', icon: Globe, color: '#1a2744', accessCount: 432 },
-  { id: '5', name: 'African Journals Online', description: 'Revues africaines', count: '890 titres', icon: BookOpen, color: '#2d7a4f', accessCount: 678 },
-  { id: '6', name: 'OpenEdition', description: 'Livres et revues ouvertes', count: '320 docs', icon: ExternalLink, color: '#d4a853', accessCount: 567 },
+interface LibraryStats {
+  totalResources: number
+  totalCopies: number
+  availableCopies: number
+  activeLoans: number
+  overdueLoans: number
+  totalRoomCapacity: number
+  totalRoomOccupancy: number
+  avgOccupancyPercent: number
+  activeBorrowersCount: number
+  totalStudents: number
+  avgBorrowDurationDays: number | null
+  onTimeReturnRatePercent: number | null
+  totalLoansAllTime: number
+  monthlyBorrows: { month: string; count: number }[]
+  topCategories: { category: string; count: number }[]
+}
+
+// ─── Ressources numeriques ────────────────────────────────────────────────────
+// Curated links to real external academic databases. This is static config,
+// not tenant data (no Prisma model backs it). The old version of this card
+// showed invented usage numbers ("2,400 titres", "1245 acces", etc.) - those
+// were fabricated and have been removed. This is now a simple link-out list
+// pointing at each service's real public URL.
+
+const digitalResources: DigitalResource[] = [
+  { id: '1', name: 'Cairn.info', description: 'Revues scientifiques francophones', href: 'https://www.cairn.info', icon: Database, color: '#1a2744' },
+  { id: '2', name: 'JSTOR Africa', description: "Archives academiques, acces initiative Afrique", href: 'https://about.jstor.org/africa/', icon: Library, color: '#2d7a4f' },
+  { id: '3', name: 'Google Scholar', description: 'Moteur de recherche academique', href: 'https://scholar.google.com', icon: Search, color: '#d4a853' },
+  { id: '4', name: 'UNESCO Digital Library', description: 'Publications internationales', href: 'https://unesdoc.unesco.org', icon: Globe, color: '#1a2744' },
+  { id: '5', name: 'African Journals Online', description: 'Revues academiques africaines', href: 'https://www.ajol.info', icon: BookOpen, color: '#2d7a4f' },
+  { id: '6', name: 'OpenEdition', description: 'Livres et revues en acces ouvert', href: 'https://www.openedition.org', icon: ExternalLink, color: '#d4a853' },
 ]
 
-interface RoomSpace {
+// ─── Weekly opening hours ────────────────────────────────────────────────────
+// Static institutional schedule (real, but not tenant-specific data - there is
+// no Prisma model for it). The former "Affluence" column shown next to these
+// hours was a fabricated per-day occupancy percentage with no backing
+// check-in/attendance tracking system, so it has been removed rather than
+// kept as invented data.
+
+const weeklySchedule = [
+  { day: 'Lundi', open: '08h00', close: '22h00' },
+  { day: 'Mardi', open: '08h00', close: '22h00' },
+  { day: 'Mercredi', open: '08h00', close: '22h00' },
+  { day: 'Jeudi', open: '08h00', close: '22h00' },
+  { day: 'Vendredi', open: '08h00', close: '22h00' },
+  { day: 'Samedi', open: '09h00', close: '18h00' },
+]
+
+// ─── API Mapping ────────────────────────────────────────────────────────────
+
+const knownTypes = ['livre', 'revue', 'these', 'memoire', 'rapport', 'ebook'] as const
+type KnownType = typeof knownTypes[number]
+const knownCategories = ['sciences', 'droit', 'lettres', 'medecine', 'economie'] as const
+type KnownCategory = typeof knownCategories[number]
+const knownCatalogStatuses = ['disponible', 'emprunte', 'en_reservation', 'perdu'] as const
+type KnownCatalogStatus = typeof knownCatalogStatuses[number]
+
+function isKnownType(value: string): value is KnownType {
+  return (knownTypes as readonly string[]).includes(value)
+}
+
+function isKnownCategory(value: string): value is KnownCategory {
+  return (knownCategories as readonly string[]).includes(value)
+}
+
+function isKnownCatalogStatus(value: string): value is KnownCatalogStatus {
+  return (knownCatalogStatuses as readonly string[]).includes(value)
+}
+
+interface CatalogApiRecord {
+  id: string
+  title: string
+  type: string
+  category: string
+  status: string
+  borrowCount: number
+  location: string
+  totalCopies: number
+  availableCopies: number
+  returnDate: string | null
+}
+
+function mapCatalogItem(r: CatalogApiRecord): CatalogItem {
+  return {
+    id: r.id,
+    title: r.title,
+    type: isKnownType(r.type) ? r.type : 'livre',
+    category: isKnownCategory(r.category) ? r.category : 'sciences',
+    status: isKnownCatalogStatus(r.status) ? r.status : 'disponible',
+    borrowCount: r.borrowCount,
+    location: r.location || '',
+    totalCopies: r.totalCopies,
+    availableCopies: r.availableCopies,
+    returnDate: r.returnDate || undefined,
+  }
+}
+
+interface BorrowApiRecord {
+  id: string
+  studentName: string
+  matricule: string
+  bookTitle: string
+  dateEmprunt: string
+  dateRetourPrevue: string
+  status: string
+}
+
+function mapBorrow(r: BorrowApiRecord): BorrowRecord {
+  return {
+    id: r.id,
+    studentName: r.studentName,
+    matricule: r.matricule,
+    bookTitle: r.bookTitle,
+    dateEmprunt: r.dateEmprunt,
+    dateRetourPrevue: r.dateRetourPrevue,
+    status: r.status === 'en_retard' ? 'en_retard' : 'a_l_heure',
+  }
+}
+
+interface RoomApiRecord {
   id: string
   name: string
-  capacity: string
-  type: 'lecture' | 'multimedia' | 'these' | 'periodiques' | 'individuel'
+  type: string
+  capacity: number
   occupancy: number
 }
 
-const demoRooms: RoomSpace[] = [
-  { id: '1', name: 'Salle de lecture', capacity: '150 places', type: 'lecture', occupancy: 87 },
-  { id: '2', name: 'Salle multimedia', capacity: '40 postes', type: 'multimedia', occupancy: 65 },
-  { id: '3', name: 'Salle de these', capacity: '30 places', type: 'these', occupancy: 93 },
-  { id: '4', name: 'Espace periodiques', capacity: '50 places', type: 'periodiques', occupancy: 42 },
-  { id: '5', name: 'Box individuels', capacity: '20 places', type: 'individuel', occupancy: 75 },
-]
+function mapRoom(r: RoomApiRecord): RoomSpace {
+  return {
+    id: r.id,
+    name: r.name,
+    type: r.type,
+    capacity: r.capacity,
+    occupancy: r.occupancy,
+  }
+}
+
+interface StudentApiRecord {
+  id: string
+  firstName: string
+  lastName: string
+  matricule: string | null
+}
+
+interface StudentOption {
+  id: string
+  label: string
+  searchKey: string
+}
+
+function mapStudentOption(s: StudentApiRecord): StudentOption {
+  return {
+    id: s.id,
+    label: `${s.firstName} ${s.lastName}${s.matricule ? ' - ' + s.matricule : ''}`,
+    searchKey: `${s.firstName} ${s.lastName} ${s.matricule || ''}`.toLowerCase(),
+  }
+}
+
+function defaultDueDate() {
+  const d = new Date()
+  d.setDate(d.getDate() + 14)
+  return d.toISOString().slice(0, 10)
+}
 
 // ─── Config Maps ──────────────────────────────────────────────────────────────
 
@@ -158,12 +282,12 @@ const typeConfig: Record<string, { label: string; className: string }> = {
   ebook: { label: 'E-book', className: 'bg-[#ea580c15] text-[#ea580c] border-0' },
 }
 
-const categoryConfig: Record<string, { label: string; className: string }> = {
-  sciences: { label: 'Sciences', className: 'bg-blue-50 text-blue-700 border-0' },
-  droit: { label: 'Droit', className: 'bg-purple-50 text-purple-700 border-0' },
-  lettres: { label: 'Lettres', className: 'bg-amber-50 text-amber-700 border-0' },
-  medecine: { label: 'Medecine', className: 'bg-red-50 text-red-700 border-0' },
-  economie: { label: 'Economie', className: 'bg-emerald-50 text-emerald-700 border-0' },
+const categoryConfig: Record<string, { label: string; className: string; color: string }> = {
+  sciences: { label: 'Sciences', className: 'bg-blue-50 text-blue-700 border-0', color: '#1a2744' },
+  droit: { label: 'Droit', className: 'bg-purple-50 text-purple-700 border-0', color: '#2d7a4f' },
+  lettres: { label: 'Lettres', className: 'bg-amber-50 text-amber-700 border-0', color: '#d4a853' },
+  medecine: { label: 'Medecine', className: 'bg-red-50 text-red-700 border-0', color: '#c62828' },
+  economie: { label: 'Economie', className: 'bg-emerald-50 text-emerald-700 border-0', color: '#0891b2' },
 }
 
 const statusConfig: Record<string, { label: string; className: string; icon: React.ElementType }> = {
@@ -181,16 +305,44 @@ const borrowStatusConfig: Record<string, { label: string; className: string }> =
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function LibraryPage() {
+  const queryClient = useQueryClient()
+  const { data: libraryQuery, isLoading } = useLibrary()
+  const { data: studentsQuery } = useStudents({ limit: 1000 })
+
+  const catalog: CatalogItem[] = (libraryQuery?.catalog || []).map(mapCatalogItem)
+  const borrows: BorrowRecord[] = (libraryQuery?.borrows || []).map(mapBorrow)
+  const rooms: RoomSpace[] = (libraryQuery?.rooms || []).map(mapRoom)
+  const stats: LibraryStats | undefined = libraryQuery?.stats
+  const students: StudentOption[] = (studentsQuery?.data || []).map(mapStudentOption)
+
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState('tous')
   const [categoryFilter, setCategoryFilter] = useState('tous')
   const [statusFilter, setStatusFilter] = useState('tous')
   const [languageFilter, setLanguageFilter] = useState('tous')
   const [borrowSearch, setBorrowSearch] = useState('')
-  const [returnedBorrows, setReturnedBorrows] = useState<Set<string>>(new Set())
+
+  // Add-book dialog
+  const [showAddBook, setShowAddBook] = useState(false)
+  const [addingBook, setAddingBook] = useState(false)
+  const [newBook, setNewBook] = useState({ title: '', type: 'livre', category: 'sciences', location: '', totalCopies: '1' })
+
+  // Borrow dialog (opened from a catalog row)
+  const [borrowFor, setBorrowFor] = useState<CatalogItem | null>(null)
+  const [studentSearch, setStudentSearch] = useState('')
+  const [selectedStudentId, setSelectedStudentId] = useState('')
+  const [dueDate, setDueDate] = useState(defaultDueDate())
+  const [borrowing, setBorrowing] = useState(false)
+
+  // Return a loan
+  const [returningId, setReturningId] = useState<string | null>(null)
+
+  // Manual room occupancy entry
+  const [occupancyDrafts, setOccupancyDrafts] = useState<Record<string, string>>({})
+  const [savingRoomId, setSavingRoomId] = useState<string | null>(null)
 
   // Filter catalog
-  const filteredCatalog = demoCatalog.filter(item => {
+  const filteredCatalog = catalog.filter(item => {
     const matchSearch = search === '' ||
       item.title.toLowerCase().includes(search.toLowerCase()) ||
       item.location.toLowerCase().includes(search.toLowerCase())
@@ -201,7 +353,7 @@ export function LibraryPage() {
   })
 
   // Filter borrows
-  const filteredBorrows = demoBorrows.filter(b => {
+  const filteredBorrows = borrows.filter(b => {
     const matchSearch = borrowSearch === '' ||
       b.studentName.toLowerCase().includes(borrowSearch.toLowerCase()) ||
       b.bookTitle.toLowerCase().includes(borrowSearch.toLowerCase()) ||
@@ -209,29 +361,13 @@ export function LibraryPage() {
     return matchSearch
   })
 
-  // Stats
-  const activeBorrows = demoBorrows.length
-  const overdueCount = demoBorrows.filter(b => b.status === 'en_retard').length
+  const filteredStudents = students
+    .filter(s => studentSearch === '' || s.searchKey.includes(studentSearch.toLowerCase()))
+    .slice(0, 30)
 
-  // Monthly borrows data for chart
-  const monthlyBorrows = [
-    { month: 'Jan', count: 285 },
-    { month: 'Fev', count: 312 },
-    { month: 'Mar', count: 278 },
-    { month: 'Avr', count: 345 },
-    { month: 'Mai', count: 298 },
-    { month: 'Juin', count: 234 },
-  ]
-  const maxBorrow = Math.max(...monthlyBorrows.map(m => m.count))
-
-  // Top categories
-  const topCategories = [
-    { name: 'Sciences', count: 3456, total: 12847, color: '#1a2744' },
-    { name: 'Droit', count: 2890, total: 12847, color: '#2d7a4f' },
-    { name: 'Lettres', count: 2345, total: 12847, color: '#d4a853' },
-    { name: 'Medecine', count: 2100, total: 12847, color: '#c62828' },
-    { name: 'Economie', count: 1856, total: 12847, color: '#0891b2' },
-  ]
+  const monthlyBorrows = stats?.monthlyBorrows || []
+  const maxBorrow = Math.max(...monthlyBorrows.map(m => m.count), 0)
+  const topCategories = stats?.topCategories || []
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -246,18 +382,112 @@ export function LibraryPage() {
     visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: 'easeOut' } },
   } as const
 
-  const handleReturn = (borrowId: string) => {
-    setReturnedBorrows(prev => {
-      const next = new Set(prev)
-      next.add(borrowId)
-      return next
-    })
-  }
-
   const getOccupancyColor = (occ: number) => {
     if (occ >= 90) return 'bg-red-500'
     if (occ >= 60) return 'bg-amber-500'
     return 'bg-green-500'
+  }
+
+  function openBorrowDialog(item: CatalogItem) {
+    setBorrowFor(item)
+    setSelectedStudentId('')
+    setStudentSearch('')
+    setDueDate(defaultDueDate())
+  }
+
+  async function handleAddBook() {
+    if (!newBook.title.trim()) {
+      toast.error('Le titre est obligatoire')
+      return
+    }
+    setAddingBook(true)
+    try {
+      const res = await fetch('/api/library', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: newBook.title.trim(),
+          type: newBook.type,
+          category: newBook.category,
+          location: newBook.location.trim() || undefined,
+          totalCopies: Number(newBook.totalCopies) || 1,
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || "Echec de l'ajout du document")
+      toast.success('Document ajoute au catalogue', { description: newBook.title })
+      queryClient.invalidateQueries({ queryKey: ['library'] })
+      setShowAddBook(false)
+      setNewBook({ title: '', type: 'livre', category: 'sciences', location: '', totalCopies: '1' })
+    } catch (e) {
+      toast.error('Erreur', { description: e instanceof Error ? e.message : "Echec de l'ajout du document" })
+    } finally {
+      setAddingBook(false)
+    }
+  }
+
+  async function handleBorrow() {
+    if (!borrowFor || !selectedStudentId) return
+    setBorrowing(true)
+    try {
+      const res = await fetch('/api/library?action=borrow', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          resourceId: borrowFor.id,
+          studentId: selectedStudentId,
+          dueAt: dueDate ? new Date(dueDate).toISOString() : undefined,
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || "Echec de l'enregistrement de l'emprunt")
+      toast.success('Emprunt enregistre', { description: borrowFor.title })
+      queryClient.invalidateQueries({ queryKey: ['library'] })
+      setBorrowFor(null)
+    } catch (e) {
+      toast.error('Erreur', { description: e instanceof Error ? e.message : "Echec de l'enregistrement de l'emprunt" })
+    } finally {
+      setBorrowing(false)
+    }
+  }
+
+  async function handleReturn(loanId: string) {
+    setReturningId(loanId)
+    try {
+      const res = await fetch(`/api/library?id=${loanId}&action=return`, { method: 'PUT' })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Echec du retour')
+      toast.success('Ouvrage rendu')
+      queryClient.invalidateQueries({ queryKey: ['library'] })
+    } catch (e) {
+      toast.error('Erreur', { description: e instanceof Error ? e.message : 'Echec du retour' })
+    } finally {
+      setReturningId(null)
+    }
+  }
+
+  async function handleSaveOccupancy(roomId: string, rawValue: string) {
+    const value = Number(rawValue)
+    if (rawValue === '' || Number.isNaN(value) || value < 0) {
+      toast.error('Effectif invalide')
+      return
+    }
+    setSavingRoomId(roomId)
+    try {
+      const res = await fetch(`/api/library?id=${roomId}&action=occupancy`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ occupancy: value }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || "Echec de la mise a jour")
+      toast.success('Effectif mis a jour')
+      queryClient.invalidateQueries({ queryKey: ['library'] })
+    } catch (e) {
+      toast.error('Erreur', { description: e instanceof Error ? e.message : 'Echec de la mise a jour' })
+    } finally {
+      setSavingRoomId(null)
+    }
   }
 
   return (
@@ -274,10 +504,94 @@ export function LibraryPage() {
           <p className="text-sm text-gray-500">Gestion du patrimoine documentaire et des ressources academiques</p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <Button size="sm" className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs">
-            <Plus className="size-3.5 mr-1.5" />
-            Nouveau document
-          </Button>
+          <Dialog open={showAddBook} onOpenChange={setShowAddBook}>
+            <DialogTrigger asChild>
+              <Button size="sm" className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs">
+                <Plus className="size-3.5 mr-1.5" />
+                Nouveau document
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Ajouter un document au catalogue</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label className="text-sm">Titre</Label>
+                  <Input
+                    placeholder="Ex: Droit Civil Dalloz 2024"
+                    value={newBook.title}
+                    onChange={(e) => setNewBook(f => ({ ...f, title: e.target.value }))}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label className="text-sm">Type</Label>
+                    <Select value={newBook.type} onValueChange={(v) => setNewBook(f => ({ ...f, type: v }))}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="livre">Livre</SelectItem>
+                        <SelectItem value="revue">Revue</SelectItem>
+                        <SelectItem value="these">These</SelectItem>
+                        <SelectItem value="memoire">Memoire</SelectItem>
+                        <SelectItem value="rapport">Rapport</SelectItem>
+                        <SelectItem value="ebook">E-book</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm">Categorie</Label>
+                    <Select value={newBook.category} onValueChange={(v) => setNewBook(f => ({ ...f, category: v }))}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="sciences">Sciences</SelectItem>
+                        <SelectItem value="droit">Droit</SelectItem>
+                        <SelectItem value="lettres">Lettres</SelectItem>
+                        <SelectItem value="medecine">Medecine</SelectItem>
+                        <SelectItem value="economie">Economie</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label className="text-sm">Localisation</Label>
+                    <Input
+                      placeholder="Ex: Rayon A3"
+                      value={newBook.location}
+                      onChange={(e) => setNewBook(f => ({ ...f, location: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm">Nombre d&apos;exemplaires</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={newBook.totalCopies}
+                      onChange={(e) => setNewBook(f => ({ ...f, totalCopies: e.target.value }))}
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    className="flex-1 bg-[#2d7a4f] hover:bg-[#236b40] text-white"
+                    disabled={addingBook}
+                    onClick={handleAddBook}
+                  >
+                    {addingBook && <Loader2 className="size-4 mr-2 animate-spin" />}
+                    Ajouter au catalogue
+                  </Button>
+                  <Button variant="outline" className="flex-1" onClick={() => setShowAddBook(false)}>
+                    Annuler
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
           <Button size="sm" variant="outline" className="text-xs border-[#1a274430] text-[#1a2744] hover:bg-[#1a274408]">
             <FileSearch className="size-3.5 mr-1.5" />
             Recherche avancee
@@ -298,18 +612,15 @@ export function LibraryPage() {
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Ouvrages</p>
-                <p className="text-xl font-bold text-[#1a2744] mt-1">12,847</p>
-                <div className="flex items-center gap-1 mt-1">
-                  <TrendingUp className="size-3 text-[#2d7a4f]" />
-                  <span className="text-xs text-[#2d7a4f] font-medium">+3.2%</span>
-                </div>
+                <p className="text-xl font-bold text-[#1a2744] mt-1">{(stats?.totalResources ?? 0).toLocaleString('fr-FR')}</p>
+                <p className="text-xs text-gray-400 mt-1">{(stats?.totalCopies ?? 0).toLocaleString('fr-FR')} exemplaires au total</p>
               </div>
               <div className="w-10 h-10 rounded-xl bg-[#1a274415] flex items-center justify-center">
                 <BookOpen className="size-5 text-[#1a2744]" />
               </div>
             </div>
             <div className="mt-3">
-              <Progress value={78} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#1a2744]" />
+              <Progress value={stats && stats.totalCopies > 0 ? Math.round((stats.availableCopies / stats.totalCopies) * 100) : 0} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#1a2744]" />
             </div>
           </CardContent>
         </Card>
@@ -321,15 +632,15 @@ export function LibraryPage() {
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Emprunts actifs</p>
-                <p className="text-xl font-bold text-[#2d7a4f] mt-1">234</p>
-                <p className="text-xs text-gray-400 mt-1">{overdueCount} en retard</p>
+                <p className="text-xl font-bold text-[#2d7a4f] mt-1">{stats?.activeLoans ?? 0}</p>
+                <p className="text-xs text-gray-400 mt-1">{stats?.overdueLoans ?? 0} en retard</p>
               </div>
               <div className="w-10 h-10 rounded-xl bg-[#2d7a4f15] flex items-center justify-center">
                 <BookMarked className="size-5 text-[#2d7a4f]" />
               </div>
             </div>
             <div className="mt-3">
-              <Progress value={35} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#2d7a4f]" />
+              <Progress value={stats && stats.activeLoans > 0 ? Math.round((stats.overdueLoans / stats.activeLoans) * 100) : 0} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#2d7a4f]" />
             </div>
           </CardContent>
         </Card>
@@ -341,18 +652,12 @@ export function LibraryPage() {
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Ressources numeriques</p>
-                <p className="text-xl font-bold text-[#d4a853] mt-1">3,456</p>
-                <div className="flex items-center gap-1 mt-1">
-                  <TrendingUp className="size-3 text-[#2d7a4f]" />
-                  <span className="text-xs text-[#2d7a4f] font-medium">+15%</span>
-                </div>
+                <p className="text-xl font-bold text-[#d4a853] mt-1">{digitalResources.length}</p>
+                <p className="text-xs text-gray-400 mt-1">bases documentaires partenaires</p>
               </div>
               <div className="w-10 h-10 rounded-xl bg-[#d4a85315] flex items-center justify-center">
                 <Monitor className="size-5 text-[#d4a853]" />
               </div>
-            </div>
-            <div className="mt-3">
-              <Progress value={62} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#d4a853]" />
             </div>
           </CardContent>
         </Card>
@@ -364,15 +669,15 @@ export function LibraryPage() {
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Places assises</p>
-                <p className="text-xl font-bold text-[#1a2744] mt-1">320</p>
-                <p className="text-xs text-gray-400 mt-1">92% occupees</p>
+                <p className="text-xl font-bold text-[#1a2744] mt-1">{stats?.totalRoomCapacity ?? 0}</p>
+                <p className="text-xs text-gray-400 mt-1">{stats?.avgOccupancyPercent ?? 0}% occupees</p>
               </div>
               <div className="w-10 h-10 rounded-xl bg-[#1a274415] flex items-center justify-center">
                 <Armchair className="size-5 text-[#1a2744]" />
               </div>
             </div>
             <div className="mt-3">
-              <Progress value={92} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-gradient-to-r [&>[data-slot=progress-indicator]]:from-[#2d7a4f] [&>[data-slot=progress-indicator]]:to-[#d4a853]" />
+              <Progress value={stats?.avgOccupancyPercent ?? 0} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-gradient-to-r [&>[data-slot=progress-indicator]]:from-[#2d7a4f] [&>[data-slot=progress-indicator]]:to-[#d4a853]" />
             </div>
           </CardContent>
         </Card>
@@ -386,7 +691,7 @@ export function LibraryPage() {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
                 <Input
-                  placeholder="Rechercher par titre, auteur, ISBN, mot-cle..."
+                  placeholder="Rechercher par titre ou localisation..."
                   className="pl-9 h-10 text-sm"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
@@ -443,7 +748,18 @@ export function LibraryPage() {
                     <SelectItem value="arabe">Arabe</SelectItem>
                   </SelectContent>
                 </Select>
-                <Button variant="ghost" size="sm" className="text-xs text-gray-500 h-9">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs text-gray-500 h-9"
+                  onClick={() => {
+                    setSearch('')
+                    setTypeFilter('tous')
+                    setCategoryFilter('tous')
+                    setStatusFilter('tous')
+                    setLanguageFilter('tous')
+                  }}
+                >
                   <Filter className="size-3.5 mr-1.5" />
                   Reinitialiser
                 </Button>
@@ -477,15 +793,16 @@ export function LibraryPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredCatalog.map((item) => {
+                  {!isLoading && filteredCatalog.map((item) => {
                     const tConf = typeConfig[item.type]
                     const cConf = categoryConfig[item.category]
                     const sConf = statusConfig[item.status]
                     const StatusIcon = sConf?.icon
+                    const canBorrow = item.availableCopies > 0 && item.status !== 'perdu'
                     return (
                       <TableRow
                         key={item.id}
-                        className="hover:bg-[#2d7a4f05] transition-colors cursor-pointer"
+                        className="hover:bg-[#2d7a4f05] transition-colors"
                       >
                         <TableCell className="py-2.5">
                           <div>
@@ -523,44 +840,52 @@ export function LibraryPage() {
                         <TableCell className="py-2.5">
                           <div className="flex items-center gap-1.5">
                             <MapPin className="size-3 text-gray-400" />
-                            <span className="text-xs text-gray-600">{item.location}</span>
+                            <span className="text-xs text-gray-600">{item.location || 'Non renseignee'}</span>
                           </div>
                         </TableCell>
                         <TableCell className="text-right py-2.5">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0 hover:bg-gray-100">
-                                <MoreHorizontal className="size-4 text-gray-400" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-44">
-                              <DropdownMenuItem className="text-xs">
-                                <Eye className="size-3.5 mr-2" />
-                                Consulter
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="text-xs">
-                                <ArrowRightLeft className="size-3.5 mr-2" />
-                                Emprunter
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="text-xs">
-                                <Bookmark className="size-3.5 mr-2" />
-                                Reserver
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="text-xs">
-                                <Edit3 className="size-3.5 mr-2" />
-                                Modifier
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="text-xs text-red-600">
-                                <Trash2 className="size-3.5 mr-2" />
-                                Supprimer
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          <div className="flex items-center justify-end gap-1.5">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 px-2 text-[10px] text-gray-500 hover:bg-gray-100"
+                              onClick={() => toast.info(item.title, {
+                                description: `${tConf?.label || item.type} - ${item.location || 'Emplacement non renseigne'} - ${item.availableCopies}/${item.totalCopies} disponible(s)`,
+                              })}
+                            >
+                              <Eye className="size-3.5 mr-1" />
+                              Consulter
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 px-2 text-[10px] border-[#2d7a4f30] text-[#2d7a4f] hover:bg-[#2d7a4f10] disabled:opacity-40"
+                              disabled={!canBorrow}
+                              onClick={() => openBorrowDialog(item)}
+                            >
+                              <ArrowRightLeft className="size-3 mr-1" />
+                              Emprunter
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     )
                   })}
-                  {filteredCatalog.length === 0 && (
+                  {isLoading && (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8 text-sm text-gray-400">
+                        Chargement...
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {!isLoading && catalog.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8 text-sm text-gray-400">
+                        Aucun ouvrage enregistre pour le moment
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {!isLoading && catalog.length > 0 && filteredCatalog.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={7} className="text-center py-8 text-sm text-gray-400">
                         Aucun ouvrage trouve
@@ -574,6 +899,52 @@ export function LibraryPage() {
         </Card>
       </motion.div>
 
+      {/* ── Borrow Dialog (opened from a catalog row) ────────────────────────── */}
+      <Dialog open={!!borrowFor} onOpenChange={(open) => { if (!open) setBorrowFor(null) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Emprunter: {borrowFor?.title}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label className="text-sm">Etudiant</Label>
+              <Input
+                placeholder="Rechercher par nom ou matricule..."
+                value={studentSearch}
+                onChange={(e) => setStudentSearch(e.target.value)}
+              />
+              <Select value={selectedStudentId} onValueChange={setSelectedStudentId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selectionner un etudiant" />
+                </SelectTrigger>
+                <SelectContent>
+                  {filteredStudents.map(s => (
+                    <SelectItem key={s.id} value={s.id}>{s.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm">Date de retour prevue</Label>
+              <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+            </div>
+            <div className="flex gap-2 pt-2">
+              <Button
+                className="flex-1 bg-[#2d7a4f] hover:bg-[#236b40] text-white"
+                disabled={!selectedStudentId || borrowing}
+                onClick={handleBorrow}
+              >
+                {borrowing && <Loader2 className="size-4 mr-2 animate-spin" />}
+                Confirmer l&apos;emprunt
+              </Button>
+              <Button variant="outline" className="flex-1" onClick={() => setBorrowFor(null)}>
+                Annuler
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* ── Emprunts & Retours Card ─────────────────────────────────────────── */}
       <motion.div variants={itemVariants}>
         <Card className="border-l-4 border-l-[#2d7a4f]">
@@ -582,7 +953,7 @@ export function LibraryPage() {
               <div className="flex items-center gap-2">
                 <BookMarked className="size-4 text-[#2d7a4f]" />
                 <CardTitle className="text-sm font-semibold text-[#1a2744]">Emprunts en cours</CardTitle>
-                <Badge className="text-[10px] bg-[#2d7a4f15] text-[#2d7a4f] border-0">{activeBorrows}</Badge>
+                <Badge className="text-[10px] bg-[#2d7a4f15] text-[#2d7a4f] border-0">{borrows.length}</Badge>
               </div>
               <div className="relative w-full sm:w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
@@ -609,14 +980,14 @@ export function LibraryPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredBorrows.map((borrow) => {
+                  {!isLoading && filteredBorrows.map((borrow) => {
                     const bConf = borrowStatusConfig[borrow.status]
-                    const isReturned = returnedBorrows.has(borrow.id)
                     const isOverdue = borrow.status === 'en_retard'
+                    const isReturning = returningId === borrow.id
                     return (
                       <TableRow
                         key={borrow.id}
-                        className={`transition-colors ${isOverdue && !isReturned ? 'bg-red-50/50 hover:bg-red-50' : 'hover:bg-[#2d7a4f05]'} ${isReturned ? 'opacity-50' : ''}`}
+                        className={`transition-colors ${isOverdue ? 'bg-red-50/50 hover:bg-red-50' : 'hover:bg-[#2d7a4f05]'}`}
                       >
                         <TableCell className="py-2.5">
                           <div>
@@ -628,12 +999,7 @@ export function LibraryPage() {
                         <TableCell className="text-xs text-gray-500 py-2.5">{borrow.dateEmprunt}</TableCell>
                         <TableCell className="text-xs text-gray-500 py-2.5">{borrow.dateRetourPrevue}</TableCell>
                         <TableCell className="py-2.5">
-                          {isReturned ? (
-                            <Badge className="text-[10px] bg-[#2d7a4f15] text-[#2d7a4f] border-0">
-                              <CheckCircle2 className="size-3 mr-1" />
-                              Rendu
-                            </Badge>
-                          ) : bConf ? (
+                          {bConf ? (
                             <Badge className={`text-[10px] ${bConf.className}`}>
                               {isOverdue && <AlertTriangle className="size-3 mr-1" />}
                               {bConf.label}
@@ -641,22 +1007,35 @@ export function LibraryPage() {
                           ) : null}
                         </TableCell>
                         <TableCell className="text-right py-2.5">
-                          {!isReturned && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-7 text-[10px] border-[#2d7a4f30] text-[#2d7a4f] hover:bg-[#2d7a4f10]"
-                              onClick={() => handleReturn(borrow.id)}
-                            >
-                              <ArrowRightLeft className="size-3 mr-1" />
-                              Retourner
-                            </Button>
-                          )}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-[10px] border-[#2d7a4f30] text-[#2d7a4f] hover:bg-[#2d7a4f10]"
+                            disabled={isReturning}
+                            onClick={() => handleReturn(borrow.id)}
+                          >
+                            {isReturning ? <Loader2 className="size-3 mr-1 animate-spin" /> : <ArrowRightLeft className="size-3 mr-1" />}
+                            Retourner
+                          </Button>
                         </TableCell>
                       </TableRow>
                     )
                   })}
-                  {filteredBorrows.length === 0 && (
+                  {isLoading && (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8 text-sm text-gray-400">
+                        Chargement...
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {!isLoading && borrows.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8 text-sm text-gray-400">
+                        Aucun emprunt enregistre pour le moment
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {!isLoading && borrows.length > 0 && filteredBorrows.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center py-8 text-sm text-gray-400">
                         Aucun emprunt trouve
@@ -681,7 +1060,7 @@ export function LibraryPage() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {demoDigitalResources.map((resource) => {
+              {digitalResources.map((resource) => {
                 const ResourceIcon = resource.icon
                 return (
                   <motion.div
@@ -699,20 +1078,18 @@ export function LibraryPage() {
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-[#1a2744] truncate">{resource.name}</p>
                         <p className="text-xs text-gray-500">{resource.description}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-[10px] text-gray-400">{resource.count}</span>
-                          <span className="text-gray-200">|</span>
-                          <span className="text-[10px] text-gray-400">{resource.accessCount} acces</span>
-                        </div>
                       </div>
                     </div>
                     <Button
+                      asChild
                       size="sm"
                       variant="outline"
                       className="w-full mt-3 h-8 text-[10px] border-gray-200 text-[#1a2744] hover:bg-[#1a274408]"
                     >
-                      <ExternalLink className="size-3 mr-1.5" />
-                      Acceder
+                      <a href={resource.href} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="size-3 mr-1.5" />
+                        Acceder
+                      </a>
                     </Button>
                   </motion.div>
                 )
@@ -726,15 +1103,9 @@ export function LibraryPage() {
       <motion.div variants={itemVariants}>
         <Card className="border-l-4 border-l-[#1a2744]">
           <CardHeader className="pb-3">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <Calendar className="size-4 text-[#1a2744]" />
-                <CardTitle className="text-sm font-semibold text-[#1a2744]">Horaires &amp; Espaces</CardTitle>
-              </div>
-              <Button size="sm" className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs h-8">
-                <MapPin className="size-3.5 mr-1.5" />
-                Reserver un espace
-              </Button>
+            <div className="flex items-center gap-2">
+              <Calendar className="size-4 text-[#1a2744]" />
+              <CardTitle className="text-sm font-semibold text-[#1a2744]">Horaires &amp; Espaces</CardTitle>
             </div>
           </CardHeader>
           <CardContent className="space-y-5">
@@ -748,34 +1119,14 @@ export function LibraryPage() {
                       <TableHead className="text-xs font-semibold">Jour</TableHead>
                       <TableHead className="text-xs font-semibold text-center">Ouverture</TableHead>
                       <TableHead className="text-xs font-semibold text-center">Fermeture</TableHead>
-                      <TableHead className="text-xs font-semibold text-center">Affluence</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {[
-                      { day: 'Lundi', open: '08h00', close: '22h00', affluence: 75 },
-                      { day: 'Mardi', open: '08h00', close: '22h00', affluence: 82 },
-                      { day: 'Mercredi', open: '08h00', close: '22h00', affluence: 65 },
-                      { day: 'Jeudi', open: '08h00', close: '22h00', affluence: 88 },
-                      { day: 'Vendredi', open: '08h00', close: '22h00', affluence: 70 },
-                      { day: 'Samedi', open: '09h00', close: '18h00', affluence: 45 },
-                    ].map((row) => (
+                    {weeklySchedule.map((row) => (
                       <TableRow key={row.day} className="hover:bg-[#2d7a4f05] transition-colors">
                         <TableCell className="text-sm font-medium text-[#1a2744] py-2">{row.day}</TableCell>
                         <TableCell className="text-xs text-gray-600 py-2 text-center">{row.open}</TableCell>
                         <TableCell className="text-xs text-gray-600 py-2 text-center">{row.close}</TableCell>
-                        <TableCell className="py-2">
-                          <div className="flex items-center justify-center gap-2">
-                            <div className="w-16 h-2 bg-gray-100 rounded-full overflow-hidden">
-                              <div
-                                className={`h-full rounded-full ${getOccupancyColor(row.affluence)}`}
-                                style={{ width: `${row.affluence}%` }}
-                              />
-                            </div>
-                            <div className={`w-2 h-2 rounded-full ${getOccupancyColor(row.affluence)}`} />
-                            <span className="text-[10px] text-gray-500">{row.affluence}%</span>
-                          </div>
-                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -786,26 +1137,61 @@ export function LibraryPage() {
             {/* Room Allocation */}
             <div>
               <p className="text-xs font-semibold text-[#1a2744] mb-3 uppercase tracking-wide">Allocation des espaces</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-                {demoRooms.map((room) => (
-                  <div key={room.id} className="p-3 rounded-lg border border-gray-100 bg-white hover:shadow-sm transition-shadow">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className={`w-2.5 h-2.5 rounded-full ${getOccupancyColor(room.occupancy)}`} />
-                      <span className="text-xs font-semibold text-[#1a2744]">{room.name}</span>
-                    </div>
-                    <p className="text-[10px] text-gray-400 mb-2">{room.capacity}</p>
-                    <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                      <motion.div
-                        className={`h-full rounded-full ${getOccupancyColor(room.occupancy)}`}
-                        initial={{ width: 0 }}
-                        animate={{ width: `${room.occupancy}%` }}
-                        transition={{ duration: 0.6, ease: 'easeOut' }}
-                      />
-                    </div>
-                    <p className="text-[10px] text-gray-500 mt-1">{room.occupancy}% occupe</p>
-                  </div>
-                ))}
-              </div>
+              {isLoading && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <div key={i} className="p-3 rounded-lg border border-gray-100 bg-white h-28 animate-pulse" />
+                  ))}
+                </div>
+              )}
+              {!isLoading && rooms.length === 0 && (
+                <p className="text-xs text-gray-400 text-center py-6">Aucune salle enregistree pour le moment</p>
+              )}
+              {!isLoading && rooms.length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                  {rooms.map((room) => {
+                    const occPercent = room.capacity > 0 ? Math.min(100, Math.round((room.occupancy / room.capacity) * 100)) : 0
+                    const draftValue = occupancyDrafts[room.id] ?? String(room.occupancy)
+                    const isSaving = savingRoomId === room.id
+                    return (
+                      <div key={room.id} className="p-3 rounded-lg border border-gray-100 bg-white hover:shadow-sm transition-shadow">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className={`w-2.5 h-2.5 rounded-full ${getOccupancyColor(occPercent)}`} />
+                          <span className="text-xs font-semibold text-[#1a2744]">{room.name}</span>
+                        </div>
+                        <p className="text-[10px] text-gray-400 mb-2">{room.capacity} places</p>
+                        <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                          <motion.div
+                            className={`h-full rounded-full ${getOccupancyColor(occPercent)}`}
+                            initial={{ width: 0 }}
+                            animate={{ width: `${occPercent}%` }}
+                            transition={{ duration: 0.6, ease: 'easeOut' }}
+                          />
+                        </div>
+                        <p className="text-[10px] text-gray-500 mt-1">{room.occupancy}/{room.capacity} occupe ({occPercent}%)</p>
+                        <div className="flex items-center gap-1.5 mt-2">
+                          <Input
+                            type="number"
+                            min={0}
+                            className="h-7 text-xs px-2"
+                            value={draftValue}
+                            onChange={(e) => setOccupancyDrafts(prev => ({ ...prev, [room.id]: e.target.value }))}
+                          />
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-2 shrink-0"
+                            disabled={isSaving}
+                            onClick={() => handleSaveOccupancy(room.id, draftValue)}
+                          >
+                            {isSaving ? <Loader2 className="size-3 animate-spin" /> : <Save className="size-3" />}
+                          </Button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
 
             {/* Legend */}
@@ -839,12 +1225,12 @@ export function LibraryPage() {
           <CardContent className="space-y-6">
             {/* Monthly Borrows Bar Chart */}
             <div>
-              <p className="text-xs font-semibold text-[#1a2744] mb-3 uppercase tracking-wide">Emprunts mensuels (2025)</p>
+              <p className="text-xs font-semibold text-[#1a2744] mb-3 uppercase tracking-wide">Emprunts mensuels (6 derniers mois)</p>
               <div className="flex items-end gap-3 h-40">
                 {monthlyBorrows.map((month, index) => {
                   const heightPercent = maxBorrow > 0 ? (month.count / maxBorrow) * 100 : 0
                   return (
-                    <div key={month.month} className="flex-1 flex flex-col items-center gap-1">
+                    <div key={`${month.month}-${index}`} className="flex-1 flex flex-col items-center gap-1">
                       <span className="text-[10px] font-semibold text-[#1a2744]">{month.count}</span>
                       <div className="w-full bg-gray-100 rounded-t-sm relative" style={{ height: '120px' }}>
                         <motion.div
@@ -861,39 +1247,46 @@ export function LibraryPage() {
               </div>
             </div>
 
-            {/* Top 5 Categories + Stats */}
+            {/* Top categories + Stats */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Top Categories */}
               <div>
-                <p className="text-xs font-semibold text-[#1a2744] mb-3 uppercase tracking-wide">Top 5 categories les plus empruntees</p>
-                <div className="space-y-3">
-                  {topCategories.map((cat, index) => {
-                    const percent = cat.total > 0 ? Math.round((cat.count / cat.total) * 100) : 0
-                    return (
-                      <div key={cat.name} className="space-y-1">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
-                            <span className="text-xs font-medium text-[#1a2744]">{cat.name}</span>
+                <p className="text-xs font-semibold text-[#1a2744] mb-3 uppercase tracking-wide">Categories les plus empruntees</p>
+                {topCategories.length === 0 ? (
+                  <p className="text-xs text-gray-400 py-6 text-center">Aucun emprunt enregistre pour le moment</p>
+                ) : (
+                  <div className="space-y-3">
+                    {topCategories.map((cat, index) => {
+                      const conf = categoryConfig[cat.category]
+                      const label = conf?.label || cat.category
+                      const color = conf?.color || '#6b7280'
+                      const percent = stats && stats.totalLoansAllTime > 0 ? Math.round((cat.count / stats.totalLoansAllTime) * 100) : 0
+                      return (
+                        <div key={cat.category} className="space-y-1">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                              <span className="text-xs font-medium text-[#1a2744]">{label}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] text-gray-400">{cat.count.toLocaleString('fr-FR')}</span>
+                              <span className="text-xs font-semibold text-[#1a2744]">{percent}%</span>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-[10px] text-gray-400">{cat.count.toLocaleString('fr-FR')}</span>
-                            <span className="text-xs font-semibold text-[#1a2744]">{percent}%</span>
+                          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                            <motion.div
+                              className="h-full rounded-full"
+                              style={{ backgroundColor: color }}
+                              initial={{ width: 0 }}
+                              animate={{ width: `${percent}%` }}
+                              transition={{ duration: 0.6, delay: 0.1 * index, ease: 'easeOut' }}
+                            />
                           </div>
                         </div>
-                        <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                          <motion.div
-                            className="h-full rounded-full"
-                            style={{ backgroundColor: cat.color }}
-                            initial={{ width: 0 }}
-                            animate={{ width: `${percent}%` }}
-                            transition={{ duration: 0.6, delay: 0.1 * index, ease: 'easeOut' }}
-                          />
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
 
               {/* Key Metrics */}
@@ -901,54 +1294,46 @@ export function LibraryPage() {
                 <p className="text-xs font-semibold text-[#1a2744] mb-3 uppercase tracking-wide">Indicateurs cles</p>
                 {/* Active borrowers */}
                 <div className="p-3 rounded-lg bg-[#1a274408] border border-[#1a274410]">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <Users className="size-4 text-[#1a2744]" />
-                      <span className="text-sm font-semibold text-[#1a2744]">Emprunteurs actifs</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <TrendingUp className="size-3 text-[#2d7a4f]" />
-                      <span className="text-xs text-[#2d7a4f] font-medium">+8%</span>
-                    </div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Users className="size-4 text-[#1a2744]" />
+                    <span className="text-sm font-semibold text-[#1a2744]">Emprunteurs actifs</span>
                   </div>
-                  <p className="text-2xl font-bold text-[#1a2744]">1,456</p>
-                  <p className="text-[10px] text-gray-400 mt-1">sur 4,200 etudiats inscrits a la bibliotheque</p>
-                  <Progress value={35} className="h-1.5 bg-gray-200 mt-2 [&>[data-slot=progress-indicator]]:bg-[#1a2744]" />
+                  <p className="text-2xl font-bold text-[#1a2744]">{stats?.activeBorrowersCount ?? 0}</p>
+                  <p className="text-[10px] text-gray-400 mt-1">sur {stats?.totalStudents ?? 0} etudiants inscrits</p>
+                  <Progress value={stats && stats.totalStudents > 0 ? Math.round((stats.activeBorrowersCount / stats.totalStudents) * 100) : 0} className="h-1.5 bg-gray-200 mt-2 [&>[data-slot=progress-indicator]]:bg-[#1a2744]" />
                 </div>
 
                 {/* Average borrow duration */}
                 <div className="p-3 rounded-lg bg-[#2d7a4f08] border border-[#2d7a4f10]">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <Clock className="size-4 text-[#2d7a4f]" />
-                      <span className="text-sm font-semibold text-[#1a2744]">Duree moyenne d&apos;emprunt</span>
-                    </div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Clock className="size-4 text-[#2d7a4f]" />
+                    <span className="text-sm font-semibold text-[#1a2744]">Duree moyenne d&apos;emprunt</span>
                   </div>
-                  <p className="text-2xl font-bold text-[#2d7a4f]">14 <span className="text-sm font-normal text-gray-500">jours</span></p>
-                  <div className="flex items-center gap-1 mt-1">
-                    <div className="flex gap-0.5">
-                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14].map((d) => (
-                        <div
-                          key={d}
-                          className={`w-2 h-4 rounded-sm ${d <= 10 ? 'bg-[#2d7a4f]' : 'bg-[#d4a853]'}`}
-                        />
-                      ))}
-                    </div>
-                    <span className="text-[10px] text-gray-400 ml-1">Objectif: 10 jours</span>
-                  </div>
+                  {stats?.avgBorrowDurationDays != null ? (
+                    <>
+                      <p className="text-2xl font-bold text-[#2d7a4f]">{stats.avgBorrowDurationDays} <span className="text-sm font-normal text-gray-500">jours</span></p>
+                      <p className="text-[10px] text-gray-400 mt-1">Calculee sur les emprunts deja rendus</p>
+                    </>
+                  ) : (
+                    <p className="text-xs text-gray-400 py-1">Aucune donnee disponible pour le moment</p>
+                  )}
                 </div>
 
                 {/* Retour rate */}
                 <div className="p-3 rounded-lg bg-[#d4a85308] border border-[#d4a85310]">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="size-4 text-[#d4a853]" />
-                      <span className="text-sm font-semibold text-[#1a2744]">Taux de retour a temps</span>
-                    </div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <CheckCircle2 className="size-4 text-[#d4a853]" />
+                    <span className="text-sm font-semibold text-[#1a2744]">Taux de retour a temps</span>
                   </div>
-                  <p className="text-2xl font-bold text-[#d4a853]">87<span className="text-sm font-normal text-gray-500">%</span></p>
-                  <Progress value={87} className="h-1.5 bg-gray-200 mt-2 [&>[data-slot=progress-indicator]]:bg-[#d4a853]" />
-                  <p className="text-[10px] text-gray-400 mt-1">13% de retards constates ce mois</p>
+                  {stats?.onTimeReturnRatePercent != null ? (
+                    <>
+                      <p className="text-2xl font-bold text-[#d4a853]">{stats.onTimeReturnRatePercent}<span className="text-sm font-normal text-gray-500">%</span></p>
+                      <Progress value={stats.onTimeReturnRatePercent} className="h-1.5 bg-gray-200 mt-2 [&>[data-slot=progress-indicator]]:bg-[#d4a853]" />
+                      <p className="text-[10px] text-gray-400 mt-1">{100 - stats.onTimeReturnRatePercent}% de retards constates</p>
+                    </>
+                  ) : (
+                    <p className="text-xs text-gray-400 py-1">Aucune donnee disponible pour le moment</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -958,5 +1343,3 @@ export function LibraryPage() {
     </motion.div>
   )
 }
-
-

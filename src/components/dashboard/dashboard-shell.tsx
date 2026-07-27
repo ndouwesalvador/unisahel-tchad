@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { signOut } from 'next-auth/react'
 import { useAppStore, type AppView, type UserRole } from '@/lib/store'
+import { useNotifications } from '@/lib/api-hooks'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -541,7 +542,9 @@ function MainContent({ view }: { view: AppView }) {
 // ─── Dashboard Shell ──────────────────────────────────────────────────────────
 
 export function DashboardShell() {
-  const { user, currentView, setView, logout, sidebarCollapsed, toggleSidebarCollapse, toggleNotifications, unreadCount } = useAppStore()
+  const { user, currentView, setView, logout, sidebarCollapsed, toggleSidebarCollapse, toggleNotifications } = useAppStore()
+  const { data: notificationsData } = useNotifications()
+  const unreadCount: number = notificationsData?.unreadCount ?? 0
   const [mobileOpen, setMobileOpen] = useState(false)
 
   const handleLogout = async () => {
