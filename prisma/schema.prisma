@@ -1235,7 +1235,7 @@ model OnlineExam {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   results     ExamResult[]
   incidents   ExamIncident[]
 
