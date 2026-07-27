@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
+import { isStudentSelfRole } from '@/lib/auth/student-scope'
 import { paginationSchema, createTeacherSchema, updateTeacherSchema, validateQuery, validateBody, formatZodError } from '@/lib/validations/api'
 import { Prisma } from '@prisma/client'
 
@@ -15,8 +16,12 @@ const teacherQuerySchema = paginationSchema.extend({
 // Import z from zod
 import { z } from 'zod'
 
+// Full staff roster -- no student-facing UI lists this, so student-tier accounts are blocked.
 async function getTeachersHandler(user: SessionUser, tenantId: string, request: NextRequest) {
   try {
+    if (isStudentSelfRole(user.role)) {
+      return NextResponse.json({ error: 'FORBIDDEN', message: 'Accès refusé' }, { status: 403 })
+    }
     const { searchParams } = new URL(request.url)
     const validatedQuery = validateQuery(teacherQuerySchema, searchParams)
 

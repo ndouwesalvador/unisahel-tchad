@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
+import { isStudentSelfRole } from '@/lib/auth/student-scope'
 
 type Decision = 'ADMI' | 'AJOURNE' | 'REDOUBLANT' | 'EXCLU' | 'ADMI_DETTE' | 'COMPENSE'
 
@@ -100,8 +101,13 @@ async function computeStudentDecisions(tenantId: string, academicYearId: string,
 }
 
 // GET /api/deliberation - list real deliberation sessions + decisions for the selected one
-async function handleGet(_user: SessionUser, tenantId: string, request: NextRequest) {
+// Jury/admin tool only -- no student-facing UI calls this, and it would otherwise
+// expose every student's suggested deliberation decision to any student account.
+async function handleGet(user: SessionUser, tenantId: string, request: NextRequest) {
   try {
+    if (isStudentSelfRole(user.role)) {
+      return NextResponse.json({ error: 'FORBIDDEN', message: 'Accès refusé' }, { status: 403 })
+    }
     const { searchParams } = new URL(request.url)
     const deliberationId = searchParams.get('id')
     const sessionType = searchParams.get('session') || 'NORMALE'

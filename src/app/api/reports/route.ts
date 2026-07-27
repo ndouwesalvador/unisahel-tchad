@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
+import { isStudentSelfRole } from '@/lib/auth/student-scope'
 
 // GET /api/reports - List reports with stats
-async function handleGet(_user: SessionUser, tenantId: string, _request: NextRequest) {
+async function handleGet(user: SessionUser, tenantId: string, _request: NextRequest) {
   try {
+    if (isStudentSelfRole(user.role)) {
+      return NextResponse.json({ error: 'FORBIDDEN', message: 'Accès refusé' }, { status: 403 })
+    }
     const where = { tenantId }
 
     const [reports, total, completed, pending, totalDownloadsResult] = await Promise.all([

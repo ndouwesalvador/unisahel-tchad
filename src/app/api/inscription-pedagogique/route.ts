@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
+import { isStudentSelfRole } from '@/lib/auth/student-scope'
 
 async function resolveCurrentAcademicYearId(tenantId: string): Promise<string | null> {
   const current = await db.academicYear.findFirst({ where: { tenantId, isCurrent: true }, select: { id: true } })
@@ -8,8 +9,13 @@ async function resolveCurrentAcademicYearId(tenantId: string): Promise<string | 
 }
 
 // GET /api/inscription-pedagogique - real registration status per student
-async function handleGet(_user: SessionUser, tenantId: string, request: NextRequest) {
+// Admin/scolarite tool only -- no student-facing UI calls this, so student-tier
+// accounts (who could otherwise dump every student's UE registration status) are blocked.
+async function handleGet(user: SessionUser, tenantId: string, request: NextRequest) {
   try {
+    if (isStudentSelfRole(user.role)) {
+      return NextResponse.json({ error: 'FORBIDDEN', message: 'Accès refusé' }, { status: 403 })
+    }
     const { searchParams } = new URL(request.url)
     const studentId = searchParams.get('studentId')
 
@@ -133,8 +139,11 @@ async function handleGet(_user: SessionUser, tenantId: string, request: NextRequ
 }
 
 // POST /api/inscription-pedagogique - sync a student's UE registrations for the current academic year
-async function handlePost(_user: SessionUser, tenantId: string, request: NextRequest) {
+async function handlePost(user: SessionUser, tenantId: string, request: NextRequest) {
   try {
+    if (isStudentSelfRole(user.role)) {
+      return NextResponse.json({ error: 'FORBIDDEN', message: 'Accès refusé' }, { status: 403 })
+    }
     const body = await request.json()
     const { studentId, teachingUnitIds } = body
     if (!studentId || !Array.isArray(teachingUnitIds)) {

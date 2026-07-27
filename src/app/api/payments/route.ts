@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
+import { resolveOwnStudentId, isStudentSelfRole } from '@/lib/auth/student-scope'
 import { paymentQuerySchema, createPaymentSchema, updatePaymentSchema, validateQuery, validateBody, formatZodError } from '@/lib/validations/api'
 import { Prisma } from '@prisma/client'
 import { createNotification } from '@/lib/notifications'
@@ -10,7 +11,12 @@ async function getPaymentsHandler(user: SessionUser, tenantId: string, request: 
     const { searchParams } = new URL(request.url)
     const validatedQuery = validateQuery(paymentQuerySchema, searchParams)
 
-    const { studentId, academicYearId, status, paymentMethod, startDate, endDate, page, limit } = validatedQuery
+    const ownStudentId = await resolveOwnStudentId(user)
+    if (ownStudentId && validatedQuery.studentId && validatedQuery.studentId !== ownStudentId) {
+      return NextResponse.json({ error: 'FORBIDDEN', message: 'Accès refusé' }, { status: 403 })
+    }
+    const { academicYearId, status, paymentMethod, startDate, endDate, page, limit } = validatedQuery
+    const studentId = ownStudentId ?? validatedQuery.studentId
     const skip = (page - 1) * limit
 
     const where: Prisma.PaymentWhereInput = {
@@ -367,8 +373,9 @@ async function getPaymentReceiptHandler(user: SessionUser, tenantId: string, req
       )
     }
 
+    const ownStudentId = await resolveOwnStudentId(user)
     const payment = await db.payment.findFirst({
-      where: { id, tenantId },
+      where: ownStudentId ? { id, tenantId, studentId: ownStudentId } : { id, tenantId },
       include: {
         student: {
           include: {
@@ -540,7 +547,10 @@ async function checkMobileMoneyStatus(user: SessionUser, tenantId: string, reque
       )
     }
 
-    const payment = await db.payment.findFirst({ where: { id: paymentId, tenantId } })
+    const ownStudentId = await resolveOwnStudentId(user)
+    const payment = await db.payment.findFirst({
+      where: ownStudentId ? { id: paymentId, tenantId, studentId: ownStudentId } : { id: paymentId, tenantId },
+    })
     if (!payment) {
       return NextResponse.json(
         { error: 'Payment not found' },
@@ -630,6 +640,9 @@ export const GET = withTenantAuth(async (user: SessionUser, tenantId: string, re
   const stats = searchParams.get('stats')
 
   if (stats === 'true') {
+    if (isStudentSelfRole(user.role)) {
+      return NextResponse.json({ error: 'FORBIDDEN', message: 'Accès refusé' }, { status: 403 })
+    }
     return getPaymentStatsHandler(user, tenantId, request)
   }
   if (id && receipt === 'true') {

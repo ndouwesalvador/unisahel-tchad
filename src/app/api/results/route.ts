@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
+import { resolveOwnStudentId } from '@/lib/auth/student-scope'
 
 type Mention = 'Passable' | 'Assez-Bien' | 'Bien' | 'Tres-Bien' | 'Excellent'
 type Decision = 'Admis' | 'Ajourne'
@@ -36,10 +37,15 @@ async function resolveAcademicYearId(tenantId: string, requested: string | null)
 // GET /api/results
 //   - no `studentId`: aggregated per-student results for a session (academic year), built from real Grade rows
 //   - `studentId` present: a single student's transcript for that academic year
-async function handleGet(_user: SessionUser, tenantId: string, request: NextRequest) {
+async function handleGet(user: SessionUser, tenantId: string, request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const studentId = searchParams.get('studentId') || undefined
+    const requestedStudentId = searchParams.get('studentId') || undefined
+    const ownStudentId = await resolveOwnStudentId(user)
+    if (ownStudentId && requestedStudentId && requestedStudentId !== ownStudentId) {
+      return NextResponse.json({ error: 'FORBIDDEN', message: 'Accès refusé' }, { status: 403 })
+    }
+    const studentId = ownStudentId ?? requestedStudentId
     const sessionType = searchParams.get('session') || 'NORMALE'
     const requestedYearId = searchParams.get('academicYearId')
 

@@ -1,11 +1,114 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { withTenantAuth } from '@/lib/auth/helpers'
+import { resolveOwnStudentId } from '@/lib/auth/student-scope'
 
 import type { SessionUser } from '@/lib/auth/helpers'
 
+function round2(value: number): number {
+  return Math.round(value * 100) / 100
+}
+
+// A student's own dashboard: personal academic/payment status, never the
+// institution-wide admin aggregates (total revenue, every student's status, etc.)
+// that the rest of this route computes for staff roles.
+async function getStudentDashboardHandler(studentId: string, tenantId: string) {
+  const now = new Date()
+
+  const [student, currentAcademicYear, settings, payments, announcements, upcomingExamSessions, grades] = await Promise.all([
+    db.student.findUnique({
+      where: { id: studentId },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        matricule: true,
+        status: true,
+        currentProgram: { select: { name: true } },
+        currentLevel: { select: { name: true } },
+      },
+    }),
+    db.academicYear.findFirst({ where: { tenantId, isCurrent: true }, include: { sessions: true } }),
+    db.tenantSettings.findUnique({ where: { tenantId }, select: { passingGrade: true } }),
+    db.payment.findMany({ where: { tenantId, studentId }, orderBy: { createdAt: 'desc' } }),
+    db.announcement.findMany({ where: { tenantId, isPublished: true }, orderBy: { publishedAt: 'desc' }, take: 5 }),
+    db.examSession.findMany({ where: { academicYear: { tenantId }, startDate: { gte: now } }, orderBy: { startDate: 'asc' }, take: 5 }),
+    db.grade.findMany({
+      where: { studentId, finalGrade: { not: null } },
+      select: { finalGrade: true, courseElement: { select: { coefficient: true } } },
+    }),
+  ])
+
+  const passingGrade = settings?.passingGrade ?? 10
+  let weightedSum = 0
+  let weightTotal = 0
+  for (const g of grades) {
+    if (g.finalGrade === null) continue
+    const coeff = g.courseElement?.coefficient ?? 1
+    weightedSum += g.finalGrade * coeff
+    weightTotal += coeff
+  }
+  const moyenneGenerale = weightTotal > 0 ? round2(weightedSum / weightTotal) : null
+
+  const totalPaid = payments.filter((p) => p.status === 'VALIDATED').reduce((sum, p) => sum + p.amount, 0)
+  const pendingPaymentsCount = payments.filter((p) => p.status === 'PENDING').length
+  const lastPayment = payments[0] ?? null
+
+  const upcomingEvents = upcomingExamSessions.map((e) => ({
+    id: `exam-${e.id}`,
+    date: e.startDate,
+    title: e.name,
+    type: 'exam' as const,
+  }))
+
+  const recentActivity = announcements.map((a) => ({
+    id: `announcement-${a.id}`,
+    type: 'annonce' as const,
+    description: a.title,
+    time: a.publishedAt || a.createdAt,
+    user: a.publishedBy || 'Administration',
+  }))
+
+  return NextResponse.json({
+    isStudentView: true,
+    student: student
+      ? {
+          firstName: student.firstName,
+          lastName: student.lastName,
+          matricule: student.matricule,
+          status: student.status,
+          program: student.currentProgram?.name ?? null,
+          level: student.currentLevel?.name ?? null,
+        }
+      : null,
+    stats: {
+      moyenneGenerale,
+      passingGrade,
+      totalPaid,
+      pendingPaymentsCount,
+      lastPaymentStatus: lastPayment?.status ?? null,
+    },
+    recentActivity,
+    upcomingEvents,
+    currentAcademicYear: currentAcademicYear
+      ? {
+          id: currentAcademicYear.id,
+          name: currentAcademicYear.name,
+          startDate: currentAcademicYear.startDate,
+          endDate: currentAcademicYear.endDate,
+          examSessions: currentAcademicYear.sessions.length,
+        }
+      : null,
+  })
+}
+
 async function getDashboardHandler(user: SessionUser, tenantId: string, _request: NextRequest) {
   try {
+    const ownStudentId = await resolveOwnStudentId(user)
+    if (ownStudentId) {
+      return getStudentDashboardHandler(ownStudentId, tenantId)
+    }
+
     const now = new Date()
 
     // Parallel fetch all stats

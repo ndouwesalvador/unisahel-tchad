@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
+import { resolveOwnStudentId, isStudentSelfRole } from '@/lib/auth/student-scope'
 import { gradeQuerySchema, createGradeSchema, updateGradeSchema, bulkGradeEntrySchema, calculateGradeSchema, validateQuery, validateBody, formatZodError } from '@/lib/validations/api'
 
 async function getGradesHandler(user: SessionUser, tenantId: string, request: NextRequest) {
@@ -9,7 +10,12 @@ async function getGradesHandler(user: SessionUser, tenantId: string, request: Ne
     const { searchParams } = new URL(request.url)
     const validatedQuery = validateQuery(gradeQuerySchema, searchParams)
 
-    const { studentId, academicYearId, semesterId, teachingUnitId, courseElementId, session, page, limit } = validatedQuery
+    const ownStudentId = await resolveOwnStudentId(user)
+    if (ownStudentId && validatedQuery.studentId && validatedQuery.studentId !== ownStudentId) {
+      return NextResponse.json({ error: 'FORBIDDEN', message: 'Accès refusé' }, { status: 403 })
+    }
+    const { academicYearId, semesterId, teachingUnitId, courseElementId, session, page, limit } = validatedQuery
+    const studentId = ownStudentId ?? validatedQuery.studentId
     const skip = (page - 1) * limit
 
     const where: Prisma.GradeWhereInput = {}
@@ -845,6 +851,9 @@ export const GET = withTenantAuth(async (user: SessionUser, tenantId: string, re
   const action = searchParams.get('action')
 
   if (action === 'stats') {
+    if (isStudentSelfRole(user.role)) {
+      return NextResponse.json({ error: 'FORBIDDEN', message: 'Accès refusé' }, { status: 403 })
+    }
     return getGradeStatsHandler(user, tenantId, request)
   }
   return getGradesHandler(user, tenantId, request)

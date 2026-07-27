@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth/config'
 import { renderPDF } from '@/lib/pdf/templates'
 import { db } from '@/lib/db'
 import type { SessionUser } from '@/lib/auth/helpers'
+import { resolveOwnStudentId } from '@/lib/auth/student-scope'
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,6 +21,13 @@ export async function POST(request: NextRequest) {
     }
 
     if (sessionUser.role !== 'SUPER_ADMIN' && sessionUser.tenantId !== tenantId) {
+      return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
+    }
+
+    // A student account may only ever generate a document about themselves --
+    // without this, any studentId in the body would let them pull anyone's transcript.
+    const ownStudentId = await resolveOwnStudentId(sessionUser)
+    if (ownStudentId && studentId && studentId !== ownStudentId) {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
     }
 

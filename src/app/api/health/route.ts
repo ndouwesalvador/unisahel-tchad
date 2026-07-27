@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
+import { resolveOwnStudentId, isStudentSelfRole } from '@/lib/auth/student-scope'
 
 function formatFr(date: Date | null | undefined): string {
   if (!date) return ''
@@ -10,10 +11,20 @@ function formatFr(date: Date | null | undefined): string {
 const KNOWN_SHIFTS = ['JOUR', 'NUIT']
 
 // GET /api/health - clinical internships, hospitals, guard duties, and one student's carnet
-async function handleGet(_user: SessionUser, tenantId: string, request: NextRequest) {
+async function handleGet(user: SessionUser, tenantId: string, request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const studentId = searchParams.get('studentId')
+    const requestedStudentId = searchParams.get('studentId')
+    const ownStudentId = await resolveOwnStudentId(user)
+    if (ownStudentId && requestedStudentId && requestedStudentId !== ownStudentId) {
+      return NextResponse.json({ error: 'FORBIDDEN', message: 'Accès refusé' }, { status: 403 })
+    }
+    // A student account can never see the institution-wide overview (all students'
+    // internships/guard duties) -- always resolve to their own carnet, even with no ?studentId.
+    if (isStudentSelfRole(user.role) && !ownStudentId) {
+      return NextResponse.json({ carnet: null, competenceCategories: [] })
+    }
+    const studentId = ownStudentId ?? requestedStudentId
 
     // ─── One student's carnet de stage ─────────────────────────────────────
     if (studentId) {

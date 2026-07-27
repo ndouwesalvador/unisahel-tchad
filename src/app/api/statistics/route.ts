@@ -1,14 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
+import { isStudentSelfRole } from '@/lib/auth/student-scope'
 
 function round2(value: number): number {
   return Math.round(value * 100) / 100
 }
 
 // GET /api/statistics - real institution-wide statistics for the SUPER_ADMIN/CAISSE dashboard
-async function handleGet(_user: SessionUser, tenantId: string, _request: NextRequest) {
+async function handleGet(user: SessionUser, tenantId: string, _request: NextRequest) {
   try {
+    if (isStudentSelfRole(user.role)) {
+      return NextResponse.json({ error: 'FORBIDDEN', message: 'Accès refusé' }, { status: 403 })
+    }
     const [students, payments, academicYears, settings] = await Promise.all([
       db.student.findMany({
         where: { tenantId },

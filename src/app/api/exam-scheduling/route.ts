@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
+import { isStudentSelfRole } from '@/lib/auth/student-scope'
 
 const KNOWN_STATUSES = ['PLANIFIE', 'CONFIRME', 'EN_COURS', 'TERMINE', 'ANNULE']
 const statusToUi: Record<string, string> = {
@@ -13,8 +14,11 @@ async function resolveCurrentAcademicYearId(tenantId: string): Promise<string | 
 }
 
 // GET /api/exam-scheduling - real scheduled exams, room occupancy/conflicts, and stats
-async function handleGet(_user: SessionUser, tenantId: string) {
+async function handleGet(user: SessionUser, tenantId: string) {
   try {
+    if (isStudentSelfRole(user.role)) {
+      return NextResponse.json({ error: 'FORBIDDEN', message: 'Accès refusé' }, { status: 403 })
+    }
     const [scheduled, rooms] = await Promise.all([
       db.scheduledExam.findMany({
         where: { tenantId },

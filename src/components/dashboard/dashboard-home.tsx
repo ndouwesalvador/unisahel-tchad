@@ -91,7 +91,191 @@ const alertConfig = {
   },
 }
 
+interface StudentDashboardResponse {
+  isStudentView: true
+  student: {
+    firstName: string
+    lastName: string
+    matricule: string | null
+    status: string
+    program: string | null
+    level: string | null
+  } | null
+  stats: {
+    moyenneGenerale: number | null
+    passingGrade: number
+    totalPaid: number
+    pendingPaymentsCount: number
+    lastPaymentStatus: string | null
+  }
+  recentActivity: { id: string; type: 'inscription' | 'paiement' | 'annonce'; description: string; time: string; user: string }[]
+  upcomingEvents: { id: string; date: string; title: string; type: 'exam' | 'deliberation' }[]
+  currentAcademicYear: { id: string; name: string; startDate: string; endDate: string; examSessions: number } | null
+}
+
+// ─── Quick actions for a student's own dashboard ───────────────────────────────
+
+const studentQuickActions = [
+  { label: 'Mes Notes', icon: FileCheck, color: '#2d7a4f', bgColor: '#2d7a4f15', view: 'grades' as const },
+  { label: 'Mes Documents', icon: FileText, color: '#1a2744', bgColor: '#1a274415', view: 'documents' as const },
+  { label: 'Mes Paiements', icon: CreditCard, color: '#d4a853', bgColor: '#d4a85315', view: 'payments' as const },
+  { label: 'Emploi du temps', icon: Calendar, color: '#2d7a4f', bgColor: '#2d7a4f15', view: 'timetable' as const },
+]
+
+function StudentDashboardHome({ data }: { data: StudentDashboardResponse }) {
+  const { user, setView } = useAppStore()
+  const paymentStatusLabel: Record<string, { label: string; color: string }> = {
+    VALIDATED: { label: 'A jour', color: '#2d7a4f' },
+    PENDING: { label: 'En attente de validation', color: '#d4a853' },
+    CANCELLED: { label: 'Annule', color: '#c62828' },
+    REFUNDED: { label: 'Rembourse', color: '#c62828' },
+  }
+  const paymentStatus = data.stats.lastPaymentStatus
+    ? paymentStatusLabel[data.stats.lastPaymentStatus] ?? { label: data.stats.lastPaymentStatus, color: '#9ca3af' }
+    : { label: 'Aucun paiement enregistre', color: '#9ca3af' }
+
+  return (
+    <div className="space-y-6">
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+        <Card className="overflow-hidden">
+          <div
+            className="relative p-6 text-white"
+            style={{ background: 'linear-gradient(135deg, #1a2744 0%, #1f3050 50%, #2d7a4f 100%)' }}
+          >
+            <h1 className="text-2xl font-bold">
+              {getGreeting()}, {user?.firstName} {user?.lastName}
+            </h1>
+            <p className="text-white/70 mt-1">
+              {data.student?.program ?? 'Programme non affecte'} {data.student?.level ? `- ${data.student.level}` : ''}
+            </p>
+            <div className="flex flex-wrap items-center gap-2 mt-3">
+              {data.currentAcademicYear ? (
+                <Badge className="bg-white/20 text-white border-0 hover:bg-white/20 text-xs backdrop-blur-sm">
+                  <Calendar className="size-3 mr-1" />
+                  Annee academique {data.currentAcademicYear.name}
+                </Badge>
+              ) : (
+                <Badge className="bg-white/20 text-white border-0 hover:bg-white/20 text-xs backdrop-blur-sm">
+                  Aucune annee academique active
+                </Badge>
+              )}
+              {data.student?.matricule && (
+                <Badge className="bg-white/20 text-white border-0 hover:bg-white/20 text-xs backdrop-blur-sm">
+                  Matricule {data.student.matricule}
+                </Badge>
+              )}
+            </div>
+          </div>
+          <CardContent className="p-4 pt-3">
+            <h3 className="text-sm font-semibold text-[#1a2744] mb-3">Actions rapides</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {studentQuickActions.map((action) => (
+                <Button
+                  key={action.label}
+                  variant="outline"
+                  className="h-auto py-3 w-full flex flex-col items-center gap-2"
+                  onClick={() => setView(action.view)}
+                >
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ backgroundColor: action.bgColor }}>
+                    <action.icon className="size-4" style={{ color: action.color }} />
+                  </div>
+                  <span className="text-[11px] font-medium text-gray-600">{action.label}</span>
+                </Button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Moyenne generale</p>
+            <p className="text-2xl font-bold text-[#1a2744] mt-1.5">
+              {data.stats.moyenneGenerale !== null ? `${data.stats.moyenneGenerale.toFixed(2)}/20` : 'Aucune note'}
+            </p>
+            <p className="text-xs text-gray-400 mt-1">Seuil de passage : {data.stats.passingGrade}/20</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Statut des paiements</p>
+            <p className="text-lg font-bold mt-1.5" style={{ color: paymentStatus.color }}>{paymentStatus.label}</p>
+            <p className="text-xs text-gray-400 mt-1">{data.stats.totalPaid.toLocaleString('fr-FR')} FCFA verses au total</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Statut administratif</p>
+            <p className="text-lg font-bold text-[#1a2744] mt-1.5">{statusLabels[data.student?.status ?? '']?.label ?? data.student?.status ?? '—'}</p>
+            {data.stats.pendingPaymentsCount > 0 && (
+              <p className="text-xs text-[#d4a853] mt-1">{data.stats.pendingPaymentsCount} paiement(s) en attente de validation</p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-semibold text-[#1a2744]">Annonces recentes</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            {data.recentActivity.length === 0 ? (
+              <EmptyState label="Aucune annonce pour le moment." />
+            ) : (
+              <div className="max-h-80 overflow-y-auto">
+                {data.recentActivity.map((activity, i) => (
+                  <div key={activity.id} className={`flex items-start gap-3 px-6 py-3 ${i < data.recentActivity.length - 1 ? 'border-b border-gray-100' : ''}`}>
+                    <div className="w-8 h-8 rounded-lg bg-[#1a274415] flex items-center justify-center shrink-0">
+                      <Megaphone className="size-4 text-[#1a2744]" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-[#1a2744] truncate">{activity.description}</p>
+                      <span className="text-xs text-gray-400">{formatDateShort(activity.time)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-semibold text-[#1a2744] flex items-center gap-2">
+              <Timer className="size-4 text-[#d4a853]" />
+              Examens a venir
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            {data.upcomingEvents.length === 0 ? (
+              <EmptyState label="Aucun examen planifie." />
+            ) : (
+              <div className="max-h-80 overflow-y-auto">
+                {data.upcomingEvents.map((event, i) => (
+                  <div key={event.id} className={`flex items-start gap-3 px-6 py-3 ${i < data.upcomingEvents.length - 1 ? 'border-b border-gray-100' : ''}`}>
+                    <div className="w-10 h-10 rounded-lg bg-[#1a274408] flex flex-col items-center justify-center shrink-0">
+                      <Calendar className="size-3 text-[#1a2744]" />
+                      <span className="text-[9px] font-bold text-[#1a2744] mt-0.5">{formatDateShort(event.date)}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-[#1a2744] font-medium truncate">{event.title}</p>
+                      <span className="text-[10px] text-[#d4a853] font-medium">{formatCountdown(event.date)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  )
+}
+
 interface DashboardApiResponse {
+  isStudentView?: false
   statsCards: {
     totalStudents: number
     totalTeachers: number
@@ -188,7 +372,10 @@ function PulsingDot({ color = '#2d7a4f' }: { color?: string }) {
 
 export function DashboardHome() {
   const { user, setView } = useAppStore()
-  const { data, isLoading } = useDashboardStats() as { data: DashboardApiResponse | undefined; isLoading: boolean }
+  const { data, isLoading } = useDashboardStats() as {
+    data: DashboardApiResponse | StudentDashboardResponse | undefined
+    isLoading: boolean
+  }
 
   if (isLoading || !data) {
     return (
@@ -199,6 +386,10 @@ export function DashboardHome() {
         </div>
       </div>
     )
+  }
+
+  if (data.isStudentView) {
+    return <StudentDashboardHome data={data} />
   }
 
   const statsCards = [
