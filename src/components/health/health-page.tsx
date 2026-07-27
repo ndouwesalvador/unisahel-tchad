@@ -1,12 +1,15 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { toast } from 'sonner'
+import { useQueryClient } from '@tanstack/react-query'
+import { useHealth } from '@/lib/api-hooks'
 import { motion } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
+import { Input } from '@/components/ui/input'
 import {
   Table,
   TableBody,
@@ -49,32 +52,50 @@ import {
   AlertTriangle,
 } from 'lucide-react'
 
-// ─── Demo Data ────────────────────────────────────────────────────────────────
+// ─── Types (shapes returned by /api/health) ────────────────────────────────────
 
-const hospitals = [
-  { id: '1', nom: 'Hopital General de Reference de N\'Djamena', type: 'CHU', ville: 'N\'Djamena', adresse: 'Avenue Charles de Gaulle', departements: ['Urgences', 'Chirurgie', 'Pediatrie', 'Maternite', 'Medecine interne'], internes: 18, status: 'actif' },
-  { id: '2', nom: 'Hopital de la Mere et de l\'Enfant', type: 'Hopital regional', ville: 'N\'Djamena', adresse: 'Rue du 11 Aout', departements: ['Pediatrie', 'Maternite', 'Neonatologie'], internes: 12, status: 'actif' },
-  { id: '3', nom: 'Centre de Sante de Moundou', type: 'Centre de sante', ville: 'Moundou', adresse: 'Quartier Sarh', departements: ['Medecine generale', 'Maternite', 'Vaccination'], internes: 8, status: 'alerte' },
-]
+interface HospitalRecord {
+  id: string; nom: string; type: string; ville: string; adresse: string
+  departements: string[]; internes: number; status: string
+}
+interface StageRecord {
+  id: string; etudiant: string; filiere: string; hopital: string; service: string
+  debut: string; fin: string; maitre: string; statut: string
+}
+interface GardeRecord {
+  id: string; date: string; etudiant: string; hopital: string; service: string; shift: string; statut: string
+}
+interface AlerteRecord { id: string; text: string; severity: string }
+interface CompetenceItem { id: string; nom: string; statut: string; date: string }
+interface CompetenceCategory { id: string; nom: string; competences: CompetenceItem[] }
+interface CarnetData {
+  etudiantId: string; hopital: string; service: string; debut: string; fin: string; maitre: string
+  presences: { date: string; present: boolean }[]
+  competencesValidees: string[]
+  evaluation: { comportement: number; competence: number; pratique: number; note: number } | null
+}
+
+// Categories come from the free-text ClinicalSkill.category field, so there is
+// no fixed set of ids to key an icon map off of the way the original demo did
+// (soins_infirmiers/diagnostique/...) - match on keywords with a safe default.
+function categoryIconFor(categoryName: string): React.ElementType {
+  const n = categoryName.toLowerCase()
+  if (n.includes('diagnost')) return Thermometer
+  if (n.includes('pharma')) return Pill
+  if (n.includes('chirurg')) return Scissors
+  if (n.includes('hygien')) return ShieldCheck
+  if (n.includes('ethiq') || n.includes('droit')) return BookOpen
+  if (n.includes('soin')) return Heart
+  return Stethoscope
+}
+
+// ─── Config Maps ──────────────────────────────────────────────────────────────
 
 const hospitalTypeConfig: Record<string, { label: string; className: string }> = {
   CHU: { label: 'CHU', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0' },
   hopital_regional: { label: 'Hopital regional', className: 'bg-[#1a274415] text-[#1a2744] border-0' },
   centre_sante: { label: 'Centre de sante', className: 'bg-[#d4a85315] text-[#d4a853] border-0' },
 }
-
-const stages = [
-  { id: '1', etudiant: 'HISSEIN Mariam', filiere: 'Soins Infirmiers', hopital: 'Hopital General', service: 'Urgences', debut: '01/02/2025', fin: '30/04/2025', maitre: 'Dr. Mahamat Ali', statut: 'en_cours' },
-  { id: '2', etudiant: 'SALEH Hassana', filiere: 'Soins Infirmiers', hopital: 'Hopital de la Mere', service: 'Maternite', debut: '01/02/2025', fin: '30/04/2025', maitre: 'Dr. Khadija Adam', statut: 'en_cours' },
-  { id: '3', etudiant: 'RAMADANE Zara', filiere: 'Sages-femmes', hopital: 'Hopital de la Mere', service: 'Neonatologie', debut: '01/11/2024', fin: '31/01/2025', maitre: 'Dr. Fatime Ngaro', statut: 'termine' },
-  { id: '4', etudiant: 'ADAM Khadija', filiere: 'Sages-femmes', hopital: 'Hopital General', service: 'Maternite', debut: '15/03/2025', fin: '15/06/2025', maitre: 'Dr. Ache Madjee', statut: 'planifie' },
-  { id: '5', etudiant: 'BICHARA Hawa', filiere: 'Laborantins', hopital: 'Centre de Sante', service: 'Laboratoire', debut: '01/02/2025', fin: '30/04/2025', maitre: 'Labo. Chef Idriss', statut: 'en_cours' },
-  { id: '6', etudiant: 'NGARNDMI Halime', filiere: 'Soins Infirmiers', hopital: 'Hopital General', service: 'Cardiologie', debut: '01/03/2025', fin: '31/05/2025', maitre: 'Dr. Seid Ibrahim', statut: 'planifie' },
-  { id: '7', etudiant: 'ABAKAR Adam', filiere: 'Pharmacie', hopital: 'Centre de Sante', service: 'Pharmacie', debut: '01/02/2025', fin: '30/04/2025', maitre: 'Pharm. Fatime', statut: 'en_cours' },
-  { id: '8', etudiant: 'DJIBRINE Amina', filiere: 'Soins Infirmiers', hopital: 'Hopital General', service: 'Chirurgie', debut: '15/01/2025', fin: '15/04/2025', maitre: 'Dr. Hassan Djibril', statut: 'valide' },
-  { id: '9', etudiant: 'MAHAMAT Youssouf', filiere: 'Sages-femmes', hopital: 'Hopital de la Mere', service: 'Maternite', debut: '01/10/2024', fin: '31/12/2024', maitre: 'Dr. Ngaro Fatime', statut: 'termine' },
-  { id: '10', etudiant: 'KHAMIS Fatime', filiere: 'Pharmacie', hopital: 'Centre de Sante', service: 'Pharmacie', debut: '01/01/2025', fin: '31/03/2025', maitre: 'Pharm. Abdoulaye', statut: 'en_cours' },
-]
 
 const stageStatusConfig: Record<string, { label: string; className: string; icon: React.ElementType }> = {
   en_cours: { label: 'En cours', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0', icon: Activity },
@@ -83,79 +104,6 @@ const stageStatusConfig: Record<string, { label: string; className: string; icon
   valide: { label: 'Valide', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0', icon: CheckCircle2 },
 }
 
-// Competence categories with skills
-const competenceCategories = [
-  {
-    id: 'soins_infirmiers',
-    nom: 'Soins infirmiers',
-    icon: Heart,
-    competences: [
-      { id: 's1', nom: 'Prise de constantes vitales', statut: 'validee', validateur: 'Dr. Mahamat Ali', date: '15/02/2025' },
-      { id: 's2', nom: 'Injection intramusculaire', statut: 'validee', validateur: 'Infirmier Chef Hassan', date: '20/02/2025' },
-      { id: 's3', nom: 'Pose de perfusion', statut: 'en_cours', validateur: '', date: '' },
-      { id: 's4', nom: 'Pansement simple', statut: 'validee', validateur: 'Dr. Khadija Adam', date: '10/03/2025' },
-      { id: 's5', nom: 'Soins de plaie chirurgicale', statut: 'non_acquise', validateur: '', date: '' },
-    ],
-  },
-  {
-    id: 'diagnostique',
-    nom: 'Diagnostique',
-    icon: Thermometer,
-    competences: [
-      { id: 'd1', nom: 'Electrocardiogramme', statut: 'en_cours', validateur: '', date: '' },
-      { id: 'd2', nom: 'Auscultation pulmonaire', statut: 'validee', validateur: 'Dr. Seid Ibrahim', date: '05/03/2025' },
-      { id: 'd3', nom: 'Examen neurologique', statut: 'non_acquise', validateur: '', date: '' },
-      { id: 'd4', nom: 'Palpation abdominale', statut: 'en_cours', validateur: '', date: '' },
-    ],
-  },
-  {
-    id: 'pharmacie',
-    nom: 'Pharmacie',
-    icon: Pill,
-    competences: [
-      { id: 'p1', nom: 'Preparation de medicaments', statut: 'validee', validateur: 'Pharm. Fatime', date: '12/02/2025' },
-      { id: 'p2', nom: 'Dispensation de medicaments', statut: 'validee', validateur: 'Pharm. Abdoulaye', date: '18/02/2025' },
-      { id: 'p3', nom: 'Calcul de posologie', statut: 'en_cours', validateur: '', date: '' },
-      { id: 'p4', nom: 'Gestion des stocks', statut: 'non_acquise', validateur: '', date: '' },
-      { id: 'p5', nom: 'Conseil au patient', statut: 'validee', validateur: 'Pharm. Fatime', date: '28/02/2025' },
-    ],
-  },
-  {
-    id: 'chirurgie',
-    nom: 'Chirurgie',
-    icon: Scissors,
-    competences: [
-      { id: 'c1', nom: 'Preparation du champ operatoire', statut: 'validee', validateur: 'Dr. Hassan Djibril', date: '10/02/2025' },
-      { id: 'c2', nom: 'Suture simple', statut: 'en_cours', validateur: '', date: '' },
-      { id: 'c3', nom: 'Aide operatoire', statut: 'non_acquise', validateur: '', date: '' },
-      { id: 'c4', nom: 'Retrait de points', statut: 'validee', validateur: 'Dr. Seid Ibrahim', date: '15/03/2025' },
-    ],
-  },
-  {
-    id: 'hygiene',
-    nom: 'Hygiene',
-    icon: ShieldCheck,
-    competences: [
-      { id: 'h1', nom: 'Lavage des mains chirurgical', statut: 'validee', validateur: 'Infirmier Chef Hassan', date: '05/02/2025' },
-      { id: 'h2', nom: 'Desinfection du materiel', statut: 'validee', validateur: 'Dr. Mahamat Ali', date: '08/02/2025' },
-      { id: 'h3', nom: 'Gestion des dechets medicaux', statut: 'en_cours', validateur: '', date: '' },
-      { id: 'h4', nom: 'Isolement septique', statut: 'non_acquise', validateur: '', date: '' },
-      { id: 'h5', nom: 'Sterilisation des instruments', statut: 'validee', validateur: 'Infirmier Chef Hassan', date: '20/02/2025' },
-      { id: 'h6', nom: 'Protocole anti-infectieux', statut: 'en_cours', validateur: '', date: '' },
-    ],
-  },
-  {
-    id: 'ethique',
-    nom: 'Ethique',
-    icon: BookOpen,
-    competences: [
-      { id: 'e1', nom: 'Secret medical', statut: 'validee', validateur: 'Dr. Khadija Adam', date: '01/02/2025' },
-      { id: 'e2', nom: 'Consentement eclaire', statut: 'validee', validateur: 'Dr. Ngaro Fatime', date: '05/02/2025' },
-      { id: 'e3', nom: 'Deontologie medicale', statut: 'en_cours', validateur: '', date: '' },
-      { id: 'e4', nom: 'Droit des patients', statut: 'non_acquise', validateur: '', date: '' },
-    ],
-  },
-]
 
 const competenceStatutConfig: Record<string, { label: string; className: string; icon: React.ElementType }> = {
   validee: { label: 'Validee', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0', icon: CheckCircle2 },
@@ -163,49 +111,7 @@ const competenceStatutConfig: Record<string, { label: string; className: string;
   non_acquise: { label: 'Non acquise', className: 'bg-gray-100 text-gray-500 border-0', icon: XCircle },
 }
 
-// Carnet de stage data
-const carnetData = {
-  etudiant: 'HISSEIN Mariam',
-  matricule: 'UDN/L2-SI/2024/007',
-  hopital: 'Hopital General de Reference de N\'Djamena',
-  service: 'Urgences',
-  debut: '01/02/2025',
-  fin: '30/04/2025',
-  maitre: 'Dr. Mahamat Ali',
-  presences: [
-    { date: '03/02/2025', present: true },
-    { date: '04/02/2025', present: true },
-    { date: '05/02/2025', present: true },
-    { date: '06/02/2025', present: false },
-    { date: '07/02/2025', present: true },
-    { date: '10/02/2025', present: true },
-    { date: '11/02/2025', present: true },
-    { date: '12/02/2025', present: true },
-    { date: '13/02/2025', present: true },
-    { date: '14/02/2025', present: true },
-  ],
-  competencesValidees: ['Prise de constantes vitales', 'Injection intramusculaire', 'Pansement simple'],
-  evaluation: {
-    comportement: 16,
-    competence: 14,
-    pratique: 15,
-    note: 15,
-    statut: 'en_cours_validation',
-  },
-}
 
-// Gardes data
-const gardes = [
-  { id: '1', date: '03/03/2025', etudiant: 'HISSEIN Mariam', hopital: 'Hopital General', service: 'Urgences', shift: 'nuit', statut: 'effectuee' },
-  { id: '2', date: '05/03/2025', etudiant: 'SALEH Hassana', hopital: 'Hopital de la Mere', service: 'Maternite', shift: 'jour', statut: 'effectuee' },
-  { id: '3', date: '07/03/2025', etudiant: 'BICHARA Hawa', hopital: 'Centre de Sante', service: 'Laboratoire', shift: 'nuit', statut: 'effectuee' },
-  { id: '4', date: '10/03/2025', etudiant: 'ABAKAR Adam', hopital: 'Centre de Sante', service: 'Pharmacie', shift: 'jour', statut: 'effectuee' },
-  { id: '5', date: '12/03/2025', etudiant: 'DJIBRINE Amina', hopital: 'Hopital General', service: 'Chirurgie', shift: 'nuit', statut: 'effectuee' },
-  { id: '6', date: '15/03/2025', etudiant: 'KHAMIS Fatime', hopital: 'Centre de Sante', service: 'Pharmacie', shift: 'jour', statut: 'planifiee' },
-  { id: '7', date: '17/03/2025', etudiant: 'NGARNDMI Halime', hopital: 'Hopital General', service: 'Cardiologie', shift: 'nuit', statut: 'planifiee' },
-  { id: '8', date: '20/03/2025', etudiant: 'ADAM Khadija', hopital: 'Hopital General', service: 'Maternite', shift: 'jour', statut: 'planifiee' },
-  { id: '9', date: '22/03/2025', etudiant: 'MAHAMAT Youssouf', hopital: 'Hopital de la Mere', service: 'Maternite', shift: 'nuit', statut: 'planifiee' },
-]
 
 const shiftConfig: Record<string, { label: string; className: string; icon: React.ElementType }> = {
   jour: { label: 'Jour', className: 'bg-[#d4a85315] text-[#d4a853] border-0', icon: Sun },
@@ -218,12 +124,6 @@ const gardeStatutConfig: Record<string, { label: string; className: string }> = 
   annulee: { label: 'Annulee', className: 'bg-red-50 text-red-500 border-0' },
 }
 
-// Sanitary alerts
-const alertesSanitaires = [
-  { id: '1', text: 'Stage CHU complet - S2 2025', severity: 'warning' },
-  { id: '2', text: 'Competence non validee: 12 etudiants', severity: 'critical' },
-  { id: '3', text: 'Vaccination obligatoire a jour requise', severity: 'info' },
-]
 
 // ─── Animated Count-Up Hook ──────────────────────────────────────────────────
 
@@ -259,17 +159,58 @@ function useCountUp(target: number, duration: number = 1400) {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function HealthPage() {
+  const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState('hopitaux')
   const [stageHopitalFilter, setStageHopitalFilter] = useState('all')
   const [stageStatutFilter, setStageStatutFilter] = useState('all')
-  const [selectedCarnetStudent, setSelectedCarnetStudent] = useState('hissein_mariam')
+  const [selectedCarnetStudent, setSelectedCarnetStudent] = useState('')
+  const [showNewGardeForm, setShowNewGardeForm] = useState(false)
+  const [isAddingGarde, setIsAddingGarde] = useState(false)
+  const [newGarde, setNewGarde] = useState({ studentId: '', date: '', shift: 'JOUR', service: '' })
+
+  const { data, isLoading } = useHealth()
+  const hospitals: HospitalRecord[] = useMemo(() => data?.hospitals ?? [], [data])
+  const stages: StageRecord[] = useMemo(() => data?.stages ?? [], [data])
+  const gardes: GardeRecord[] = useMemo(() => data?.gardes ?? [], [data])
+  const alertesSanitaires: AlerteRecord[] = useMemo(() => data?.alertes ?? [], [data])
+  const carnetStudents: { id: string; name: string }[] = useMemo(() => data?.students ?? [], [data])
+  const overviewStats = data?.stats
+
+  const effectiveCarnetStudent = selectedCarnetStudent || carnetStudents[0]?.id || ''
+  const { data: carnetResponse, isLoading: isCarnetLoading } = useHealth(effectiveCarnetStudent || undefined)
+  const carnetData: CarnetData | null = carnetResponse?.carnet ?? null
+  const competenceCategories: CompetenceCategory[] = useMemo(() => carnetResponse?.competenceCategories ?? [], [carnetResponse])
+
+  const handleAddGarde = async () => {
+    if (!newGarde.studentId || !newGarde.date) {
+      toast.error('Etudiant et date sont requis.')
+      return
+    }
+    setIsAddingGarde(true)
+    try {
+      const res = await fetch('/api/health?entity=garde', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newGarde),
+      })
+      if (!res.ok) throw new Error('failed')
+      toast.success('Garde ajoutee', { description: 'Nouvelle garde planifiee avec succes' })
+      setShowNewGardeForm(false)
+      setNewGarde({ studentId: '', date: '', shift: 'JOUR', service: '' })
+      queryClient.invalidateQueries({ queryKey: ['health'] })
+    } catch {
+      toast.error("Echec de l'ajout de la garde")
+    } finally {
+      setIsAddingGarde(false)
+    }
+  }
 
   // Stats
-  const stagesEnCours = stages.filter(s => s.statut === 'en_cours').length
-  const totalCompetences = competenceCategories.reduce((acc, cat) => acc + cat.competences.length, 0)
-  const competencesValidees = competenceCategories.reduce((acc, cat) => acc + cat.competences.filter(c => c.statut === 'validee').length, 0)
-  const etudiantsEnStage = stages.filter(s => s.statut === 'en_cours' || s.statut === 'valide').length
-  const competencePercent = totalCompetences > 0 ? Math.round((competencesValidees / totalCompetences) * 100) : 0
+  const stagesEnCours = overviewStats?.stagesEnCours ?? 0
+  const totalCompetences = competenceCategories.reduce((acc: number, cat: { competences: unknown[] }) => acc + cat.competences.length, 0)
+  const competencesValidees = competenceCategories.reduce((acc: number, cat: { competences: { statut: string }[] }) => acc + cat.competences.filter((c) => c.statut === 'validee').length, 0)
+  const etudiantsEnStage = overviewStats?.etudiantsEnStage ?? 0
+  const competencePercent = overviewStats?.competencePercent ?? 0
 
   // Animated stats (using computed values)
   const animatedEtudiantsSante = useCountUp(etudiantsEnStage, 1400)
@@ -277,16 +218,18 @@ export function HealthPage() {
   const animatedCompVal = useCountUp(competencePercent, 1300)
 
   // Filtered stages
-  const filteredStages = stages.filter(s => {
+  const filteredStages = stages.filter((s: { hopital: string; statut: string }) => {
     const matchHopital = stageHopitalFilter === 'all' || s.hopital === stageHopitalFilter
     const matchStatut = stageStatutFilter === 'all' || s.statut === stageStatutFilter
     return matchHopital && matchStatut
   })
 
   // Attendance percentage for carnet
-  const presencesCount = carnetData.presences.filter(p => p.present).length
-  const attendancePercent = carnetData.presences.length > 0 ? Math.round((presencesCount / carnetData.presences.length) * 100) : 0
-  const computedNoteGlobale = Math.round((carnetData.evaluation.comportement + carnetData.evaluation.competence + carnetData.evaluation.pratique) / 3)
+  const presencesCount = carnetData?.presences.filter((p: { present: boolean }) => p.present).length ?? 0
+  const attendancePercent = carnetData && carnetData.presences.length > 0 ? Math.round((presencesCount / carnetData.presences.length) * 100) : 0
+  const computedNoteGlobale = carnetData?.evaluation
+    ? Math.round((carnetData.evaluation.comportement + carnetData.evaluation.competence + carnetData.evaluation.pratique) / 3)
+    : 0
 
   return (
     <div className="space-y-5">
@@ -433,6 +376,11 @@ export function HealthPage() {
 
         {/* ─── Hopitaux Tab ─── */}
         <TabsContent value="hopitaux" className="mt-4">
+          {isLoading ? (
+            <p className="text-sm text-gray-400 text-center py-6">Chargement...</p>
+          ) : hospitals.length === 0 ? (
+            <Card><CardContent className="p-8 text-center text-sm text-gray-400">Aucun hopital partenaire enregistre pour le moment.</CardContent></Card>
+          ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {hospitals.map((hopital, i) => {
               const typeConfig = hospitalTypeConfig[hopital.type] || hospitalTypeConfig.centre_sante
@@ -509,6 +457,7 @@ export function HealthPage() {
               )
             })}
           </div>
+          )}
         </TabsContent>
 
         {/* ─── Stages Tab ─── */}
@@ -608,7 +557,7 @@ export function HealthPage() {
             {/* Categories grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {competenceCategories.map((category) => {
-                const CatIcon = category.icon
+                const CatIcon = categoryIconFor(category.nom)
                 const validated = category.competences.filter(c => c.statut === 'validee').length
                 const total = category.competences.length
                 const percent = Math.round((validated / total) * 100)
@@ -662,15 +611,16 @@ export function HealthPage() {
             <Card>
               <CardContent className="p-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <Select value={selectedCarnetStudent} onValueChange={setSelectedCarnetStudent}>
+                  <Select value={effectiveCarnetStudent} onValueChange={setSelectedCarnetStudent}>
                     <SelectTrigger className="h-9 text-sm w-full">
                       <SelectValue placeholder="Selectionner un etudiant" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="hissein_mariam">HISSEIN Mariam</SelectItem>
-                      <SelectItem value="saleh_hassana">SALEH Hassana</SelectItem>
-                      <SelectItem value="bichara_hawa">BICHARA Hawa</SelectItem>
-                      <SelectItem value="abakar_adam">ABAKAR Adam</SelectItem>
+                      {carnetStudents.length === 0 ? (
+                        <div className="px-2 py-1.5 text-xs text-gray-400">Aucun etudiant en stage clinique</div>
+                      ) : carnetStudents.map((s) => (
+                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <Badge className="text-[10px] bg-[#2d7a4f15] text-[#2d7a4f] border-0 self-center w-fit">
@@ -681,6 +631,13 @@ export function HealthPage() {
             </Card>
 
             {/* Carnet content */}
+            {isCarnetLoading ? (
+              <p className="text-sm text-gray-400 text-center py-6">Chargement...</p>
+            ) : !carnetData ? (
+              <Card><CardContent className="p-8 text-center text-sm text-gray-400">
+                {effectiveCarnetStudent ? 'Aucun stage clinique enregistre pour cet etudiant.' : 'Aucun etudiant en stage clinique pour le moment.'}
+              </CardContent></Card>
+            ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {/* Stage info */}
               <Card>
@@ -780,6 +737,10 @@ export function HealthPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
+                  {!carnetData.evaluation ? (
+                    <p className="text-xs text-gray-400 text-center py-4">Aucune evaluation enregistree pour le moment.</p>
+                  ) : (
+                  <>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-gray-500">Comportement</span>
@@ -810,9 +771,12 @@ export function HealthPage() {
                       </Badge>
                     </div>
                   </div>
+                  </>
+                  )}
                 </CardContent>
               </Card>
             </div>
+            )}
           </div>
         </TabsContent>
 
@@ -823,11 +787,53 @@ export function HealthPage() {
               <Badge className="text-[10px] bg-[#1a274415] text-[#1a2744] border-0">
                 {gardes.length} gardes programmees
               </Badge>
-              <Button size="sm" className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs h-8" onClick={() => toast.success('Garde ajoutée', { description: 'Nouvelle garde planifiée avec succès' })}>
+              <Button size="sm" className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs h-8" onClick={() => setShowNewGardeForm((v) => !v)}>
                 <Plus className="size-3.5 mr-1.5" />
                 Ajouter une garde
               </Button>
             </div>
+            {showNewGardeForm && (
+              <Card>
+                <CardContent className="p-4 space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <Select value={newGarde.studentId} onValueChange={(v) => setNewGarde((f) => ({ ...f, studentId: v }))}>
+                      <SelectTrigger className="h-9 text-sm">
+                        <SelectValue placeholder="Etudiant" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {carnetStudents.map((s) => (
+                          <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      type="date"
+                      className="h-9 text-sm"
+                      value={newGarde.date}
+                      onChange={(e) => setNewGarde((f) => ({ ...f, date: e.target.value }))}
+                    />
+                    <Select value={newGarde.shift} onValueChange={(v) => setNewGarde((f) => ({ ...f, shift: v }))}>
+                      <SelectTrigger className="h-9 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="JOUR">Jour</SelectItem>
+                        <SelectItem value="NUIT">Nuit</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Input
+                    placeholder="Service (optionnel)"
+                    className="h-9 text-sm"
+                    value={newGarde.service}
+                    onChange={(e) => setNewGarde((f) => ({ ...f, service: e.target.value }))}
+                  />
+                  <Button size="sm" className="bg-[#1a2744] hover:bg-[#1a2744]/90 text-white text-xs" onClick={handleAddGarde} disabled={isAddingGarde}>
+                    {isAddingGarde ? 'Ajout...' : 'Enregistrer'}
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
             <Card>
               <CardContent className="p-0">
                 <div className="overflow-x-auto">

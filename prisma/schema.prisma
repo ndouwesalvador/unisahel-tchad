@@ -105,6 +105,7 @@ model Tenant {
   examBankQuestions  ExamBankQuestion[]
   examResults        ExamResult[]
   examIncidents      ExamIncident[]
+  scheduledExams     ScheduledExam[]
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 }
@@ -142,6 +143,7 @@ model TenantSettings {
   whatsappNotifications Boolean  @default(false)
   pwaEnabled            Boolean  @default(false)
   offlineMode           Boolean  @default(false)
+  pedagogicalRegistrationOpen Boolean @default(true)
   primaryColor          String   @default("#1a2744")
   secondaryColor        String   @default("#2d7a4f")
   accentColor           String   @default("#c9a84c")
@@ -317,6 +319,7 @@ model TeachingUnit {
   courseElements           CourseElement[]
   grades                   Grade[]
   pedagogicalRegistrations PedagogicalRegistration[]
+  scheduledExams           ScheduledExam[]
   createdAt                DateTime                  @default(now())
   updatedAt                DateTime                  @updatedAt
 }
@@ -430,6 +433,7 @@ model Teacher {
   gradeImports     GradeImport[]
   evaluations      ClinicalEvaluation[]
   advisorProfile   Advisor?
+  scheduledExams   ScheduledExam[]
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
 }
@@ -581,6 +585,8 @@ model PedagogicalRegistration {
   status         String       @default("ACTIVE")
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
+
+  @@unique([studentId, teachingUnitId, academicYearId])
 }
 
 // ============================================
@@ -700,6 +706,8 @@ model Deliberation {
   id             String                 @id @default(cuid())
   tenantId       String
   academicYearId String
+  programId      String?
+  levelId        String?
   type           String                 @default("ANNUEL")
   name           String
   date           DateTime
@@ -978,9 +986,32 @@ model Room {
   status       String             @default("libre") // libre, occupee, maintenance
   isActive     Boolean             @default(true)
   reservations RoomReservation[]
+  scheduledExams ScheduledExam[]
   tenant       Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
+}
+
+model ScheduledExam {
+  id             String   @id @default(cuid())
+  tenantId       String
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  teachingUnitId String?
+  teachingUnit   TeachingUnit? @relation(fields: [teachingUnitId], references: [id], onDelete: SetNull)
+  examDate       DateTime
+  startTime      String
+  endTime        String
+  roomId         String?
+  room           Room?    @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  supervisorId   String?
+  supervisor     Teacher? @relation(fields: [supervisorId], references: [id], onDelete: SetNull)
+  sessionType    String   @default("NORMALE") // NORMALE, RATTRAPAGE
+  status         String   @default("PLANIFIE") // PLANIFIE, CONFIRME, EN_COURS, TERMINE, ANNULE
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([tenantId])
+  @@map("scheduled_exams")
 }
 
 model TimetableSlot {

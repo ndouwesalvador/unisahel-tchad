@@ -2,6 +2,8 @@
 
 import { useState, useMemo, useCallback } from 'react'
 import { toast } from 'sonner'
+import { useQueryClient } from '@tanstack/react-query'
+import { useDeliberation } from '@/lib/api-hooks'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -68,14 +70,6 @@ interface DeliberationSession {
   statut: 'planifiee' | 'en_cours' | 'terminee'
 }
 
-const deliberations: DeliberationSession[] = [
-  { id: '1', titre: 'Deliberation L2 Droit S3', filiere: 'Droit', niveau: 'L2', semestre: 'S3', date: '15/07/2025', statut: 'en_cours' },
-  { id: '2', titre: 'Deliberation L1 Sciences S2', filiere: 'Sciences', niveau: 'L1', semestre: 'S2', date: '18/07/2025', statut: 'planifiee' },
-  { id: '3', titre: 'Deliberation L3 Informatique S5', filiere: 'Informatique', niveau: 'L3', semestre: 'S5', date: '12/07/2025', statut: 'terminee' },
-  { id: '4', titre: 'Deliberation M1 Droit S1', filiere: 'Droit', niveau: 'M1', semestre: 'S1', date: '20/07/2025', statut: 'planifiee' },
-  { id: '5', titre: 'Deliberation L2 Economie S4', filiere: 'Economie', niveau: 'L2', semestre: 'S4', date: '10/07/2025', statut: 'terminee' },
-]
-
 type Decision = 'ADMI' | 'AJOURNE' | 'REDOUBLANT' | 'EXCLU' | 'ADMI_DETTE' | 'COMPENSE'
 
 interface DeliberationStudent {
@@ -89,26 +83,6 @@ interface DeliberationStudent {
   decision: Decision
   observation: string
 }
-
-const deliberationStudents: DeliberationStudent[] = [
-  { id: '1', matricule: 'UDN/L2/2024/001', nom: 'ABAKAR', prenom: 'Adam Hassane', moyenne: 12.4, credits: 28, creditsTotal: 30, decision: 'ADMI', observation: '' },
-  { id: '2', matricule: 'UDN/L2/2024/004', nom: 'MAHAMAT', prenom: 'Youssouf', moyenne: 8.6, credits: 18, creditsTotal: 30, decision: 'REDOUBLANT', observation: 'Credits insuffisants' },
-  { id: '3', matricule: 'UDN/L2/2024/017', nom: 'HAMID', prenom: 'Oumar', moyenne: 10.2, credits: 24, creditsTotal: 30, decision: 'ADMI_DETTE', observation: 'Dette de 6 credits' },
-  { id: '4', matricule: 'UDN/L2/2024/020', nom: 'HAROUN', prenom: 'Meriam', moyenne: 11.8, credits: 26, creditsTotal: 30, decision: 'ADMI', observation: '' },
-  { id: '5', matricule: 'UDN/L2/2024/015', nom: 'ISSA', prenom: 'Mahamat Nour', moyenne: 6.4, credits: 12, creditsTotal: 30, decision: 'EXCLU', observation: 'Moyenne elimatoire' },
-  { id: '6', matricule: 'UDN/L2/2024/024', nom: 'BACHAR', prenom: 'Ali', moyenne: 9.2, credits: 22, creditsTotal: 30, decision: 'COMPENSE', observation: 'Compensation par UE validee' },
-  { id: '7', matricule: 'UDN/L2/2024/019', nom: 'ABDALLAH', prenom: 'Fadoul', moyenne: 13.6, credits: 30, creditsTotal: 30, decision: 'ADMI', observation: 'Mention Assez-Bien' },
-  { id: '8', matricule: 'UDN/L2/2024/011', nom: 'BICHARA', prenom: 'Hawa', moyenne: 10.8, credits: 25, creditsTotal: 30, decision: 'ADMI_DETTE', observation: 'Dette de 5 credits' },
-  { id: '9', matricule: 'UDN/M1/2024/010', nom: 'ADOUM', prenom: 'Abdoulaye', moyenne: 7.4, credits: 15, creditsTotal: 30, decision: 'AJOURNE', observation: 'Passage en rattrapage' },
-  { id: '10', matricule: 'UDN/M1/2024/016', nom: 'AHMAT', prenom: 'Achta', moyenne: 15.2, credits: 30, creditsTotal: 30, decision: 'ADMI', observation: 'Mention Bien' },
-  { id: '11', matricule: 'UDN/L2/2024/002', nom: 'KHAMIS', prenom: 'Fatime', moyenne: 14.8, credits: 30, creditsTotal: 30, decision: 'ADMI', observation: 'Mention Bien' },
-  { id: '12', matricule: 'UDN/L2/2024/025', nom: 'OUMAR', prenom: 'Ibrahim', moyenne: 9.8, credits: 20, creditsTotal: 30, decision: 'COMPENSE', observation: 'Compensation validee' },
-  { id: '13', matricule: 'UDN/L2/2024/026', nom: 'ZAKARIA', prenom: 'Mariam', moyenne: 11.4, credits: 27, creditsTotal: 30, decision: 'ADMI_DETTE', observation: 'Dette de 3 credits' },
-  { id: '14', matricule: 'UDN/L2/2024/027', nom: 'HASSAN', prenom: 'Djibril', moyenne: 5.2, credits: 8, creditsTotal: 30, decision: 'EXCLU', observation: 'Exclusion definitive' },
-  { id: '15', matricule: 'UDN/L2/2024/028', nom: 'FATIME', prenom: 'Zenab', moyenne: 13.0, credits: 30, creditsTotal: 30, decision: 'ADMI', observation: 'Mention Assez-Bien' },
-  { id: '16', matricule: 'UDN/L2/2024/029', nom: 'MOUSSA', prenom: 'Adoum', moyenne: 8.2, credits: 16, creditsTotal: 30, decision: 'REDOUBLANT', observation: 'Redoublement necessaire' },
-  { id: '17', matricule: 'UDN/L2/2024/030', nom: 'KHADIDJA', prenom: 'Abakar', moyenne: 10.6, credits: 28, creditsTotal: 30, decision: 'ADMI_DETTE', observation: 'Dette de 2 credits' },
-]
 
 const decisionConfig: Record<Decision, { label: string; className: string; icon: React.ElementType; tooltip: string }> = {
   ADMI: { label: 'Admis', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0 hover:bg-[#2d7a4f15]', icon: CheckCircle2, tooltip: 'Etudiant admis avec succes' },
@@ -128,13 +102,19 @@ const sessionStatusConfig: Record<string, { label: string; className: string }> 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function DeliberationPage() {
-  const [selectedSession, setSelectedSession] = useState<string | null>('1')
+  const queryClient = useQueryClient()
+  const [selectedSession, setSelectedSession] = useState<string | null>(null)
   const [selectedSessionType, setSelectedSessionType] = useState('normale')
   const [selectedFiliere, setSelectedFiliere] = useState('droit')
   const [selectedNiveau, setSelectedNiveau] = useState('L2')
   const [selectedSemestre, setSelectedSemestre] = useState('S3')
   const [isExportingPV, setIsExportingPV] = useState(false)
+  const [isLaunching, setIsLaunching] = useState(false)
+  const [isLocking, setIsLocking] = useState(false)
   const [qrCode, setQrCode] = useState<string | null>(null)
+  // Pas de modele backend pour la composition du jury (Deliberation n'a qu'un
+  // presidentId) - reste un etat local de la session de travail en cours, pas
+  // persiste, comme l'inventaire d'equipement de room-booking-page.tsx.
   const [juryMembers, setJuryMembers] = useState([
     { id: '1', name: 'Dr. MAHAMAT Ali', role: 'President' },
     { id: '2', name: 'Prof. KHAMIS Fatime', role: 'Membre' },
@@ -142,6 +122,54 @@ export function DeliberationPage() {
   ])
   const [newMemberName, setNewMemberName] = useState('')
   const [newMemberRole, setNewMemberRole] = useState('Membre')
+
+  const apiSessionType = selectedSessionType === 'normale' ? 'NORMALE' : 'RATTRAPAGE'
+  const { data: deliberationData, isLoading: isDeliberationLoading } = useDeliberation(
+    selectedSession ? { id: selectedSession } : { session: apiSessionType }
+  )
+  const deliberations: DeliberationSession[] = useMemo(
+    () => (deliberationData?.sessions ?? []).map((s: { id: string; titre: string; date: string; statut: string }) => ({
+      id: s.id, titre: s.titre, filiere: '—', niveau: '—', semestre: '—', date: s.date, statut: s.statut as DeliberationSession['statut'],
+    })),
+    [deliberationData]
+  )
+  const deliberationStudents: DeliberationStudent[] = useMemo(() => deliberationData?.students ?? [], [deliberationData])
+  const isLocked: boolean = deliberationData?.selected?.isLocked ?? false
+
+  const handleLaunch = async () => {
+    setIsLaunching(true)
+    try {
+      const res = await fetch('/api/deliberation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session: apiSessionType }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json.error || 'Echec du lancement')
+      toast.success('Deliberation lancee', { description: `${json.deliberation?.decisions?.length ?? 0} etudiant(s) evalue(s)` })
+      setSelectedSession(json.deliberation?.id ?? null)
+      queryClient.invalidateQueries({ queryKey: ['deliberation'] })
+    } catch (e) {
+      toast.error('Erreur', { description: e instanceof Error ? e.message : 'Echec du lancement' })
+    } finally {
+      setIsLaunching(false)
+    }
+  }
+
+  const handleLock = async () => {
+    if (!selectedSession) return
+    setIsLocking(true)
+    try {
+      const res = await fetch(`/api/deliberation?id=${selectedSession}`, { method: 'PUT' })
+      if (!res.ok) throw new Error('failed')
+      toast.success('Deliberation validee', { description: 'Les resultats sont officialises' })
+      queryClient.invalidateQueries({ queryKey: ['deliberation'] })
+    } catch {
+      toast.error('Echec de la validation')
+    } finally {
+      setIsLocking(false)
+    }
+  }
 
   const exportPV = useCallback(async () => {
     setIsExportingPV(true)
@@ -207,7 +235,7 @@ export function DeliberationPage() {
     } finally {
       setIsExportingPV(false)
     }
-  }, [selectedSession, selectedSessionType, juryMembers])
+  }, [selectedSession, selectedSessionType, juryMembers, deliberations, deliberationStudents])
 
   const currentSession = deliberations.find(d => d.id === selectedSession)
 
@@ -218,7 +246,9 @@ export function DeliberationPage() {
     const ajournes = deliberationStudents.filter(s => s.decision === 'AJOURNE' || s.decision === 'REDOUBLANT').length
     const exclus = deliberationStudents.filter(s => s.decision === 'EXCLU').length
     const admisDette = deliberationStudents.filter(s => s.decision === 'ADMI_DETTE').length
-    const admissionRate = Math.round(((admis + compenses + admisDette) / deliberationStudents.length) * 100)
+    const admissionRate = deliberationStudents.length > 0
+      ? Math.round(((admis + compenses + admisDette) / deliberationStudents.length) * 100)
+      : 0
     return {
       total: deliberationStudents.length,
       admis,
@@ -228,7 +258,7 @@ export function DeliberationPage() {
       admisDette,
       admissionRate,
     }
-  }, [])
+  }, [deliberationStudents])
 
   // ─── Jury Members Management ───────────────────────────────────────────
   const addMember = () => {
@@ -536,10 +566,11 @@ export function DeliberationPage() {
                 <Button
                   size="sm"
                   className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs"
-                  onClick={() => toast.success('Délibération lancée', { description: `Session ${currentSession?.titre || 'en cours'}` })}
+                  onClick={handleLaunch}
+                  disabled={isLaunching}
                 >
                   <Shield className="size-3.5 mr-1.5" />
-                  Lancer la deliberation
+                  {isLaunching ? 'Lancement...' : 'Lancer la deliberation'}
                 </Button>
               </div>
             </CardContent>
@@ -738,9 +769,14 @@ export function DeliberationPage() {
                     {isExportingPV ? <Loader2 className="size-3.5 mr-1.5 animate-spin" /> : <Download className="size-3.5 mr-1.5" />}
                     PV
                   </Button>
-                  <Button size="sm" className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs" onClick={() => toast.success('Délibération validée', { description: 'Les résultats sont officialisés' })}>
+                  <Button
+                    size="sm"
+                    className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs"
+                    onClick={handleLock}
+                    disabled={!selectedSession || isLocked || isLocking}
+                  >
                     <CheckSquare className="size-3.5 mr-1.5" />
-                    Valider deliberation
+                    {isLocked ? 'Deliberation validee' : isLocking ? 'Validation...' : 'Valider deliberation'}
                   </Button>
                 </div>
               </div>
@@ -760,6 +796,18 @@ export function DeliberationPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
+                    {isDeliberationLoading && (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-6 text-xs text-gray-400">Chargement...</TableCell>
+                      </TableRow>
+                    )}
+                    {!isDeliberationLoading && deliberationStudents.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-6 text-xs text-gray-400">
+                          Aucune note trouvee pour l&apos;annee academique en cours
+                        </TableCell>
+                      </TableRow>
+                    )}
                     {deliberationStudents.map((student, i) => {
                       const config = decisionConfig[student.decision]
                       const DecisionIcon = config.icon
@@ -981,6 +1029,13 @@ export function DeliberationPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
+                  {deliberations.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-6 text-xs text-gray-400">
+                        Aucune deliberation lancee pour le moment
+                      </TableCell>
+                    </TableRow>
+                  )}
                   {deliberations.map((session) => (
                     <TableRow
                       key={session.id}

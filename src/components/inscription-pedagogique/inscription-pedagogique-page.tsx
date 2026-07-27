@@ -1,6 +1,9 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
+import { useInscriptionPedagogique } from '@/lib/api-hooks'
 import { motion } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -86,39 +89,6 @@ interface UEItem {
   selected: boolean
 }
 
-// ─── Demo Data ──────────────────────────────────────────────────────────────────
-
-const students: StudentRegistration[] = [
-  { id: '1', name: 'Abakar Youssouf', matricule: 'US-2024-0001', filiere: 'Informatique', niveau: 'L3', semestre: 'S2', ueInscrites: 6, totalUe: 6, statut: 'complete', hasDebt: false },
-  { id: '2', name: 'Hassan Fatime', matricule: 'US-2024-0002', filiere: 'Droit', niveau: 'L2', semestre: 'S2', ueInscrites: 4, totalUe: 6, statut: 'en-cours', hasDebt: false },
-  { id: '3', name: 'Adam Brahim', matricule: 'US-2024-0003', filiere: 'Gestion', niveau: 'L1', semestre: 'S2', ueInscrites: 0, totalUe: 6, statut: 'non-commencee', hasDebt: false },
-  { id: '4', name: 'Djibrine Amina', matricule: 'US-2024-0004', filiere: 'Informatique', niveau: 'M1', semestre: 'S2', ueInscrites: 5, totalUe: 5, statut: 'en-attente', hasDebt: false },
-  { id: '5', name: 'Hissein Mariam', matricule: 'US-2024-0005', filiere: 'Lettres', niveau: 'L3', semestre: 'S2', ueInscrites: 6, totalUe: 6, statut: 'complete', hasDebt: false },
-  { id: '6', name: 'Mahamat Nour', matricule: 'US-2024-0006', filiere: 'Informatique', niveau: 'L2', semestre: 'S2', ueInscrites: 3, totalUe: 6, statut: 'en-cours', hasDebt: true },
-  { id: '7', name: 'Ngarndmi Halime', matricule: 'US-2024-0007', filiere: 'Droit', niveau: 'L1', semestre: 'S2', ueInscrites: 6, totalUe: 6, statut: 'complete', hasDebt: false },
-  { id: '8', name: 'Saleh Hassana', matricule: 'US-2024-0008', filiere: 'Gestion', niveau: 'M1', semestre: 'S2', ueInscrites: 2, totalUe: 5, statut: 'en-cours', hasDebt: false },
-  { id: '9', name: 'Bichara Hawa', matricule: 'US-2024-0009', filiere: 'Informatique', niveau: 'L3', semestre: 'S2', ueInscrites: 0, totalUe: 6, statut: 'non-commencee', hasDebt: true },
-  { id: '10', name: 'Adoum Khadija', matricule: 'US-2024-0010', filiere: 'Lettres', niveau: 'L2', semestre: 'S2', ueInscrites: 6, totalUe: 6, statut: 'complete', hasDebt: false },
-  { id: '11', name: 'Issa Abakar', matricule: 'US-2024-0011', filiere: 'Droit', niveau: 'L3', semestre: 'S2', ueInscrites: 5, totalUe: 6, statut: 'en-attente', hasDebt: false },
-  { id: '12', name: 'Ahmat Djibrine', matricule: 'US-2024-0012', filiere: 'Gestion', niveau: 'L1', semestre: 'S2', ueInscrites: 6, totalUe: 6, statut: 'complete', hasDebt: false },
-  { id: '13', name: 'Khamis Zara', matricule: 'US-2024-0013', filiere: 'Informatique', niveau: 'M1', semestre: 'S2', ueInscrites: 3, totalUe: 5, statut: 'en-cours', hasDebt: false },
-  { id: '14', name: 'Seid Ibrahim', matricule: 'US-2024-0014', filiere: 'Lettres', niveau: 'L1', semestre: 'S2', ueInscrites: 0, totalUe: 6, statut: 'non-commencee', hasDebt: false },
-  { id: '15', name: 'Deby Idriss', matricule: 'US-2024-0015', filiere: 'Droit', niveau: 'M1', semestre: 'S2', ueInscrites: 5, totalUe: 5, statut: 'complete', hasDebt: false },
-  { id: '16', name: 'Oumar Malloum', matricule: 'US-2024-0016', filiere: 'Informatique', niveau: 'L1', semestre: 'S2', ueInscrites: 6, totalUe: 6, statut: 'complete', hasDebt: false },
-]
-
-const availableUEs: UEItem[] = [
-  { id: 'ue1', code: 'INF301', name: 'Programmation avancee', credits: 6, type: 'obligatoire', professor: 'Dr. Mahamat Ali', selected: true },
-  { id: 'ue2', code: 'INF302', name: 'Bases de donnees II', credits: 6, type: 'obligatoire', professor: 'Dr. Youssouf Haroun', selected: true },
-  { id: 'ue3', code: 'INF303', name: 'Reseaux informatiques', credits: 6, type: 'obligatoire', professor: 'Dr. Adoum Seid', selected: true },
-  { id: 'ue4', code: 'INF304', name: 'Intelligence artificielle', credits: 6, type: 'obligatoire', professor: 'Dr. Fatime Abdel', selected: true },
-  { id: 'ue5', code: 'INF305', name: 'Genie logiciel', credits: 4, type: 'obligatoire', professor: 'Dr. Brahim Ngarndmi', selected: true },
-  { id: 'ue6', code: 'INF306', name: 'Securite informatique', credits: 4, type: 'optionnelle', professor: 'Dr. Hassan Adam', selected: false },
-  { id: 'ue7', code: 'INF307', name: 'Developpement mobile', credits: 4, type: 'optionnelle', professor: 'Dr. Amina Djibrine', selected: false },
-  { id: 'ue8', code: 'INF308', name: 'Cloud computing', credits: 4, type: 'optionnelle', professor: 'Dr. Mariam Hissein', selected: false },
-  { id: 'ue9', code: 'INF309', name: 'Data science', credits: 4, type: 'optionnelle', professor: 'Dr. Nour Mahamat', selected: false },
-]
-
 // ─── Animation Variants ─────────────────────────────────────────────────────────
 
 const containerVariants = {
@@ -155,67 +125,76 @@ function StatusBadge({ statut }: { statut: StudentRegistration['statut'] }) {
 
 export function InscriptionPedagogiquePage() {
   // Table state
+  const queryClient = useQueryClient()
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [levelFilter, setLevelFilter] = useState<string>('all')
   const [programFilter, setProgramFilter] = useState<string>('all')
 
-  // Registration period state
-  const [periodStatus, setPeriodStatus] = useState<'en-cours' | 'cloturee' | 'a-venir'>('en-cours')
-
   // UE Selection state
   const [selectedStudent, setSelectedStudent] = useState<string>('')
   const [selectedSemestre, setSelectedSemestre] = useState<string>('s2')
   const [selectedSession, setSelectedSession] = useState<string>('normale')
-  const [ueSelections, setUeSelections] = useState<Record<string, boolean>>(
-    Object.fromEntries(availableUEs.map((ue) => [ue.id, ue.selected]))
-  )
+  const [ueSelections, setUeSelections] = useState<Record<string, boolean>>({})
   const [ueSectionExpanded, setUeSectionExpanded] = useState(false)
+  const [isSubmittingRegistration, setIsSubmittingRegistration] = useState(false)
+  const [isTogglingPeriod, setIsTogglingPeriod] = useState(false)
+
+  const { data: listData, isLoading: isListLoading } = useInscriptionPedagogique()
+  const students: StudentRegistration[] = useMemo(() => listData?.students ?? [], [listData])
+  const stats = listData?.stats
+  const registrationOpen: boolean = listData?.registrationOpen ?? true
+
+  const { data: ueData } = useInscriptionPedagogique(selectedStudent || undefined)
+  const availableUEs: UEItem[] = useMemo(() => {
+    const raw = (ueData?.availableUEs ?? []) as UEItem[]
+    return raw
+  }, [ueData])
+
+  // Sync local checkbox state whenever the selected student's real UE list loads
+  const ueDataKey = selectedStudent + ':' + availableUEs.length
+  const [syncedKey, setSyncedKey] = useState('')
+  if (ueDataKey !== syncedKey && availableUEs.length >= 0 && selectedStudent) {
+    setSyncedKey(ueDataKey)
+    setUeSelections(Object.fromEntries(availableUEs.map((ue) => [ue.id, ue.selected])))
+  }
 
   // Computed: filtered students
   const filteredStudents = useMemo(() => {
     return students.filter((s) => {
-      const matchSearch = searchQuery === '' || 
-        s.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      const matchSearch = searchQuery === '' ||
+        s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         s.matricule.toLowerCase().includes(searchQuery.toLowerCase())
       const matchStatus = statusFilter === 'all' || s.statut === statusFilter
       const matchLevel = levelFilter === 'all' || s.niveau === levelFilter
       const matchProgram = programFilter === 'all' || s.filiere === programFilter
       return matchSearch && matchStatus && matchLevel && matchProgram
     })
-  }, [searchQuery, statusFilter, levelFilter, programFilter])
+  }, [students, searchQuery, statusFilter, levelFilter, programFilter])
 
   // Computed: UE credit totals
   const selectedCredits = useMemo(() => {
     return availableUEs
       .filter((ue) => ueSelections[ue.id])
       .reduce((sum, ue) => sum + ue.credits, 0)
-  }, [ueSelections])
+  }, [availableUEs, ueSelections])
 
   const compulsoryCredits = useMemo(() => {
     return availableUEs
       .filter((ue) => ue.type === 'obligatoire')
       .reduce((sum, ue) => sum + ue.credits, 0)
-  }, [])
+  }, [availableUEs])
 
   const optionalCreditsSelected = useMemo(() => {
     return availableUEs
       .filter((ue) => ue.type === 'optionnelle' && ueSelections[ue.id])
       .reduce((sum, ue) => sum + ue.credits, 0)
-  }, [ueSelections])
+  }, [availableUEs, ueSelections])
 
   const minCredits = 30
   const maxCredits = 42
   const creditsRemaining = Math.max(0, minCredits - selectedCredits)
   const creditsOver = Math.max(0, selectedCredits - maxCredits)
-
-  // Period progress calculation
-  const periodStartDate = new Date(2025, 0, 15) // Jan 15, 2025
-  const periodEndDate = new Date(2025, 1, 15) // Feb 15, 2025
-  const totalDays = (periodEndDate.getTime() - periodStartDate.getTime()) / (1000 * 60 * 60 * 24)
-  const now = new Date(2025, 1, 5) // Simulated "now"
-  const daysElapsed = (now.getTime() - periodStartDate.getTime()) / (1000 * 60 * 60 * 24)
-  const periodProgress = Math.min(100, Math.max(0, (daysElapsed / totalDays) * 100))
 
   // UE toggle
   const handleUeToggle = (ueId: string, ueType: string) => {
@@ -223,36 +202,76 @@ export function InscriptionPedagogiquePage() {
     setUeSelections((prev) => ({ ...prev, [ueId]: !prev[ueId] }))
   }
 
+  const handleValidateRegistration = async () => {
+    if (!selectedStudent) return
+    setIsSubmittingRegistration(true)
+    try {
+      const teachingUnitIds = availableUEs.filter((ue) => ueSelections[ue.id]).map((ue) => ue.id)
+      const res = await fetch('/api/inscription-pedagogique', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentId: selectedStudent, teachingUnitIds }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json.error || "Echec de l'inscription")
+      toast.success('Inscription pedagogique enregistree')
+      queryClient.invalidateQueries({ queryKey: ['inscriptionPedagogique'] })
+    } catch (e) {
+      toast.error('Erreur', { description: e instanceof Error ? e.message : "Echec de l'inscription" })
+    } finally {
+      setIsSubmittingRegistration(false)
+    }
+  }
+
+  const handleTogglePeriod = async (open: boolean) => {
+    setIsTogglingPeriod(true)
+    try {
+      const res = await fetch('/api/inscription-pedagogique', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ open }),
+      })
+      if (!res.ok) throw new Error('failed')
+      toast.success(open ? 'Inscriptions ouvertes' : 'Inscriptions cloturees')
+      queryClient.invalidateQueries({ queryKey: ['inscriptionPedagogique'] })
+    } catch {
+      toast.error('Echec de la mise a jour de la periode')
+    } finally {
+      setIsTogglingPeriod(false)
+    }
+  }
+
   // Stats data
   const statsData = [
     {
       title: 'Inscriptions completes',
-      value: '342',
+      value: String(stats?.completes ?? 0),
       icon: CheckSquare,
       gradient: 'from-[#2d7a4f] to-[#1a5a38]',
       iconBg: 'bg-white/20',
     },
     {
       title: 'En cours',
-      value: '45',
+      value: String(stats?.enCours ?? 0),
       icon: Clock,
       gradient: 'from-[#d4a853] to-[#b8922e]',
       iconBg: 'bg-white/20',
     },
     {
       title: 'Non inscrites',
-      value: '67',
+      value: String(stats?.nonCommencees ?? 0),
       icon: UserX,
       gradient: 'from-[#6b7280] to-[#4b5563]',
       iconBg: 'bg-white/20',
     },
     {
       title: 'Taux de completion',
-      value: '76%',
+      value: `${stats?.completionRate ?? 0}%`,
       icon: TrendingUp,
       gradient: 'from-[#1a2744] to-[#2d3e5e]',
       iconBg: 'bg-white/20',
       hasProgress: true,
+      progressValue: stats?.completionRate ?? 0,
     },
   ]
 
@@ -303,7 +322,7 @@ export function InscriptionPedagogiquePage() {
                   </div>
                   {stat.hasProgress && (
                     <div className="mt-3">
-                      <Progress value={76} className="h-2 bg-white/20 [&>div]:bg-white" />
+                      <Progress value={(stat as { progressValue?: number }).progressValue ?? 0} className="h-2 bg-white/20 [&>div]:bg-white" />
                     </div>
                   )}
                 </CardContent>
@@ -327,72 +346,31 @@ export function InscriptionPedagogiquePage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  {periodStatus === 'en-cours' && (
+                  {registrationOpen ? (
                     <Badge className="bg-[#2d7a4f] text-white border-0 text-xs">En cours</Badge>
-                  )}
-                  {periodStatus === 'cloturee' && (
+                  ) : (
                     <Badge className="bg-gray-500 text-white border-0 text-xs">Cloturee</Badge>
-                  )}
-                  {periodStatus === 'a-venir' && (
-                    <Badge className="bg-[#d4a853] text-white border-0 text-xs">A venir</Badge>
                   )}
                 </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-4 text-sm">
-                <div className="flex items-center gap-2 text-gray-600">
-                  <Clock className="size-4 text-gray-400" />
-                  <span>Du <strong>15 Jan</strong> au <strong>15 Fev 2025</strong></span>
-                </div>
-                <div className="flex items-center gap-2 text-gray-600">
-                  <Calendar className="size-4 text-gray-400" />
-                  <span>{Math.max(0, Math.round(totalDays - daysElapsed))} jours restants</span>
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <div className="flex justify-between text-xs text-gray-500">
-                  <span>Progression de la periode</span>
-                  <span>{Math.round(periodProgress)}%</span>
-                </div>
-                <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${periodProgress}%` }}
-                    transition={{ duration: 1, ease: 'easeOut' }}
-                    className="h-full bg-gradient-to-r from-[#2d7a4f] to-[#3da66a] rounded-full"
-                  />
-                </div>
-              </div>
               <div className="flex flex-wrap gap-2 pt-1">
-                {periodStatus === 'en-cours' && (
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      className="bg-[#d4a853] hover:bg-[#c49a48] text-white text-xs"
-                      onClick={() => setPeriodStatus('cloturee')}
-                    >
-                      Cloturer
-                    </Button>
-                    <Button variant="outline" size="sm" className="text-xs border-[#2d7a4f] text-[#2d7a4f] hover:bg-[#2d7a4f10]">
-                      Prolonger
-                    </Button>
-                  </div>
-                )}
-                {periodStatus === 'cloturee' && (
+                {registrationOpen ? (
                   <Button
                     size="sm"
-                    className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs"
-                    onClick={() => setPeriodStatus('en-cours')}
+                    className="bg-[#d4a853] hover:bg-[#c49a48] text-white text-xs"
+                    onClick={() => handleTogglePeriod(false)}
+                    disabled={isTogglingPeriod}
                   >
-                    Ouvrir les inscriptions
+                    Cloturer
                   </Button>
-                )}
-                {periodStatus === 'a-venir' && (
+                ) : (
                   <Button
                     size="sm"
                     className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs"
-                    onClick={() => setPeriodStatus('en-cours')}
+                    onClick={() => handleTogglePeriod(true)}
+                    disabled={isTogglingPeriod}
                   >
                     Ouvrir les inscriptions
                   </Button>
@@ -484,6 +462,11 @@ export function InscriptionPedagogiquePage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
+                    {isListLoading && (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-6 text-xs text-gray-400">Chargement...</TableCell>
+                      </TableRow>
+                    )}
                     {filteredStudents.map((student, index) => (
                       <motion.tr
                         key={student.id}
@@ -790,10 +773,11 @@ export function InscriptionPedagogiquePage() {
                   <div className="flex justify-end pt-1">
                     <Button
                       className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-sm"
-                      disabled={!selectedStudent || selectedCredits < minCredits || selectedCredits > maxCredits}
+                      disabled={!selectedStudent || selectedCredits < minCredits || selectedCredits > maxCredits || isSubmittingRegistration || !registrationOpen}
+                      onClick={handleValidateRegistration}
                     >
                       <FileCheck className="size-4 mr-2" />
-                      Valider l&apos;inscription
+                      {isSubmittingRegistration ? 'Enregistrement...' : "Valider l'inscription"}
                     </Button>
                   </div>
                 </div>

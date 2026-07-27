@@ -2,6 +2,9 @@
 
 import { exportToExcel } from '@/lib/export'
 import { useState, useMemo } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
+import { useExamScheduling } from '@/lib/api-hooks'
 import { motion } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -80,38 +83,6 @@ interface RoomInfo {
   conflictDetail?: string
 }
 
-// ─── Demo Data ────────────────────────────────────────────────────────────────
-
-const examEntries: ExamEntry[] = [
-  { id: '1', date: '07/07/2025', heure: '08:00 - 10:00', ue: 'Droit Civil', code: 'DR101', programme: 'Droit', niveau: 'L1', salle: 'Amphitheatre A', surveillant: 'Dr. MAHAMAT Ali', effectif: 180, statut: 'confirme' },
-  { id: '2', date: '07/07/2025', heure: '10:30 - 12:30', ue: 'Algorithmique', code: 'INFO201', programme: 'Informatique', niveau: 'L2', salle: 'Labo Info 1', surveillant: 'Mme KHAMIS Fatime', effectif: 28, statut: 'confirme' },
-  { id: '3', date: '07/07/2025', heure: '14:00 - 16:00', ue: 'Litterature Africaine', code: 'LIT301', programme: 'Lettres', niveau: 'L3', salle: 'Salle 101', surveillant: 'Dr. ADAM Khadija', effectif: 55, statut: 'planifie' },
-  { id: '4', date: '09/07/2025', heure: '08:00 - 10:00', ue: 'Macroeconomie', code: 'ECO102', programme: 'Sciences', niveau: 'L1', salle: 'Amphitheatre A', surveillant: 'Prof. HASSAN Djibril', effectif: 195, statut: 'confirme' },
-  { id: '5', date: '09/07/2025', heure: '10:30 - 12:30', ue: 'Physique', code: 'SCI201', programme: 'Sciences', niveau: 'L2', salle: 'Salle 102', surveillant: 'Dr. OUMAR Ibrahim', effectif: 38, statut: 'planifie' },
-  { id: '6', date: '09/07/2025', heure: '14:00 - 16:00', ue: 'Droit Commercial', code: 'DR202', programme: 'Droit', niveau: 'L2', salle: 'Salle 101', surveillant: 'Mme FATIME Zenab', effectif: 52, statut: 'en_cours' },
-  { id: '7', date: '11/07/2025', heure: '08:00 - 10:00', ue: 'Bases de donnees', code: 'INFO301', programme: 'Informatique', niveau: 'L3', salle: 'Labo Info 2', surveillant: 'Dr. BACHAR Ali', effectif: 26, statut: 'planifie' },
-  { id: '8', date: '11/07/2025', heure: '10:30 - 12:30', ue: 'Philosophie du droit', code: 'DR301', programme: 'Droit', niveau: 'L3', salle: 'Amphitheatre A', surveillant: 'Prof. ABDALLAH Fadoul', effectif: 145, statut: 'confirme' },
-  { id: '9', date: '11/07/2025', heure: '14:00 - 16:00', ue: 'Statistiques', code: 'SCI301', programme: 'Sciences', niveau: 'L3', salle: 'Salle 102', surveillant: 'Mme AHMAT Achta', effectif: 35, statut: 'planifie' },
-  { id: '10', date: '14/07/2025', heure: '08:00 - 10:00', ue: 'Reseaux informatiques', code: 'INFO401', programme: 'Informatique', niveau: 'M1', salle: 'Labo Info 1', surveillant: 'Dr. MOUSSA Adoum', effectif: 22, statut: 'planifie' },
-  { id: '11', date: '14/07/2025', heure: '10:30 - 12:30', ue: 'Droit international', code: 'DR401', programme: 'Droit', niveau: 'M1', salle: 'Salle de conference', surveillant: 'Prof. ISSA Mahamat', effectif: 85, statut: 'confirme' },
-  { id: '12', date: '14/07/2025', heure: '14:00 - 16:00', ue: 'Chimie organique', code: 'SCI102', programme: 'Sciences', niveau: 'L1', salle: 'Salle 101', surveillant: 'Dr. HAMID Oumar', effectif: 48, statut: 'planifie' },
-  { id: '13', date: '16/07/2025', heure: '08:00 - 10:00', ue: 'Intelligence artificielle', code: 'INFO501', programme: 'Informatique', niveau: 'M2', salle: 'Labo Info 2', surveillant: 'Dr. KHADIDJA Abakar', effectif: 18, statut: 'planifie' },
-  { id: '14', date: '16/07/2025', heure: '10:30 - 12:30', ue: 'Linguistique', code: 'LIT201', programme: 'Lettres', niveau: 'L2', salle: 'Salle 102', surveillant: 'Mme BICHARA Hawa', effectif: 40, statut: 'confirme' },
-  { id: '15', date: '16/07/2025', heure: '14:00 - 16:00', ue: 'Microeconomie', code: 'ECO201', programme: 'Sciences', niveau: 'L2', salle: 'Amphitheatre A', surveillant: 'Prof. HAROUN Meriam', effectif: 165, statut: 'termine' },
-  { id: '16', date: '18/07/2025', heure: '08:00 - 10:00', ue: 'Droit penal', code: 'DR302', programme: 'Droit', niveau: 'L3', salle: 'Salle de conference', surveillant: 'Dr. ADOUM Abdoulaye', effectif: 92, statut: 'planifie' },
-  { id: '17', date: '18/07/2025', heure: '10:30 - 12:30', ue: 'Geologie', code: 'SCI202', programme: 'Sciences', niveau: 'L2', salle: 'Salle 101', surveillant: 'Mme ZAKARIA Mariam', effectif: 44, statut: 'planifie' },
-  { id: '18', date: '18/07/2025', heure: '14:00 - 16:00', ue: 'Systemes d exploitation', code: 'INFO202', programme: 'Informatique', niveau: 'L2', salle: 'Labo Info 1', surveillant: 'Dr. KHAMIS Fatime', effectif: 30, statut: 'annule' },
-]
-
-const rooms: RoomInfo[] = [
-  { id: '1', name: 'Salle 101', capacity: 60, occupancy: 55, hasConflict: false },
-  { id: '2', name: 'Salle 102', capacity: 40, occupancy: 38, hasConflict: false },
-  { id: '3', name: 'Amphitheatre A', capacity: 200, occupancy: 195, hasConflict: true, conflictDetail: 'Macroeconomie + Droit Civil (09/07 08:00)' },
-  { id: '4', name: 'Labo Info 1', capacity: 30, occupancy: 28, hasConflict: false },
-  { id: '5', name: 'Labo Info 2', capacity: 30, occupancy: 26, hasConflict: false },
-  { id: '6', name: 'Salle de conference', capacity: 150, occupancy: 85, hasConflict: true, conflictDetail: 'Droit international + Droit penal (14/07 10:30)' },
-]
-
 // ─── Status Config ─────────────────────────────────────────────────────────────
 
 const statusConfig: Record<ExamStatus, { label: string; className: string }> = {
@@ -129,13 +100,10 @@ const programColorMap: Record<string, { bg: string; border: string; text: string
   Sciences: { bg: 'bg-purple-50', border: 'border-l-purple-400', text: 'text-purple-700' },
 }
 
-const weekDays = ['Lun 07', 'Mar 08', 'Mer 09', 'Jeu 10', 'Ven 11', 'Sam 12', 'Lun 14']
-const weekDates = ['07/07/2025', '08/07/2025', '09/07/2025', '10/07/2025', '11/07/2025', '12/07/2025', '14/07/2025']
-const timeSlots = ['08:00 - 10:00', '10:30 - 12:30', '14:00 - 16:00']
-
 // ─── Component ─────────────────────────────────────────────────────────────────
 
 export function ExamSchedulingPage() {
+  const queryClient = useQueryClient()
   const [selectedSession, setSelectedSession] = useState('sn-s1')
   const [selectedNiveau, setSelectedNiveau] = useState('all')
   const [filterProgramme, setFilterProgramme] = useState('all')
@@ -145,6 +113,10 @@ export function ExamSchedulingPage() {
   const [dateDebut, setDateDebut] = useState('07/07/2025')
   const [dateFin, setDateFin] = useState('18/07/2025')
 
+  const { data, isLoading } = useExamScheduling()
+  const examEntries: ExamEntry[] = useMemo(() => data?.examEntries ?? [], [data])
+  const rooms: RoomInfo[] = useMemo(() => data?.rooms ?? [], [data])
+
   // ─── Filtered Exams ─────────────────────────────────────────────────────
   const filteredExams = useMemo(() => {
     return examEntries.filter(e => {
@@ -153,17 +125,28 @@ export function ExamSchedulingPage() {
       if (filterStatut !== 'all' && e.statut !== filterStatut) return false
       return true
     })
-  }, [filterProgramme, filterSalle, filterStatut])
+  }, [examEntries, filterProgramme, filterSalle, filterStatut])
 
   // ─── Stats ──────────────────────────────────────────────────────────────
-  const stats = useMemo(() => ({
-    total: 48,
-    enCours: 12,
-    termines: 28,
-    conflits: 2,
-  }), [])
+  const stats = data?.stats ?? { total: 0, enCours: 0, termines: 0, conflits: 0 }
 
-  // ─── Weekly Calendar Data ───────────────────────────────────────────────
+  // ─── Weekly Calendar Data — built from the real distinct exam dates present,
+  //     not a hardcoded July 2025 week ─────────────────────────────────────
+  const weekDates = useMemo(() => {
+    return Array.from(new Set(examEntries.map(e => e.date))).sort((a, b) => {
+      const [da, ma, ya] = a.split('/').map(Number)
+      const [db, mb, yb] = b.split('/').map(Number)
+      return new Date(ya, ma - 1, da).getTime() - new Date(yb, mb - 1, db).getTime()
+    }).slice(0, 7)
+  }, [examEntries])
+  const weekDays = weekDates.map(d => {
+    const [day, month] = d.split('/')
+    return `${day}/${month}`
+  })
+  const timeSlots = useMemo(() => {
+    return Array.from(new Set(examEntries.map(e => e.heure))).sort()
+  }, [examEntries])
+
   const calendarExams = useMemo(() => {
     const map: Record<string, ExamEntry[]> = {}
     weekDates.forEach(d => { map[d] = [] })
@@ -173,30 +156,73 @@ export function ExamSchedulingPage() {
       }
     })
     return map
-  }, [])
+  }, [examEntries, weekDates])
 
-  // ─── Exam per Day Stats ─────────────────────────────────────────────────
+  // ─── Exam per Day Stats — real counts per real date, not a fixed 9-day list ──
   const examsPerDay = useMemo(() => {
-    const dayLabels = ['Lun 07', 'Mar 08', 'Mer 09', 'Jeu 10', 'Ven 11', 'Sam 12', 'Lun 14', 'Mer 16', 'Ven 18']
-    const dayDateMap: Record<string, string> = {
-      'Lun 07': '07/07/2025', 'Mar 08': '08/07/2025', 'Mer 09': '09/07/2025',
-      'Jeu 10': '10/07/2025', 'Ven 11': '11/07/2025', 'Sam 12': '12/07/2025',
-      'Lun 14': '14/07/2025', 'Mer 16': '16/07/2025', 'Ven 18': '18/07/2025',
-    }
-    return dayLabels.map(label => {
-      const date = dayDateMap[label]
-      const count = examEntries.filter(e => e.date === date).length
-      return { label, count }
-    })
-  }, [])
+    return weekDates.map(date => ({
+      label: date.slice(0, 5),
+      count: examEntries.filter(e => e.date === date).length,
+    }))
+  }, [examEntries, weekDates])
   const maxExamsPerDay = Math.max(...examsPerDay.map(d => d.count), 1)
 
-  // ─── Supervisor Stats ───────────────────────────────────────────────────
+  // ─── Supervisor Stats — real: each non-cancelled exam needs one supervisor ──
   const supervisorStats = useMemo(() => {
-    const assigned = new Set(examEntries.filter(e => e.statut !== 'annule').map(e => e.surveillant)).size
-    const needed = 52
-    return { assigned, needed }
-  }, [])
+    const active = examEntries.filter(e => e.statut !== 'annule')
+    const assigned = active.filter(e => e.surveillant !== '—').length
+    return { assigned, needed: active.length }
+  }, [examEntries])
+
+  // ─── Create / status-update actions ─────────────────────────────────────
+  const [showNewExamDialog, setShowNewExamDialog] = useState(false)
+  const [isCreatingExam, setIsCreatingExam] = useState(false)
+  const [newExam, setNewExam] = useState({ examDate: '', startTime: '08:00', endTime: '10:00', roomId: '', sessionType: 'NORMALE' })
+
+  const handleCreateExam = async () => {
+    if (!newExam.examDate || !newExam.startTime || !newExam.endTime) {
+      toast.error('Date, heure de debut et heure de fin sont requises.')
+      return
+    }
+    setIsCreatingExam(true)
+    try {
+      const res = await fetch('/api/exam-scheduling', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          examDate: newExam.examDate,
+          startTime: newExam.startTime,
+          endTime: newExam.endTime,
+          roomId: newExam.roomId || undefined,
+          sessionType: newExam.sessionType,
+        }),
+      })
+      if (!res.ok) throw new Error('failed')
+      toast.success('Examen planifie')
+      setShowNewExamDialog(false)
+      setNewExam({ examDate: '', startTime: '08:00', endTime: '10:00', roomId: '', sessionType: 'NORMALE' })
+      queryClient.invalidateQueries({ queryKey: ['examScheduling'] })
+    } catch {
+      toast.error("Echec de la planification de l'examen")
+    } finally {
+      setIsCreatingExam(false)
+    }
+  }
+
+  const updateExamStatus = async (id: string, status: string) => {
+    try {
+      const res = await fetch(`/api/exam-scheduling?id=${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      })
+      if (!res.ok) throw new Error('failed')
+      toast.success('Statut mis a jour')
+      queryClient.invalidateQueries({ queryKey: ['examScheduling'] })
+    } catch {
+      toast.error('Echec de la mise a jour du statut')
+    }
+  }
 
   return (
     <div className="space-y-5">
@@ -212,6 +238,10 @@ export function ExamSchedulingPage() {
           <p className="text-sm text-gray-500">Gestion des sessions et planification des examens</p>
         </div>
         <div className="flex items-center gap-2">
+          <Button size="sm" className="text-xs bg-[#2d7a4f] hover:bg-[#236b40] text-white" onClick={() => setShowNewExamDialog(true)}>
+            <Calendar className="size-3.5 mr-1.5" />
+            Planifier un examen
+          </Button>
           <Button variant="outline" size="sm" className="text-xs" onClick={() => exportToExcel(filteredExams, 'export_exam-scheduling')}>
             <Download className="size-3.5 mr-1.5" />
             Exporter
@@ -553,6 +583,16 @@ export function ExamSchedulingPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
+                  {isLoading && (
+                    <TableRow>
+                      <TableCell colSpan={10} className="text-center py-6 text-xs text-gray-400">Chargement...</TableCell>
+                    </TableRow>
+                  )}
+                  {!isLoading && filteredExams.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={10} className="text-center py-6 text-xs text-gray-400">Aucun examen planifie pour le moment</TableCell>
+                    </TableRow>
+                  )}
                   {filteredExams.map((exam) => {
                     const colors = programColorMap[exam.programme]
                     return (
@@ -587,11 +627,11 @@ export function ExamSchedulingPage() {
                                 <Pencil className="size-3.5 mr-2" />
                                 Modifier
                               </DropdownMenuItem>
-                              <DropdownMenuItem className="text-xs text-[#2d7a4f]">
+                              <DropdownMenuItem className="text-xs text-[#2d7a4f]" onClick={() => updateExamStatus(exam.id, 'CONFIRME')}>
                                 <CheckCircle2 className="size-3.5 mr-2" />
                                 Confirmer
                               </DropdownMenuItem>
-                              <DropdownMenuItem className="text-xs text-[#c62828]">
+                              <DropdownMenuItem className="text-xs text-[#c62828]" onClick={() => updateExamStatus(exam.id, 'ANNULE')}>
                                 <XCircle className="size-3.5 mr-2" />
                                 Annuler
                               </DropdownMenuItem>
@@ -770,20 +810,80 @@ export function ExamSchedulingPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Progress value={Math.round((supervisorStats.assigned / supervisorStats.needed) * 100)} className="h-2.5 flex-1" />
+                  <Progress value={supervisorStats.needed > 0 ? Math.round((supervisorStats.assigned / supervisorStats.needed) * 100) : 0} className="h-2.5 flex-1" />
                   <span className="text-[10px] font-medium text-[#2d7a4f]">
-                    {Math.round((supervisorStats.assigned / supervisorStats.needed) * 100)}%
+                    {supervisorStats.needed > 0 ? Math.round((supervisorStats.assigned / supervisorStats.needed) * 100) : 0}%
                   </span>
                 </div>
-                <p className="text-[10px] text-[#d4a853] flex items-center gap-1">
-                  <AlertTriangle className="size-3" />
-                  {supervisorStats.needed - supervisorStats.assigned} surveillants encore necessaires
-                </p>
+                {supervisorStats.needed - supervisorStats.assigned > 0 && (
+                  <p className="text-[10px] text-[#d4a853] flex items-center gap-1">
+                    <AlertTriangle className="size-3" />
+                    {supervisorStats.needed - supervisorStats.assigned} surveillants encore necessaires
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>
         </motion.div>
       </div>
+
+      {showNewExamDialog && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowNewExamDialog(false)}>
+          <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-[#1a2744] mb-4">Planifier un examen</h3>
+            <div className="space-y-3">
+              <Input
+                type="date"
+                className="h-9 text-sm"
+                value={newExam.examDate}
+                onChange={(e) => setNewExam((f) => ({ ...f, examDate: e.target.value }))}
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <Input
+                  type="time"
+                  className="h-9 text-sm"
+                  value={newExam.startTime}
+                  onChange={(e) => setNewExam((f) => ({ ...f, startTime: e.target.value }))}
+                />
+                <Input
+                  type="time"
+                  className="h-9 text-sm"
+                  value={newExam.endTime}
+                  onChange={(e) => setNewExam((f) => ({ ...f, endTime: e.target.value }))}
+                />
+              </div>
+              <Select value={newExam.roomId} onValueChange={(v) => setNewExam((f) => ({ ...f, roomId: v }))}>
+                <SelectTrigger className="h-9 text-sm">
+                  <SelectValue placeholder="Salle (optionnel)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {rooms.map((r) => (
+                    <SelectItem key={r.id} value={r.id}>{r.name} ({r.capacity} places)</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={newExam.sessionType} onValueChange={(v) => setNewExam((f) => ({ ...f, sessionType: v }))}>
+                <SelectTrigger className="h-9 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="NORMALE">Session Normale</SelectItem>
+                  <SelectItem value="RATTRAPAGE">Session de Rattrapage</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-[10px] text-gray-400">
+                L&apos;association a une UE et l&apos;affectation d&apos;un surveillant se font depuis la fiche de l&apos;examen une fois cree.
+              </p>
+            </div>
+            <div className="flex gap-2 mt-5">
+              <Button variant="outline" className="flex-1 text-xs" onClick={() => setShowNewExamDialog(false)}>Annuler</Button>
+              <Button className="flex-1 text-xs bg-[#2d7a4f] hover:bg-[#236b40] text-white" onClick={handleCreateExam} disabled={isCreatingExam}>
+                {isCreatingExam ? 'Creation...' : 'Planifier'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

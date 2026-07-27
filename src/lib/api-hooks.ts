@@ -174,6 +174,53 @@ export function useImportExport() {
   return useSimpleGet('importExport', '/api/import-export');
 }
 
+export function useExamScheduling() {
+  return useSimpleGet('examScheduling', '/api/exam-scheduling');
+}
+
+export function useHealth(studentId?: string) {
+  return useQuery({
+    queryKey: ['health', studentId],
+    queryFn: async () => {
+      const url = new URL('/api/health', window.location.origin);
+      if (studentId) url.searchParams.set('studentId', studentId);
+      const res = await fetch(url.toString());
+      if (!res.ok) throw new Error('Failed to fetch health data');
+      return res.json();
+    },
+  });
+}
+
+export function useDeliberation(params?: { id?: string; session?: string }) {
+  return useQuery({
+    queryKey: ['deliberation', params],
+    queryFn: async () => {
+      const url = new URL('/api/deliberation', window.location.origin);
+      if (params) {
+        Object.entries(params).forEach(([key, value]) => {
+          if (value !== undefined && value !== '') url.searchParams.append(key, value);
+        });
+      }
+      const res = await fetch(url.toString());
+      if (!res.ok) throw new Error('Failed to fetch deliberation data');
+      return res.json();
+    },
+  });
+}
+
+export function useInscriptionPedagogique(studentId?: string) {
+  return useQuery({
+    queryKey: ['inscriptionPedagogique', studentId],
+    queryFn: async () => {
+      const url = new URL('/api/inscription-pedagogique', window.location.origin);
+      if (studentId) url.searchParams.set('studentId', studentId);
+      const res = await fetch(url.toString());
+      if (!res.ok) throw new Error('Failed to fetch inscription pedagogique');
+      return res.json();
+    },
+  });
+}
+
 export function useResults(params?: { academicYearId?: string; studentId?: string; session?: string }) {
   return useQuery({
     queryKey: ['results', params],
