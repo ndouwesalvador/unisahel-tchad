@@ -4,7 +4,8 @@ import { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
 import { useAppStore } from '@/lib/store'
-import { useInstitution, useStructure } from '@/lib/api-hooks'
+import { useInstitution, useStructure, useHrStaff, useAcademicYears } from '@/lib/api-hooks'
+import { useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -13,6 +14,7 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Switch } from '@/components/ui/switch'
 import { Progress } from '@/components/ui/progress'
 import {
@@ -155,15 +157,6 @@ function mapApiFaculty(faculty: ApiFaculty): Faculty {
   }
 }
 
-// ─── Demo Data ───────────────────────────────────────────────────────────────
-// (academicYears has no backing API in this batch — left as static demo data)
-
-const academicYears = [
-  { id: 'ay1', label: '2025-2026', start: '2025-10-01', end: '2026-07-15', isCurrent: true },
-  { id: 'ay2', label: '2024-2025', start: '2024-10-01', end: '2025-07-15', isCurrent: false },
-  { id: 'ay3', label: '2023-2024', start: '2023-10-01', end: '2024-07-15', isCurrent: false },
-]
-
 const countries = [
   'Tchad', 'Cameroun', 'Niger', 'Senegal', 'Mali',
   'Burkina Faso', 'Cote d Ivoire', 'Congo', 'RDC', 'Benin', 'Togo'
@@ -172,9 +165,11 @@ const countries = [
 // ─── Header ──────────────────────────────────────────────────────────────────
 function InstitutionHeader() {
   const { goBack } = useAppStore()
-  const facultiesCount = useCountUp(3, 1200)
-  const programsCount = useCountUp(42, 1400)
-  const staffCount = useCountUp(156, 1300)
+  const { data: structureData } = useStructure() as { data: { stats?: { faculties: number; programs: number } } | undefined }
+  const { data: hrData } = useHrStaff() as { data: { stats?: { total: number } } | undefined }
+  const facultiesCount = useCountUp(structureData?.stats?.faculties ?? 0, 1200)
+  const programsCount = useCountUp(structureData?.stats?.programs ?? 0, 1400)
+  const staffCount = useCountUp(hrData?.stats?.total ?? 0, 1300)
 
   return (
     <div className="space-y-6">
@@ -705,6 +700,11 @@ function AcademiqueTab() {
     isLoading: boolean
     refetch: () => void
   }
+  const { data: academicYearsData } = useAcademicYears() as {
+    data: { data: { id: string; name: string; startDate: string; endDate: string; isCurrent: boolean }[] } | undefined
+  }
+  const queryClient = useQueryClient()
+  const academicYears = academicYearsData?.data ?? []
 
   const [system, setSystem] = useState('lmd')
   const [creditsSemester, setCreditsSemester] = useState('30')
@@ -713,6 +713,60 @@ function AcademiqueTab() {
   const [eliminationGrade, setEliminationGrade] = useState('7')
   const [initialized, setInitialized] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [showAddYear, setShowAddYear] = useState(false)
+  const [newYearName, setNewYearName] = useState('')
+  const [newYearStart, setNewYearStart] = useState('')
+  const [newYearEnd, setNewYearEnd] = useState('')
+  const [isSavingYear, setIsSavingYear] = useState(false)
+  const [settingCurrentId, setSettingCurrentId] = useState<string | null>(null)
+
+  const handleAddYear = async () => {
+    if (!newYearName || !newYearStart || !newYearEnd) {
+      toast.error('Champs requis', { description: "Nom, date de debut et date de fin sont obligatoires" })
+      return
+    }
+    setIsSavingYear(true)
+    try {
+      const res = await fetch('/api/academic-years', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newYearName, startDate: newYearStart, endDate: newYearEnd }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || "Echec de la creation")
+      }
+      toast.success('Annee academique creee')
+      queryClient.invalidateQueries({ queryKey: ['academicYears'] })
+      setShowAddYear(false)
+      setNewYearName('')
+      setNewYearStart('')
+      setNewYearEnd('')
+    } catch (error) {
+      toast.error('Erreur', { description: error instanceof Error ? error.message : "Echec de la creation" })
+    } finally {
+      setIsSavingYear(false)
+    }
+  }
+
+  const handleSetCurrentYear = async (id: string) => {
+    setSettingCurrentId(id)
+    try {
+      const res = await fetch('/api/academic-years', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      })
+      if (!res.ok) throw new Error("Echec de la mise a jour")
+      toast.success('Annee academique en cours mise a jour')
+      queryClient.invalidateQueries({ queryKey: ['academicYears'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboardStats'] })
+    } catch (error) {
+      toast.error('Erreur', { description: error instanceof Error ? error.message : "Echec de la mise a jour" })
+    } finally {
+      setSettingCurrentId(null)
+    }
+  }
 
   useEffect(() => {
     if (institutionQuery?.tenant && !initialized) {
@@ -816,46 +870,83 @@ function AcademiqueTab() {
               <CardTitle className="text-base">Annees academiques</CardTitle>
               <CardDescription>Gerez les annees academiques et definissez l&apos;annee en cours</CardDescription>
             </div>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={() => setShowAddYear(true)}>
               <Plus className="size-3 mr-1" />
               Ajouter
             </Button>
           </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-2">
-            {academicYears.map((year) => (
-              <div
-                key={year.id}
-                className={`flex items-center justify-between p-3 rounded-lg border ${
-                  year.isCurrent
-                    ? 'border-[#2d7a4f30] bg-[#2d7a4f08]'
-                    : 'border-gray-100 bg-white'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <Calendar className={`size-4 ${year.isCurrent ? 'text-[#2d7a4f]' : 'text-gray-400'}`} />
-                  <div>
-                    <p className={`font-medium text-sm ${year.isCurrent ? 'text-[#2d7a4f]' : 'text-[#1a2744]'}`}>
-                      {year.label}
-                    </p>
-                    <p className="text-xs text-gray-400">
-                      {year.start} au {year.end}
-                    </p>
+          {academicYears.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-4">Aucune annee academique configuree.</p>
+          ) : (
+            <div className="space-y-2">
+              {academicYears.map((year) => (
+                <div
+                  key={year.id}
+                  className={`flex items-center justify-between p-3 rounded-lg border ${
+                    year.isCurrent
+                      ? 'border-[#2d7a4f30] bg-[#2d7a4f08]'
+                      : 'border-gray-100 bg-white'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Calendar className={`size-4 ${year.isCurrent ? 'text-[#2d7a4f]' : 'text-gray-400'}`} />
+                    <div>
+                      <p className={`font-medium text-sm ${year.isCurrent ? 'text-[#2d7a4f]' : 'text-[#1a2744]'}`}>
+                        {year.name}
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        {new Date(year.startDate).toLocaleDateString('fr-FR')} au {new Date(year.endDate).toLocaleDateString('fr-FR')}
+                      </p>
+                    </div>
                   </div>
+                  {year.isCurrent ? (
+                    <Badge className="bg-[#2d7a4f] text-white text-xs">En cours</Badge>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs text-gray-500"
+                      disabled={settingCurrentId === year.id}
+                      onClick={() => handleSetCurrentYear(year.id)}
+                    >
+                      {settingCurrentId === year.id ? 'Mise a jour...' : 'Definir en cours'}
+                    </Button>
+                  )}
                 </div>
-                {year.isCurrent ? (
-                  <Badge className="bg-[#2d7a4f] text-white text-xs">En cours</Badge>
-                ) : (
-                  <Button variant="ghost" size="sm" className="text-xs text-gray-500">
-                    Definir en cours
-                  </Button>
-                )}
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
+
+      <Dialog open={showAddYear} onOpenChange={setShowAddYear}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Ajouter une annee academique</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label className="text-sm">Nom (ex: 2026-2027)</Label>
+              <Input value={newYearName} onChange={(e) => setNewYearName(e.target.value)} placeholder="2026-2027" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label className="text-sm">Date de debut</Label>
+                <Input type="date" value={newYearStart} onChange={(e) => setNewYearStart(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm">Date de fin</Label>
+                <Input type="date" value={newYearEnd} onChange={(e) => setNewYearEnd(e.target.value)} />
+              </div>
+            </div>
+            <Button className="w-full bg-[#2d7a4f] hover:bg-[#236b40] text-white" disabled={isSavingYear} onClick={handleAddYear}>
+              {isSavingYear ? 'Creation...' : "Creer l'annee academique"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Semester & grades configuration */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">

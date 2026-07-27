@@ -111,6 +111,14 @@ export function useHrStaff() {
   return useSimpleGet('hrStaff', '/api/hr');
 }
 
+export function useAcademicYears() {
+  return useSimpleGet('academicYears', '/api/academic-years');
+}
+
+export function useProfileActivity() {
+  return useSimpleGet('profileActivity', '/api/profile');
+}
+
 export function useAttendance() {
   return useSimpleGet('attendance', '/api/attendance');
 }

@@ -120,6 +120,18 @@ export const authConfig = {
       if (!user?.id) return
       const raw = user as unknown as Record<string, unknown>
       const tenantId = raw.tenantId as string
+
+      let ipAddress: string | undefined
+      let userAgent: string | undefined
+      try {
+        const { headers } = await import('next/headers')
+        const h = await headers()
+        ipAddress = h.get('x-forwarded-for')?.split(',')[0].trim() || undefined
+        userAgent = h.get('user-agent') || undefined
+      } catch {
+        // headers() is only available inside a request context - best effort only
+      }
+
       await db.auditLog.create({
         data: {
           tenantId,
@@ -127,7 +139,8 @@ export const authConfig = {
           action: 'SIGN_IN',
           entity: 'User',
           entityId: user.id,
-          details: JSON.stringify({ signInMethod: 'credentials', isNewUser }),
+          ipAddress,
+          details: JSON.stringify({ signInMethod: 'credentials', isNewUser, userAgent }),
         },
       })
     },

@@ -1,7 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { toast } from 'sonner'
+import { useQueryClient } from '@tanstack/react-query'
 import { useAppStore } from '@/lib/store'
+import { useProfileActivity } from '@/lib/api-hooks'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Input } from '@/components/ui/input'
@@ -28,13 +31,11 @@ import {
   Activity,
   Lock,
   Globe,
-  LogOut,
   Smartphone,
   Camera,
   Save,
   X,
   Clock,
-  MapPin,
   Monitor,
   Download,
   Edit3,
@@ -44,52 +45,17 @@ import {
   Pencil,
 } from 'lucide-react'
 
-// ─── Demo Data ────────────────────────────────────────────────────────────────
-
-const loginHistory = [
-  { id: '1', date: '06 Mars 2026, 08:23', ip: '192.168.1.45', device: 'Chrome / Windows', location: 'Niamey, Niger' },
-  { id: '2', date: '05 Mars 2026, 14:10', ip: '10.0.0.12', device: 'Firefox / macOS', location: 'Ouagadougou, Burkina' },
-  { id: '3', date: '04 Mars 2026, 09:45', ip: '172.16.0.88', device: 'Safari / iPhone', location: 'Dakar, Senegal' },
-  { id: '4', date: '03 Mars 2026, 16:30', ip: '192.168.2.101', device: 'Chrome / Android', location: 'Bamako, Mali' },
-  { id: '5', date: '02 Mars 2026, 07:55', ip: '10.10.5.22', device: 'Edge / Windows', location: 'Niamey, Niger' },
-]
-
-const activeSessions = [
-  { id: '1', device: 'Chrome / Windows', location: 'Niamey, Niger', lastActive: 'Actif maintenant', current: true },
-  { id: '2', device: 'Safari / iPhone', location: 'Dakar, Senegal', lastActive: 'Il y a 2 heures', current: false },
-  { id: '3', device: 'Firefox / macOS', location: 'Ouagadougou, Burkina', lastActive: 'Il y a 5 heures', current: false },
-]
-
-type ActivityType = 'login' | 'edit' | 'create' | 'delete' | 'export'
-
-interface ActivityEntry {
-  id: string
-  type: ActivityType
-  description: string
-  timestamp: string
-}
-
-const activityData: ActivityEntry[] = [
-  { id: '1', type: 'login', description: 'Connexion depuis Niamey, Niger', timestamp: '06 Mars 2026, 08:23' },
-  { id: '2', type: 'edit', description: 'Modification des informations de l\'etudiant Amadou Diallo', timestamp: '06 Mars 2026, 09:15' },
-  { id: '3', type: 'create', description: 'Creation d\'un nouveau programme: Master Data Science', timestamp: '05 Mars 2026, 11:30' },
-  { id: '4', type: 'export', description: 'Export de la liste des etudiants en PDF', timestamp: '05 Mars 2026, 10:00' },
-  { id: '5', type: 'delete', description: 'Suppression du document obsolete "Reglement_2022"', timestamp: '04 Mars 2026, 16:45' },
-  { id: '6', type: 'login', description: 'Connexion depuis Dakar, Senegal', timestamp: '04 Mars 2026, 09:45' },
-  { id: '7', type: 'edit', description: 'Modification de la maquette UE: Algorithmique avancee', timestamp: '04 Mars 2026, 14:20' },
-  { id: '8', type: 'create', description: 'Creation d\'une annonce: Rentrée universitaire 2026', timestamp: '03 Mars 2026, 08:10' },
-  { id: '9', type: 'export', description: 'Export des notes du semestre d\'automne en Excel', timestamp: '03 Mars 2026, 15:30' },
-  { id: '10', type: 'edit', description: 'Mise a jour des informations du departement Informatique', timestamp: '02 Mars 2026, 11:00' },
-  { id: '11', type: 'login', description: 'Connexion depuis Bamako, Mali', timestamp: '02 Mars 2026, 07:55' },
-  { id: '12', type: 'create', description: 'Ajout d\'un nouvel enseignant: Dr. Fatou Sow', timestamp: '01 Mars 2026, 13:25' },
-]
+type ActivityType = 'login' | 'edit' | 'create' | 'delete'
 
 const activityConfig: Record<ActivityType, { icon: React.ElementType; color: string; bg: string; label: string }> = {
   login: { icon: LogIn, color: 'text-[#2d7a4f]', bg: 'bg-[#2d7a4f10]', label: 'Connexion' },
   edit: { icon: Pencil, color: 'text-[#d4a853]', bg: 'bg-[#d4a85310]', label: 'Modification' },
   create: { icon: Edit3, color: 'text-[#2d7a4f]', bg: 'bg-[#2d7a4f10]', label: 'Creation' },
   delete: { icon: Trash2, color: 'text-red-500', bg: 'bg-red-50', label: 'Suppression' },
-  export: { icon: Download, color: 'text-[#1a2744]', bg: 'bg-[#1a274410]', label: 'Export' },
+}
+
+function formatDateTimeFr(iso: string) {
+  return new Date(iso).toLocaleString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
 // ─── Role Labels ──────────────────────────────────────────────────────────────
@@ -115,21 +81,38 @@ const roleLabels: Record<string, string> = {
 
 export function ProfilePage() {
   const { user } = useAppStore()
+  const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState('profil')
   const [isEditing, setIsEditing] = useState(false)
   const [twoFactor, setTwoFactor] = useState(false)
   const [emailNotif, setEmailNotif] = useState(true)
   const [pushNotif, setPushNotif] = useState(true)
   const [smsNotif, setSmsNotif] = useState(false)
+  const [isSavingProfile, setIsSavingProfile] = useState(false)
+  const [isChangingPassword, setIsChangingPassword] = useState(false)
+
+  const { data: profileQuery } = useProfileActivity() as {
+    data: {
+      loginHistory: { id: string; date: string; ip: string; device: string }[]
+      currentSession: { id: string; date: string; ip: string; device: string } | null
+      activity: { id: string; type: ActivityType; description: string; timestamp: string }[]
+      profile: { firstName: string; lastName: string; email: string; phone: string; hasPassword: boolean }
+    } | undefined
+  }
 
   // Form state
   const [formData, setFormData] = useState({
     firstName: user?.firstName || '',
     lastName: user?.lastName || '',
     email: user?.email || '',
-    phone: '+227 90 34 56 78',
-    address: 'Niamey, Niger',
+    phone: '',
   })
+
+  useEffect(() => {
+    if (profileQuery?.profile) {
+      setFormData((prev) => ({ ...prev, phone: profileQuery.profile.phone }))
+    }
+  }, [profileQuery])
 
   // Password state
   const [passwordData, setPasswordData] = useState({
@@ -143,8 +126,26 @@ export function ProfilePage() {
   const initials = `${user.firstName[0]}${user.lastName[0]}`
   const fullName = `${user.firstName} ${user.lastName}`
 
-  const handleSaveProfile = () => {
-    setIsEditing(false)
+  const handleSaveProfile = async () => {
+    setIsSavingProfile(true)
+    try {
+      const res = await fetch('/api/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ firstName: formData.firstName, lastName: formData.lastName, phone: formData.phone }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || 'Echec de la mise a jour')
+      }
+      toast.success('Profil mis a jour')
+      queryClient.invalidateQueries({ queryKey: ['profileActivity'] })
+      setIsEditing(false)
+    } catch (error) {
+      toast.error('Erreur', { description: error instanceof Error ? error.message : 'Echec de la mise a jour' })
+    } finally {
+      setIsSavingProfile(false)
+    }
   }
 
   const handleCancelEdit = () => {
@@ -152,14 +153,38 @@ export function ProfilePage() {
       firstName: user.firstName,
       lastName: user.lastName,
       email: user.email || '',
-      phone: '+227 90 34 56 78',
-      address: 'Niamey, Niger',
+      phone: profileQuery?.profile?.phone || '',
     })
     setIsEditing(false)
   }
 
-  const handleChangePassword = () => {
-    setPasswordData({ current: '', new: '', confirm: '' })
+  const handleChangePassword = async () => {
+    if (!passwordData.current || !passwordData.new) {
+      toast.error('Champs requis', { description: 'Mot de passe actuel et nouveau mot de passe requis' })
+      return
+    }
+    if (passwordData.new !== passwordData.confirm) {
+      toast.error('Les mots de passe ne correspondent pas')
+      return
+    }
+    setIsChangingPassword(true)
+    try {
+      const res = await fetch('/api/profile?action=password', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword: passwordData.current, newPassword: passwordData.new }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || 'Echec du changement de mot de passe')
+      }
+      toast.success('Mot de passe mis a jour')
+      setPasswordData({ current: '', new: '', confirm: '' })
+    } catch (error) {
+      toast.error('Erreur', { description: error instanceof Error ? error.message : 'Echec du changement de mot de passe' })
+    } finally {
+      setIsChangingPassword(false)
+    }
   }
 
   return (
@@ -200,9 +225,9 @@ export function ProfilePage() {
                 <Badge className="bg-[#2d7a4f] text-white border-0 text-xs font-medium">
                   {roleLabels[user.role] || user.role}
                 </Badge>
-                <span className="text-sm text-gray-500">{user.email || 'admin@unisahel.ne'}</span>
+                <span className="text-sm text-gray-500">{user.email || 'Non renseigne'}</span>
               </div>
-              <p className="text-sm text-gray-400 mt-0.5">{user.tenantName || 'Universite Abdou Moumouni de Niamey'}</p>
+              <p className="text-sm text-gray-400 mt-0.5">{user.tenantName || 'Etablissement non renseigne'}</p>
             </div>
             <Button
               variant="outline"
@@ -301,7 +326,7 @@ export function ProfilePage() {
                           className="h-9"
                         />
                       ) : (
-                        <p className="text-sm font-medium text-[#1a2744]">{user.email || 'admin@unisahel.ne'}</p>
+                        <p className="text-sm font-medium text-[#1a2744]">{user.email || 'Non renseigne'}</p>
                       )}
                     </div>
                     <div className="space-y-1.5">
@@ -313,19 +338,7 @@ export function ProfilePage() {
                           className="h-9"
                         />
                       ) : (
-                        <p className="text-sm font-medium text-[#1a2744]">{formData.phone}</p>
-                      )}
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs text-gray-500">Adresse</Label>
-                      {isEditing ? (
-                        <Input
-                          value={formData.address}
-                          onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                          className="h-9"
-                        />
-                      ) : (
-                        <p className="text-sm font-medium text-[#1a2744]">{formData.address}</p>
+                        <p className="text-sm font-medium text-[#1a2744]">{formData.phone || 'Non renseigne'}</p>
                       )}
                     </div>
                     {isEditing && (
@@ -333,10 +346,11 @@ export function ProfilePage() {
                         <Button
                           size="sm"
                           className="bg-[#2d7a4f] hover:bg-[#236b40] text-white"
+                          disabled={isSavingProfile}
                           onClick={handleSaveProfile}
                         >
                           <Save className="size-4 mr-1" />
-                          Enregistrer
+                          {isSavingProfile ? 'Enregistrement...' : 'Enregistrer'}
                         </Button>
                         <Button
                           variant="outline"
@@ -436,10 +450,11 @@ export function ProfilePage() {
                   <Button
                     size="sm"
                     className="bg-[#2d7a4f] hover:bg-[#236b40] text-white"
+                    disabled={isChangingPassword}
                     onClick={handleChangePassword}
                   >
                     <Lock className="size-4 mr-1" />
-                    Mettre a jour le mot de passe
+                    {isChangingPassword ? 'Mise a jour...' : 'Mettre a jour le mot de passe'}
                   </Button>
                 </CardContent>
               </Card>
@@ -475,78 +490,65 @@ export function ProfilePage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Adresse IP</TableHead>
-                        <TableHead className="hidden sm:table-cell">Appareil</TableHead>
-                        <TableHead className="hidden md:table-cell">Localisation</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {loginHistory.map((entry) => (
-                        <TableRow key={entry.id}>
-                          <TableCell className="text-sm">{entry.date}</TableCell>
-                          <TableCell className="text-sm font-mono text-gray-600">{entry.ip}</TableCell>
-                          <TableCell className="text-sm hidden sm:table-cell">
-                            <div className="flex items-center gap-1.5">
-                              <Monitor className="size-3.5 text-gray-400" />
-                              {entry.device}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-sm hidden md:table-cell">
-                            <div className="flex items-center gap-1.5">
-                              <MapPin className="size-3.5 text-gray-400" />
-                              {entry.location}
-                            </div>
-                          </TableCell>
+                  {(profileQuery?.loginHistory ?? []).length === 0 ? (
+                    <p className="text-sm text-gray-400 text-center py-6">Aucune connexion enregistree.</p>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Adresse IP</TableHead>
+                          <TableHead className="hidden sm:table-cell">Appareil</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {(profileQuery?.loginHistory ?? []).map((entry) => (
+                          <TableRow key={entry.id}>
+                            <TableCell className="text-sm">{formatDateTimeFr(entry.date)}</TableCell>
+                            <TableCell className="text-sm font-mono text-gray-600">{entry.ip}</TableCell>
+                            <TableCell className="text-sm hidden sm:table-cell">
+                              <div className="flex items-center gap-1.5">
+                                <Monitor className="size-3.5 text-gray-400" />
+                                {entry.device}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
                 </CardContent>
               </Card>
 
-              {/* Active Sessions */}
+              {/* Current Session */}
               <Card>
                 <CardHeader className="pb-4">
                   <CardTitle className="text-base font-semibold text-[#1a2744] flex items-center gap-2">
                     <Smartphone className="size-4 text-[#2d7a4f]" />
-                    Sessions actives
+                    Session actuelle
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {activeSessions.map((session) => (
-                    <div key={session.id} className="flex items-center justify-between p-3 rounded-lg border border-gray-100 bg-gray-50/50">
+                  {profileQuery?.currentSession ? (
+                    <div className="flex items-center justify-between p-3 rounded-lg border border-gray-100 bg-gray-50/50">
                       <div className="flex items-center gap-3">
                         <div className="p-2 rounded-lg bg-white border border-gray-200">
                           <Smartphone className="size-4 text-[#1a2744]" />
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <p className="text-sm font-medium text-[#1a2744]">{session.device}</p>
-                            {session.current && (
-                              <Badge className="bg-[#2d7a4f] text-white border-0 text-[10px] px-1.5 py-0">
-                                Actif
-                              </Badge>
-                            )}
+                            <p className="text-sm font-medium text-[#1a2744]">{profileQuery.currentSession.device}</p>
+                            <Badge className="bg-[#2d7a4f] text-white border-0 text-[10px] px-1.5 py-0">
+                              Actif
+                            </Badge>
                           </div>
-                          <p className="text-xs text-gray-500">{session.location} - {session.lastActive}</p>
+                          <p className="text-xs text-gray-500">Connecte depuis le {formatDateTimeFr(profileQuery.currentSession.date)}</p>
                         </div>
                       </div>
-                      {!session.current && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-red-500 hover:text-red-700 hover:bg-red-50 h-8"
-                        >
-                          <LogOut className="size-3.5 mr-1" />
-                          Deconnecter
-                        </Button>
-                      )}
                     </div>
-                  ))}
+                  ) : (
+                    <p className="text-sm text-gray-400 text-center py-4">Aucune information de session disponible.</p>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -693,7 +695,10 @@ export function ProfilePage() {
                     <div className="absolute left-[15px] top-2 bottom-2 w-px bg-gray-200" />
 
                     <div className="space-y-1">
-                      {activityData.map((entry) => {
+                      {(profileQuery?.activity ?? []).length === 0 && (
+                        <p className="text-sm text-gray-400 text-center py-6">Aucune activite recente.</p>
+                      )}
+                      {(profileQuery?.activity ?? []).map((entry) => {
                         const config = activityConfig[entry.type]
                         const IconComponent = config.icon
                         return (
@@ -713,7 +718,7 @@ export function ProfilePage() {
                                     </Badge>
                                   </div>
                                 </div>
-                                <span className="text-xs text-gray-400 whitespace-nowrap shrink-0">{entry.timestamp}</span>
+                                <span className="text-xs text-gray-400 whitespace-nowrap shrink-0">{formatDateTimeFr(entry.timestamp)}</span>
                               </div>
                             </div>
                           </div>

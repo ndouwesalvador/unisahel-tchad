@@ -278,6 +278,19 @@ function AnimatedStat({ value, label, icon: Icon }: { value: number; label: stri
 
 // ─── Component ──────────────────────────────────────────────────────────────────
 
+// Monday of the week containing today, shifted by `offset` weeks.
+function getWeekStart(offset: number): Date {
+  const now = new Date()
+  const day = now.getDay()
+  const diffToMonday = day === 0 ? -6 : 1 - day
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate() + diffToMonday + offset * 7)
+}
+
+function timeToMinutes(t: string): number {
+  const [h, m] = t.split(':').map(Number)
+  return h * 60 + (m || 0)
+}
+
 export function RoomBookingPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedRoom, setSelectedRoom] = useState('')
@@ -298,31 +311,35 @@ export function RoomBookingPage() {
   const rooms: Room[] = (roomsQuery?.data || []).map(mapRoom)
   const reservations: Reservation[] = (roomsQuery?.reservations || []).map(mapReservation)
 
-  // Weekly calendar demo data
+  // Real weekly calendar built from actual reservations for the displayed week
+  const weekStart = useMemo(() => getWeekStart(currentWeekOffset), [currentWeekOffset])
+  const weekLabel = useMemo(() => {
+    const end = new Date(weekStart)
+    end.setDate(end.getDate() + 4)
+    const fmt = (d: Date) => d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })
+    return `Semaine du ${fmt(weekStart)} au ${fmt(end)}`
+  }, [weekStart])
+
   const weeklyReservations = useMemo(() => {
     const data: Record<string, { slot: string; purpose: ReservationPurpose; room: string; organizer: string; duration: number }[]> = {}
-    const dayMap: Record<string, string[]> = {
-      'Lundi': ['08:00', '10:00', '14:00', '16:00'],
-      'Mardi': ['09:00', '14:00'],
-      'Mercredi': ['08:00', '10:00', '14:00'],
-      'Jeudi': ['08:00', '16:00'],
-      'Vendredi': ['09:00', '14:00'],
-    }
-    const purposes: ReservationPurpose[] = ['Cours', 'Conference', 'Reunion', 'Examen']
-    const rooms = ['Amphi 500', 'Salle Tchad', 'Labo Informatique', 'Salle de conference']
-    const organizers = ['Dr. MAHAMAT Ali', 'Mme KHAMIS Fatime', 'Prof. ABDALLAH Fadoul', 'Dr. ISSA Mahamat']
+    for (const day of weekDays) data[day] = []
 
-    Object.entries(dayMap).forEach(([day, slots]) => {
-      data[day] = slots.map((slot, i) => ({
-        slot,
-        purpose: purposes[i % purposes.length],
-        room: rooms[i % rooms.length],
-        organizer: organizers[i % organizers.length],
-        duration: 2,
-      }))
+    const dayDates = weekDays.map((_, i) => {
+      const d = new Date(weekStart)
+      d.setDate(d.getDate() + i)
+      return d.toISOString().slice(0, 10)
     })
+
+    for (const r of reservations) {
+      const dayIndex = dayDates.indexOf(r.date)
+      if (dayIndex === -1) continue
+      const day = weekDays[dayIndex]
+      const slot = timeSlots.find((s) => timeToMinutes(s) === timeToMinutes(r.startTime)) || r.startTime
+      const duration = Math.max(1, Math.round((timeToMinutes(r.endTime) - timeToMinutes(r.startTime)) / 60))
+      data[day].push({ slot, purpose: r.purpose, room: r.room, organizer: r.organizer, duration })
+    }
     return data
-  }, [])
+  }, [reservations, weekStart])
 
   // Filter reservations
   const filteredReservations = useMemo(() => {
@@ -614,7 +631,7 @@ export function RoomBookingPage() {
                     <ChevronLeft className="size-4" />
                   </Button>
                   <span className="text-xs font-medium text-gray-600 px-2">
-                    Semaine du 10 Mars 2025{currentWeekOffset !== 0 ? ` (${currentWeekOffset > 0 ? '+' : ''}${currentWeekOffset})` : ''}
+                    {weekLabel}
                   </span>
                   <Button
                     variant="outline"
@@ -645,7 +662,7 @@ export function RoomBookingPage() {
                       <div className="p-2 text-[10px] font-medium text-gray-500 border-r border-gray-200 flex items-center justify-center bg-gray-50/50 min-h-[44px]">
                         {slot}
                       </div>
-                      {weekDays.map(day => {
+                      {weekDays.map((day, dayIndex) => {
                         const reservs = weeklyReservations[day]?.filter(r => r.slot === slot) || []
                         return (
                           <div
@@ -653,7 +670,10 @@ export function RoomBookingPage() {
                             className="p-1 border-r border-gray-100 last:border-r-0 min-h-[44px] cursor-pointer hover:bg-[#2d7a4f05] transition-colors"
                             onClick={() => {
                               if (reservs.length === 0) {
+                                const d = new Date(weekStart)
+                                d.setDate(d.getDate() + dayIndex)
                                 setSelectedRoom('')
+                                setReservDate(d.toISOString().slice(0, 10))
                                 setReservStart(slot)
                                 setDialogOpen(true)
                               }
