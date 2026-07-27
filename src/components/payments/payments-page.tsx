@@ -3,8 +3,9 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { toast } from 'sonner'
 import { motion } from 'framer-motion'
+import { useQueryClient } from '@tanstack/react-query'
 import { useAppStore } from '@/lib/store'
-import { usePayments } from '@/lib/api-hooks'
+import { usePayments, useStudents, useDashboardStats } from '@/lib/api-hooks'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -136,9 +137,17 @@ export function PaymentsPage() {
   const [showNewPayment, setShowNewPayment] = useState(false)
   const [statusFilter, setStatusFilter] = useState('tous')
   const [methodeFilter, setMethodeFilter] = useState('tous')
-  const [newPayment, setNewPayment] = useState({ etudiant: '', montant: '', description: '', methode: '', reference: '' })
+  const [newPayment, setNewPayment] = useState({ studentId: '', studentLabel: '', montant: '', description: '', methode: '', reference: '' })
+  const [studentSearch, setStudentSearch] = useState('')
+  const [isSubmittingPayment, setIsSubmittingPayment] = useState(false)
+  const [remindingId, setRemindingId] = useState<string | null>(null)
 
+  const queryClient = useQueryClient()
   const { data: paymentsData, isLoading } = usePayments({ limit: 1000 })
+  const { data: studentMatches } = useStudents({ search: studentSearch, limit: 6 })
+  const showStudentDropdown = showNewPayment && studentSearch.length >= 2 && !newPayment.studentId
+  const { data: dashboardData } = useDashboardStats() as { data: { currentAcademicYear?: { id: string } } | undefined }
+  const currentAcademicYearId = dashboardData?.currentAcademicYear?.id
 
   const realPayments = useMemo(() => {
     if (!paymentsData?.data) return []
@@ -149,7 +158,7 @@ export function PaymentsPage() {
 
       let methode = 'cash'
       if (p.paymentMethod === 'MOBILE_MONEY') methode = 'mobile_money'
-      if (p.paymentMethod === 'BANK') methode = 'bank'
+      if (p.paymentMethod === 'BANK_TRANSFER') methode = 'bank'
 
       const date = new Date(p.createdAt).toLocaleDateString('fr-FR')
 
@@ -221,6 +230,113 @@ export function PaymentsPage() {
 
   const maxRevenue = Math.max(...revenueData.map(r => r.value), 1)
 
+  const methodApiMap: Record<string, string> = { cash: 'CASH', mobile_money: 'MOBILE_MONEY', bank: 'BANK_TRANSFER' }
+
+  const handleCreatePayment = async () => {
+    if (!newPayment.studentId || !newPayment.montant || !newPayment.methode) {
+      toast.error('Champs requis', { description: 'Etudiant, montant et methode sont obligatoires' })
+      return
+    }
+    if (!currentAcademicYearId) {
+      toast.error('Aucune annee academique active', { description: "Configurez une annee academique active dans Structure avant d'enregistrer un paiement." })
+      return
+    }
+    setIsSubmittingPayment(true)
+    try {
+      const res = await fetch('/api/payments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentId: newPayment.studentId,
+          academicYearId: currentAcademicYearId,
+          amount: Number(newPayment.montant),
+          paymentMethod: methodApiMap[newPayment.methode] || 'CASH',
+          description: newPayment.description || undefined,
+          transactionRef: newPayment.reference || undefined,
+          status: 'VALIDATED',
+        }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json.error || "Echec de l'enregistrement")
+      toast.success('Paiement enregistre', {
+        description: `Recu ${json.data?.receiptNumber ?? ''} - ${formatFCFA(Number(newPayment.montant))}`,
+      })
+      queryClient.invalidateQueries({ queryKey: ['payments'] })
+      setShowNewPayment(false)
+      setNewPayment({ studentId: '', studentLabel: '', montant: '', description: '', methode: '', reference: '' })
+      setStudentSearch('')
+    } catch (e) {
+      toast.error('Erreur', { description: e instanceof Error ? e.message : "Echec de l'enregistrement" })
+    } finally {
+      setIsSubmittingPayment(false)
+    }
+  }
+
+  const handlePrintReceipt = async (paymentId: string) => {
+    try {
+      const res = await fetch(`/api/payments?receipt=true&id=${paymentId}`)
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json.error || 'Recu introuvable')
+      const { payment, tenant } = json.data
+      const win = window.open('', '_blank', 'width=700,height=900')
+      if (!win) {
+        toast.error('Bloque par le navigateur', { description: 'Autorisez les fenetres popup pour imprimer le recu.' })
+        return
+      }
+      const student = payment.student
+      win.document.write(`
+        <html><head><title>Recu ${payment.receiptNumber || payment.id}</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 40px; color: #1a2744; }
+          h1 { font-size: 18px; margin-bottom: 4px; }
+          .muted { color: #6b7280; font-size: 12px; }
+          table { width: 100%; margin-top: 24px; border-collapse: collapse; }
+          td { padding: 8px 0; border-bottom: 1px solid #e5e7eb; font-size: 14px; }
+          td:first-child { color: #6b7280; width: 40%; }
+          .total { font-size: 20px; font-weight: bold; margin-top: 24px; }
+        </style></head><body>
+        <h1>${tenant?.name || 'Institution'}</h1>
+        <p class="muted">Recu de paiement ${payment.receiptNumber || ''}</p>
+        <table>
+          <tr><td>Etudiant</td><td>${student.firstName} ${student.lastName} (${student.matricule || '-'})</td></tr>
+          <tr><td>Programme</td><td>${student.currentProgram?.name || '-'}</td></tr>
+          <tr><td>Methode</td><td>${payment.paymentMethod}</td></tr>
+          <tr><td>Reference</td><td>${payment.transactionRef || '-'}</td></tr>
+          <tr><td>Statut</td><td>${payment.status}</td></tr>
+          <tr><td>Date</td><td>${new Date(payment.createdAt).toLocaleDateString('fr-FR')}</td></tr>
+        </table>
+        <p class="total">${formatFCFA(payment.amount)}</p>
+        <script>window.onload = () => window.print()</script>
+        </body></html>
+      `)
+      win.document.close()
+    } catch (e) {
+      toast.error('Erreur', { description: e instanceof Error ? e.message : 'Recu introuvable' })
+    }
+  }
+
+  const handleRemind = async (paymentId: string, studentName: string) => {
+    setRemindingId(paymentId)
+    try {
+      const res = await fetch('/api/payments?action=remind', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paymentId }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json.error || 'Echec de la relance')
+      toast.success('Relance envoyee', {
+        description: json.emailSent
+          ? `Email envoye a ${studentName}`
+          : `Notification creee pour ${studentName} (email non configure)`,
+      })
+    } catch (e) {
+      toast.error('Erreur', { description: e instanceof Error ? e.message : 'Echec de la relance' })
+    } finally {
+      setRemindingId(null)
+    }
+  }
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -252,7 +368,7 @@ export function PaymentsPage() {
                   <h1 className="text-2xl font-bold">Gestion des paiements</h1>
                   <p className="text-white/70 text-sm mt-1">Suivi des encaissements et des frais</p>
                 </div>
-                <Dialog open={showNewPayment} onOpenChange={setShowNewPayment}>
+                <Dialog open={showNewPayment} onOpenChange={(open) => { setShowNewPayment(open); if (!open) { setNewPayment({ studentId: '', studentLabel: '', montant: '', description: '', methode: '', reference: '' }); setStudentSearch('') } }}>
                   <DialogTrigger asChild>
                     <Button size="sm" className="bg-white/15 border border-white/25 text-white hover:bg-white/25 text-xs">
                       <Plus className="size-3.5 mr-1.5" />
@@ -266,10 +382,50 @@ export function PaymentsPage() {
                     <div className="space-y-4 py-4">
                       <div className="space-y-2">
                         <Label className="text-sm">Etudiant</Label>
-                        <div className="relative">
-                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
-                          <Input placeholder="Rechercher un etudiant..." className="pl-9" value={newPayment.etudiant} onChange={(e) => setNewPayment(p => ({ ...p, etudiant: e.target.value }))} />
-                        </div>
+                        {newPayment.studentId ? (
+                          <div className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+                            <span>{newPayment.studentLabel}</span>
+                            <button
+                              type="button"
+                              className="text-xs text-[#2d7a4f] hover:underline"
+                              onClick={() => setNewPayment((p) => ({ ...p, studentId: '', studentLabel: '' }))}
+                            >
+                              Changer
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
+                            <Input
+                              placeholder="Rechercher un etudiant (nom, matricule)..."
+                              className="pl-9"
+                              value={studentSearch}
+                              onChange={(e) => setStudentSearch(e.target.value)}
+                            />
+                            {showStudentDropdown && (
+                              <div className="absolute z-10 mt-1 w-full rounded-md border bg-white shadow-lg max-h-48 overflow-y-auto">
+                                {(studentMatches?.data ?? []).length === 0 ? (
+                                  <p className="px-3 py-2 text-xs text-gray-400">Aucun etudiant trouve</p>
+                                ) : (
+                                  studentMatches.data.map((s: { id: string; firstName: string; lastName: string; matricule?: string }) => (
+                                    <button
+                                      key={s.id}
+                                      type="button"
+                                      className="flex w-full flex-col items-start px-3 py-2 text-left text-sm hover:bg-gray-50"
+                                      onClick={() => {
+                                        setNewPayment((p) => ({ ...p, studentId: s.id, studentLabel: `${s.lastName.toUpperCase()} ${s.firstName}${s.matricule ? ` (${s.matricule})` : ''}` }))
+                                        setStudentSearch('')
+                                      }}
+                                    >
+                                      <span>{s.lastName.toUpperCase()} {s.firstName}</span>
+                                      <span className="text-[10px] text-gray-400">{s.matricule || '-'}</span>
+                                    </button>
+                                  ))
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                       <div className="space-y-2">
                         <Label className="text-sm">Montant (FCFA)</Label>
@@ -296,8 +452,8 @@ export function PaymentsPage() {
                         <Label className="text-sm">Reference</Label>
                         <Input placeholder="MM-2024-XXX" value={newPayment.reference} onChange={(e) => setNewPayment(p => ({ ...p, reference: e.target.value }))} />
                       </div>
-                      <Button className="w-full bg-[#2d7a4f] hover:bg-[#236b40] text-white" onClick={() => { setShowNewPayment(false); toast.success('Paiement enregistré', { description: `${newPayment.etudiant || 'Nouveau paiement'} - ${newPayment.montant || '0'} FCFA` }); setNewPayment({ etudiant: '', montant: '', description: '', methode: '', reference: '' }) }}>
-                        Enregistrer le paiement
+                      <Button className="w-full bg-[#2d7a4f] hover:bg-[#236b40] text-white" disabled={isSubmittingPayment} onClick={handleCreatePayment}>
+                        {isSubmittingPayment ? 'Enregistrement...' : 'Enregistrer le paiement'}
                       </Button>
                     </div>
                   </DialogContent>
@@ -755,15 +911,21 @@ export function PaymentsPage() {
                         <TableCell className="text-right py-2.5">
                           <div className="flex items-center justify-end gap-1">
                             {payment.statut === 'paye' && (
-                              <Button variant="ghost" size="sm" className="h-7 text-xs text-[#2d7a4f] hover:bg-[#2d7a4f10]" onClick={() => toast.success('Reçu généré', { description: `Reçu ${payment.reference} prêt pour impression` })}>
+                              <Button variant="ghost" size="sm" className="h-7 text-xs text-[#2d7a4f] hover:bg-[#2d7a4f10]" onClick={() => handlePrintReceipt(payment.id)}>
                                 <Printer className="size-3 mr-1" />
                                 Imprimer recu
                               </Button>
                             )}
                             {payment.statut === 'en_attente' && (
-                              <Button variant="ghost" size="sm" className="h-7 text-xs text-[#a67c00] hover:bg-[#a67c0010]" onClick={() => toast.success('Relance envoyée', { description: `Notification envoyée à ${payment.etudiant}` })}>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 text-xs text-[#a67c00] hover:bg-[#a67c0010]"
+                                disabled={remindingId === payment.id}
+                                onClick={() => handleRemind(payment.id, payment.etudiant)}
+                              >
                                 <RefreshCw className="size-3 mr-1" />
-                                Relancer
+                                {remindingId === payment.id ? 'Envoi...' : 'Relancer'}
                               </Button>
                             )}
                           </div>

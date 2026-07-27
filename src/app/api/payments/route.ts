@@ -5,6 +5,7 @@ import { resolveOwnStudentId, isStudentSelfRole } from '@/lib/auth/student-scope
 import { paymentQuerySchema, createPaymentSchema, updatePaymentSchema, validateQuery, validateBody, formatZodError } from '@/lib/validations/api'
 import { Prisma } from '@prisma/client'
 import { createNotification } from '@/lib/notifications'
+import { sendEmail } from '@/lib/email'
 
 async function getPaymentsHandler(user: SessionUser, tenantId: string, request: NextRequest) {
   try {
@@ -492,6 +493,54 @@ async function getPaymentStatsHandler(user: SessionUser, tenantId: string, reque
 // Mobile Money Helpers
 // ========================================
 
+// Sends a real reminder for a pending payment: an email to the student (if an
+// address is on file) plus a tenant audit-trail notification. There is no
+// per-user notification target in the schema, so this cannot page just the
+// student in-app - the email is the only channel that actually reaches them.
+async function remindPaymentHandler(user: SessionUser, tenantId: string, request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { paymentId } = body
+    if (!paymentId) {
+      return NextResponse.json({ error: 'paymentId is required' }, { status: 400 })
+    }
+
+    const payment = await db.payment.findFirst({
+      where: { id: paymentId, tenantId },
+      include: { student: { select: { firstName: true, lastName: true, email: true } } },
+    })
+    if (!payment) {
+      return NextResponse.json({ error: 'Payment not found' }, { status: 404 })
+    }
+    if (payment.status !== 'PENDING') {
+      return NextResponse.json({ error: 'Ce paiement n\'est pas en attente' }, { status: 409 })
+    }
+
+    const studentName = `${payment.student.firstName} ${payment.student.lastName}`
+    let emailSent = false
+    if (payment.student.email) {
+      const result = await sendEmail({
+        to: payment.student.email,
+        subject: 'Rappel de paiement en attente',
+        html: `<p>Bonjour ${payment.student.firstName},</p><p>Votre paiement de <strong>${payment.amount.toLocaleString('fr-FR')} ${payment.currency}</strong> est toujours en attente de validation. Merci de finaliser ce paiement ou de contacter la caisse pour toute question.</p>`,
+      })
+      emailSent = result.success
+    }
+
+    await createNotification(tenantId, {
+      type: 'warning',
+      category: 'Paiement',
+      title: 'Relance de paiement envoyee',
+      description: `Relance envoyee a ${studentName} pour un paiement de ${payment.amount.toLocaleString('fr-FR')} ${payment.currency} en attente${emailSent ? '' : ' (email non envoye - adresse manquante ou non configuree)'}.`,
+    })
+
+    return NextResponse.json({ ok: true, emailSent })
+  } catch (error) {
+    console.error('Remind payment error:', error)
+    return NextResponse.json({ error: 'Failed to send reminder' }, { status: 500 })
+  }
+}
+
 // No Mobile Money provider (Airtel/Orange/MTN/Moov) is configured yet - there
 // are no API credentials for any of them. Rather than faking a successful
 // initiation (which used to silently flip the payment to PENDING with a
@@ -663,6 +712,9 @@ export const POST = withTenantAuth(async (user: SessionUser, tenantId: string, r
   }
   if (action === 'mobile-money-webhook') {
     return mobileMoneyWebhookHandler(tenantId, request)
+  }
+  if (action === 'remind') {
+    return remindPaymentHandler(user, tenantId, request)
   }
   return createPaymentHandler(user, tenantId, request)
 }, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'CAISSE', 'SCOLARITE'])

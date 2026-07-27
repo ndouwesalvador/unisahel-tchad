@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     const sessionUser = session.user as SessionUser
 
     const body = await request.json()
-    const { type, studentId, tenantId, academicYearId, deliberationId, data } = body
+    const { type, studentId, tenantId, academicYearId, deliberationId, data, sign } = body
 
     if (!type || !tenantId) {
       return NextResponse.json({ error: 'Type et tenant requis' }, { status: 400 })
@@ -294,6 +294,10 @@ export async function POST(request: NextRequest) {
 
     const pdfBuffer = await renderPDF(DocumentComponent)
 
+    // "Signing" certifies the document as officially validated -- a student
+    // generating their own document can never self-certify it, only staff can.
+    const isSigned = Boolean(sign) && !ownStudentId
+
     // Save to database for verification
     await db.officialDocument.create({
       data: {
@@ -306,6 +310,8 @@ export async function POST(request: NextRequest) {
         verificationCode,
         status: 'GENERATED',
         generatedBy: tenantId,
+        validatedBy: isSigned ? sessionUser.id : undefined,
+        validatedAt: isSigned ? new Date() : undefined,
       },
     })
 

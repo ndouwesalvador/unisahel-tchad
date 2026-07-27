@@ -174,6 +174,10 @@ export function useImportExport() {
   return useSimpleGet('importExport', '/api/import-export');
 }
 
+export function useDocuments() {
+  return useSimpleGet('documents', '/api/documents');
+}
+
 export function useExamScheduling() {
   return useSimpleGet('examScheduling', '/api/exam-scheduling');
 }

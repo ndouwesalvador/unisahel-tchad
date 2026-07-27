@@ -9,6 +9,8 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { QrDisplay } from '@/components/ui/qr-display'
 import { useAppStore } from '@/lib/store'
+import { useQueryClient } from '@tanstack/react-query'
+import { useDocuments, useStudents } from '@/lib/api-hooks'
 import {
   Tooltip,
   TooltipContent,
@@ -37,12 +39,10 @@ import {
   Download,
   Eye,
   QrCode,
-  Printer,
   Shield,
   CheckCircle2,
   Clock,
   Stamp,
-  FileCheck,
   Award,
   BookOpen,
   CreditCard,
@@ -57,45 +57,31 @@ import {
   Zap,
 } from 'lucide-react'
 
-// ─── Demo Data ────────────────────────────────────────────────────────────────
-
+// Only types with a real backend template (see /api/documents/generate) are
+// selectable. The rest are listed for reference but marked "bientot disponible"
+// rather than silently generating the wrong document (previous behavior).
 const documentTypeList = [
-  { key: 'releve_notes', label: 'Releve de notes', icon: FileText, count: 34, tooltip: 'Releve officiel des notes par semestre, valide par le secretaire academique' },
-  { key: 'attestation_inscription', label: 'Attestation d\'inscription', icon: BookOpen, count: 89, tooltip: 'Attestation confirmant l\'inscription administrative de l\'etudiant' },
-  { key: 'certificat_scolarite', label: 'Certificat de scolarite', icon: ScrollText, count: 56, tooltip: 'Certificat prouvant la frequention reguliere des cours' },
-  { key: 'attestation_reussite', label: 'Attestation de reussite', icon: Award, count: 23, tooltip: 'Attestation officielle de reussite a un examen ou un diplome' },
-  { key: 'carte_etudiant', label: 'Carte etudiant', icon: CreditCard, count: 112, tooltip: 'Carte d\'identification etudiante avec photo et QR code' },
-  { key: 'recu_paiement', label: 'Recu de paiement', icon: FileCheck, count: 78, tooltip: 'Recu officiel de paiement des frais de scolarite' },
-  { key: 'pv_deliberation', label: 'PV de deliberation', icon: ClipboardList, count: 12, tooltip: 'Proces-verbal officiel des deliberations du jury' },
-  { key: 'attestation_stage', label: 'Attestation de stage', icon: Briefcase, count: 18, tooltip: 'Attestation confirmant l\'accomplissement d\'un stage professionnel' },
+  { key: 'releve_notes', apiType: 'RELEVE_NOTES', label: 'Releve de notes', icon: FileText, implemented: true, tooltip: 'Releve officiel des notes par semestre, valide par le secretaire academique' },
+  { key: 'attestation_inscription', apiType: 'ATTESTATION_INSCRIPTION', label: 'Attestation d\'inscription', icon: BookOpen, implemented: true, tooltip: 'Attestation confirmant l\'inscription administrative de l\'etudiant' },
+  { key: 'certificat_scolarite', apiType: 'CERTIFICAT_SCOLARITE', label: 'Certificat de scolarite', icon: ScrollText, implemented: true, tooltip: 'Certificat prouvant la frequentation reguliere des cours' },
+  { key: 'pv_deliberation', apiType: 'PV_DELIBERATION', label: 'PV de deliberation', icon: ClipboardList, implemented: true, tooltip: 'Proces-verbal officiel des deliberations du jury' },
+  { key: 'attestation_reussite', apiType: null, label: 'Attestation de reussite', icon: Award, implemented: false, tooltip: 'Bientot disponible' },
+  { key: 'carte_etudiant', apiType: null, label: 'Carte etudiant', icon: CreditCard, implemented: false, tooltip: 'Bientot disponible' },
+  { key: 'attestation_stage', apiType: null, label: 'Attestation de stage', icon: Briefcase, implemented: false, tooltip: 'Bientot disponible' },
 ]
 
 interface GeneratedDoc {
   id: string
   type: string
   typeKey: string
+  studentId: string | null
+  academicYearId: string | null
   etudiant: string
   matricule: string
   date: string
   statut: 'signe' | 'genere' | 'en_attente'
   codeVerification: string
 }
-
-const generatedDocuments: GeneratedDoc[] = [
-  { id: '1', type: 'Releve de notes', typeKey: 'releve_notes', etudiant: 'ABAKAR Adam Hassane', matricule: 'UDN/L2/2024/001', date: '20/01/2025', statut: 'signe', codeVerification: 'VER-UDN-2024-RN-001' },
-  { id: '2', type: 'Attestation d\'inscription', typeKey: 'attestation_inscription', etudiant: 'ABAKAR Adam Hassane', matricule: 'UDN/L2/2024/001', date: '15/09/2024', statut: 'signe', codeVerification: 'VER-UDN-2024-AI-001' },
-  { id: '3', type: 'Certificat de scolarite', typeKey: 'certificat_scolarite', etudiant: 'ABAKAR Adam Hassane', matricule: 'UDN/L2/2024/001', date: '18/09/2024', statut: 'signe', codeVerification: 'VER-UDN-2024-CS-001' },
-  { id: '4', type: 'Releve de notes', typeKey: 'releve_notes', etudiant: 'KHAMIS Fatime', matricule: 'UDN/L3/2024/002', date: '20/01/2025', statut: 'signe', codeVerification: 'VER-UDN-2024-RN-002' },
-  { id: '5', type: 'Attestation d\'inscription', typeKey: 'attestation_inscription', etudiant: 'KHAMIS Fatime', matricule: 'UDN/L3/2024/002', date: '12/09/2024', statut: 'signe', codeVerification: 'VER-UDN-2024-AI-002' },
-  { id: '6', type: 'Attestation de reussite', typeKey: 'attestation_reussite', etudiant: 'DOUMNGAR Zakaria', matricule: 'UDN/L3/2024/006', date: '05/07/2024', statut: 'signe', codeVerification: 'VER-UDN-2024-AR-001' },
-  { id: '7', type: 'Certificat de scolarite', typeKey: 'certificat_scolarite', etudiant: 'DJIBRINE Amina', matricule: 'UDN/L1/2024/003', date: '20/09/2024', statut: 'genere', codeVerification: 'VER-UDN-2024-CS-002' },
-  { id: '8', type: 'Releve de notes', typeKey: 'releve_notes', etudiant: 'MAHAMAT Youssouf', matricule: 'UDN/L2/2024/004', date: '', statut: 'en_attente', codeVerification: '' },
-  { id: '9', type: 'Carte etudiant', typeKey: 'carte_etudiant', etudiant: 'HISSEIN Mariam', matricule: 'UDN/L1/2024/007', date: '15/09/2024', statut: 'signe', codeVerification: 'VER-UDN-2024-CE-001' },
-  { id: '10', type: 'Recu de paiement', typeKey: 'recu_paiement', etudiant: 'AHMAT Achta', matricule: 'UDN/M1/2024/016', date: '10/01/2025', statut: 'genere', codeVerification: 'VER-UDN-2025-RP-001' },
-  { id: '11', type: 'PV de deliberation', typeKey: 'pv_deliberation', etudiant: 'NGARNDMI Halime', matricule: 'UDN/L3/2024/008', date: '28/06/2024', statut: 'signe', codeVerification: 'VER-UDN-2024-PV-001' },
-  { id: '12', type: 'Attestation de stage', typeKey: 'attestation_stage', etudiant: 'SALEH Hassana', matricule: 'UDN/L2/2024/009', date: '15/02/2025', statut: 'genere', codeVerification: 'VER-UDN-2025-AS-001' },
-  { id: '13', type: 'Certificat de scolarite', typeKey: 'certificat_scolarite', etudiant: 'BICHARA Hawa', matricule: 'UDN/L1/2024/010', date: '', statut: 'en_attente', codeVerification: '' },
-]
 
 // ASCII keys for status config - NO accented characters
 const statusConfig: Record<string, { label: string; className: string; icon: React.ElementType }> = {
@@ -139,35 +125,44 @@ function useCountUp(target: number, duration: number = 1400) {
 
 export function DocumentsPage() {
   const { user, setView } = useAppStore()
+  const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
   const [selectedType, setSelectedType] = useState('')
-  const [selectedStudent, setSelectedStudent] = useState('')
+  const [selectedStudentId, setSelectedStudentId] = useState('')
+  const [selectedStudentLabel, setSelectedStudentLabel] = useState('')
+  const [studentSearch, setStudentSearch] = useState('')
   const [isGenerating, setIsGenerating] = useState(false)
   const [isGeneratingSigned, setIsGeneratingSigned] = useState(false)
   const [qrCode, setQrCode] = useState<string | null>(null)
   const qrCodeRef = useRef<string | null>(null)
 
-  const animatedDocsMonth = useCountUp(127, 1400)
-  const animatedPending = useCountUp(8, 1200)
+  const { data: docsData } = useDocuments() as {
+    data: { documents: Array<{ id: string; type: string; studentId: string | null; academicYearId: string | null; etudiant: string; matricule: string; date: string; statut: 'signe' | 'genere' | 'en_attente'; codeVerification: string }>; stats: { thisMonth: number; pending: number }; countByType: Record<string, number> } | undefined
+  }
+  const { data: studentMatches } = useStudents({ search: studentSearch, limit: 6 })
+  const showStudentDropdown = studentSearch.length >= 2 && !selectedStudentId
 
-  const mapTypeToApi = useCallback((key: string) => {
-    const map: Record<string, string> = {
-      releve_notes: 'RELEVE_NOTES',
-      attestation_inscription: 'ATTESTATION_INSCRIPTION',
-      certificat_scolarite: 'CERTIFICAT_SCOLARITE',
-      attestation_reussite: 'ATTESTATION_INSCRIPTION',
-      recu_paiement: 'RELEVE_NOTES',
-      pv_deliberation: 'PV_DELIBERATION',
-      attestation_stage: 'ATTESTATION_INSCRIPTION',
-      carte_etudiant: 'CERTIFICAT_SCOLARITE',
-    }
-    return map[key] || 'RELEVE_NOTES'
-  }, [])
+  const generatedDocuments: GeneratedDoc[] = (docsData?.documents ?? []).map((d) => ({
+    id: d.id,
+    type: documentTypeList.find((dt) => dt.apiType === d.type)?.label ?? d.type,
+    typeKey: documentTypeList.find((dt) => dt.apiType === d.type)?.key ?? d.type.toLowerCase(),
+    studentId: d.studentId,
+    academicYearId: d.academicYearId,
+    etudiant: d.etudiant,
+    matricule: d.matricule,
+    date: d.date ? new Date(d.date).toLocaleDateString('fr-FR') : '',
+    statut: d.statut,
+    codeVerification: d.codeVerification,
+  }))
 
-  const generateDoc = useCallback(async (sign: boolean = false) => {
-    if (!selectedType || !user) return
+  const animatedDocsMonth = useCountUp(docsData?.stats?.thisMonth ?? 0, 1400)
+  const animatedPending = useCountUp(docsData?.stats?.pending ?? 0, 1200)
+
+  const generateDoc = useCallback(async (sign: boolean = false, override?: { type: string; studentId: string | null; academicYearId: string | null }) => {
+    const apiType = override?.type ?? documentTypeList.find((dt) => dt.key === selectedType)?.apiType
+    if (!apiType || !user) return
     const loading = sign ? setIsGeneratingSigned : setIsGenerating
     loading(true)
 
@@ -176,25 +171,11 @@ export function DocumentsPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          type: mapTypeToApi(selectedType),
+          type: apiType,
           tenantId: user.tenantId,
-          studentId: selectedStudent || undefined,
-          academicYearId: undefined,
-          data: {
-            tenant: {
-              name: user.tenantName || 'Université',
-              shortName: user.tenantName,
-              address: '', city: '', phone: '', email: '',
-              rectorName: '', rectorTitle: 'Recteur',
-            },
-            student: {
-              firstName: selectedStudent || 'Étudiant', lastName: '',
-              matricule: 'MAT-001', program: 'Programme', level: 'L1',
-            },
-            academicYear: '2024-2025',
-            semester: 'Semestre 1',
-            students: [],
-          },
+          studentId: override ? override.studentId || undefined : selectedStudentId || undefined,
+          academicYearId: override?.academicYearId || undefined,
+          sign,
         }),
       })
 
@@ -209,7 +190,7 @@ export function DocumentsPage() {
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `${selectedType}_${Date.now()}.pdf`
+      a.download = `${apiType}_${Date.now()}.pdf`
       a.click()
       window.URL.revokeObjectURL(url)
 
@@ -221,6 +202,7 @@ export function DocumentsPage() {
       toast.success(sign ? 'Document généré et signé' : 'Document généré avec succès', {
         description: verificationCode ? `Code: ${verificationCode}` : 'Le fichier PDF a été téléchargé',
       })
+      queryClient.invalidateQueries({ queryKey: ['documents'] })
     } catch (error) {
       toast.error('Erreur de génération', {
         description: error instanceof Error ? error.message : 'Une erreur est survenue',
@@ -228,7 +210,25 @@ export function DocumentsPage() {
     } finally {
       loading(false)
     }
-  }, [selectedType, selectedStudent, user, mapTypeToApi])
+  }, [selectedType, selectedStudentId, user, queryClient])
+
+  const handleValidate = useCallback(async (id: string) => {
+    try {
+      const res = await fetch('/api/documents', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || 'Echec de la validation')
+      }
+      toast.success('Document valide')
+      queryClient.invalidateQueries({ queryKey: ['documents'] })
+    } catch (error) {
+      toast.error('Erreur', { description: error instanceof Error ? error.message : 'Echec de la validation' })
+    }
+  }, [queryClient])
 
   const filteredDocs = generatedDocuments.filter(d => {
     const matchSearch = search === '' ||
@@ -256,9 +256,9 @@ export function DocumentsPage() {
   const pipelineSigned = totalSigned
   const pipelineGenerated = generatedDocuments.filter(d => d.statut === 'genere').length
   const pipelinePending = totalPending
-  const signedPercent = Math.round((pipelineSigned / pipelineTotal) * 100)
-  const generatedPercent = Math.round((pipelineGenerated / pipelineTotal) * 100)
-  const pendingPercent = Math.round((pipelinePending / pipelineTotal) * 100)
+  const signedPercent = pipelineTotal > 0 ? Math.round((pipelineSigned / pipelineTotal) * 100) : 0
+  const generatedPercent = pipelineTotal > 0 ? Math.round((pipelineGenerated / pipelineTotal) * 100) : 0
+  const pendingPercent = pipelineTotal > 0 ? Math.round((pipelinePending / pipelineTotal) * 100) : 0
 
   return (
     <TooltipProvider>
@@ -301,9 +301,9 @@ export function DocumentsPage() {
                 <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/15">
                   <div className="flex items-center gap-2 mb-1">
                     <TrendingUp className="size-4 text-white/60" />
-                    <p className="text-[11px] text-white/70">Taux de conformite</p>
+                    <p className="text-[11px] text-white/70">Documents valides</p>
                   </div>
-                  <p className="text-2xl font-bold text-white">98,5%</p>
+                  <p className="text-2xl font-bold text-white">{signedPercent}%</p>
                 </div>
               </motion.div>
             </div>
@@ -465,38 +465,63 @@ export function DocumentsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   {documentTypeList.map(dt => (
-                    <SelectItem key={dt.key} value={dt.key}>{dt.label}</SelectItem>
+                    <SelectItem key={dt.key} value={dt.key} disabled={!dt.implemented}>
+                      {dt.label}{!dt.implemented ? ' (bientot disponible)' : ''}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
-                <Input
-                  placeholder="Rechercher un etudiant..."
-                  className="pl-9 h-9 text-sm"
-                  value={selectedStudent}
-                  onChange={(e) => setSelectedStudent(e.target.value)}
-                />
-              </div>
+              {selectedStudentId ? (
+                <div className="flex items-center justify-between rounded-md border px-3 h-9 text-sm">
+                  <span className="truncate">{selectedStudentLabel}</span>
+                  <button type="button" className="text-xs text-[#2d7a4f] hover:underline shrink-0 ml-2" onClick={() => { setSelectedStudentId(''); setSelectedStudentLabel('') }}>
+                    Changer
+                  </button>
+                </div>
+              ) : (
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
+                  <Input
+                    placeholder="Rechercher un etudiant..."
+                    className="pl-9 h-9 text-sm"
+                    value={studentSearch}
+                    onChange={(e) => setStudentSearch(e.target.value)}
+                  />
+                  {showStudentDropdown && (
+                    <div className="absolute z-10 mt-1 w-full rounded-md border bg-white shadow-lg max-h-48 overflow-y-auto">
+                      {(studentMatches?.data ?? []).length === 0 ? (
+                        <p className="px-3 py-2 text-xs text-gray-400">Aucun etudiant trouve</p>
+                      ) : (
+                        studentMatches.data.map((s: { id: string; firstName: string; lastName: string; matricule?: string }) => (
+                          <button
+                            key={s.id}
+                            type="button"
+                            className="flex w-full flex-col items-start px-3 py-2 text-left text-sm hover:bg-gray-50"
+                            onClick={() => {
+                              setSelectedStudentId(s.id)
+                              setSelectedStudentLabel(`${s.lastName.toUpperCase()} ${s.firstName}${s.matricule ? ` (${s.matricule})` : ''}`)
+                              setStudentSearch('')
+                            }}
+                          >
+                            <span>{s.lastName.toUpperCase()} {s.firstName}</span>
+                            <span className="text-[10px] text-gray-400">{s.matricule || '-'}</span>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
               <div className="flex gap-2">
                 <Button
                   variant="outline"
                   size="sm"
                   className="text-xs flex-1 h-9"
-                  disabled={!selectedType}
-                  onClick={() => generateDoc(false)}
-                >
-                  <Eye className="size-3.5 mr-1.5" />
-                  Apercu
-                </Button>
-                <Button
-                  size="sm"
-                  className="bg-[#1a2744] hover:bg-[#1a2744]/90 text-white text-xs flex-1 h-9"
                   disabled={!selectedType || isGenerating}
                   onClick={() => generateDoc(false)}
                 >
-                  {isGenerating ? <Loader2 className="size-3.5 mr-1.5 animate-spin" /> : <Printer className="size-3.5 mr-1.5" />}
-                  Generer
+                  {isGenerating ? <Loader2 className="size-3.5 mr-1.5 animate-spin" /> : <Eye className="size-3.5 mr-1.5" />}
+                  Apercu
                 </Button>
               </div>
               <Button
@@ -618,18 +643,22 @@ export function DocumentsPage() {
                           <div className="flex items-center justify-end gap-1">
                             {doc.statut !== 'en_attente' && (
                               <div className="flex items-center gap-1">
-                                <Button variant="ghost" size="sm" className="h-7 text-xs text-[#2d7a4f] hover:text-[#2d7a4f] hover:bg-[#2d7a4f10]" onClick={() => generateDoc(false)}>
-                                  <Eye className="size-3.5 mr-1" />
-                                  Voir
-                                </Button>
-                                <Button variant="ghost" size="sm" className="h-7 text-xs text-gray-500 hover:text-gray-700" onClick={() => generateDoc(false)}>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 text-xs text-gray-500 hover:text-gray-700"
+                                  onClick={() => {
+                                    const apiType = documentTypeList.find((dt) => dt.key === doc.typeKey)?.apiType
+                                    if (apiType) generateDoc(false, { type: apiType, studentId: doc.studentId, academicYearId: doc.academicYearId })
+                                  }}
+                                >
                                   <Download className="size-3.5 mr-1" />
-                                  PDF
+                                  Regenerer / PDF
                                 </Button>
                               </div>
                             )}
                             {doc.statut === 'genere' && (
-                              <Button variant="ghost" size="sm" className="h-7 text-xs text-[#2d7a4f] hover:text-[#2d7a4f] hover:bg-[#2d7a4f10]">
+                              <Button variant="ghost" size="sm" className="h-7 text-xs text-[#2d7a4f] hover:text-[#2d7a4f] hover:bg-[#2d7a4f10]" onClick={() => handleValidate(doc.id)}>
                                 <CheckCircle2 className="size-3.5 mr-1" />
                                 Valider
                               </Button>
@@ -669,19 +698,20 @@ export function DocumentsPage() {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {documentTypeList.map((dt) => {
                   const Icon = dt.icon
+                  const count = dt.apiType ? docsData?.countByType?.[dt.apiType] ?? 0 : 0
                   return (
                     <Tooltip key={dt.key}>
                       <TooltipTrigger asChild>
                         <div
-                          className="flex flex-col items-center gap-2 p-3 rounded-lg border border-gray-100 hover:border-[#2d7a4f30] hover:bg-[#2d7a4f05] transition-colors cursor-pointer"
-                          style={{ borderTop: '3px solid #2d7a4f' }}
+                          className={`flex flex-col items-center gap-2 p-3 rounded-lg border border-gray-100 transition-colors ${dt.implemented ? 'hover:border-[#2d7a4f30] hover:bg-[#2d7a4f05] cursor-pointer' : 'opacity-50'}`}
+                          style={{ borderTop: `3px solid ${dt.implemented ? '#2d7a4f' : '#9ca3af'}` }}
                         >
                           <div className="w-9 h-9 rounded-lg bg-[#1a274410] flex items-center justify-center">
                             <Icon className="size-4 text-[#1a2744]" />
                           </div>
                           <div className="text-center">
                             <p className="text-[11px] font-medium text-[#1a2744] leading-tight">{dt.label}</p>
-                            <p className="text-[10px] text-gray-400 mt-0.5">{dt.count} generes</p>
+                            <p className="text-[10px] text-gray-400 mt-0.5">{dt.implemented ? `${count} generes` : 'Bientot disponible'}</p>
                           </div>
                         </div>
                       </TooltipTrigger>
