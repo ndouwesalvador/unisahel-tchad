@@ -178,6 +178,10 @@ export function useExamScheduling() {
   return useSimpleGet('examScheduling', '/api/exam-scheduling');
 }
 
+export function useStatistics() {
+  return useSimpleGet('statistics', '/api/statistics');
+}
+
 export function useHealth(studentId?: string) {
   return useQuery({
     queryKey: ['health', studentId],

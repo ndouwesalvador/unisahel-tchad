@@ -1,7 +1,8 @@
 'use client'
 
 import { exportToExcel } from '@/lib/export'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
+import { useStatistics } from '@/lib/api-hooks'
 import { motion } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -35,52 +36,6 @@ import {
   Download,
   Calendar,
 } from 'lucide-react'
-
-// ─── Demo Data ────────────────────────────────────────────────────────────────
-
-const studentsByFaculty = [
-  { name: 'Droit', etudiants: 620, femmes: 280, hommes: 340 },
-  { name: 'Sciences', etudiants: 480, femmes: 180, hommes: 300 },
-  { name: 'Lettres', etudiants: 350, femmes: 210, hommes: 140 },
-  { name: 'Économie', etudiants: 410, femmes: 190, hommes: 220 },
-  { name: 'Médecine', etudiants: 290, femmes: 150, hommes: 140 },
-  { name: 'Informatique', etudiants: 380, femmes: 80, hommes: 300 },
-  { name: 'Agronomie', etudiants: 317, femmes: 107, hommes: 210 },
-]
-
-const successRateByYear = [
-  { year: '2019', taux: 62 },
-  { year: '2020', taux: 58 },
-  { year: '2021', taux: 65 },
-  { year: '2022', taux: 68 },
-  { year: '2023', taux: 71 },
-  { year: '2024', taux: 74 },
-]
-
-const paymentCollection = [
-  { name: 'Encaissé', value: 45200000, color: '#2d7a4f' },
-  { name: 'En attente', value: 12500000, color: '#d4a853' },
-  { name: 'Impayé', value: 8300000, color: '#c62828' },
-]
-
-const gradeDistribution = [
-  { range: '0-5', count: 45 },
-  { range: '5-8', count: 120 },
-  { range: '8-10', count: 180 },
-  { range: '10-12', count: 350 },
-  { range: '12-14', count: 420 },
-  { range: '14-16', count: 280 },
-  { range: '16-18', count: 95 },
-  { range: '18-20', count: 15 },
-]
-
-const successByProgram = [
-  { program: 'Droit Privé', L1: 62, L2: 68, L3: 75 },
-  { program: 'Informatique', L1: 55, L2: 72, L3: 80 },
-  { program: 'Sciences', L1: 58, L2: 65, L3: 70 },
-  { program: 'Lettres', L1: 70, L2: 74, L3: 78 },
-  { program: 'Médecine', L1: 48, L2: 60, L3: 72 },
-]
 
 function formatFCFA(amount: number) {
   return (amount / 1000000).toFixed(1) + 'M FCFA'
@@ -134,9 +89,15 @@ function HeaderStat({ value, label, suffix = '' }: { value: number; label: strin
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function StatisticsPage() {
-  const totalStudents = studentsByFaculty.reduce((acc, f) => acc + f.etudiants, 0)
-  const totalFemmes = studentsByFaculty.reduce((acc, f) => acc + f.femmes, 0)
-  const globalSuccessRate = 74
+  const { data, isLoading } = useStatistics()
+  const studentsByFaculty: { name: string; etudiants: number; femmes: number; hommes: number }[] = useMemo(() => data?.studentsByFaculty ?? [], [data])
+  const successRateByYear: { year: string; taux: number }[] = useMemo(() => data?.successRateByYear ?? [], [data])
+  const paymentCollection: { name: string; value: number; color: string }[] = useMemo(() => data?.paymentCollection ?? [], [data])
+  const gradeDistribution: { range: string; count: number }[] = useMemo(() => data?.gradeDistribution ?? [], [data])
+  const successByProgram: Record<string, string | number>[] = useMemo(() => data?.successByProgram ?? [], [data])
+  const totalStudents = data?.totals?.totalStudents ?? 0
+  const totalFemmes = data?.totals?.totalFemmes ?? 0
+  const globalSuccessRate = data?.totals?.globalSuccessRate ?? 0
   const [periode, setPeriode] = useState('s2-2024')
 
   return (
@@ -420,26 +381,34 @@ export function StatisticsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {successByProgram.map((row) => (
-                    <tr key={row.program} className="border-b border-gray-50 hover:bg-gray-50/50">
+                  {successByProgram.length === 0 && (
+                    <tr><td colSpan={4} className="text-center py-6 text-xs text-gray-400">
+                      {isLoading ? 'Chargement...' : 'Aucune note trouvee pour le moment'}
+                    </td></tr>
+                  )}
+                  {successByProgram.map((row) => {
+                    const l1 = Number(row.L1 ?? 0), l2 = Number(row.L2 ?? 0), l3 = Number(row.L3 ?? 0)
+                    return (
+                    <tr key={String(row.program)} className="border-b border-gray-50 hover:bg-gray-50/50">
                       <td className="px-4 py-2 font-medium text-[#1a2744]">{row.program}</td>
                       <td className="px-4 py-2 text-center">
-                        <span className={`font-semibold ${row.L1 >= 60 ? 'text-[#2d7a4f]' : 'text-[#c62828]'}`}>
-                          {row.L1}%
+                        <span className={`font-semibold ${l1 >= 60 ? 'text-[#2d7a4f]' : 'text-[#c62828]'}`}>
+                          {row.L1 ?? '—'}{row.L1 !== undefined ? '%' : ''}
                         </span>
                       </td>
                       <td className="px-4 py-2 text-center">
-                        <span className={`font-semibold ${row.L2 >= 60 ? 'text-[#2d7a4f]' : 'text-[#c62828]'}`}>
-                          {row.L2}%
+                        <span className={`font-semibold ${l2 >= 60 ? 'text-[#2d7a4f]' : 'text-[#c62828]'}`}>
+                          {row.L2 ?? '—'}{row.L2 !== undefined ? '%' : ''}
                         </span>
                       </td>
                       <td className="px-4 py-2 text-center">
-                        <span className={`font-semibold ${row.L3 >= 60 ? 'text-[#2d7a4f]' : 'text-[#c62828]'}`}>
-                          {row.L3}%
+                        <span className={`font-semibold ${l3 >= 60 ? 'text-[#2d7a4f]' : 'text-[#c62828]'}`}>
+                          {row.L3 ?? '—'}{row.L3 !== undefined ? '%' : ''}
                         </span>
                       </td>
                     </tr>
-                  ))}
+                    )
+                  })}
                 </tbody>
               </table>
             </div>

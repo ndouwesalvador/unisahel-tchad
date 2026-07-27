@@ -78,14 +78,6 @@ const methodeLabels: Record<string, { label: string; icon: React.ElementType }> 
   bank: { label: 'Virement', icon: Building },
 }
 
-const revenueData = [
-  { month: 'Sep', value: 3200000 },
-  { month: 'Oct', value: 4500000 },
-  { month: 'Nov', value: 3800000 },
-  { month: 'Dec', value: 2900000 },
-  { month: 'Jan', value: 5100000 },
-  { month: 'Fev', value: 4200000 },
-]
 
 const mobileMoneyOperators = [
   { name: 'Airtel Money', color: '#ED1C24' },
@@ -93,6 +85,8 @@ const mobileMoneyOperators = [
   { name: 'Orange Money', color: '#FF7900' },
   { name: 'MTN Mobile Money', color: '#FFCC00' },
 ]
+
+const MONTH_LABELS_FR = ['Jan', 'Fev', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aou', 'Sep', 'Oct', 'Nov', 'Dec']
 
 function formatFCFA(amount: number) {
   return amount.toLocaleString('fr-FR') + ' FCFA'
@@ -186,7 +180,26 @@ export function PaymentsPage() {
   const tauxRecouvrement = totalAttendu > 0 ? ((totalEncaisse / totalAttendu) * 100).toFixed(1) : '0.0'
 
   const revenueDuJour = realPayments.filter((p: Payment) => p.statut === 'paye').slice(0, 3).reduce((acc: number, p: Payment) => acc + p.montant, 0)
-  const revenueDuMois = revenueData[revenueData.length - 1]?.value || 4200000
+
+  // Real 6-month revenue trend from actual validated payments, not a fixed demo array
+  const revenueData = useMemo(() => {
+    const now = new Date()
+    const buckets: { key: string; month: string; value: number }[] = []
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+      buckets.push({ key: `${d.getFullYear()}-${d.getMonth()}`, month: MONTH_LABELS_FR[d.getMonth()], value: 0 })
+    }
+    const byKey = new Map(buckets.map((b) => [b.key, b]))
+    for (const p of paymentsData?.data ?? []) {
+      if (p.status !== 'VALIDATED') continue
+      const d = new Date(p.createdAt)
+      const key = `${d.getFullYear()}-${d.getMonth()}`
+      const bucket = byKey.get(key)
+      if (bucket) bucket.value += p.amount
+    }
+    return buckets.map((b) => ({ month: b.month, value: b.value }))
+  }, [paymentsData])
+  const revenueDuMois = revenueData[revenueData.length - 1]?.value ?? 0
 
   const animatedJour = useCountUp(revenueDuJour, 1600)
   const animatedMois = useCountUp(revenueDuMois, 1800)
@@ -206,7 +219,7 @@ export function PaymentsPage() {
     .filter((p: Payment) => p.statut === 'paye')
     .slice(0, 3)
 
-  const maxRevenue = Math.max(...revenueData.map(r => r.value))
+  const maxRevenue = Math.max(...revenueData.map(r => r.value), 1)
 
   const containerVariants = {
     hidden: { opacity: 0 },
