@@ -6,13 +6,8 @@ import { studentQuerySchema, createStudentSchema, updateStudentSchema, validateQ
 import { Prisma } from '@prisma/client'
 import { provisionStudentAccount } from '@/lib/student-portal'
 
-// No student-facing UI ever lists the full student roster -- block student-tier
-// accounts from an endpoint that would otherwise dump every classmate's PII.
 async function getStudentsHandler(user: SessionUser, tenantId: string, request: NextRequest) {
   try {
-    if (isStudentSelfRole(user.role)) {
-      return NextResponse.json({ error: 'FORBIDDEN', message: 'Accès refusé' }, { status: 403 })
-    }
     const { searchParams } = new URL(request.url)
     const validatedQuery = validateQuery(studentQuerySchema, searchParams)
 
@@ -347,6 +342,10 @@ async function getStudentDetailHandler(user: SessionUser, tenantId: string, requ
         tenant: {
           select: { name: true, shortName: true, logo: true },
         },
+        registrations: {
+          include: { academicYear: { select: { name: true } } },
+          orderBy: { registrationDate: 'desc' },
+        },
       },
     })
 
@@ -357,7 +356,27 @@ async function getStudentDetailHandler(user: SessionUser, tenantId: string, requ
       )
     }
 
-    return NextResponse.json({ data: student })
+    // AdministrativeRegistration.programId/levelId are bare scalars (no FK) --
+    // resolve their names with a manual lookup, same pattern used for Deliberation.
+    const programIds = [...new Set(student.registrations.map((r) => r.programId))]
+    const levelIds = [...new Set(student.registrations.map((r) => r.levelId))]
+    const [programs, levels] = await Promise.all([
+      db.program.findMany({ where: { id: { in: programIds } }, select: { id: true, name: true } }),
+      db.level.findMany({ where: { id: { in: levelIds } }, select: { id: true, name: true } }),
+    ])
+    const programById = new Map(programs.map((p) => [p.id, p.name]))
+    const levelById = new Map(levels.map((l) => [l.id, l.name]))
+
+    const registrations = student.registrations.map((r) => ({
+      id: r.id,
+      academicYear: r.academicYear.name,
+      program: programById.get(r.programId) || '—',
+      level: levelById.get(r.levelId) || '—',
+      status: r.status,
+      registrationDate: r.registrationDate,
+    }))
+
+    return NextResponse.json({ data: { ...student, registrations } })
   } catch (error) {
     console.error('Get student detail error:', error)
     return NextResponse.json(
@@ -544,7 +563,12 @@ async function getStudentTranscriptHandler(user: SessionUser, tenantId: string, 
   }
 }
 
+// No student-facing UI ever browses another student's record (roster, detail,
+// or transcript) -- block student-tier accounts from all three up front.
 export const GET = withTenantAuth(async (user: SessionUser, tenantId: string, request: NextRequest) => {
+  if (isStudentSelfRole(user.role)) {
+    return NextResponse.json({ error: 'FORBIDDEN', message: 'Accès refusé' }, { status: 403 })
+  }
   const { searchParams } = new URL(request.url)
   const id = searchParams.get('id')
   const transcript = searchParams.get('transcript')

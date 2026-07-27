@@ -2,7 +2,9 @@
 
 import { useState } from 'react'
 import { toast } from 'sonner'
+import { useQueryClient } from '@tanstack/react-query'
 import { useAppStore } from '@/lib/store'
+import { useStudentDetail, useStudentTranscript, usePayments, useDocuments, useHealth } from '@/lib/api-hooks'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -17,7 +19,6 @@ import {
 } from '@/components/ui/table'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Separator } from '@/components/ui/separator'
-import { Progress } from '@/components/ui/progress'
 import {
   ArrowLeft,
   Download,
@@ -26,7 +27,6 @@ import {
   Calendar,
   User,
   BookOpen,
-  FileCheck,
   Clock,
   Printer,
   Award,
@@ -38,93 +38,9 @@ import {
   ClipboardList,
   UserCheck,
   Receipt,
-  Eye,
   GraduationCap,
+  Loader2,
 } from 'lucide-react'
-
-// ─── Demo Student Data ────────────────────────────────────────────────────────
-
-const studentData = {
-  id: '1',
-  matricule: 'UDN/L2/2024/001',
-  login: 'adam.abakar',
-  nom: 'ABAKAR',
-  prenom: 'Adam Hassane',
-  dateNaissance: '15 Mars 2002',
-  lieuNaissance: "N'Djamena",
-  sexe: 'Masculin',
-  nationalite: 'Tchadienne',
-  telephone: '+235 66 12 34 56',
-  email: 'adam.abakar@univ.td',
-  adresse: "Quartier Moursal, N'Djamena",
-  filiere: 'Droit',
-  niveau: 'L2',
-  statut: 'INSCRIT' as const,
-  credits: 48,
-  photo: null,
-  isHealthStudent: false,
-  // Bac info
-  bacSerie: 'Serie D',
-  bacAnnee: '2021',
-  bacMention: 'Assez Bien',
-  bacEtablissement: "Lycee Felix Eboue, N'Djamena",
-  // Guardian
-  tuteurNom: 'Hassane Abakar',
-  tuteurTelephone: '+235 66 98 76 54',
-  tuteurProfession: 'Commercant',
-  tuteurAdresse: "Quartier Moursal, N'Djamena",
-}
-
-const inscriptions = [
-  { annee: '2024-2025', niveau: 'L2', filiere: 'Droit', statut: 'Inscrit', date: '15/09/2024' },
-  { annee: '2023-2024', niveau: 'L1', filiere: 'Droit', statut: 'Valide', date: '10/09/2023' },
-]
-
-const notes = [
-  { semestre: 'S3', ue: 'Droit Civil', ecue: 'Obligations', cc: 12, exam: 14, tp: null as number | null, moyenne: 12.8, credits: 4, coeff: 4, statut: 'Valide', mention: 'Bien' },
-  { semestre: 'S3', ue: 'Droit Civil', ecue: 'Contrats', cc: 10, exam: 11, tp: null as number | null, moyenne: 10.6, credits: 3, coeff: 3, statut: 'Valide', mention: 'Passable' },
-  { semestre: 'S3', ue: 'Droit Constitutionnel', ecue: 'Institutions politiques', cc: 8, exam: 9, tp: null as number | null, moyenne: 8.6, credits: 0, coeff: 4, statut: 'Non valide', mention: 'Insuffisant' },
-  { semestre: 'S3', ue: 'Droit Penal', ecue: 'Infractions', cc: 14, exam: 15, tp: null as number | null, moyenne: 14.6, credits: 4, coeff: 4, statut: 'Valide', mention: 'Bien' },
-  { semestre: 'S4', ue: 'Droit de la Famille', ecue: 'Mariage & divorce', cc: 11, exam: 13, tp: null as number | null, moyenne: 12.2, credits: 3, coeff: 3, statut: 'Valide', mention: 'Assez Bien' },
-  { semestre: 'S4', ue: 'Droit Commercial', ecue: 'Actes de commerce', cc: 9, exam: 8, tp: null as number | null, moyenne: 8.4, credits: 0, coeff: 3, statut: 'Non valide', mention: 'Insuffisant' },
-  { semestre: 'S4', ue: 'Droit Administratif', ecue: 'Service public', cc: 13, exam: 12, tp: null as number | null, moyenne: 12.4, credits: 4, coeff: 4, statut: 'Valide', mention: 'Assez Bien' },
-  { semestre: 'S4', ue: 'Procedure Civile', ecue: 'Instance', cc: 10, exam: 11, tp: null as number | null, moyenne: 10.6, credits: 3, coeff: 3, statut: 'Valide', mention: 'Passable' },
-]
-
-const documents = [
-  { id: '1', type: 'Releve de notes', semestre: 'S3', date: '20/01/2025', statut: 'Genere', code: 'VER-UDN-2024-RN-001', icon: FileText, color: '#2d7a4f' },
-  { id: '2', type: 'Attestation inscription', semestre: '', date: '15/09/2024', statut: 'Genere', code: 'VER-UDN-2024-AI-001', icon: Award, color: '#1a2744' },
-  { id: '3', type: 'Certificat scolarite', semestre: '', date: '18/09/2024', statut: 'Genere', code: 'VER-UDN-2024-CS-001', icon: FileCheck, color: '#d4a853' },
-  { id: '4', type: 'Releve de notes', semestre: 'S4', date: '', statut: 'En attente', code: '', icon: FileText, color: '#2d7a4f' },
-  { id: '5', type: 'Carte etudiant', semestre: '', date: '15/09/2024', statut: 'Genere', code: 'VER-UDN-2024-CE-001', icon: IdCard, color: '#5b8c5a' },
-  { id: '6', type: 'Certificat reussite', semestre: '', date: '', statut: 'En attente', code: '', icon: Award, color: '#d4a853' },
-]
-
-const paiements = [
-  { id: '1', description: "Frais d'inscription 2024-2025", montant: 175000, date: '15/09/2024', methode: 'Mobile Money', reference: 'MM-2024-001', statut: 'Paye', echeance: '' },
-  { id: '2', description: 'Frais de scolarite S1', montant: 250000, date: '20/09/2024', methode: 'Especes', reference: 'ESP-2024-045', statut: 'Paye', echeance: '' },
-  { id: '3', description: 'Frais de scolarite S2', montant: 250000, date: '', methode: '', reference: '', statut: 'En attente', echeance: '15/02/2025' },
-  { id: '4', description: 'Frais de releve de notes', montant: 5000, date: '20/01/2025', methode: 'Mobile Money', reference: 'MM-2025-012', statut: 'Paye', echeance: '' },
-  { id: '5', description: 'Frais de diplome', montant: 50000, date: '', methode: '', reference: '', statut: 'En attente', echeance: '30/06/2025' },
-]
-
-const stageData = {
-  hopital: "Hopital General de Reference de N'Djamena",
-  service: 'Chirurgie generale',
-  maitreStage: 'Dr. Mahamat Ali Hissein',
-  dateDebut: '01/02/2025',
-  dateFin: '30/06/2025',
-  joursRestants: 124,
-  progression: 35,
-  competences: [
-    { nom: 'Examen clinique', progression: 80 },
-    { nom: 'Pose de diagnostic', progression: 60 },
-    { nom: 'Soins infirmiers', progression: 45 },
-    { nom: 'Gestion dossier patient', progression: 90 },
-    { nom: 'Urgences', progression: 30 },
-  ],
-  presences: { total: 45, present: 40, absent: 3, justifie: 2 },
-}
 
 const statusConfig: Record<string, { label: string; className: string }> = {
   INSCRIT: { label: 'Inscrit', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0 hover:bg-[#2d7a4f15]' },
@@ -135,6 +51,7 @@ const statusConfig: Record<string, { label: string; className: string }> = {
 }
 
 const mentionConfig: Record<string, string> = {
+  'Excellent': 'text-[#1a2744] font-semibold',
   'Tres Bien': 'text-[#1a2744] font-semibold',
   'Bien': 'text-[#2d7a4f] font-semibold',
   'Assez Bien': 'text-[#5b8c5a] font-medium',
@@ -142,27 +59,174 @@ const mentionConfig: Record<string, string> = {
   'Insuffisant': 'text-red-600 font-medium',
 }
 
+const paymentMethodLabels: Record<string, string> = {
+  CASH: 'Especes',
+  MOBILE_MONEY: 'Mobile Money',
+  BANK_TRANSFER: 'Virement',
+  CARD: 'Carte',
+}
+
+const documentTypeLabels: Record<string, { label: string; icon: React.ElementType; color: string }> = {
+  RELEVE_NOTES: { label: 'Releve de notes', icon: FileText, color: '#2d7a4f' },
+  ATTESTATION_INSCRIPTION: { label: "Attestation d'inscription", icon: Award, color: '#1a2744' },
+  CERTIFICAT_SCOLARITE: { label: 'Certificat de scolarite', icon: FileText, color: '#d4a853' },
+  PV_DELIBERATION: { label: 'PV de deliberation', icon: ClipboardList, color: '#5b8c5a' },
+}
+
+// Passing grade threshold used app-wide as the fallback when TenantSettings
+// isn't loaded on this page (see the same `?? 10` default in the API routes).
+const PASSING_GRADE = 10
+
+function computeMention(note: number): string {
+  if (note < PASSING_GRADE) return 'Insuffisant'
+  if (note >= 18) return 'Excellent'
+  if (note >= 16) return 'Tres Bien'
+  if (note >= 14) return 'Bien'
+  if (note >= 12) return 'Assez Bien'
+  return 'Passable'
+}
+
 function formatFCFA(amount: number) {
   return amount.toLocaleString('fr-FR') + ' FCFA'
+}
+
+function formatDateFr(iso: string | null | undefined) {
+  if (!iso) return ''
+  return new Date(iso).toLocaleDateString('fr-FR')
+}
+
+interface TranscriptGrade {
+  id: string
+  courseElement: { name: string; coefficient: number } | null
+  ccGrade: number | null
+  examGrade: number | null
+  finalGrade: number | null
+}
+
+interface TranscriptTeachingUnit {
+  teachingUnit: { id: string; name: string; credits: number } | null
+  grades: TranscriptGrade[]
+}
+
+interface TranscriptSemester {
+  semester: { id: string; name: string } | null
+  teachingUnits: TranscriptTeachingUnit[]
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function StudentDetail() {
-  const { goBack } = useAppStore()
+  const { goBack, selectedStudentId } = useAppStore()
+  const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState('informations')
+  const [isGenerating, setIsGenerating] = useState<string | null>(null)
 
-  const s = studentData
-  const initials = `${s.prenom[0]}${s.nom[0]}`
+  const { data: detailData, isLoading: isLoadingDetail } = useStudentDetail(selectedStudentId || undefined)
+  const { data: transcriptData } = useStudentTranscript(selectedStudentId || undefined)
+  const { data: paymentsData } = usePayments(selectedStudentId ? { studentId: selectedStudentId, limit: 200 } : undefined)
+  const { data: documentsData } = useDocuments(selectedStudentId || undefined)
 
-  const totalCredits = notes.reduce((sum, n) => sum + n.credits, 0)
-  const totalCoeff = notes.reduce((sum, n) => sum + n.coeff, 0)
-  const moyenneGenerale = totalCoeff > 0 ? notes.reduce((sum, n) => sum + n.moyenne * n.coeff, 0) / totalCoeff : 0
-  const totalPaye = paiements.filter(p => p.statut === 'Paye').reduce((sum, p) => sum + p.montant, 0)
-  const totalReste = paiements.filter(p => p.statut !== 'Paye').reduce((sum, p) => sum + p.montant, 0)
-  const prochainEcheance = paiements.find(p => p.statut !== 'Paye' && p.echeance)
+  const s = detailData?.data
 
-  const isHealthStudent = s.isHealthStudent || s.filiere === 'Medecine' || s.filiere === 'Infirmier' || s.filiere === 'Pharmacie'
+  const isHealthStudent = Boolean(
+    s?.currentProgram?.name && /medecine|infirmier|pharmacie|sante/i.test(s.currentProgram.name)
+  )
+  const { data: healthData } = useHealth(isHealthStudent ? selectedStudentId || undefined : undefined)
+
+  const generateDocument = async (type: string) => {
+    if (!selectedStudentId || !s) return
+    setIsGenerating(type)
+    try {
+      const res = await fetch('/api/documents/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type, tenantId: s.tenantId, studentId: selectedStudentId }),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Erreur de generation')
+      }
+      const verificationCode = res.headers.get('X-Verification-Code') || ''
+      const blob = await res.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${type}_${Date.now()}.pdf`
+      a.click()
+      window.URL.revokeObjectURL(url)
+      toast.success('Document genere avec succes', {
+        description: verificationCode ? `Code: ${verificationCode}` : undefined,
+      })
+      queryClient.invalidateQueries({ queryKey: ['documents'] })
+    } catch (error) {
+      toast.error('Erreur de generation', {
+        description: error instanceof Error ? error.message : 'Une erreur est survenue',
+      })
+    } finally {
+      setIsGenerating(null)
+    }
+  }
+
+  if (!selectedStudentId) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center gap-3">
+        <User className="size-10 text-gray-300" />
+        <p className="text-sm text-gray-400">Aucun etudiant selectionne.</p>
+        <Button variant="outline" size="sm" onClick={goBack}>
+          <ArrowLeft className="size-3.5 mr-1.5" />
+          Retour a la liste
+        </Button>
+      </div>
+    )
+  }
+
+  if (isLoadingDetail || !s) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="size-6 animate-spin text-[#2d7a4f]" />
+      </div>
+    )
+  }
+
+  const initials = `${s.firstName[0] || ''}${s.lastName[0] || ''}`
+  const summary = transcriptData?.data?.summary
+  const totalCredits = summary?.totalCreditsAcquired ?? 0
+  const moyenneGenerale = summary?.averageFinalGrade ?? 0
+
+  const gradeRows: Array<{ ue: string; ecue: string; credits: number; coeff: number; cc: number | null; exam: number | null; moyenne: number; mention: string }> = []
+  for (const sem of (transcriptData?.data?.grades ?? []) as TranscriptSemester[]) {
+    for (const tu of sem.teachingUnits) {
+      for (const g of tu.grades) {
+        if (g.finalGrade === null) continue
+        gradeRows.push({
+          ue: tu.teachingUnit?.name || '—',
+          ecue: g.courseElement?.name || '—',
+          credits: tu.teachingUnit?.credits || 0,
+          coeff: g.courseElement?.coefficient || 1,
+          cc: g.ccGrade,
+          exam: g.examGrade,
+          moyenne: g.finalGrade,
+          mention: computeMention(g.finalGrade),
+        })
+      }
+    }
+  }
+
+  const payments = paymentsData?.data ?? []
+  const totalPaye = payments.filter((p: { status: string }) => p.status === 'VALIDATED').reduce((sum: number, p: { amount: number }) => sum + p.amount, 0)
+  const pendingPayments = payments.filter((p: { status: string }) => p.status === 'PENDING')
+  const totalReste = pendingPayments.reduce((sum: number, p: { amount: number }) => sum + p.amount, 0)
+
+  const documents = documentsData?.documents ?? []
+
+  const carnet = healthData?.carnet
+  const presences = carnet?.presences ?? []
+  const presenceStats = {
+    total: presences.length,
+    present: presences.filter((p: { present: boolean }) => p.present).length,
+    absent: presences.filter((p: { present: boolean }) => !p.present).length,
+  }
+  const competenceCategories = healthData?.competenceCategories ?? []
 
   return (
     <div className="space-y-4">
@@ -196,21 +260,15 @@ export function StudentDetail() {
               {/* Student Info */}
               <div className="flex-1 pt-2 sm:pb-1">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-                  <h1 className="text-2xl font-bold text-[#1a2744]">{s.prenom} {s.nom}</h1>
-                  <div className="flex items-center gap-2">
-                    <Badge className={`text-xs ${statusConfig[s.statut].className}`}>
-                      {statusConfig[s.statut].label}
-                    </Badge>
-                    <Badge className="text-xs bg-[#1a274415] text-[#1a2744] border-0 hover:bg-[#1a274415]">
-                      <User className="size-3 mr-1" />
-                      {s.login}
-                    </Badge>
-                  </div>
+                  <h1 className="text-2xl font-bold text-[#1a2744]">{s.firstName} {s.lastName}</h1>
+                  <Badge className={`text-xs ${statusConfig[s.status]?.className || 'bg-gray-100 text-gray-500 border-0'}`}>
+                    {statusConfig[s.status]?.label || s.status}
+                  </Badge>
                 </div>
                 <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-gray-500">
-                  <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded font-semibold text-[#1a2744]">{s.matricule}</span>
-                  <span className="flex items-center gap-1"><BookOpen className="size-3.5 text-[#2d7a4f]" /> {s.filiere}</span>
-                  <span className="flex items-center gap-1"><GraduationCap className="size-3.5 text-[#d4a853]" /> {s.niveau}</span>
+                  <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded font-semibold text-[#1a2744]">{s.matricule || '—'}</span>
+                  <span className="flex items-center gap-1"><BookOpen className="size-3.5 text-[#2d7a4f]" /> {s.currentProgram?.name || 'Non affecte'}</span>
+                  <span className="flex items-center gap-1"><GraduationCap className="size-3.5 text-[#d4a853]" /> {s.currentLevel?.name || '—'}</span>
                   <span className="flex items-center gap-1"><Award className="size-3.5 text-[#2d7a4f]" /> {totalCredits} credits</span>
                 </div>
               </div>
@@ -218,19 +276,36 @@ export function StudentDetail() {
 
             {/* Quick Action Buttons */}
             <div className="flex flex-wrap gap-2 mt-4">
-              <Button size="sm" variant="outline" className="text-xs border-[#1a274430] hover:bg-[#1a274408] text-[#1a2744]" onClick={() => toast.success('Fiche étudiante prête pour impression')}>
+              <Button size="sm" variant="outline" className="text-xs border-[#1a274430] hover:bg-[#1a274408] text-[#1a2744]" onClick={() => window.print()}>
                 <Printer className="size-3.5 mr-1.5" />
                 Imprimer fiche
               </Button>
-              <Button size="sm" variant="outline" className="text-xs border-[#2d7a4f30] hover:bg-[#2d7a4f08] text-[#2d7a4f]" onClick={() => toast.success('Relevé de notes généré', { description: 'Document prêt pour téléchargement' })}>
-                <FileText className="size-3.5 mr-1.5" />
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-xs border-[#2d7a4f30] hover:bg-[#2d7a4f08] text-[#2d7a4f]"
+                disabled={isGenerating === 'RELEVE_NOTES'}
+                onClick={() => generateDocument('RELEVE_NOTES')}
+              >
+                {isGenerating === 'RELEVE_NOTES' ? <Loader2 className="size-3.5 mr-1.5 animate-spin" /> : <FileText className="size-3.5 mr-1.5" />}
                 Generer releve
               </Button>
-              <Button size="sm" variant="outline" className="text-xs border-[#d4a85330] hover:bg-[#d4a85308] text-[#d4a853]" onClick={() => toast.success('Attestation générée')}>
-                <Award className="size-3.5 mr-1.5" />
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-xs border-[#d4a85330] hover:bg-[#d4a85308] text-[#d4a853]"
+                disabled={isGenerating === 'ATTESTATION_INSCRIPTION'}
+                onClick={() => generateDocument('ATTESTATION_INSCRIPTION')}
+              >
+                {isGenerating === 'ATTESTATION_INSCRIPTION' ? <Loader2 className="size-3.5 mr-1.5 animate-spin" /> : <Award className="size-3.5 mr-1.5" />}
                 Attestation
               </Button>
-              <Button size="sm" variant="outline" className="text-xs border-[#5b8c5a30] hover:bg-[#5b8c5a08] text-[#5b8c5a]" onClick={() => toast.success('Carte étudiante générée')}>
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-xs border-[#5b8c5a30] hover:bg-[#5b8c5a08] text-[#5b8c5a]"
+                onClick={() => toast.info('Bientot disponible', { description: "La generation de carte etudiante n'est pas encore implementee." })}
+              >
                 <IdCard className="size-3.5 mr-1.5" />
                 Carte etudiant
               </Button>
@@ -264,20 +339,20 @@ export function StudentDetail() {
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
                 <div className="grid grid-cols-2 gap-2">
-                  <div><span className="text-gray-400 text-xs">Nom complet</span><p className="font-medium text-[#1a2744]">{s.prenom} {s.nom}</p></div>
-                  <div><span className="text-gray-400 text-xs">Date de naissance</span><p className="font-medium text-[#1a2744]">{s.dateNaissance}</p></div>
-                  <div><span className="text-gray-400 text-xs">Lieu de naissance</span><p className="font-medium text-[#1a2744]">{s.lieuNaissance}</p></div>
-                  <div><span className="text-gray-400 text-xs">Sexe</span><p className="font-medium text-[#1a2744]">{s.sexe}</p></div>
-                  <div><span className="text-gray-400 text-xs">Nationalite</span><p className="font-medium text-[#1a2744]">{s.nationalite}</p></div>
-                  <div><span className="text-gray-400 text-xs">Telephone</span><p className="font-medium text-[#1a2744]">{s.telephone}</p></div>
+                  <div><span className="text-gray-400 text-xs">Nom complet</span><p className="font-medium text-[#1a2744]">{s.firstName} {s.lastName}</p></div>
+                  <div><span className="text-gray-400 text-xs">Date de naissance</span><p className="font-medium text-[#1a2744]">{formatDateFr(s.dateOfBirth) || '—'}</p></div>
+                  <div><span className="text-gray-400 text-xs">Lieu de naissance</span><p className="font-medium text-[#1a2744]">{s.placeOfBirth || '—'}</p></div>
+                  <div><span className="text-gray-400 text-xs">Sexe</span><p className="font-medium text-[#1a2744]">{s.gender || '—'}</p></div>
+                  <div><span className="text-gray-400 text-xs">Nationalite</span><p className="font-medium text-[#1a2744]">{s.nationality || '—'}</p></div>
+                  <div><span className="text-gray-400 text-xs">Telephone</span><p className="font-medium text-[#1a2744]">{s.phone || '—'}</p></div>
                 </div>
                 <div>
                   <span className="text-gray-400 text-xs">Adresse</span>
-                  <p className="font-medium text-[#1a2744]">{s.adresse}</p>
+                  <p className="font-medium text-[#1a2744]">{s.address || '—'}</p>
                 </div>
                 <div>
                   <span className="text-gray-400 text-xs">Email</span>
-                  <p className="font-medium text-[#2d7a4f]">{s.email}</p>
+                  <p className="font-medium text-[#2d7a4f]">{s.email || '—'}</p>
                 </div>
               </CardContent>
             </Card>
@@ -292,10 +367,10 @@ export function StudentDetail() {
                 </CardHeader>
                 <CardContent className="space-y-3 text-sm">
                   <div className="grid grid-cols-2 gap-2">
-                    <div><span className="text-gray-400 text-xs">Serie</span><p className="font-medium text-[#1a2744]">{s.bacSerie}</p></div>
-                    <div><span className="text-gray-400 text-xs">Annee</span><p className="font-medium text-[#1a2744]">{s.bacAnnee}</p></div>
-                    <div><span className="text-gray-400 text-xs">Mention</span><p className="font-medium text-[#1a2744]">{s.bacMention}</p></div>
-                    <div><span className="text-gray-400 text-xs">Etablissement</span><p className="font-medium text-[#1a2744]">{s.bacEtablissement}</p></div>
+                    <div><span className="text-gray-400 text-xs">Serie</span><p className="font-medium text-[#1a2744]">{s.bacSeries || '—'}</p></div>
+                    <div><span className="text-gray-400 text-xs">Annee</span><p className="font-medium text-[#1a2744]">{s.bacYear || '—'}</p></div>
+                    <div><span className="text-gray-400 text-xs">Numero</span><p className="font-medium text-[#1a2744]">{s.bacNumber || '—'}</p></div>
+                    <div><span className="text-gray-400 text-xs">Etablissement</span><p className="font-medium text-[#1a2744]">{s.highSchool || '—'}</p></div>
                   </div>
                 </CardContent>
               </Card>
@@ -309,10 +384,8 @@ export function StudentDetail() {
                 </CardHeader>
                 <CardContent className="space-y-3 text-sm">
                   <div className="grid grid-cols-2 gap-2">
-                    <div><span className="text-gray-400 text-xs">Nom</span><p className="font-medium text-[#1a2744]">{s.tuteurNom}</p></div>
-                    <div><span className="text-gray-400 text-xs">Telephone</span><p className="font-medium text-[#1a2744]">{s.tuteurTelephone}</p></div>
-                    <div><span className="text-gray-400 text-xs">Profession</span><p className="font-medium text-[#1a2744]">{s.tuteurProfession}</p></div>
-                    <div><span className="text-gray-400 text-xs">Adresse</span><p className="font-medium text-[#1a2744]">{s.tuteurAdresse}</p></div>
+                    <div><span className="text-gray-400 text-xs">Nom</span><p className="font-medium text-[#1a2744]">{s.guardianName || '—'}</p></div>
+                    <div><span className="text-gray-400 text-xs">Telephone</span><p className="font-medium text-[#1a2744]">{s.guardianPhone || '—'}</p></div>
                   </div>
                 </CardContent>
               </Card>
@@ -327,32 +400,36 @@ export function StudentDetail() {
               <CardTitle className="text-sm font-semibold text-[#1a2744]">Historique des inscriptions</CardTitle>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-gray-50">
-                    <TableHead className="text-xs">Annee academique</TableHead>
-                    <TableHead className="text-xs">Niveau</TableHead>
-                    <TableHead className="text-xs">Filiere</TableHead>
-                    <TableHead className="text-xs">Statut</TableHead>
-                    <TableHead className="text-xs">Date</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {inscriptions.map((ins, i) => (
-                    <TableRow key={i}>
-                      <TableCell className="text-sm font-medium">{ins.annee}</TableCell>
-                      <TableCell className="text-sm">{ins.niveau}</TableCell>
-                      <TableCell className="text-sm">{ins.filiere}</TableCell>
-                      <TableCell>
-                        <Badge className={`text-[10px] ${ins.statut === 'Valide' ? 'bg-[#2d7a4f15] text-[#2d7a4f] border-0' : 'bg-[#d4a85315] text-[#d4a853] border-0'}`}>
-                          {ins.statut}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-sm text-gray-500">{ins.date}</TableCell>
+              {(s.registrations ?? []).length === 0 ? (
+                <p className="text-sm text-gray-400 text-center py-6">Aucune inscription enregistree.</p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-gray-50">
+                      <TableHead className="text-xs">Annee academique</TableHead>
+                      <TableHead className="text-xs">Niveau</TableHead>
+                      <TableHead className="text-xs">Filiere</TableHead>
+                      <TableHead className="text-xs">Statut</TableHead>
+                      <TableHead className="text-xs">Date</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {s.registrations.map((ins: { id: string; academicYear: string; level: string; program: string; status: string; registrationDate: string }) => (
+                      <TableRow key={ins.id}>
+                        <TableCell className="text-sm font-medium">{ins.academicYear}</TableCell>
+                        <TableCell className="text-sm">{ins.level}</TableCell>
+                        <TableCell className="text-sm">{ins.program}</TableCell>
+                        <TableCell>
+                          <Badge className={`text-[10px] ${ins.status === 'VALIDE' ? 'bg-[#2d7a4f15] text-[#2d7a4f] border-0' : 'bg-[#d4a85315] text-[#d4a853] border-0'}`}>
+                            {ins.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-sm text-gray-500">{formatDateFr(ins.registrationDate)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -368,58 +445,60 @@ export function StudentDetail() {
                   <p className="text-[10px] tracking-[0.2em] uppercase text-gray-600 font-medium">Republique du Tchad</p>
                   <p className="text-[10px] tracking-[0.15em] uppercase text-gray-600 font-medium">Ministere de l&apos;Enseignement Superieur, de la Recherche Scientifique et de l&apos;Innovation</p>
                   <Separator className="my-2 bg-[#1a274430]" />
-                  <p className="text-sm font-bold text-[#1a2744] tracking-wide">UNIVERSITE DE N&apos;DJAMENA</p>
-                  <p className="text-[10px] text-gray-500 mt-0.5">Creee par Ordonnance N 008/PR/94 du 19 Mai 1994</p>
+                  <p className="text-sm font-bold text-[#1a2744] tracking-wide">{s.tenant?.name?.toUpperCase() || 'ETABLISSEMENT'}</p>
                   <Separator className="my-2 bg-[#1a274430]" />
                   <p className="text-base font-bold text-[#1a2744] tracking-[0.15em] uppercase mt-1">Releve de Notes</p>
-                  <p className="text-[10px] text-gray-500 mt-0.5">Annee academique 2024-2025</p>
                 </div>
 
                 {/* Student Info Line */}
                 <div className="px-6 py-3 border-b border-gray-200 grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1 text-xs">
-                  <div><span className="text-gray-400">Nom :</span> <span className="font-semibold text-[#1a2744]">{s.nom}</span></div>
-                  <div><span className="text-gray-400">Prenom :</span> <span className="font-semibold text-[#1a2744]">{s.prenom}</span></div>
-                  <div><span className="text-gray-400">Matricule :</span> <span className="font-mono font-semibold text-[#1a2744]">{s.matricule}</span></div>
-                  <div><span className="text-gray-400">Date de naissance :</span> <span className="font-medium text-[#1a2744]">{s.dateNaissance}</span></div>
-                  <div><span className="text-gray-400">Filiere :</span> <span className="font-medium text-[#1a2744]">{s.filiere}</span></div>
-                  <div><span className="text-gray-400">Niveau :</span> <span className="font-medium text-[#1a2744]">{s.niveau}</span></div>
+                  <div><span className="text-gray-400">Nom :</span> <span className="font-semibold text-[#1a2744]">{s.lastName}</span></div>
+                  <div><span className="text-gray-400">Prenom :</span> <span className="font-semibold text-[#1a2744]">{s.firstName}</span></div>
+                  <div><span className="text-gray-400">Matricule :</span> <span className="font-mono font-semibold text-[#1a2744]">{s.matricule || '—'}</span></div>
+                  <div><span className="text-gray-400">Date de naissance :</span> <span className="font-medium text-[#1a2744]">{formatDateFr(s.dateOfBirth) || '—'}</span></div>
+                  <div><span className="text-gray-400">Filiere :</span> <span className="font-medium text-[#1a2744]">{s.currentProgram?.name || '—'}</span></div>
+                  <div><span className="text-gray-400">Niveau :</span> <span className="font-medium text-[#1a2744]">{s.currentLevel?.name || '—'}</span></div>
                 </div>
 
                 {/* Grades Table */}
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-[#1a2744] hover:bg-[#1a2744]">
-                        <TableHead className="text-xs text-white font-semibold">UE</TableHead>
-                        <TableHead className="text-xs text-white font-semibold">ECUE</TableHead>
-                        <TableHead className="text-xs text-white font-semibold text-center">Credits</TableHead>
-                        <TableHead className="text-xs text-white font-semibold text-center">Coeff</TableHead>
-                        <TableHead className="text-xs text-white font-semibold text-center">CC</TableHead>
-                        <TableHead className="text-xs text-white font-semibold text-center">Examen</TableHead>
-                        <TableHead className="text-xs text-white font-semibold text-center">Moyenne</TableHead>
-                        <TableHead className="text-xs text-white font-semibold">Mention</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {notes.map((note, i) => (
-                        <TableRow key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
-                          <TableCell className="text-xs font-semibold text-[#1a2744]">{note.ue}</TableCell>
-                          <TableCell className="text-xs text-gray-600">{note.ecue}</TableCell>
-                          <TableCell className="text-xs text-center">{note.credits}</TableCell>
-                          <TableCell className="text-xs text-center">{note.coeff}</TableCell>
-                          <TableCell className="text-xs text-center">{note.cc}</TableCell>
-                          <TableCell className="text-xs text-center">{note.exam}</TableCell>
-                          <TableCell className={`text-xs text-center font-bold ${note.moyenne >= 10 ? 'text-[#2d7a4f]' : 'text-red-600'}`}>
-                            {note.moyenne.toFixed(2)}
-                          </TableCell>
-                          <TableCell className={`text-xs ${mentionConfig[note.mention] || 'text-gray-500'}`}>
-                            {note.mention}
-                          </TableCell>
+                {gradeRows.length === 0 ? (
+                  <p className="text-sm text-gray-400 text-center py-8">Aucune note saisie pour le moment.</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-[#1a2744] hover:bg-[#1a2744]">
+                          <TableHead className="text-xs text-white font-semibold">UE</TableHead>
+                          <TableHead className="text-xs text-white font-semibold">ECUE</TableHead>
+                          <TableHead className="text-xs text-white font-semibold text-center">Credits</TableHead>
+                          <TableHead className="text-xs text-white font-semibold text-center">Coeff</TableHead>
+                          <TableHead className="text-xs text-white font-semibold text-center">CC</TableHead>
+                          <TableHead className="text-xs text-white font-semibold text-center">Examen</TableHead>
+                          <TableHead className="text-xs text-white font-semibold text-center">Moyenne</TableHead>
+                          <TableHead className="text-xs text-white font-semibold">Mention</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                      </TableHeader>
+                      <TableBody>
+                        {gradeRows.map((note, i) => (
+                          <TableRow key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
+                            <TableCell className="text-xs font-semibold text-[#1a2744]">{note.ue}</TableCell>
+                            <TableCell className="text-xs text-gray-600">{note.ecue}</TableCell>
+                            <TableCell className="text-xs text-center">{note.credits}</TableCell>
+                            <TableCell className="text-xs text-center">{note.coeff}</TableCell>
+                            <TableCell className="text-xs text-center">{note.cc ?? '—'}</TableCell>
+                            <TableCell className="text-xs text-center">{note.exam ?? '—'}</TableCell>
+                            <TableCell className={`text-xs text-center font-bold ${note.moyenne >= PASSING_GRADE ? 'text-[#2d7a4f]' : 'text-red-600'}`}>
+                              {note.moyenne.toFixed(2)}
+                            </TableCell>
+                            <TableCell className={`text-xs ${mentionConfig[note.mention] || 'text-gray-500'}`}>
+                              {note.mention}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
 
                 {/* Transcript Footer */}
                 <div className="border-t-2 border-[#1a2744] bg-gray-50 px-6 py-4">
@@ -430,28 +509,15 @@ export function StudentDetail() {
                     </div>
                     <div>
                       <span className="text-gray-400 text-xs block">Moyenne generale</span>
-                      <p className={`text-lg font-bold ${moyenneGenerale >= 10 ? 'text-[#2d7a4f]' : 'text-red-600'}`}>
+                      <p className={`text-lg font-bold ${moyenneGenerale >= PASSING_GRADE ? 'text-[#2d7a4f]' : 'text-red-600'}`}>
                         {moyenneGenerale.toFixed(2)}/20
                       </p>
                     </div>
                     <div>
-                      <span className="text-gray-400 text-xs block">Decision du jury</span>
+                      <span className="text-gray-400 text-xs block">Decision indicative</span>
                       <p className="text-lg font-bold text-[#1a2744]">
-                        {moyenneGenerale >= 10 ? 'Admis' : 'Ajourné'}
+                        {moyenneGenerale >= PASSING_GRADE ? 'Admis' : 'Ajourné'}
                       </p>
-                    </div>
-                  </div>
-
-                  <Separator className="my-4 bg-[#1a274420]" />
-
-                  <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4">
-                    <div className="text-[10px] text-gray-400">
-                      <p>Document delivre par l&apos;Universite de N&apos;Djamena</p>
-                      <p>Code de verification : VER-UDN-2024-RN-001</p>
-                    </div>
-                    <div className="text-center">
-                      <div className="w-32 border-b border-gray-400 mb-1" />
-                      <p className="text-[10px] text-gray-500">Signature du Responsable</p>
                     </div>
                   </div>
                 </div>
@@ -459,12 +525,17 @@ export function StudentDetail() {
 
               {/* Action Buttons */}
               <div className="flex justify-end gap-2 p-4 bg-gray-50 border-t">
-                <Button variant="outline" size="sm" className="text-xs" onClick={() => toast.success('Impression en cours')}>
+                <Button variant="outline" size="sm" className="text-xs" onClick={() => window.print()}>
                   <Printer className="size-3.5 mr-1.5" />
                   Imprimer
                 </Button>
-                <Button size="sm" className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs" onClick={() => toast.success('PDF téléchargé', { description: 'Relevé de notes prêt' })}>
-                  <Download className="size-3.5 mr-1.5" />
+                <Button
+                  size="sm"
+                  className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs"
+                  disabled={isGenerating === 'RELEVE_NOTES'}
+                  onClick={() => generateDocument('RELEVE_NOTES')}
+                >
+                  {isGenerating === 'RELEVE_NOTES' ? <Loader2 className="size-3.5 mr-1.5 animate-spin" /> : <Download className="size-3.5 mr-1.5" />}
                   Telecharger PDF
                 </Button>
               </div>
@@ -510,11 +581,8 @@ export function StudentDetail() {
                       <Clock className="size-5 text-[#d4a853]" />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-400">Prochaine echeance</p>
-                      <p className="text-lg font-bold text-[#d4a853]">{prochainEcheance?.echeance || 'Aucune'}</p>
-                      {prochainEcheance && (
-                        <p className="text-xs text-gray-400">{formatFCFA(prochainEcheance.montant)}</p>
-                      )}
+                      <p className="text-xs text-gray-400">Paiements en attente</p>
+                      <p className="text-lg font-bold text-[#d4a853]">{pendingPayments.length}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -530,49 +598,59 @@ export function StudentDetail() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="max-h-96 overflow-y-auto">
-                  {paiements.map((p, i) => (
-                    <div
-                      key={p.id}
-                      className={`flex items-center gap-4 px-6 py-4 hover:bg-gray-50 transition-colors ${i < paiements.length - 1 ? 'border-b border-gray-100' : ''}`}
-                    >
-                      {/* Timeline indicator */}
-                      <div className="relative flex flex-col items-center">
-                        <div className={`w-3 h-3 rounded-full border-2 ${p.statut === 'Paye' ? 'bg-[#2d7a4f] border-[#2d7a4f]' : 'bg-white border-[#d4a853]'}`} />
-                        {i < paiements.length - 1 && (
-                          <div className={`w-0.5 h-8 ${p.statut === 'Paye' ? 'bg-[#2d7a4f30]' : 'bg-[#d4a85330]'}`} />
-                        )}
-                      </div>
-
-                      {/* Payment details */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-medium text-[#1a2744] truncate">{p.description}</p>
-                          <Badge className={`text-[10px] shrink-0 ${p.statut === 'Paye' ? 'bg-[#2d7a4f15] text-[#2d7a4f] border-0' : 'bg-[#d4a85315] text-[#d4a853] border-0'}`}>
-                            {p.statut}
-                          </Badge>
+                {payments.length === 0 ? (
+                  <p className="text-sm text-gray-400 text-center py-8">Aucun paiement enregistre.</p>
+                ) : (
+                  <div className="max-h-96 overflow-y-auto">
+                    {payments.map((p: { id: string; status: string; comment: string | null; createdAt: string; paymentMethod: string; receiptNumber: string | null; transactionRef: string | null; amount: number }, i: number) => (
+                      <div
+                        key={p.id}
+                        className={`flex items-center gap-4 px-6 py-4 hover:bg-gray-50 transition-colors ${i < payments.length - 1 ? 'border-b border-gray-100' : ''}`}
+                      >
+                        {/* Timeline indicator */}
+                        <div className="relative flex flex-col items-center">
+                          <div className={`w-3 h-3 rounded-full border-2 ${p.status === 'VALIDATED' ? 'bg-[#2d7a4f] border-[#2d7a4f]' : 'bg-white border-[#d4a853]'}`} />
+                          {i < payments.length - 1 && (
+                            <div className={`w-0.5 h-8 ${p.status === 'VALIDATED' ? 'bg-[#2d7a4f30]' : 'bg-[#d4a85330]'}`} />
+                          )}
                         </div>
-                        <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1 text-xs text-gray-400">
-                          {p.date && <span className="flex items-center gap-1"><Calendar className="size-3" /> {p.date}</span>}
-                          {p.methode && <span className="flex items-center gap-1"><CreditCard className="size-3" /> {p.methode}</span>}
-                          {p.reference && <span className="font-mono">Ref: {p.reference}</span>}
-                          {p.echeance && p.statut !== 'Paye' && <span className="flex items-center gap-1 text-[#d4a853]"><Clock className="size-3" /> Echeance: {p.echeance}</span>}
+
+                        {/* Payment details */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium text-[#1a2744] truncate">{p.comment || 'Frais de scolarite'}</p>
+                            <Badge className={`text-[10px] shrink-0 ${p.status === 'VALIDATED' ? 'bg-[#2d7a4f15] text-[#2d7a4f] border-0' : 'bg-[#d4a85315] text-[#d4a853] border-0'}`}>
+                              {p.status === 'VALIDATED' ? 'Paye' : p.status === 'PENDING' ? 'En attente' : p.status}
+                            </Badge>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1 text-xs text-gray-400">
+                            <span className="flex items-center gap-1"><Calendar className="size-3" /> {formatDateFr(p.createdAt)}</span>
+                            <span className="flex items-center gap-1"><CreditCard className="size-3" /> {paymentMethodLabels[p.paymentMethod] || p.paymentMethod}</span>
+                            {(p.receiptNumber || p.transactionRef) && <span className="font-mono">Ref: {p.receiptNumber || p.transactionRef}</span>}
+                          </div>
+                        </div>
+
+                        {/* Amount and action */}
+                        <div className="text-right shrink-0">
+                          <p className="text-sm font-bold text-[#1a2744]">{formatFCFA(p.amount)}</p>
+                          {p.status === 'VALIDATED' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 text-[10px] text-[#2d7a4f] p-0 mt-1"
+                              onClick={() => {
+                                window.open(`/api/payments?receipt=true&id=${p.id}`, '_blank')
+                              }}
+                            >
+                              <Download className="size-3 mr-1" />
+                              Recu
+                            </Button>
+                          )}
                         </div>
                       </div>
-
-                      {/* Amount and action */}
-                      <div className="text-right shrink-0">
-                        <p className="text-sm font-bold text-[#1a2744]">{formatFCFA(p.montant)}</p>
-                        {p.statut === 'Paye' && (
-                          <Button variant="ghost" size="sm" className="h-6 text-[10px] text-[#2d7a4f] p-0 mt-1" onClick={() => toast.success('Reçu téléchargé', { description: `Réf: ${p.reference}` })}>
-                            <Download className="size-3 mr-1" />
-                            Recu
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -582,86 +660,93 @@ export function StudentDetail() {
         {isHealthStudent && (
           <TabsContent value="stages" className="mt-4">
             <div className="space-y-4">
-              {/* Current Internship Info */}
-              <Card className="border-l-4 border-l-[#2d7a4f]">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-semibold text-[#1a2744] flex items-center gap-2">
-                    <Stethoscope className="size-4 text-[#2d7a4f]" />
-                    Stage en cours
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2 text-sm">
-                      <div><span className="text-gray-400 text-xs">Hopital</span><p className="font-medium text-[#1a2744]">{stageData.hopital}</p></div>
-                      <div><span className="text-gray-400 text-xs">Service</span><p className="font-medium text-[#1a2744]">{stageData.service}</p></div>
-                      <div><span className="text-gray-400 text-xs">Maitre de stage</span><p className="font-medium text-[#1a2744]">{stageData.maitreStage}</p></div>
-                    </div>
-                    <div className="space-y-2 text-sm">
-                      <div><span className="text-gray-400 text-xs">Periode</span><p className="font-medium text-[#1a2744]">{stageData.dateDebut} - {stageData.dateFin}</p></div>
-                      <div><span className="text-gray-400 text-xs">Jours restants</span><p className="font-bold text-[#d4a853]">{stageData.joursRestants} jours</p></div>
-                      <div>
-                        <span className="text-gray-400 text-xs block mb-1">Progression</span>
-                        <Progress value={stageData.progression} className="h-2" />
-                        <p className="text-xs text-gray-400 mt-1">{stageData.progression}% complete</p>
+              {!carnet ? (
+                <Card>
+                  <CardContent className="py-8 text-center text-sm text-gray-400">
+                    Aucun stage clinique enregistre pour cet etudiant.
+                  </CardContent>
+                </Card>
+              ) : (
+                <>
+                  {/* Current Internship Info */}
+                  <Card className="border-l-4 border-l-[#2d7a4f]">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-semibold text-[#1a2744] flex items-center gap-2">
+                        <Stethoscope className="size-4 text-[#2d7a4f]" />
+                        Stage
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-2 text-sm">
+                          <div><span className="text-gray-400 text-xs">Hopital</span><p className="font-medium text-[#1a2744]">{carnet.hopital}</p></div>
+                          <div><span className="text-gray-400 text-xs">Service</span><p className="font-medium text-[#1a2744]">{carnet.service}</p></div>
+                        </div>
+                        <div className="space-y-2 text-sm">
+                          <div><span className="text-gray-400 text-xs">Periode</span><p className="font-medium text-[#1a2744]">{carnet.debut} - {carnet.fin}</p></div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                    </CardContent>
+                  </Card>
 
-              {/* Skills Progress */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-semibold text-[#1a2744] flex items-center gap-2">
-                    <ClipboardList className="size-4 text-[#d4a853]" />
-                    Competences acquises
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {stageData.competences.map((comp, i) => (
-                    <div key={i}>
-                      <div className="flex items-center justify-between text-sm mb-1">
-                        <span className="text-[#1a2744] font-medium">{comp.nom}</span>
-                        <span className={`text-xs font-semibold ${comp.progression >= 70 ? 'text-[#2d7a4f]' : comp.progression >= 40 ? 'text-[#d4a853]' : 'text-[#c62828]'}`}>
-                          {comp.progression}%
-                        </span>
+                  {/* Skills Progress */}
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-semibold text-[#1a2744] flex items-center gap-2">
+                        <ClipboardList className="size-4 text-[#d4a853]" />
+                        Competences
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {competenceCategories.length === 0 ? (
+                        <p className="text-sm text-gray-400 text-center py-4">Aucune competence suivie.</p>
+                      ) : (
+                        competenceCategories.map((cat: { id: string; nom: string; competences: { id: string; nom: string; statut: string }[] }) => (
+                          <div key={cat.id}>
+                            <p className="text-xs font-semibold text-[#1a2744] mb-2">{cat.nom}</p>
+                            <div className="flex flex-wrap gap-2">
+                              {cat.competences.map((comp) => (
+                                <Badge
+                                  key={comp.id}
+                                  className={`text-[10px] border-0 ${comp.statut === 'validee' ? 'bg-[#2d7a4f15] text-[#2d7a4f]' : comp.statut === 'en_cours' ? 'bg-[#d4a85315] text-[#d4a853]' : 'bg-gray-100 text-gray-500'}`}
+                                >
+                                  {comp.nom}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Attendance Summary */}
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-semibold text-[#1a2744] flex items-center gap-2">
+                        <UserCheck className="size-4 text-[#1a2744]" />
+                        Recapitulatif des presences
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="text-center p-3 rounded-lg bg-gray-50">
+                          <p className="text-2xl font-bold text-[#1a2744]">{presenceStats.total}</p>
+                          <p className="text-xs text-gray-400">Total jours</p>
+                        </div>
+                        <div className="text-center p-3 rounded-lg bg-[#2d7a4f08]">
+                          <p className="text-2xl font-bold text-[#2d7a4f]">{presenceStats.present}</p>
+                          <p className="text-xs text-gray-400">Presents</p>
+                        </div>
+                        <div className="text-center p-3 rounded-lg bg-[#c6282808]">
+                          <p className="text-2xl font-bold text-[#c62828]">{presenceStats.absent}</p>
+                          <p className="text-xs text-gray-400">Absents</p>
+                        </div>
                       </div>
-                      <Progress value={comp.progression} className="h-1.5" />
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-
-              {/* Attendance Summary */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-semibold text-[#1a2744] flex items-center gap-2">
-                    <UserCheck className="size-4 text-[#1a2744]" />
-                    Recapitulatif des presences
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    <div className="text-center p-3 rounded-lg bg-gray-50">
-                      <p className="text-2xl font-bold text-[#1a2744]">{stageData.presences.total}</p>
-                      <p className="text-xs text-gray-400">Total jours</p>
-                    </div>
-                    <div className="text-center p-3 rounded-lg bg-[#2d7a4f08]">
-                      <p className="text-2xl font-bold text-[#2d7a4f]">{stageData.presences.present}</p>
-                      <p className="text-xs text-gray-400">Presents</p>
-                    </div>
-                    <div className="text-center p-3 rounded-lg bg-[#c6282808]">
-                      <p className="text-2xl font-bold text-[#c62828]">{stageData.presences.absent}</p>
-                      <p className="text-xs text-gray-400">Absents</p>
-                    </div>
-                    <div className="text-center p-3 rounded-lg bg-[#d4a85308]">
-                      <p className="text-2xl font-bold text-[#d4a853]">{stageData.presences.justifie}</p>
-                      <p className="text-xs text-gray-400">Justifies</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                    </CardContent>
+                  </Card>
+                </>
+              )}
             </div>
           </TabsContent>
         )}
@@ -669,73 +754,78 @@ export function StudentDetail() {
         {/* Documents Tab */}
         <TabsContent value="documents" className="mt-4">
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-2">
               <h3 className="text-sm font-semibold text-[#1a2744]">Documents generes</h3>
-              <Button size="sm" className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs" onClick={() => toast.success('Nouveau document', { description: 'Assistant de création de document' })}>
-                <FileText className="size-3.5 mr-1.5" />
-                Generer un document
-              </Button>
+              <div className="flex gap-2">
+                {(['RELEVE_NOTES', 'ATTESTATION_INSCRIPTION', 'CERTIFICAT_SCOLARITE'] as const).map((type) => (
+                  <Button
+                    key={type}
+                    size="sm"
+                    variant="outline"
+                    className="text-xs"
+                    disabled={isGenerating === type}
+                    onClick={() => generateDocument(type)}
+                  >
+                    {isGenerating === type ? <Loader2 className="size-3.5 mr-1.5 animate-spin" /> : <FileText className="size-3.5 mr-1.5" />}
+                    {documentTypeLabels[type].label}
+                  </Button>
+                ))}
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {documents.map((doc) => (
-                <Card key={doc.id} className="hover:shadow-md transition-shadow group">
-                  <CardContent className="p-4">
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: `${doc.color}15` }}>
-                        <doc.icon className="size-5" style={{ color: doc.color }} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-[#1a2744] truncate">{doc.type}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Badge className={`text-[10px] ${doc.statut === 'Genere' ? 'bg-[#2d7a4f15] text-[#2d7a4f] border-0' : 'bg-[#d4a85315] text-[#d4a853] border-0'}`}>
-                            {doc.statut}
-                          </Badge>
-                          {doc.semestre && (
-                            <span className="text-[10px] text-gray-400">{doc.semestre}</span>
+            {documents.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-8">Aucun document genere pour cet etudiant.</p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {documents.map((doc: { id: string; type: string; statut: string; date: string; codeVerification: string }) => {
+                  const meta = documentTypeLabels[doc.type] || { label: doc.type, icon: FileText, color: '#1a2744' }
+                  const Icon = meta.icon
+                  return (
+                    <Card key={doc.id} className="hover:shadow-md transition-shadow group">
+                      <CardContent className="p-4">
+                        <div className="flex items-start gap-3">
+                          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: `${meta.color}15` }}>
+                            <Icon className="size-5" style={{ color: meta.color }} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-[#1a2744] truncate">{meta.label}</p>
+                            <Badge className={`text-[10px] mt-1 ${doc.statut === 'signe' ? 'bg-[#2d7a4f15] text-[#2d7a4f] border-0' : 'bg-[#d4a85315] text-[#d4a853] border-0'}`}>
+                              {doc.statut === 'signe' ? 'Valide' : doc.statut === 'genere' ? 'Genere' : 'En attente'}
+                            </Badge>
+                          </div>
+                        </div>
+
+                        <div className="mt-3 pt-3 border-t border-gray-100 space-y-1">
+                          <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                            <Calendar className="size-3" />
+                            {formatDateFr(doc.date)}
+                          </div>
+                          {doc.codeVerification && (
+                            <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                              <Shield className="size-3" />
+                              <span className="font-mono text-[10px]">{doc.codeVerification}</span>
+                            </div>
                           )}
                         </div>
-                      </div>
-                    </div>
 
-                    <div className="mt-3 pt-3 border-t border-gray-100 space-y-1">
-                      {doc.date && (
-                        <div className="flex items-center gap-1.5 text-xs text-gray-400">
-                          <Calendar className="size-3" />
-                          {doc.date}
+                        <div className="flex items-center gap-2 mt-3">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-[10px] flex-1"
+                            disabled={isGenerating === doc.type}
+                            onClick={() => generateDocument(doc.type)}
+                          >
+                            {isGenerating === doc.type ? <Loader2 className="size-3 mr-1 animate-spin" /> : <Download className="size-3 mr-1" />}
+                            Regenerer / PDF
+                          </Button>
                         </div>
-                      )}
-                      {doc.code && (
-                        <div className="flex items-center gap-1.5 text-xs text-gray-400">
-                          <Shield className="size-3" />
-                          <span className="font-mono text-[10px]">{doc.code}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-2 mt-3">
-                      {doc.statut === 'Genere' && (
-                        <Button variant="outline" size="sm" className="h-7 text-[10px] flex-1" onClick={() => toast.success('Document téléchargé', { description: doc.type })}>
-                          <Download className="size-3 mr-1" />
-                          Telecharger
-                        </Button>
-                      )}
-                      {doc.code && (
-                        <Button variant="ghost" size="sm" className="h-7 text-[10px] text-[#2d7a4f]" onClick={() => toast.success('Document vérifié', { description: `Code: ${doc.code} - Authentique` })}>
-                          <Eye className="size-3 mr-1" />
-                          Verifier
-                        </Button>
-                      )}
-                      {doc.statut !== 'Genere' && (
-                        <Button size="sm" className="h-7 text-[10px] bg-[#2d7a4f] hover:bg-[#236b40] text-white flex-1" onClick={() => toast.success('Document généré avec succès')}>
-                          Generer
-                        </Button>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                      </CardContent>
+                    </Card>
+                  )
+                })}
+              </div>
+            )}
           </div>
         </TabsContent>
       </Tabs>

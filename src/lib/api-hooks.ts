@@ -45,6 +45,30 @@ export function useStudents(params?: { search?: string; status?: string; program
   });
 }
 
+export function useStudentDetail(id?: string) {
+  return useQuery({
+    queryKey: ['studentDetail', id],
+    enabled: Boolean(id),
+    queryFn: async () => {
+      const res = await fetch(`/api/students?id=${id}`);
+      if (!res.ok) throw new Error('Failed to fetch student');
+      return res.json();
+    },
+  });
+}
+
+export function useStudentTranscript(id?: string) {
+  return useQuery({
+    queryKey: ['studentTranscript', id],
+    enabled: Boolean(id),
+    queryFn: async () => {
+      const res = await fetch(`/api/students?id=${id}&transcript=true`);
+      if (!res.ok) throw new Error('Failed to fetch transcript');
+      return res.json();
+    },
+  });
+}
+
 export function useTeachers(params?: { search?: string; departmentId?: string; grade?: string; isActive?: boolean; page?: number; limit?: number }) {
   return useQuery({
     queryKey: ['teachers', params],
@@ -64,7 +88,7 @@ export function useTeachers(params?: { search?: string; departmentId?: string; g
   });
 }
 
-export function usePayments(params?: { search?: string; status?: string; paymentMethod?: string; startDate?: string; endDate?: string; page?: number; limit?: number }) {
+export function usePayments(params?: { search?: string; status?: string; paymentMethod?: string; studentId?: string; startDate?: string; endDate?: string; page?: number; limit?: number }) {
   return useQuery({
     queryKey: ['payments', params],
     queryFn: async () => {
@@ -174,8 +198,17 @@ export function useImportExport() {
   return useSimpleGet('importExport', '/api/import-export');
 }
 
-export function useDocuments() {
-  return useSimpleGet('documents', '/api/documents');
+export function useDocuments(studentId?: string) {
+  return useQuery({
+    queryKey: ['documents', studentId],
+    queryFn: async () => {
+      const url = new URL('/api/documents', window.location.origin);
+      if (studentId) url.searchParams.set('studentId', studentId);
+      const res = await fetch(url.toString());
+      if (!res.ok) throw new Error('Failed to fetch documents');
+      return res.json();
+    },
+  });
 }
 
 export function useExamScheduling() {

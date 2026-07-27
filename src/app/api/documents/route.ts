@@ -3,13 +3,17 @@ import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
 import { resolveOwnStudentId, isStudentSelfRole } from '@/lib/auth/student-scope'
 
-// GET /api/documents - real generated-document history + stats for the
-// documents-page.tsx dashboard (previously a hardcoded demo list/counters).
-// A student account only ever sees documents generated for themselves.
-async function handleGet(user: SessionUser, tenantId: string) {
+// GET /api/documents - real generated-document history + stats. Without
+// ?studentId, this is the documents-page.tsx dashboard (previously a
+// hardcoded demo list/counters). With ?studentId (staff only), it scopes to
+// one student's documents for student-detail.tsx. A student account only
+// ever sees documents generated for themselves, regardless of the param.
+async function handleGet(user: SessionUser, tenantId: string, request: NextRequest) {
   try {
     const ownStudentId = await resolveOwnStudentId(user)
-    const where = ownStudentId ? { tenantId, studentId: ownStudentId } : { tenantId }
+    const requestedStudentId = ownStudentId ? null : new URL(request.url).searchParams.get('studentId')
+    const scopedStudentId = ownStudentId || requestedStudentId
+    const where = scopedStudentId ? { tenantId, studentId: scopedStudentId } : { tenantId }
 
     const now = new Date()
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
