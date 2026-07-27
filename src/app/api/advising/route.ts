@@ -308,6 +308,33 @@ async function handleGet(_user: SessionUser, tenantId: string, _request: NextReq
   }
 }
 
+// POST /api/advising?entity=advisor - register a new advisor
+async function createAdvisorHandler(_user: SessionUser, tenantId: string, request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { name, title, department, specialties } = body
+
+    if (!name || typeof name !== 'string' || !name.trim()) {
+      return NextResponse.json({ error: 'name is required' }, { status: 400 })
+    }
+
+    const advisor = await db.advisor.create({
+      data: {
+        tenantId,
+        name: name.trim(),
+        title: title ? String(title).trim() : null,
+        department: department ? String(department).trim() : null,
+        specialties: Array.isArray(specialties) ? specialties.map(String) : [],
+      },
+    })
+
+    return NextResponse.json({ advisor }, { status: 201 })
+  } catch (error) {
+    console.error('Create advisor error:', error)
+    return NextResponse.json({ error: 'Failed to create advisor' }, { status: 500 })
+  }
+}
+
 // POST /api/advising - schedule a new advising appointment
 async function handlePost(_user: SessionUser, tenantId: string, request: NextRequest) {
   try {
@@ -412,5 +439,13 @@ async function handlePut(_user: SessionUser, tenantId: string, request: NextRequ
 }
 
 export const GET = withTenantAuth(handleGet)
-export const POST = withTenantAuth(handlePost)
+
+export const POST = withTenantAuth(async (user: SessionUser, tenantId: string, request: NextRequest) => {
+  const { searchParams } = new URL(request.url)
+  if (searchParams.get('entity') === 'advisor') {
+    return createAdvisorHandler(user, tenantId, request)
+  }
+  return handlePost(user, tenantId, request)
+})
+
 export const PUT = withTenantAuth(handlePut)

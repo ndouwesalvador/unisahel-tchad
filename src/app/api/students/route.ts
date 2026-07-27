@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
 import { studentQuerySchema, createStudentSchema, updateStudentSchema, validateQuery, validateBody, formatZodError } from '@/lib/validations/api'
 import { Prisma } from '@prisma/client'
+import { provisionStudentAccount } from '@/lib/student-portal'
 
 async function getStudentsHandler(user: SessionUser, tenantId: string, request: NextRequest) {
   try {
@@ -156,7 +157,9 @@ async function createStudentHandler(user: SessionUser, tenantId: string, request
       },
     })
 
-    return NextResponse.json({ data: student }, { status: 201 })
+    const portalAccount = await provisionStudentAccount(tenantId, student.id, student.matricule, student.firstName, student.lastName)
+
+    return NextResponse.json({ data: student, portalAccount }, { status: 201 })
   } catch (error) {
     console.error('Create student error:', error)
     if (error instanceof Error && error.name === 'ZodError') {

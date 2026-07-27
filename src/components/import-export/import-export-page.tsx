@@ -393,7 +393,7 @@ export function ImportExportPage() {
         toast.error('Import echoue', { description: `${result.errorRows} ligne(s) en erreur.` })
       } else {
         toast.success('Import terminé avec succès', {
-          description: `${result.successRows} etudiant(s) importe(s).`,
+          description: `${result.successRows} etudiant(s) importe(s)${result.portalAccountsCreated ? `, ${result.portalAccountsCreated} compte(s) Espace Etudiant cree(s) (PIN a communiquer via la fiche etudiant)` : ''}.`,
         })
       }
       queryClient.invalidateQueries({ queryKey: ['importExport'] })

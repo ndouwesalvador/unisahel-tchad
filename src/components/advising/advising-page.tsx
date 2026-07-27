@@ -303,6 +303,9 @@ export function AdvisingPage() {
   const [showNewAppointment, setShowNewAppointment] = useState(false)
   const [isSubmittingAppt, setIsSubmittingAppt] = useState(false)
   const [newAppt, setNewAppt] = useState({ studentId: '', advisorId: '', type: 'Suivi pedagogique', date: '', time: '', notes: '' })
+  const [showNewAdvisor, setShowNewAdvisor] = useState(false)
+  const [isSubmittingAdvisor, setIsSubmittingAdvisor] = useState(false)
+  const [newAdvisor, setNewAdvisor] = useState<{ name: string; title: string; department: string; specialties: string[] }>({ name: '', title: '', department: '', specialties: [] })
 
   // ── Real derived aggregates (no fabricated numbers) ──────────────────────
   const now = new Date()
@@ -439,6 +442,36 @@ export function AdvisingPage() {
       toast.error('Erreur', { description: e instanceof Error ? e.message : 'Echec de la planification' })
     } finally {
       setIsSubmittingAppt(false)
+    }
+  }
+
+  const createAdvisor = async () => {
+    if (!newAdvisor.name.trim()) {
+      toast.error('Le nom du conseiller est requis')
+      return
+    }
+    setIsSubmittingAdvisor(true)
+    try {
+      const res = await fetch('/api/advising?entity=advisor', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newAdvisor.name.trim(),
+          title: newAdvisor.title || undefined,
+          department: newAdvisor.department || undefined,
+          specialties: newAdvisor.specialties,
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || "Echec de l'ajout du conseiller")
+      toast.success('Conseiller ajoute')
+      queryClient.invalidateQueries({ queryKey: ['advising'] })
+      setShowNewAdvisor(false)
+      setNewAdvisor({ name: '', title: '', department: '', specialties: [] })
+    } catch (e) {
+      toast.error('Erreur', { description: e instanceof Error ? e.message : "Echec de l'ajout du conseiller" })
+    } finally {
+      setIsSubmittingAdvisor(false)
     }
   }
 
@@ -1234,12 +1267,66 @@ export function AdvisingPage() {
       <motion.div variants={itemVariants}>
         <Card className="border-l-4 border-l-[#1a2744]">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold text-[#1a2744]">Equipe de conseillers</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-semibold text-[#1a2744]">Equipe de conseillers</CardTitle>
+              <Button size="sm" variant="outline" className="text-xs h-8" onClick={() => setShowNewAdvisor((v) => !v)}>
+                <Plus className="size-3.5 mr-1.5" />
+                Ajouter un conseiller
+              </Button>
+            </div>
           </CardHeader>
-          <CardContent className="p-4 pt-0">
+          <CardContent className="p-4 pt-0 space-y-4">
+            {showNewAdvisor && (
+              <div className="p-3 rounded-lg border border-gray-200 bg-gray-50 space-y-2">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <Input
+                    placeholder="Nom complet"
+                    className="h-8 text-xs bg-white"
+                    value={newAdvisor.name}
+                    onChange={(e) => setNewAdvisor((f) => ({ ...f, name: e.target.value }))}
+                  />
+                  <Input
+                    placeholder="Titre (ex: Conseiller pedagogique)"
+                    className="h-8 text-xs bg-white"
+                    value={newAdvisor.title}
+                    onChange={(e) => setNewAdvisor((f) => ({ ...f, title: e.target.value }))}
+                  />
+                  <Input
+                    placeholder="Departement"
+                    className="h-8 text-xs bg-white"
+                    value={newAdvisor.department}
+                    onChange={(e) => setNewAdvisor((f) => ({ ...f, department: e.target.value }))}
+                  />
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {Object.keys(specialtyConfig).map((spec) => (
+                    <button
+                      key={spec}
+                      type="button"
+                      onClick={() => setNewAdvisor((f) => ({
+                        ...f,
+                        specialties: f.specialties.includes(spec)
+                          ? f.specialties.filter((s) => s !== spec)
+                          : [...f.specialties, spec],
+                      }))}
+                      className={`text-[10px] px-2 py-1 rounded-full border transition-colors ${
+                        newAdvisor.specialties.includes(spec)
+                          ? 'bg-[#1a2744] text-white border-[#1a2744]'
+                          : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      {specialtyConfig[spec].label}
+                    </button>
+                  ))}
+                </div>
+                <Button size="sm" className="h-7 text-[10px] bg-[#1a2744] hover:bg-[#1a2744]/90 text-white" onClick={createAdvisor} disabled={isSubmittingAdvisor}>
+                  {isSubmittingAdvisor ? 'Ajout...' : 'Enregistrer'}
+                </Button>
+              </div>
+            )}
             {noAdvisors ? (
               <p className="text-sm text-gray-400 text-center py-6">
-                Aucun conseiller enregistre — contactez un administrateur pour en ajouter.
+                Aucun conseiller enregistre pour le moment.
               </p>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

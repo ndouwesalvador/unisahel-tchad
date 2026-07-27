@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
+import { provisionStudentAccount } from '@/lib/student-portal'
 
 const SUPPORTED_IMPORT_TYPES = ['Etudiants'] as const
 
@@ -71,6 +72,7 @@ async function handleImport(tenantId: string, body: { type?: string; fileName?: 
   const programs = await db.program.findMany({ where: { tenantId }, select: { id: true, name: true } })
   const errors: string[] = []
   let successRows = 0
+  let portalAccountsCreated = 0
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i]
@@ -103,7 +105,7 @@ async function handleImport(tenantId: string, body: { type?: string; fileName?: 
         errors.push(`Ligne ${lineNumber}: filiere "${filiereText}" introuvable — etudiant cree sans filiere assignee`)
       }
 
-      await db.student.create({
+      const created = await db.student.create({
         data: {
           tenantId,
           matricule,
@@ -114,6 +116,10 @@ async function handleImport(tenantId: string, body: { type?: string; fileName?: 
           status: mapStatut(row['Statut']),
         },
       })
+      if (matricule) {
+        const account = await provisionStudentAccount(tenantId, created.id, matricule, firstName, lastName)
+        if (account) portalAccountsCreated += 1
+      }
       successRows += 1
     } catch (rowError) {
       errors.push(`Ligne ${lineNumber}: ${rowError instanceof Error ? rowError.message : 'erreur inconnue'}`)
@@ -136,7 +142,7 @@ async function handleImport(tenantId: string, body: { type?: string; fileName?: 
     },
   })
 
-  return NextResponse.json({ importLog, successRows, errorRows, errors })
+  return NextResponse.json({ importLog, successRows, errorRows, errors, portalAccountsCreated })
 }
 
 async function handleExportLog(tenantId: string, body: { type?: string; format?: string; rowCount?: number; fileSizeLabel?: string }) {
