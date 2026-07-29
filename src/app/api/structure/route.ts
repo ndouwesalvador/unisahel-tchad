@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
+import { createFacultySchema, createDepartmentSchema, validateBody, formatZodError } from '@/lib/validations/api'
 
 async function handler(_user: SessionUser, tenantId: string, _request: NextRequest) {
   try {
@@ -197,4 +198,57 @@ async function handler(_user: SessionUser, tenantId: string, _request: NextReque
   }
 }
 
+// POST /api/structure?type=faculty|department - createFacultySchema and
+// createDepartmentSchema existed in validations/api.ts but no route ever
+// used them; StructurePage/InstitutionPage's "Ajouter" buttons had no
+// handler to call.
+async function createFacultyHandler(user: SessionUser, tenantId: string, request: NextRequest) {
+  try {
+    const body = await request.json()
+    const data = validateBody(createFacultySchema, body)
+    const faculty = await db.faculty.create({ data: { ...data, tenantId } })
+    await db.auditLog.create({
+      data: { tenantId, userId: user.id, action: 'CREATE', entity: 'Faculty', entityId: faculty.id, details: JSON.stringify({ name: faculty.name }) },
+    })
+    return NextResponse.json({ data: faculty }, { status: 201 })
+  } catch (error) {
+    if (error instanceof Error && error.name === 'ZodError') {
+      return NextResponse.json({ error: 'Validation failed', details: formatZodError(error as any) }, { status: 400 })
+    }
+    console.error('Create faculty error:', error)
+    return NextResponse.json({ error: 'Failed to create faculty' }, { status: 500 })
+  }
+}
+
+async function createDepartmentHandler(user: SessionUser, tenantId: string, request: NextRequest) {
+  try {
+    const body = await request.json()
+    const data = validateBody(createDepartmentSchema, body)
+
+    const faculty = await db.faculty.findFirst({ where: { id: data.facultyId, tenantId } })
+    if (!faculty) {
+      return NextResponse.json({ error: 'Faculty not found in this tenant' }, { status: 404 })
+    }
+
+    const department = await db.department.create({ data: { ...data, tenantId } })
+    await db.auditLog.create({
+      data: { tenantId, userId: user.id, action: 'CREATE', entity: 'Department', entityId: department.id, details: JSON.stringify({ name: department.name, facultyId: department.facultyId }) },
+    })
+    return NextResponse.json({ data: department }, { status: 201 })
+  } catch (error) {
+    if (error instanceof Error && error.name === 'ZodError') {
+      return NextResponse.json({ error: 'Validation failed', details: formatZodError(error as any) }, { status: 400 })
+    }
+    console.error('Create department error:', error)
+    return NextResponse.json({ error: 'Failed to create department' }, { status: 500 })
+  }
+}
+
 export const GET = withTenantAuth(handler)
+
+export const POST = withTenantAuth(async (user: SessionUser, tenantId: string, request: NextRequest) => {
+  const { searchParams } = new URL(request.url)
+  const type = searchParams.get('type')
+  if (type === 'department') return createDepartmentHandler(user, tenantId, request)
+  return createFacultyHandler(user, tenantId, request)
+}, ['SUPER_ADMIN', 'ADMIN_INSTITUTION'])

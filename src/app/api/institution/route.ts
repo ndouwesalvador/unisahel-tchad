@@ -4,7 +4,7 @@ import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
 
 const TENANT_FIELDS = [
   'name', 'shortName', 'motto', 'ministry', 'country', 'city', 'address',
-  'phone', 'email', 'website', 'rectorName', 'rectorTitle', 'academicSystem', 'logo',
+  'phone', 'email', 'website', 'rectorName', 'rectorTitle', 'academicSystem', 'logo', 'stamp',
 ] as const
 
 const SETTINGS_FIELDS = [

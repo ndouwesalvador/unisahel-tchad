@@ -195,8 +195,6 @@ export const createDepartmentSchema = z.object({
   name: z.string().min(1).max(200),
   shortName: z.string().max(20),
   headName: z.string().max(100).optional(),
-  email: z.string().email().optional(),
-  phone: z.string().max(30).optional(),
   isActive: z.boolean().default(true),
 })
 

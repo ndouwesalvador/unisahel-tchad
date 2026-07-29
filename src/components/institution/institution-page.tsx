@@ -15,12 +15,9 @@ import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Switch } from '@/components/ui/switch'
-import { Progress } from '@/components/ui/progress'
 import {
   ArrowLeft,
   Save,
-  Upload,
   Building2,
   GraduationCap,
   BookOpen,
@@ -33,9 +30,6 @@ import {
   ChevronRight,
   Plus,
   Settings,
-  MapPin,
-  Phone,
-  Mail,
   Stamp,
   QrCode,
   Shield,
@@ -116,11 +110,24 @@ interface TenantData {
   rectorName: string | null
   rectorTitle: string | null
   academicSystem: string
+  logo: string | null
+  stamp: string | null
+  subscriptionPlan: string
+  subscriptionEnd: string | null
   settings: TenantSettingsData | null
+}
+
+interface InstitutionStats {
+  students: number
+  teachers: number
+  staffUsers: number
+  payments: number
+  documentsGenerated: number
 }
 
 interface InstitutionResponse {
   tenant: TenantData
+  stats: InstitutionStats
 }
 
 // ─── API Response Types (shape returned by GET /api/structure) ────────────
@@ -274,6 +281,8 @@ function InformationsTab() {
     siteWeb: '',
     recteurNom: '',
     recteurTitre: 'Recteur',
+    logo: '',
+    stamp: '',
   })
   const [initialized, setInitialized] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -294,6 +303,8 @@ function InformationsTab() {
         siteWeb: t.website || '',
         recteurNom: t.rectorName || '',
         recteurTitre: t.rectorTitle || 'Recteur',
+        logo: t.logo || '',
+        stamp: t.stamp || '',
       })
       setInitialized(true)
     }
@@ -322,6 +333,8 @@ function InformationsTab() {
           website: formData.siteWeb,
           rectorName: formData.recteurNom,
           rectorTitle: formData.recteurTitre,
+          logo: formData.logo,
+          stamp: formData.stamp,
         }),
       })
       const data = await res.json().catch(() => ({}))
@@ -356,17 +369,22 @@ function InformationsTab() {
               <CardDescription>Logo officiel utilise sur les documents</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-col items-center gap-4">
-                <div className="w-32 h-32 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 hover:border-[#2d7a4f] transition-colors cursor-pointer group">
-                  <div className="text-center">
-                    <Building2 className="size-10 text-gray-300 group-hover:text-[#2d7a4f] transition-colors mx-auto" />
-                    <span className="text-xs text-gray-400 mt-2 block">Clic pour televerser</span>
-                  </div>
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-32 h-32 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 overflow-hidden">
+                  {formData.logo ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- externally hosted logo URL, not a local asset
+                    <img src={formData.logo} alt="Logo" className="w-full h-full object-contain" />
+                  ) : (
+                    <Building2 className="size-10 text-gray-300 mx-auto" />
+                  )}
                 </div>
-                <Button variant="outline" size="sm" className="text-xs">
-                  <Upload className="size-3 mr-1" />
-                  Changer le logo
-                </Button>
+                <Input
+                  value={formData.logo}
+                  onChange={(e) => handleChange('logo', e.target.value)}
+                  placeholder="https://.../logo.png"
+                  className="text-xs h-8"
+                />
+                <p className="text-[10px] text-gray-400 text-center">Collez l&apos;URL d&apos;une image hebergee (aucun televersement de fichier n&apos;est disponible pour le moment)</p>
               </div>
             </CardContent>
           </Card>
@@ -379,17 +397,21 @@ function InformationsTab() {
               <CardDescription>Cachet appose sur les documents</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-col items-center gap-4">
-                <div className="w-28 h-28 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 hover:border-[#d4a853] transition-colors cursor-pointer group">
-                  <div className="text-center">
-                    <Stamp className="size-8 text-gray-300 group-hover:text-[#d4a853] transition-colors mx-auto" />
-                    <span className="text-xs text-gray-400 mt-1 block">Cachet</span>
-                  </div>
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-28 h-28 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 overflow-hidden">
+                  {formData.stamp ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- externally hosted stamp URL, not a local asset
+                    <img src={formData.stamp} alt="Cachet" className="w-full h-full object-contain" />
+                  ) : (
+                    <Stamp className="size-8 text-gray-300 mx-auto" />
+                  )}
                 </div>
-                <Button variant="outline" size="sm" className="text-xs">
-                  <Upload className="size-3 mr-1" />
-                  Changer le cachet
-                </Button>
+                <Input
+                  value={formData.stamp}
+                  onChange={(e) => handleChange('stamp', e.target.value)}
+                  placeholder="https://.../cachet.png"
+                  className="text-xs h-8"
+                />
               </div>
             </CardContent>
           </Card>
@@ -549,17 +571,75 @@ function InformationsTab() {
 
 // ─── Structure Tab ───────────────────────────────────────────────────────────
 function StructureTab() {
+  const queryClient = useQueryClient()
   const { data: structureQuery, isLoading } = useStructure() as {
     data: { faculties?: ApiFaculty[] } | undefined
     isLoading: boolean
   }
 
-  const faculties: Faculty[] = ((structureQuery?.faculties || []) as ApiFaculty[]).map(mapApiFaculty)
+  const rawFaculties = (structureQuery?.faculties || []) as ApiFaculty[]
+  const faculties: Faculty[] = rawFaculties.map(mapApiFaculty)
 
   const [expandedFaculties, setExpandedFaculties] = useState<Record<string, boolean>>({})
+  const [showAddFaculty, setShowAddFaculty] = useState(false)
+  const [facultyForm, setFacultyForm] = useState({ name: '', shortName: '', deanName: '' })
+  const [isSavingFaculty, setIsSavingFaculty] = useState(false)
+  const [showAddDepartment, setShowAddDepartment] = useState(false)
+  const [departmentForm, setDepartmentForm] = useState({ facultyId: '', name: '', shortName: '', headName: '' })
+  const [isSavingDepartment, setIsSavingDepartment] = useState(false)
 
   const toggleFaculty = (id: string) => {
     setExpandedFaculties((prev) => ({ ...prev, [id]: !prev[id] }))
+  }
+
+  const handleAddFaculty = async () => {
+    if (!facultyForm.name || !facultyForm.shortName) {
+      toast.error('Champs requis', { description: 'Nom et sigle sont obligatoires' })
+      return
+    }
+    setIsSavingFaculty(true)
+    try {
+      const res = await fetch('/api/structure?type=faculty', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(facultyForm),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.error || "Echec de la creation")
+      toast.success('Faculte creee', { description: facultyForm.name })
+      queryClient.invalidateQueries({ queryKey: ['structure'] })
+      setShowAddFaculty(false)
+      setFacultyForm({ name: '', shortName: '', deanName: '' })
+    } catch (error) {
+      toast.error('Erreur', { description: error instanceof Error ? error.message : "Echec de la creation" })
+    } finally {
+      setIsSavingFaculty(false)
+    }
+  }
+
+  const handleAddDepartment = async () => {
+    if (!departmentForm.facultyId || !departmentForm.name || !departmentForm.shortName) {
+      toast.error('Champs requis', { description: 'Faculte, nom et sigle sont obligatoires' })
+      return
+    }
+    setIsSavingDepartment(true)
+    try {
+      const res = await fetch('/api/structure?type=department', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(departmentForm),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.error || "Echec de la creation")
+      toast.success('Departement cree', { description: departmentForm.name })
+      queryClient.invalidateQueries({ queryKey: ['structure'] })
+      setShowAddDepartment(false)
+      setDepartmentForm({ facultyId: '', name: '', shortName: '', headName: '' })
+    } catch (error) {
+      toast.error('Erreur', { description: error instanceof Error ? error.message : "Echec de la creation" })
+    } finally {
+      setIsSavingDepartment(false)
+    }
   }
 
   const totalDepartments = faculties.reduce((acc, f) => acc + f.departments.length, 0)
@@ -678,15 +758,83 @@ function StructureTab() {
 
       {/* Action buttons */}
       <div className="flex flex-col sm:flex-row gap-3">
-        <Button variant="outline" className="border-[#2d7a4f30] text-[#2d7a4f]">
+        <Button variant="outline" className="border-[#2d7a4f30] text-[#2d7a4f]" onClick={() => setShowAddFaculty(true)}>
           <Plus className="size-4 mr-2" />
           Ajouter faculte
         </Button>
-        <Button variant="outline" className="border-[#1a274430] text-[#1a2744]">
+        <Button
+          variant="outline"
+          className="border-[#1a274430] text-[#1a2744]"
+          disabled={rawFaculties.length === 0}
+          onClick={() => setShowAddDepartment(true)}
+        >
           <Plus className="size-4 mr-2" />
           Ajouter departement
         </Button>
       </div>
+
+      {/* Add faculty dialog */}
+      <Dialog open={showAddFaculty} onOpenChange={setShowAddFaculty}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Ajouter une faculte</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label className="text-sm">Nom</Label>
+              <Input value={facultyForm.name} onChange={(e) => setFacultyForm((f) => ({ ...f, name: e.target.value }))} placeholder="Faculte des Sciences" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm">Sigle</Label>
+              <Input value={facultyForm.shortName} onChange={(e) => setFacultyForm((f) => ({ ...f, shortName: e.target.value }))} placeholder="FS" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm">Doyen (optionnel)</Label>
+              <Input value={facultyForm.deanName} onChange={(e) => setFacultyForm((f) => ({ ...f, deanName: e.target.value }))} />
+            </div>
+            <Button className="w-full bg-[#2d7a4f] hover:bg-[#236b40] text-white" disabled={isSavingFaculty} onClick={handleAddFaculty}>
+              {isSavingFaculty ? 'Creation...' : 'Creer la faculte'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add department dialog */}
+      <Dialog open={showAddDepartment} onOpenChange={setShowAddDepartment}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Ajouter un departement</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label className="text-sm">Faculte</Label>
+              <Select value={departmentForm.facultyId} onValueChange={(v) => setDepartmentForm((f) => ({ ...f, facultyId: v }))}>
+                <SelectTrigger><SelectValue placeholder="Selectionner une faculte" /></SelectTrigger>
+                <SelectContent>
+                  {rawFaculties.map((f) => (
+                    <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm">Nom</Label>
+              <Input value={departmentForm.name} onChange={(e) => setDepartmentForm((f) => ({ ...f, name: e.target.value }))} placeholder="Departement d'Informatique" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm">Sigle</Label>
+              <Input value={departmentForm.shortName} onChange={(e) => setDepartmentForm((f) => ({ ...f, shortName: e.target.value }))} placeholder="INFO" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm">Chef de departement (optionnel)</Label>
+              <Input value={departmentForm.headName} onChange={(e) => setDepartmentForm((f) => ({ ...f, headName: e.target.value }))} />
+            </div>
+            <Button className="w-full bg-[#2d7a4f] hover:bg-[#236b40] text-white" disabled={isSavingDepartment} onClick={handleAddDepartment}>
+              {isSavingDepartment ? 'Creation...' : 'Creer le departement'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -1064,16 +1212,27 @@ function AcademiqueTab() {
 
 // ─── Documents Tab ───────────────────────────────────────────────────────────
 function DocumentsTab() {
-  const [qrPosition, setQrPosition] = useState('bottom-right')
-  const [stampPosition, setStampPosition] = useState('bottom-left')
+  const { data: institutionQuery, isLoading } = useInstitution() as {
+    data: InstitutionResponse | undefined
+    isLoading: boolean
+  }
+  const tenant = institutionQuery?.tenant
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-16 text-sm text-gray-400">
+        Chargement...
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
       {/* Document formats */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Formats de documents</CardTitle>
-          <CardDescription>Configurez les modeles de documents officiels</CardDescription>
+          <CardTitle className="text-base">Types de documents generes</CardTitle>
+          <CardDescription>Chaque document est un vrai PDF, avec code de verification et QR code</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -1082,16 +1241,13 @@ function DocumentsTab() {
               'Attestation',
               'Diplome',
               'Recu de paiement',
-              'Certificat de scolarite',
-              'Carte etudiant',
               'Proces-verbal',
-              'Attestation de stage',
             ].map((doc) => (
               <div
                 key={doc}
-                className="flex flex-col items-center gap-2 p-3 rounded-lg border border-gray-100 bg-white hover:border-[#2d7a4f20] hover:shadow-sm transition-all cursor-pointer group"
+                className="flex flex-col items-center gap-2 p-3 rounded-lg border border-gray-100 bg-white"
               >
-                <div className="w-10 h-10 rounded-lg bg-[#1a274408] flex items-center justify-center group-hover:bg-[#1a274415] transition-colors">
+                <div className="w-10 h-10 rounded-lg bg-[#1a274408] flex items-center justify-center">
                   <FileText className="size-5 text-[#1a2744]/60" />
                 </div>
                 <span className="text-xs font-medium text-gray-700 text-center">{doc}</span>
@@ -1105,137 +1261,62 @@ function DocumentsTab() {
         {/* Signature configuration */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Signataires</CardTitle>
-            <CardDescription>Qui signe quel type de document</CardDescription>
+            <CardTitle className="text-base">Signataire</CardTitle>
+            <CardDescription>Renseigne dans l&apos;onglet Informations</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3">
-            {[
-              { doc: 'Releve de notes', signataire: 'Directeur de scolarite' },
-              { doc: 'Attestation', signataire: 'Recteur' },
-              { doc: 'Diplome', signataire: 'Recteur + Ministre' },
-              { doc: 'Recu', signataire: 'Agent de caisse' },
-              { doc: 'Proces-verbal', signataire: 'President du jury' },
-            ].map((item) => (
-              <div key={item.doc} className="flex items-center justify-between p-2.5 rounded-lg bg-gray-50 border border-gray-100">
-                <span className="text-sm text-[#1a2744] font-medium">{item.doc}</span>
-                <Badge variant="outline" className="text-xs">
-                  {item.signataire}
-                </Badge>
+          <CardContent>
+            {tenant?.rectorName ? (
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 border border-gray-100">
+                <div className="w-9 h-9 rounded-lg bg-[#d4a85310] flex items-center justify-center shrink-0">
+                  <FileText className="size-4 text-[#d4a853]" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-[#1a2744]">{tenant.rectorName}</p>
+                  <p className="text-xs text-gray-400">{tenant.rectorTitle || 'Recteur'}</p>
+                </div>
               </div>
-            ))}
+            ) : (
+              <p className="text-sm text-gray-400">Aucun signataire renseigne. Ajoutez-en un depuis l&apos;onglet Informations.</p>
+            )}
           </CardContent>
         </Card>
 
-        {/* QR & Stamp positioning */}
+        {/* Verification */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Positionnement</CardTitle>
-            <CardDescription>Position du QR code et du cachet sur les documents</CardDescription>
+            <CardTitle className="text-base">Verification</CardTitle>
+            <CardDescription>Chaque document genere est verifiable</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label>Position du QR code</Label>
-              <Select value={qrPosition} onValueChange={setQrPosition}>
-                <SelectTrigger className="mt-1.5">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="top-right">En haut a droite</SelectItem>
-                  <SelectItem value="bottom-right">En bas a droite</SelectItem>
-                  <SelectItem value="bottom-left">En bas a gauche</SelectItem>
-                  <SelectItem value="top-left">En haut a gauche</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Position du cachet</Label>
-              <Select value={stampPosition} onValueChange={setStampPosition}>
-                <SelectTrigger className="mt-1.5">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="bottom-left">En bas a gauche</SelectItem>
-                  <SelectItem value="bottom-right">En bas a droite</SelectItem>
-                  <SelectItem value="center">Au centre</SelectItem>
-                  <SelectItem value="overlay">Superpose signature</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Mini preview */}
-            <div className="mt-2">
-              <Label className="mb-2 block">Apercu</Label>
-              <div className="border border-gray-200 rounded-lg p-4 bg-white relative h-48">
-                <div className="border-b border-gray-200 pb-2 mb-3">
-                  <div className="h-3 w-32 bg-gray-100 rounded" />
-                  <div className="h-2 w-24 bg-gray-50 rounded mt-1" />
-                </div>
-                <div className="space-y-1.5">
-                  <div className="h-2 bg-gray-50 rounded w-full" />
-                  <div className="h-2 bg-gray-50 rounded w-4/5" />
-                  <div className="h-2 bg-gray-50 rounded w-3/4" />
-                </div>
-                {/* QR code position */}
-                <div
-                  className={`absolute ${qrPosition === 'bottom-right' ? 'bottom-2 right-2' : qrPosition === 'bottom-left' ? 'bottom-2 left-2' : qrPosition === 'top-right' ? 'top-2 right-2' : 'top-2 left-2'}`}
-                >
-                  <div className="w-8 h-8 border border-gray-300 rounded flex items-center justify-center bg-gray-50">
-                    <QrCode className="size-4 text-gray-400" />
-                  </div>
-                </div>
-                {/* Stamp position */}
-                <div
-                  className={`absolute ${stampPosition === 'bottom-left' ? 'bottom-2 left-2' : stampPosition === 'bottom-right' ? 'bottom-2 right-2' : stampPosition === 'center' ? 'top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2' : 'bottom-8 right-8'}`}
-                >
-                  <div className="w-10 h-10 border-2 border-red-200 rounded-full flex items-center justify-center bg-red-50/50">
-                    <Stamp className="size-3 text-red-300" />
-                  </div>
-                </div>
+          <CardContent>
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-[#2d7a4f08] border border-[#2d7a4f20]">
+              <div className="w-9 h-9 rounded-lg bg-[#2d7a4f15] flex items-center justify-center shrink-0">
+                <QrCode className="size-4 text-[#2d7a4f]" />
               </div>
+              <p className="text-xs text-gray-600">
+                Un code de verification unique et un QR code sont integres sur chaque document officiel. Toute personne peut verifier son authenticite sur la page publique <span className="font-mono text-[#2d7a4f]">/verify</span>.
+              </p>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Header/Footer template */}
+      {/* Header/Footer preview */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">En-tete et pied de page PDF</CardTitle>
-          <CardDescription>Modele d&apos;en-tete et de pied de page pour les documents</CardDescription>
+          <CardTitle className="text-base">En-tete des documents generes</CardTitle>
+          <CardDescription>Compose a partir des informations de l&apos;onglet Informations — aucun champ separe a remplir ici</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <Label>En-tete</Label>
-              <div className="mt-1.5 p-3 rounded-lg border border-gray-200 bg-gray-50 min-h-20 text-xs text-gray-500 space-y-1">
-                <div className="flex items-center gap-2">
-                  <Building2 className="size-3" />
-                  <span>REPUBLIQUE DU TCHAD</span>
-                </div>
-                <div className="flex items-center gap-2 pl-5">
-                  <span>Ministere de l&apos;Enseignement Superieur</span>
-                </div>
-                <div className="flex items-center gap-2 font-semibold text-[#1a2744]">
-                  <span>Universite de N&apos;Djamena</span>
-                </div>
-              </div>
+          <div className="p-3 rounded-lg border border-gray-200 bg-gray-50 max-w-md text-xs text-gray-500 space-y-1">
+            <div className="flex items-center gap-2 font-semibold text-[#1a2744] text-sm">
+              <Building2 className="size-3.5" />
+              <span>{tenant?.name || 'Nom de l’institution'}</span>
             </div>
-            <div>
-              <Label>Pied de page</Label>
-              <div className="mt-1.5 p-3 rounded-lg border border-gray-200 bg-gray-50 min-h-20 text-xs text-gray-500 space-y-1">
-                <div className="flex items-center gap-2">
-                  <MapPin className="size-3" />
-                  <span>BP 1117, N&apos;Djamena, Tchad</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Phone className="size-3" />
-                  <span>+235 66 00 00 00</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Mail className="size-3" />
-                  <span>contact@und.td | www.univ-ndjamena.td</span>
-                </div>
-              </div>
+            <div className="flex items-center gap-2 pl-5">
+              <span>{[tenant?.address, tenant?.city].filter(Boolean).join(', ') || 'Adresse non renseignee'}</span>
+            </div>
+            <div className="flex items-center gap-2 pl-5">
+              <span>{[tenant?.phone, tenant?.email].filter(Boolean).join(' | ') || 'Contact non renseigne'}</span>
             </div>
           </div>
         </CardContent>
@@ -1246,10 +1327,54 @@ function DocumentsTab() {
 
 // ─── Apparence Tab ───────────────────────────────────────────────────────────
 function ApparenceTab() {
+  const { data: institutionQuery, isLoading, refetch } = useInstitution() as {
+    data: InstitutionResponse | undefined
+    isLoading: boolean
+    refetch: () => void
+  }
+  const tenant = institutionQuery?.tenant
+
   const [primaryColor, setPrimaryColor] = useState('#1a2744')
   const [secondaryColor, setSecondaryColor] = useState('#2d7a4f')
   const [accentColor, setAccentColor] = useState('#d4a853')
-  const [darkMode, setDarkMode] = useState(false)
+  const [initialized, setInitialized] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+
+  useEffect(() => {
+    if (tenant?.settings && !initialized) {
+      setPrimaryColor(tenant.settings.primaryColor || '#1a2744')
+      setSecondaryColor(tenant.settings.secondaryColor || '#2d7a4f')
+      setAccentColor(tenant.settings.accentColor || '#d4a853')
+      setInitialized(true)
+    }
+  }, [tenant, initialized])
+
+  const handleSave = async () => {
+    setIsSaving(true)
+    try {
+      const res = await fetch('/api/institution', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ primaryColor, secondaryColor, accentColor }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || "Echec de l'enregistrement")
+      toast.success('Couleurs enregistrees')
+      refetch()
+    } catch (error) {
+      toast.error('Erreur', { description: error instanceof Error ? error.message : "Echec de l'enregistrement" })
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-16 text-sm text-gray-400">
+        Chargement...
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -1315,12 +1440,11 @@ function ApparenceTab() {
                 />
               </div>
             </div>
-            <div className="flex items-center justify-between pt-2">
-              <div>
-                <Label>Mode sombre</Label>
-                <p className="text-xs text-gray-400 mt-0.5">Activer le theme sombre</p>
-              </div>
-              <Switch checked={darkMode} onCheckedChange={setDarkMode} />
+            <div className="pt-2">
+              <Button className="bg-[#2d7a4f] hover:bg-[#236b40] text-white" onClick={handleSave} disabled={isSaving}>
+                <Save className="size-4 mr-2" />
+                {isSaving ? 'Enregistrement...' : 'Enregistrer les couleurs'}
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -1332,7 +1456,7 @@ function ApparenceTab() {
             <CardDescription>Apercu de vos couleurs sur l&apos;interface</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className={`rounded-xl border overflow-hidden ${darkMode ? 'bg-gray-900' : 'bg-white'}`}>
+            <div className="rounded-xl border overflow-hidden bg-white">
               {/* Header preview */}
               <div
                 className="p-3 flex items-center gap-2"
@@ -1349,9 +1473,9 @@ function ApparenceTab() {
                 </div>
               </div>
               {/* Content preview */}
-              <div className={`p-4 space-y-3 ${darkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
-                <div className={`h-3 rounded w-3/4 ${darkMode ? 'bg-gray-600' : 'bg-gray-200'}`} />
-                <div className={`h-2 rounded w-1/2 ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`} />
+              <div className="p-4 space-y-3 bg-gray-50">
+                <div className="h-3 rounded w-3/4 bg-gray-200" />
+                <div className="h-2 rounded w-1/2 bg-gray-100" />
                 <div className="flex gap-2 mt-3">
                   <div
                     className="h-7 rounded-md flex items-center justify-center px-3"
@@ -1359,18 +1483,16 @@ function ApparenceTab() {
                   >
                     <span className="text-white text-xs font-medium">Valider</span>
                   </div>
-                  <div
-                    className={`h-7 rounded-md border flex items-center justify-center px-3 ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}
-                  >
-                    <span className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Annuler</span>
+                  <div className="h-7 rounded-md border flex items-center justify-center px-3 border-gray-200">
+                    <span className="text-xs text-gray-600">Annuler</span>
                   </div>
                 </div>
               </div>
               {/* Accent preview */}
-              <div className={`p-3 flex items-center gap-2 ${darkMode ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-100'} border-t`}>
+              <div className="p-3 flex items-center gap-2 bg-white border-gray-100 border-t">
                 <div className="w-5 h-5 rounded" style={{ backgroundColor: accentColor }} />
-                <div className={`h-2 rounded w-20 ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`} />
-                <div className={`h-2 rounded w-12 ml-auto ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`} />
+                <div className="h-2 rounded w-20 bg-gray-200" />
+                <div className="h-2 rounded w-12 ml-auto bg-gray-200" />
               </div>
             </div>
 
@@ -1397,19 +1519,29 @@ function ApparenceTab() {
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Logo et cachet</CardTitle>
-          <CardDescription>Apercu du logo et du cachet sur les documents</CardDescription>
+          <CardDescription>Definis dans l&apos;onglet Informations — utilises sur les documents officiels generes</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-6 items-center justify-center p-6 bg-gray-50 rounded-xl">
             <div className="text-center">
-              <div className="w-20 h-20 rounded-full border-2 border-gray-200 flex items-center justify-center bg-white">
-                <Building2 className="size-8 text-gray-300" />
+              <div className="w-20 h-20 rounded-full border-2 border-gray-200 flex items-center justify-center bg-white overflow-hidden">
+                {tenant?.logo ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- externally hosted logo URL, not a local asset
+                  <img src={tenant.logo} alt="Logo" className="w-full h-full object-contain" />
+                ) : (
+                  <Building2 className="size-8 text-gray-300" />
+                )}
               </div>
               <p className="text-xs text-gray-400 mt-2">Logo</p>
             </div>
             <div className="text-center">
-              <div className="w-20 h-20 rounded-lg border-2 border-gray-200 flex items-center justify-center bg-white">
-                <Stamp className="size-8 text-gray-300" />
+              <div className="w-20 h-20 rounded-lg border-2 border-gray-200 flex items-center justify-center bg-white overflow-hidden">
+                {tenant?.stamp ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- externally hosted stamp URL, not a local asset
+                  <img src={tenant.stamp} alt="Cachet" className="w-full h-full object-contain" />
+                ) : (
+                  <Stamp className="size-8 text-gray-300" />
+                )}
               </div>
               <p className="text-xs text-gray-400 mt-2">Cachet</p>
             </div>
@@ -1418,12 +1550,7 @@ function ApparenceTab() {
                 <QrCode className="size-8 text-gray-300" />
               </div>
               <p className="text-xs text-gray-400 mt-2">QR Code</p>
-            </div>
-            <div className="text-center">
-              <div className="w-20 h-20 rounded border-2 border-gray-200 flex items-center justify-center bg-white">
-                <FileText className="size-8 text-gray-300" />
-              </div>
-              <p className="text-xs text-gray-400 mt-2">En-tete</p>
+              <p className="text-[9px] text-gray-400">Sur chaque document</p>
             </div>
           </div>
         </CardContent>
@@ -1433,68 +1560,44 @@ function ApparenceTab() {
 }
 
 // ─── Abonnement Tab ──────────────────────────────────────────────────────────
+const PLAN_LABELS: Record<string, string> = { STARTER: 'Starter', PRO: 'Pro', ENTERPRISE: 'Entreprise' }
+
 function AbonnementTab() {
-  const [currentPlan] = useState('pro')
+  const { data: institutionQuery, isLoading } = useInstitution() as {
+    data: InstitutionResponse | undefined
+    isLoading: boolean
+  }
+  const tenant = institutionQuery?.tenant
+  const stats = institutionQuery?.stats
 
   const plans = [
     {
-      id: 'starter',
-      name: 'STARTER',
+      id: 'STARTER',
       icon: Rocket,
-      price: '150 000',
-      period: '/mois',
       description: 'Pour les petits etablissements',
-      features: [
-        'Jusqu a 500 etudiants',
-        '2 facultes',
-        'Gestion LMD de base',
-        'Documents PDF basiques',
-        'Support email',
-        '5 Go stockage',
-      ],
-      current: currentPlan === 'starter',
+      features: ['Gestion LMD de base', 'Documents PDF avec QR code', 'Enregistrement des paiements'],
     },
     {
-      id: 'pro',
-      name: 'PRO',
+      id: 'PRO',
       icon: Star,
-      price: '350 000',
-      period: '/mois',
       description: 'Pour les universites moyennes',
-      features: [
-        'Jusqu a 5 000 etudiants',
-        'Facultes illimitees',
-        'LMD + Classique + Sante',
-        'Documents avances + QR code',
-        'Support prioritaire 24/7',
-        '50 Go stockage',
-        'API et integrations',
-        'Mobile Money',
-      ],
-      current: currentPlan === 'pro',
-      popular: true,
+      features: ['LMD + Classique + Sante', 'Facultes et departements illimites', 'Import/export en masse'],
     },
     {
-      id: 'enterprise',
-      name: 'ENTERPRISE',
+      id: 'ENTERPRISE',
       icon: Crown,
-      price: 'Sur devis',
-      period: '',
       description: 'Pour les grandes universites',
-      features: [
-        'Etudiants illimites',
-        'Multi-etablissement',
-        'Tous les systemes',
-        'Personnalisation complete',
-        'Support dedie',
-        'Stockage illimite',
-        'SLA garanti',
-        'Formation sur site',
-        'Hebergement prive',
-      ],
-      current: currentPlan === 'enterprise',
+      features: ['Tous les systemes academiques', 'Personnalisation complete', 'Support dedie'],
     },
   ]
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-16 text-sm text-gray-400">
+        Chargement...
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -1504,115 +1607,76 @@ function AbonnementTab() {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <Badge className="bg-[#2d7a4f] text-white">PRO</Badge>
+                <Badge className="bg-[#2d7a4f] text-white">{PLAN_LABELS[tenant?.subscriptionPlan || 'STARTER']}</Badge>
                 <span className="text-sm text-gray-500">Plan actuel</span>
               </div>
-              <h3 className="text-xl font-bold text-[#1a2744]">Plan Professionnel</h3>
-              <p className="text-sm text-gray-500 mt-1">350 000 FCFA / mois</p>
+              <h3 className="text-xl font-bold text-[#1a2744]">
+                Plan {PLAN_LABELS[tenant?.subscriptionPlan || 'STARTER']}
+              </h3>
+              {tenant?.subscriptionEnd && (
+                <p className="text-sm text-gray-500 mt-1">
+                  Valide jusqu&apos;au {new Date(tenant.subscriptionEnd).toLocaleDateString('fr-FR')}
+                </p>
+              )}
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm">
-                Modifier le plan
-              </Button>
-              <Button size="sm" className="bg-[#2d7a4f] hover:bg-[#236b40] text-white">
-                Upgrader
-              </Button>
-            </div>
+            <Button variant="outline" size="sm" asChild>
+              <a href="mailto:contact@unisahel.africa?subject=Changement%20de%20plan">Contacter le support pour changer de plan</a>
+            </Button>
           </div>
+          <p className="text-[11px] text-gray-400 mt-3">
+            Le plan et la facturation sont geres par l&apos;equipe UniSahel, pas en libre-service depuis cette page.
+          </p>
         </CardContent>
       </Card>
 
-      {/* Usage stats */}
+      {/* Real usage stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: 'Etudiants', current: 2847, max: 5000, unit: '' },
-          { label: 'Stockage', current: 18, max: 50, unit: ' Go' },
-          { label: 'Facultes', current: 3, max: 99, unit: '' },
-          { label: 'Utilisateurs', current: 42, max: 100, unit: '' },
-        ].map((stat) => {
-          const percentage = Math.min(Math.round((stat.current / stat.max) * 100), 100)
+          { label: 'Etudiants', value: stats?.students ?? 0 },
+          { label: 'Enseignants', value: stats?.teachers ?? 0 },
+          { label: 'Personnel', value: stats?.staffUsers ?? 0 },
+          { label: 'Documents generes', value: stats?.documentsGenerated ?? 0 },
+        ].map((stat) => (
+          <Card key={stat.label}>
+            <CardContent className="p-4">
+              <p className="text-xs text-gray-500 mb-1">{stat.label}</p>
+              <p className="text-lg font-bold text-[#1a2744]">{stat.value.toLocaleString('fr-FR')}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Plan comparison (informational only -- no self-service billing exists) */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {plans.map((plan) => {
+          const isCurrent = (tenant?.subscriptionPlan || 'STARTER') === plan.id
           return (
-            <Card key={stat.label}>
-              <CardContent className="p-4">
-                <p className="text-xs text-gray-500 mb-1">{stat.label}</p>
-                <p className="text-lg font-bold text-[#1a2744]">
-                  {stat.current.toLocaleString()}{stat.unit}
-                </p>
-                <p className="text-xs text-gray-400 mb-2">sur {stat.max.toLocaleString()}{stat.unit}</p>
-                <Progress value={percentage} className="h-1.5" />
-                <p className="text-xs text-gray-400 mt-1">{percentage}% utilise</p>
+            <Card key={plan.id} className={isCurrent ? 'border-[#2d7a4f] shadow-md' : 'border-gray-100'}>
+              <CardHeader className="pb-2">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${isCurrent ? 'bg-[#2d7a4f15]' : 'bg-gray-100'}`}>
+                    <plan.icon className={`size-5 ${isCurrent ? 'text-[#2d7a4f]' : 'text-gray-400'}`} />
+                  </div>
+                  <CardTitle className="text-lg">{PLAN_LABELS[plan.id]}</CardTitle>
+                </div>
+                <CardDescription>{plan.description}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {plan.features.map((feature) => (
+                    <div key={feature} className="flex items-start gap-2">
+                      <CheckCircle2 className={`size-4 shrink-0 mt-0.5 ${isCurrent ? 'text-[#2d7a4f]' : 'text-gray-300'}`} />
+                      <span className="text-xs text-gray-600">{feature}</span>
+                    </div>
+                  ))}
+                </div>
+                {isCurrent && (
+                  <Badge variant="outline" className="mt-4 text-xs">Plan actuel</Badge>
+                )}
               </CardContent>
             </Card>
           )
         })}
-      </div>
-
-      {/* Plan comparison */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {plans.map((plan) => (
-          <Card
-            key={plan.id}
-            className={`relative overflow-hidden ${
-              plan.popular ? 'border-[#2d7a4f] shadow-md' : 'border-gray-100'
-            }`}
-          >
-            {plan.popular && (
-              <div className="absolute top-0 right-0 bg-[#2d7a4f] text-white text-xs font-medium px-3 py-1 rounded-bl-lg">
-                Populaire
-              </div>
-            )}
-            <CardHeader className="pb-2">
-              <div className="flex items-center gap-2 mb-2">
-                <div
-                  className={`w-9 h-9 rounded-lg flex items-center justify-center ${
-                    plan.current ? 'bg-[#2d7a4f15]' : 'bg-gray-100'
-                  }`}
-                >
-                  <plan.icon
-                    className={`size-5 ${plan.current ? 'text-[#2d7a4f]' : 'text-gray-400'}`}
-                  />
-                </div>
-                <CardTitle className="text-lg">{plan.name}</CardTitle>
-              </div>
-              <CardDescription>{plan.description}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="mb-4">
-                <span className="text-2xl font-bold text-[#1a2744]">{plan.price}</span>
-                <span className="text-sm text-gray-400">{plan.period}</span>
-              </div>
-              <div className="space-y-2">
-                {plan.features.map((feature) => (
-                  <div key={feature} className="flex items-start gap-2">
-                    <CheckCircle2
-                      className={`size-4 shrink-0 mt-0.5 ${
-                        plan.current ? 'text-[#2d7a4f]' : 'text-gray-300'
-                      }`}
-                    />
-                    <span className="text-xs text-gray-600">{feature}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-4">
-                {plan.current ? (
-                  <Button variant="outline" className="w-full" disabled>
-                    Plan actuel
-                  </Button>
-                ) : (
-                  <Button
-                    className={`w-full ${
-                      plan.popular
-                        ? 'bg-[#2d7a4f] hover:bg-[#236b40] text-white'
-                        : 'bg-[#1a2744] hover:bg-[#1a2744]/90 text-white'
-                    }`}
-                  >
-                    {plan.id === 'enterprise' ? 'Nous contacter' : 'Upgrader'}
-                  </Button>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
       </div>
     </div>
   )
