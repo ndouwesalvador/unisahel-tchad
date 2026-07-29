@@ -4,27 +4,42 @@ import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
 
 const TENANT_FIELDS = [
   'name', 'shortName', 'motto', 'ministry', 'country', 'city', 'address',
-  'phone', 'email', 'website', 'rectorName', 'rectorTitle', 'academicSystem',
+  'phone', 'email', 'website', 'rectorName', 'rectorTitle', 'academicSystem', 'logo',
 ] as const
 
 const SETTINGS_FIELDS = [
   'creditsPerSemester', 'creditsPerYear', 'passingGrade', 'eliminationGrade',
-  'primaryColor', 'secondaryColor', 'accentColor',
+  'primaryColor', 'secondaryColor', 'accentColor', 'gradingScale',
+  'compensationEnabled', 'catchUpSessionEnabled', 'ccWeight', 'examWeight',
+  'tpWeight', 'stageWeight', 'emailNotifications', 'smsNotifications',
+  'whatsappNotifications',
 ] as const
 
-// GET /api/institution - fetch the current tenant's profile + settings
+// GET /api/institution - fetch the current tenant's profile + settings, plus
+// real usage stats and email-delivery status for the Settings/Maintenance
+// pages (replaces what used to be hardcoded placeholder numbers there).
 async function handleGet(_user: SessionUser, tenantId: string, _request: NextRequest) {
   try {
-    const tenant = await db.tenant.findUnique({
-      where: { id: tenantId },
-      include: { settings: true },
-    })
+    const [tenant, students, teachers, staffUsers, payments, documentsGenerated, auditLogCount, oldestAuditLog] = await Promise.all([
+      db.tenant.findUnique({ where: { id: tenantId }, include: { settings: true } }),
+      db.student.count({ where: { tenantId } }),
+      db.teacher.count({ where: { tenantId } }),
+      db.user.count({ where: { tenantId, role: { notIn: ['ETUDIANT', 'ETUDIANT_SANTE', 'PARENT'] } } }),
+      db.payment.count({ where: { tenantId } }),
+      db.officialDocument.count({ where: { tenantId } }),
+      db.auditLog.count({ where: { tenantId } }),
+      db.auditLog.findFirst({ where: { tenantId }, orderBy: { createdAt: 'asc' }, select: { createdAt: true } }),
+    ])
 
     if (!tenant) {
       return NextResponse.json({ error: 'Tenant not found' }, { status: 404 })
     }
 
-    return NextResponse.json({ tenant })
+    return NextResponse.json({
+      tenant,
+      stats: { students, teachers, staffUsers, payments, documentsGenerated, auditLogCount, oldestAuditLogDate: oldestAuditLog?.createdAt ?? null },
+      emailStatus: { resendConfigured: Boolean(process.env.RESEND_API_KEY) },
+    })
   } catch (error) {
     console.error('Institution API error:', error)
     return NextResponse.json({ error: 'Failed to fetch institution profile' }, { status: 500 })
