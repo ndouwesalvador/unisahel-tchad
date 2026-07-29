@@ -3,7 +3,8 @@
 import { useState, useMemo, useCallback } from 'react'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
-import { useDeliberation } from '@/lib/api-hooks'
+import { useAppStore } from '@/lib/store'
+import { useDeliberation, useInstitution, useAcademicYears } from '@/lib/api-hooks'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -63,9 +64,6 @@ import {
 interface DeliberationSession {
   id: string
   titre: string
-  filiere: string
-  niveau: string
-  semestre: string
   date: string
   statut: 'planifiee' | 'en_cours' | 'terminee'
 }
@@ -103,11 +101,16 @@ const sessionStatusConfig: Record<string, { label: string; className: string }> 
 
 export function DeliberationPage() {
   const queryClient = useQueryClient()
+  const tenantId = useAppStore((s) => s.user?.tenantId)
+  const { data: institutionQuery } = useInstitution() as {
+    data: { tenant: { name: string; address: string | null; city: string | null; phone: string | null; email: string | null; rectorName: string | null; rectorTitle: string | null } } | undefined
+  }
+  const { data: academicYearsQuery } = useAcademicYears() as {
+    data: { data: { id: string; name: string; isCurrent: boolean }[] } | undefined
+  }
+  const currentYearName = (academicYearsQuery?.data || []).find((y) => y.isCurrent)?.name || ''
   const [selectedSession, setSelectedSession] = useState<string | null>(null)
   const [selectedSessionType, setSelectedSessionType] = useState('normale')
-  const [selectedFiliere, setSelectedFiliere] = useState('droit')
-  const [selectedNiveau, setSelectedNiveau] = useState('L2')
-  const [selectedSemestre, setSelectedSemestre] = useState('S3')
   const [isExportingPV, setIsExportingPV] = useState(false)
   const [isLaunching, setIsLaunching] = useState(false)
   const [isLocking, setIsLocking] = useState(false)
@@ -129,7 +132,7 @@ export function DeliberationPage() {
   )
   const deliberations: DeliberationSession[] = useMemo(
     () => (deliberationData?.sessions ?? []).map((s: { id: string; titre: string; date: string; statut: string }) => ({
-      id: s.id, titre: s.titre, filiere: '—', niveau: '—', semestre: '—', date: s.date, statut: s.statut as DeliberationSession['statut'],
+      id: s.id, titre: s.titre, date: s.date, statut: s.statut as DeliberationSession['statut'],
     })),
     [deliberationData]
   )
@@ -172,6 +175,10 @@ export function DeliberationPage() {
   }
 
   const exportPV = useCallback(async () => {
+    if (!tenantId) {
+      toast.error('Session invalide', { description: 'Impossible de determiner votre etablissement' })
+      return
+    }
     setIsExportingPV(true)
     try {
       const session = {
@@ -189,21 +196,21 @@ export function DeliberationPage() {
         mention: s.moyenne >= 16 ? 'Très Bien' : s.moyenne >= 14 ? 'Bien' : s.moyenne >= 12 ? 'Assez Bien' : s.moyenne >= 10 ? 'Passable' : undefined,
       }))
 
+      const tenant = institutionQuery?.tenant
       const res = await fetch('/api/documents/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           type: 'PV_DELIBERATION',
-          tenantId: 'unknown',
+          tenantId,
           deliberationId: selectedSession,
           data: {
-            session, members, students, academicYear: '2024-2025',
-            tenant: {
-              name: 'Université de N\'Djamena', shortName: 'UND',
-              address: 'Avenue du 28 Novembre', city: 'N\'Djamena',
-              phone: '+235 66 00 00 00', email: 'contact@univ-ndjamena.td',
-              rectorName: 'Pr. Mahamat Ali', rectorTitle: 'Recteur',
-            },
+            session, members, students, academicYear: currentYearName,
+            tenant: tenant ? {
+              name: tenant.name, address: tenant.address || '', city: tenant.city || '',
+              phone: tenant.phone || '', email: tenant.email || '',
+              rectorName: tenant.rectorName || '', rectorTitle: tenant.rectorTitle || 'Recteur',
+            } : undefined,
           },
         }),
       })
@@ -235,7 +242,7 @@ export function DeliberationPage() {
     } finally {
       setIsExportingPV(false)
     }
-  }, [selectedSession, selectedSessionType, juryMembers, deliberations, deliberationStudents])
+  }, [selectedSession, selectedSessionType, juryMembers, deliberations, deliberationStudents, tenantId, institutionQuery, currentYearName])
 
   const currentSession = deliberations.find(d => d.id === selectedSession)
 
@@ -326,7 +333,7 @@ export function DeliberationPage() {
                   >
                     <Badge className="bg-white/20 text-white border border-white/30 text-xs px-3 py-1">
                       <Gavel className="size-3 mr-1.5" />
-                      {currentSession?.titre || 'L2 Droit S3'}
+                      {currentSession?.titre || 'Aucune session selectionnee'}
                     </Badge>
                   </motion.div>
                   <Button variant="outline" size="sm" className="text-xs bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white" onClick={exportPV} disabled={isExportingPV}>
@@ -408,8 +415,10 @@ export function DeliberationPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-5">
-              {/* Selectors Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {/* Session type selector -- deliberations are computed for the whole
+                  institution over the current academic year (see /api/deliberation);
+                  there is no per-filiere/niveau/semestre scoping to select. */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label className="text-xs font-medium text-gray-600">Session</Label>
                   <Select value={selectedSessionType} onValueChange={setSelectedSessionType}>
@@ -422,51 +431,10 @@ export function DeliberationPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-gray-600">Programme / Filiere</Label>
-                  <Select value={selectedFiliere} onValueChange={setSelectedFiliere}>
-                    <SelectTrigger className="h-9 text-sm">
-                      <SelectValue placeholder="Filiere" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="droit">Droit</SelectItem>
-                      <SelectItem value="sciences">Sciences</SelectItem>
-                      <SelectItem value="informatique">Informatique</SelectItem>
-                      <SelectItem value="lettres">Lettres</SelectItem>
-                      <SelectItem value="economie">Economie</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-gray-600">Niveau</Label>
-                  <Select value={selectedNiveau} onValueChange={setSelectedNiveau}>
-                    <SelectTrigger className="h-9 text-sm">
-                      <SelectValue placeholder="Niveau" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="L1">L1 - Licence 1</SelectItem>
-                      <SelectItem value="L2">L2 - Licence 2</SelectItem>
-                      <SelectItem value="L3">L3 - Licence 3</SelectItem>
-                      <SelectItem value="M1">M1 - Master 1</SelectItem>
-                      <SelectItem value="M2">M2 - Master 2</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-gray-600">Semestre</Label>
-                  <Select value={selectedSemestre} onValueChange={setSelectedSemestre}>
-                    <SelectTrigger className="h-9 text-sm">
-                      <SelectValue placeholder="Semestre" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="S1">Semestre 1</SelectItem>
-                      <SelectItem value="S2">Semestre 2</SelectItem>
-                      <SelectItem value="S3">Semestre 3</SelectItem>
-                      <SelectItem value="S4">Semestre 4</SelectItem>
-                      <SelectItem value="S5">Semestre 5</SelectItem>
-                      <SelectItem value="S6">Semestre 6</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="flex items-end pb-2">
+                  <p className="text-[11px] text-gray-400">
+                    Portee : tous les etudiants de l&apos;annee academique {currentYearName || 'en cours'}
+                  </p>
                 </div>
               </div>
 
@@ -1021,8 +989,6 @@ export function DeliberationPage() {
                 <TableHeader>
                   <TableRow className="bg-gray-50">
                     <TableHead className="text-xs">Titre</TableHead>
-                    <TableHead className="text-xs">Filiere</TableHead>
-                    <TableHead className="text-xs">Niveau</TableHead>
                     <TableHead className="text-xs">Date</TableHead>
                     <TableHead className="text-xs">Statut</TableHead>
                     <TableHead className="text-xs text-right">Actions</TableHead>
@@ -1031,7 +997,7 @@ export function DeliberationPage() {
                 <TableBody>
                   {deliberations.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-6 text-xs text-gray-400">
+                      <TableCell colSpan={4} className="text-center py-6 text-xs text-gray-400">
                         Aucune deliberation lancee pour le moment
                       </TableCell>
                     </TableRow>
@@ -1043,8 +1009,6 @@ export function DeliberationPage() {
                       onClick={() => setSelectedSession(session.id)}
                     >
                       <TableCell className="text-sm font-medium text-[#1a2744]">{session.titre}</TableCell>
-                      <TableCell className="text-sm text-gray-600">{session.filiere}</TableCell>
-                      <TableCell className="text-sm text-gray-600">{session.niveau}</TableCell>
                       <TableCell className="text-sm text-gray-500">{session.date}</TableCell>
                       <TableCell>
                         <Badge className={`text-[10px] ${sessionStatusConfig[session.statut].className}`}>

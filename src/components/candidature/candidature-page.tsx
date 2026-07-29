@@ -1,10 +1,11 @@
 'use client'
 
 import { exportToExcel } from '@/lib/export'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useMemo } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { useCandidatures } from '@/lib/api-hooks'
+import { useAppStore } from '@/lib/store'
+import { useCandidatures, useStructure, useAcademicYears } from '@/lib/api-hooks'
 import { motion } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -160,72 +161,56 @@ const docStatusConfig: Record<string, { label: string; className: string; icon: 
   en_verification: { label: 'En vérification', className: 'text-[#d4a853] bg-[#d4a85312]', icon: Clock },
 }
 
-const filieres = [
-  'Informatique',
-  'Droit',
-  'Economie',
-  'Medecine',
-  'Gestion',
-  'Lettres',
-  'Sciences',
-  'Agronomie',
-]
+const PROGRAM_CHART_COLORS = ['#2d7a4f', '#1a2744', '#d4a853', '#e65100']
 
-const timelineEvents = [
-  { label: 'Ouverture des candidatures', date: '15 Jan 2025', status: 'done' as const },
-  { label: 'Date limite de soumission', date: '31 Mars 2025', status: 'current' as const },
-  { label: 'Délibération', date: '15 Avril 2025', status: 'upcoming' as const },
-  { label: "Affichage des résultats", date: '25 Avril 2025', status: 'upcoming' as const },
-  { label: 'Rentrée académique', date: '15 Septembre 2025', status: 'upcoming' as const },
-]
+interface ApiProgram {
+  id: string
+  name: string
+}
+interface ApiDepartment {
+  programs: ApiProgram[]
+}
+interface ApiFaculty {
+  departments: ApiDepartment[]
+}
 
-const programStats = [
-  { name: 'Informatique', count: 42, color: '#2d7a4f' },
-  { name: 'Droit', count: 35, color: '#1a2744' },
-  { name: 'Economie', count: 28, color: '#d4a853' },
-  { name: 'Medecine', count: 22, color: '#e65100' },
-  { name: 'Gestion', count: 31, color: '#2d7a4f' },
-  { name: 'Lettres', count: 18, color: '#1a2744' },
-  { name: 'Sciences', count: 25, color: '#d4a853' },
-  { name: 'Agronomie', count: 15, color: '#e65100' },
-]
-
-// ─── useCountUp Hook ──────────────────────────────────────────────────────────
-
-function useCountUp(target: number, duration: number = 1400) {
-  const [value, setValue] = useState(0)
-  const ref = useRef<number>(0)
-  useEffect(() => {
-    const start = performance.now()
-    const animate = (now: number) => {
-      const elapsed = now - start
-      const progress = Math.min(elapsed / duration, 1)
-      const eased = 1 - Math.pow(1 - progress, 3)
-      setValue(Math.round(eased * target))
-      if (progress < 1) ref.current = requestAnimationFrame(animate)
-    }
-    ref.current = requestAnimationFrame(animate)
-    return () => cancelAnimationFrame(ref.current)
-  }, [target, duration])
-  return value
+function TrendBadge({ pct }: { pct: number }) {
+  if (pct === 0) return <span className="text-xs text-gray-400">stable vs mois dernier</span>
+  const positive = pct > 0
+  const Icon = positive ? ArrowUpRight : ArrowDownRight
+  const color = positive ? 'text-[#2d7a4f]' : 'text-[#c62828]'
+  return (
+    <>
+      <Icon className={`size-3 ${color}`} />
+      <span className={`text-xs font-medium ${color}`}>{positive ? '+' : ''}{pct}%</span>
+      <span className="text-xs text-gray-400">vs mois dernier</span>
+    </>
+  )
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function CandidaturePage() {
-  const candidaturesMoisCount = useCountUp(127, 1400)
-  const tauxAdmissionCount = useCountUp(68, 1300)
+  const setView = useAppStore((s) => s.setView)
   const queryClient = useQueryClient()
   const { data: candidaturesQuery, isLoading } = useCandidatures() as {
     data: CandidaturesResponse | undefined
     isLoading: boolean
   }
+  const { data: structureQuery } = useStructure() as { data: { faculties?: ApiFaculty[] } | undefined }
+  const { data: academicYearsQuery } = useAcademicYears() as {
+    data: { data: { id: string; name: string; startDate: string; endDate: string; isCurrent: boolean }[] } | undefined
+  }
+  const currentYear = (academicYearsQuery?.data || []).find((y) => y.isCurrent) || null
+  const realPrograms = (structureQuery?.faculties || []).flatMap((f) => f.departments.flatMap((d) => d.programs))
+
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [showForm, setShowForm] = useState(false)
   const [showDocsDialog, setShowDocsDialog] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [formType, setFormType] = useState('')
-  const [formFiliere, setFormFiliere] = useState('')
+  const [formProgramId, setFormProgramId] = useState('')
   const [formNiveau, setFormNiveau] = useState('')
   const [formNom, setFormNom] = useState('')
   const [formEmail, setFormEmail] = useState('')
@@ -240,6 +225,39 @@ export function CandidaturePage() {
   const admis = candidatures.filter(c => c.statut === 'admis').length
   const refuses = candidatures.filter(c => c.statut === 'refuse').length
 
+  // Real month-over-month trends, derived from actual submission dates
+  // (candidaturesQuery.candidatures carries createdAt as ISO before mapping).
+  const trends = useMemo(() => {
+    const now = new Date()
+    const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+    const raw = candidaturesQuery?.candidatures || []
+
+    const countIn = (from: Date, to: Date, statut?: CandidatureStatut) =>
+      raw.filter((r) => {
+        const created = new Date(r.createdAt)
+        if (created < from || created >= to) return false
+        if (!statut) return true
+        return (isCandidatureStatut(r.status) ? r.status : 'en_attente') === statut
+      }).length
+
+    const pct = (curr: number, prev: number) => {
+      if (prev === 0) return curr > 0 ? 100 : 0
+      return Math.round(((curr - prev) / prev) * 100)
+    }
+
+    const thisMonthTotal = countIn(startOfThisMonth, now)
+    const lastMonthTotal = countIn(startOfLastMonth, startOfThisMonth)
+
+    return {
+      candidaturesThisMonth: thisMonthTotal,
+      total: pct(thisMonthTotal, lastMonthTotal),
+      enExamen: pct(countIn(startOfThisMonth, now, 'en_examen'), countIn(startOfLastMonth, startOfThisMonth, 'en_examen')),
+      admis: pct(countIn(startOfThisMonth, now, 'admis'), countIn(startOfLastMonth, startOfThisMonth, 'admis')),
+      refuse: pct(countIn(startOfThisMonth, now, 'refuse'), countIn(startOfLastMonth, startOfThisMonth, 'refuse')),
+    }
+  }, [candidaturesQuery])
+
   // Filtered candidatures
   const filteredCandidatures = candidatures.filter(c => {
     const matchSearch = search === '' ||
@@ -250,20 +268,90 @@ export function CandidaturePage() {
     return matchSearch && matchStatus
   })
 
+  // Real distribution by filiere, computed from actual candidatures
+  const programStats = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const c of candidatures) {
+      counts.set(c.filiere, (counts.get(c.filiere) || 0) + 1)
+    }
+    return Array.from(counts.entries())
+      .map(([name, count], i) => ({ name, count, color: PROGRAM_CHART_COLORS[i % PROGRAM_CHART_COLORS.length] }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 8)
+  }, [candidatures])
+
   // Chart calculations
-  const maxProgramCount = Math.max(...programStats.map(p => p.count))
+  const maxProgramCount = Math.max(1, ...programStats.map(p => p.count))
   const admissionRate = totalRecues > 0 ? Math.round((admis / totalRecues) * 100) : 0
   const refusalRate = totalRecues > 0 ? Math.round((refuses / totalRecues) * 100) : 0
   const pendingRate = totalRecues > 0 ? 100 - admissionRate - refusalRate : 0
 
-  const handleSubmit = () => {
-    setShowForm(false)
-    setFormType('')
-    setFormFiliere('')
-    setFormNiveau('')
-    setFormNom('')
-    setFormEmail('')
-    setFormTelephone('')
+  // Real timeline, derived from the current academic year and actual submission dates
+  const timelineEvents = useMemo(() => {
+    const raw = candidaturesQuery?.candidatures || []
+    const dates = raw.map((r) => new Date(r.createdAt).getTime())
+    const first = dates.length ? new Date(Math.min(...dates)) : null
+    const last = dates.length ? new Date(Math.max(...dates)) : null
+    const fmt = (d: Date) => d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+    const events: { label: string; date: string; status: 'done' | 'current' | 'upcoming' }[] = []
+    if (currentYear) {
+      events.push({ label: `Année académique ${currentYear.name}`, date: `${fmt(new Date(currentYear.startDate))} au ${fmt(new Date(currentYear.endDate))}`, status: 'current' })
+    }
+    if (first) events.push({ label: 'Première candidature reçue', date: fmt(first), status: 'done' })
+    if (last) events.push({ label: 'Dernière candidature reçue', date: fmt(last), status: 'done' })
+    if (events.length === 0) events.push({ label: 'Aucune candidature enregistrée', date: '—', status: 'upcoming' })
+    return events
+  }, [candidaturesQuery, currentYear])
+
+  const handleSubmit = async () => {
+    if (!currentYear) {
+      toast.error('Aucune année académique en cours', { description: "Configurez l'année académique en cours depuis la page Institution" })
+      return
+    }
+    if (!formNom.trim() || !formEmail.trim()) {
+      toast.error('Champs requis', { description: 'Nom complet et email sont obligatoires' })
+      return
+    }
+    const [prenom, ...rest] = formNom.trim().split(' ')
+    const nom = rest.join(' ') || prenom
+    setIsSubmitting(true)
+    try {
+      const res = await fetch('/api/candidature', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          academicYearId: currentYear.id,
+          candidateFirstName: prenom,
+          candidateLastName: nom,
+          candidateEmail: formEmail.trim(),
+          candidatePhone: formTelephone.trim() || undefined,
+          programId: formProgramId || undefined,
+          niveau: formNiveau ? formNiveau.toUpperCase() : undefined,
+          type: formType === 'premiere_inscription' ? 'Premiere_inscription'
+            : formType === 'reinscription' ? 'Reinscription'
+            : formType === 'transfert' ? 'Transfert'
+            : formType === 'equivalence' ? 'Equivalence'
+            : undefined,
+          documents: JSON.stringify(docs.filter((d) => d.status === 'recu').map((d) => d.label)),
+        }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.error || 'Échec de la soumission')
+      toast.success('Candidature soumise', { description: body.candidature?.numero })
+      queryClient.invalidateQueries({ queryKey: ['candidatures'] })
+      setShowForm(false)
+      setFormType('')
+      setFormProgramId('')
+      setFormNiveau('')
+      setFormNom('')
+      setFormEmail('')
+      setFormTelephone('')
+      setDocs(defaultDocs)
+    } catch (e) {
+      toast.error('Erreur', { description: e instanceof Error ? e.message : 'Échec de la soumission' })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleStatusChange = async (id: string, status: CandidatureStatut) => {
@@ -320,6 +408,7 @@ export function CandidaturePage() {
               <Button
                 size="sm"
                 className="bg-white/10 backdrop-blur border border-white/20 hover:bg-white/20 text-white text-xs"
+                onClick={() => setView('import-export')}
               >
                 <Upload className="size-3.5 mr-1.5" />
                 Importer
@@ -330,11 +419,11 @@ export function CandidaturePage() {
           <div className="flex gap-4 mt-4">
             <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }} className="bg-white/10 backdrop-blur border border-white/15 rounded-lg px-4 py-3">
               <div className="text-white/60 text-xs">Candidatures ce mois</div>
-              <div className="text-white text-2xl font-bold">{candidaturesMoisCount}</div>
+              <div className="text-white text-2xl font-bold">{trends.candidaturesThisMonth}</div>
             </motion.div>
             <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }} className="bg-white/10 backdrop-blur border border-white/15 rounded-lg px-4 py-3">
               <div className="text-white/60 text-xs">Taux d&apos;admission</div>
-              <div className="text-white text-2xl font-bold">{tauxAdmissionCount}%</div>
+              <div className="text-white text-2xl font-bold">{admissionRate}%</div>
             </motion.div>
           </div>
         </div>
@@ -351,9 +440,7 @@ export function CandidaturePage() {
                 <p className="text-xs font-medium text-gray-500 uppercase">Candidatures reçues</p>
                 <p className="text-2xl font-bold text-[#1a2744] mt-1">{totalRecues}</p>
                 <div className="flex items-center gap-1 mt-1">
-                  <ArrowUpRight className="size-3 text-[#2d7a4f]" />
-                  <span className="text-xs text-[#2d7a4f] font-medium">+12%</span>
-                  <span className="text-xs text-gray-400">vs mois dernier</span>
+                  <TrendBadge pct={trends.total} />
                 </div>
               </div>
               <div className="w-10 h-10 rounded-xl bg-[#1a274412] flex items-center justify-center">
@@ -372,9 +459,7 @@ export function CandidaturePage() {
                 <p className="text-xs font-medium text-gray-500 uppercase">En cours d&apos;examen</p>
                 <p className="text-2xl font-bold text-[#1a2744] mt-1">{enExamen}</p>
                 <div className="flex items-center gap-1 mt-1">
-                  <ArrowUpRight className="size-3 text-[#d4a853]" />
-                  <span className="text-xs text-[#d4a853] font-medium">+5%</span>
-                  <span className="text-xs text-gray-400">vs mois dernier</span>
+                  <TrendBadge pct={trends.enExamen} />
                 </div>
               </div>
               <div className="w-10 h-10 rounded-xl bg-[#d4a85315] flex items-center justify-center">
@@ -393,9 +478,7 @@ export function CandidaturePage() {
                 <p className="text-xs font-medium text-gray-500 uppercase">Admis</p>
                 <p className="text-2xl font-bold text-[#2d7a4f] mt-1">{admis}</p>
                 <div className="flex items-center gap-1 mt-1">
-                  <ArrowUpRight className="size-3 text-[#2d7a4f]" />
-                  <span className="text-xs text-[#2d7a4f] font-medium">+8%</span>
-                  <span className="text-xs text-gray-400">vs mois dernier</span>
+                  <TrendBadge pct={trends.admis} />
                 </div>
               </div>
               <div className="w-10 h-10 rounded-xl bg-[#2d7a4f15] flex items-center justify-center">
@@ -414,9 +497,7 @@ export function CandidaturePage() {
                 <p className="text-xs font-medium text-gray-500 uppercase">Refuses</p>
                 <p className="text-2xl font-bold text-[#c62828] mt-1">{refuses}</p>
                 <div className="flex items-center gap-1 mt-1">
-                  <ArrowDownRight className="size-3 text-[#c62828]" />
-                  <span className="text-xs text-[#c62828] font-medium">-3%</span>
-                  <span className="text-xs text-gray-400">vs mois dernier</span>
+                  <TrendBadge pct={trends.refuse} />
                 </div>
               </div>
               <div className="w-10 h-10 rounded-xl bg-[#c6282815] flex items-center justify-center">
@@ -458,13 +539,13 @@ export function CandidaturePage() {
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs font-medium text-gray-600">Filière souhaitée</Label>
-                <Select value={formFiliere} onValueChange={setFormFiliere}>
+                <Select value={formProgramId} onValueChange={setFormProgramId}>
                   <SelectTrigger className="h-9 text-sm">
                     <SelectValue placeholder="Sélectionner la filière" />
                   </SelectTrigger>
                   <SelectContent>
-                    {filieres.map((f) => (
-                      <SelectItem key={f} value={f.toLowerCase()}>{f}</SelectItem>
+                    {realPrograms.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -518,8 +599,9 @@ export function CandidaturePage() {
                 <Button
                   className="flex-1 bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs h-9"
                   onClick={handleSubmit}
+                  disabled={isSubmitting}
                 >
-                  Soumettre la candidature
+                  {isSubmitting ? 'Envoi...' : 'Soumettre la candidature'}
                 </Button>
                 <Button
                   variant="outline"
@@ -680,7 +762,7 @@ export function CandidaturePage() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-44">
-                              <DropdownMenuItem className="text-xs">
+                              <DropdownMenuItem className="text-xs" onClick={() => handleStatusChange(c.id, 'en_examen')}>
                                 <Eye className="size-3.5 mr-2 text-[#1a2744]" />
                                 Examiner
                               </DropdownMenuItem>
@@ -692,9 +774,18 @@ export function CandidaturePage() {
                                 <XCircleIcon className="size-3.5 mr-2 text-[#c62828]" />
                                 Refuser
                               </DropdownMenuItem>
-                              <DropdownMenuItem className="text-xs">
-                                <Mail className="size-3.5 mr-2 text-[#d4a853]" />
-                                Contacter
+                              <DropdownMenuItem className="text-xs" disabled={!c.email} asChild={Boolean(c.email)}>
+                                {c.email ? (
+                                  <a href={`mailto:${c.email}`}>
+                                    <Mail className="size-3.5 mr-2 text-[#d4a853]" />
+                                    Contacter
+                                  </a>
+                                ) : (
+                                  <>
+                                    <Mail className="size-3.5 mr-2 text-gray-300" />
+                                    Contacter
+                                  </>
+                                )}
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -900,13 +991,13 @@ export function CandidaturePage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-sm">Filière souhaitée</Label>
-                <Select value={formFiliere} onValueChange={setFormFiliere}>
+                <Select value={formProgramId} onValueChange={setFormProgramId}>
                   <SelectTrigger>
                     <SelectValue placeholder="Filière" />
                   </SelectTrigger>
                   <SelectContent>
-                    {filieres.map((f) => (
-                      <SelectItem key={f} value={f.toLowerCase()}>{f}</SelectItem>
+                    {realPrograms.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -959,8 +1050,9 @@ export function CandidaturePage() {
             <Button
               className="w-full bg-[#2d7a4f] hover:bg-[#236b40] text-white"
               onClick={handleSubmit}
+              disabled={isSubmitting}
             >
-              Soumettre la candidature
+              {isSubmitting ? 'Envoi...' : 'Soumettre la candidature'}
             </Button>
           </div>
         </DialogContent>

@@ -7,16 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
 import {
   Table,
   TableBody,
@@ -51,9 +43,7 @@ import {
   XCircle,
   AlertTriangle,
   TrendingUp,
-  TrendingDown,
   Search,
-  Plus,
   Pencil,
   Trash2,
   Download,
@@ -162,45 +152,12 @@ const decisionConfig: Record<Decision, { color: string; className: string; icon:
   'Exclu': { color: '#4a0000', className: 'bg-[#4a000010] text-[#4a0000] border-0', icon: AlertTriangle },
 }
 
-// ─── Demo Data ──────────────────────────────────────────────────────────────────
-
-const demoStudentResults: StudentResult[] = [
-  { id: '1', name: 'MAHAMAT Ali', matricule: 'UDN-2021-0234', moyenne: 16.5, mention: 'Tres-Bien', credits: 30, decision: 'Admis' },
-  { id: '2', name: 'KHAMIS Fatime', matricule: 'UDN-2021-0235', moyenne: 14.2, mention: 'Bien', credits: 30, decision: 'Admis' },
-  { id: '3', name: 'ABDALLAH Fadoul', matricule: 'UDN-2021-0236', moyenne: 12.8, mention: 'Assez-Bien', credits: 30, decision: 'Admis' },
-  { id: '4', name: 'ISSA Mahamat', matricule: 'UDN-2021-0237', moyenne: 11.3, mention: 'Assez-Bien', credits: 28, decision: 'Compense' },
-  { id: '5', name: 'AHMAT Achta', matricule: 'UDN-2021-0238', moyenne: 18.1, mention: 'Excellent', credits: 30, decision: 'Admis' },
-  { id: '6', name: 'BACHAR Oumar', matricule: 'UDN-2021-0239', moyenne: 10.5, mention: 'Passable', credits: 26, decision: 'Compense' },
-  { id: '7', name: 'HAROUN Meriam', matricule: 'UDN-2021-0240', moyenne: 15.7, mention: 'Bien', credits: 30, decision: 'Admis' },
-  { id: '8', name: 'DJIMADOUM Adoum', matricule: 'UDN-2021-0241', moyenne: 9.2, mention: 'Passable', credits: 18, decision: 'Ajourne' },
-  { id: '9', name: 'NGARLEITA Nathalie', matricule: 'UDN-2021-0242', moyenne: 13.4, mention: 'Assez-Bien', credits: 30, decision: 'Admis' },
-  { id: '10', name: 'MOUSSA Khadija', matricule: 'UDN-2021-0243', moyenne: 7.8, mention: 'Passable', credits: 12, decision: 'Ajourne' },
-  { id: '11', name: 'HASSAN Djibril', matricule: 'UDN-2021-0244', moyenne: 11.9, mention: 'Assez-Bien', credits: 28, decision: 'Compense' },
-  { id: '12', name: 'ADAM Zakaria', matricule: 'UDN-2021-0245', moyenne: 17.3, mention: 'Tres-Bien', credits: 30, decision: 'Admis' },
-  { id: '13', name: 'BICHARA Hawa', matricule: 'UDN-2021-0246', moyenne: 6.4, mention: 'Passable', credits: 8, decision: 'Exclu' },
-  { id: '14', name: 'OUMAR Ibrahim', matricule: 'UDN-2021-0247', moyenne: 12.1, mention: 'Assez-Bien', credits: 30, decision: 'Admis' },
-  { id: '15', name: 'FATIME Zenab', matricule: 'UDN-2021-0248', moyenne: 14.8, mention: 'Bien', credits: 30, decision: 'Admis' },
-  { id: '16', name: 'TOLLI Hamid', matricule: 'UDN-2021-0249', moyenne: 10.1, mention: 'Passable', credits: 24, decision: 'Compense' },
-  { id: '17', name: 'NDJIKOUMBA Armel', matricule: 'UDN-2021-0250', moyenne: 15.2, mention: 'Bien', credits: 30, decision: 'Admis' },
-]
-
-const demoAtRiskStudents: AtRiskStudent[] = [
-  { id: '8', name: 'DJIMADOUM Adoum', matricule: 'UDN-2021-0241', moyenne: 9.2, creditDebt: 12, risk: 'critical' },
-  { id: '10', name: 'MOUSSA Khadija', matricule: 'UDN-2021-0243', moyenne: 7.8, creditDebt: 18, risk: 'critical' },
-  { id: '13', name: 'BICHARA Hawa', matricule: 'UDN-2021-0246', moyenne: 6.4, creditDebt: 22, risk: 'critical' },
-  { id: '6', name: 'BACHAR Oumar', matricule: 'UDN-2021-0239', moyenne: 10.5, creditDebt: 4, risk: 'warning' },
-  { id: '11', name: 'HASSAN Djibril', matricule: 'UDN-2021-0244', moyenne: 11.9, creditDebt: 2, risk: 'warning' },
-  { id: '16', name: 'TOLLI Hamid', matricule: 'UDN-2021-0249', moyenne: 10.1, creditDebt: 6, risk: 'warning' },
-]
-
-const semesterGPA: { semester: string; gpa: number }[] = [
-  { semester: 'S1 L1', gpa: 11.2 },
-  { semester: 'S2 L1', gpa: 11.8 },
-  { semester: 'S1 L2', gpa: 12.5 },
-  { semester: 'S2 L2', gpa: 13.1 },
-  { semester: 'S1 L3', gpa: 14.0 },
-  { semester: 'S2 L3', gpa: 14.6 },
-]
+// ─── Statistiques tab reference data ───────────────────────────────────────────
+// distributionRanges/mentionDistribution/yearComparison/facultySuccess and the
+// gender comparison further below are not yet backed by real aggregate queries
+// (per-semester grouping, historical multi-year comparison, and demographic
+// breakdowns are not computed anywhere in the API) -- flagged as a known gap,
+// left untouched for now rather than a partial/invented fix.
 
 const distributionRanges = [
   { range: '0-8', count: 3, color: '#c62828' },
@@ -262,16 +219,6 @@ export function ResultsPage() {
   const [searchTranscript, setSearchTranscript] = useState('')
   const [selectedTranscriptStudentId, setSelectedTranscriptStudentId] = useState('')
   const [searchProgression, setSearchProgression] = useState('')
-  const [isPublished, setIsPublished] = useState(true)
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [newResultSession, setNewResultSession] = useState('')
-  const [newResultStudent, setNewResultStudent] = useState('')
-  const [ue1Note, setUe1Note] = useState('')
-  const [ue2Note, setUe2Note] = useState('')
-  const [ue3Note, setUe3Note] = useState('')
-  const [ue4Note, setUe4Note] = useState('')
-  const [ue5Note, setUe5Note] = useState('')
-  const [ue6Note, setUe6Note] = useState('')
 
   // Animation variants
   const containerVariants = {
@@ -283,28 +230,6 @@ export function ResultsPage() {
     hidden: { opacity: 0, y: 12 },
     visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: 'easeOut' } },
   } as const
-
-  // Compute auto moyenne for new result dialog
-  const newResultMoyenne = useMemo(() => {
-    const notes = [ue1Note, ue2Note, ue3Note, ue4Note, ue5Note, ue6Note]
-      .map(n => parseFloat(n))
-      .filter(n => !isNaN(n))
-    if (notes.length === 0) return 0
-    return Math.round((notes.reduce((a, b) => a + b, 0) / notes.length) * 100) / 100
-  }, [ue1Note, ue2Note, ue3Note, ue4Note, ue5Note, ue6Note])
-
-  // Compute credits validated for new result
-  const newResultCredits = useMemo(() => {
-    const notes = [ue1Note, ue2Note, ue3Note, ue4Note, ue5Note, ue6Note]
-      .map(n => parseFloat(n))
-      .filter(n => !isNaN(n) && n >= 10)
-    const credits = [6, 5, 5, 6, 4, 4]
-    let total = 0
-    notes.forEach((_, i) => {
-      total += credits[i] || 0
-    })
-    return total
-  }, [ue1Note, ue2Note, ue3Note, ue4Note, ue5Note, ue6Note])
 
   // ─── Real data: session results, built from the Grade model ────────────────
   const resultsQuery = useResults()
@@ -335,6 +260,27 @@ export function ResultsPage() {
     return { admis, ajournes, compenses, moyenneGenerale: totalMoyenne.toFixed(1) }
   }, [results])
 
+  // ─── Real data: progression tab (searched student + at-risk list) ──────────
+  const progressionStudent: StudentResult | null = useMemo(() => {
+    if (searchProgression === '') return null
+    const q = searchProgression.toLowerCase()
+    return results.find(r => r.name.toLowerCase().includes(q) || r.matricule.toLowerCase().includes(q)) ?? null
+  }, [results, searchProgression])
+
+  const atRiskStudents: AtRiskStudent[] = useMemo(() => {
+    return results
+      .filter(r => r.moyenne < passingGrade)
+      .map(r => ({
+        id: r.id,
+        name: r.name,
+        matricule: r.matricule,
+        moyenne: r.moyenne,
+        creditDebt: Math.max(0, creditsPerYear - r.credits),
+        risk: r.moyenne < passingGrade - 3 ? 'critical' as const : 'warning' as const,
+      }))
+      .sort((a, b) => a.moyenne - b.moyenne)
+  }, [results, passingGrade, creditsPerYear])
+
   // ─── Real data: transcript for a selected student ───────────────────────────
   const transcriptCandidates = useMemo(() => {
     if (searchTranscript === '') return results
@@ -358,11 +304,10 @@ export function ResultsPage() {
     return raw ?? null
   }, [transcriptQuery.data])
 
-  // Stats for header
-  const sessionsValidees = useCountUp(12, 1200)
-  const resultatsPublies = useCountUp(287, 1400)
-  const tauxReussiteGlobal = useCountUp(80, 1300)
-  const mentionsTresBien = useCountUp(23, 1100)
+  // Stats for header -- all derived from the real results already loaded above
+  const resultatsPublies = useCountUp(results.length, 1400)
+  const tauxReussiteGlobal = useCountUp(results.length > 0 ? Math.round((sessionStats.admis / results.length) * 100) : 0, 1300)
+  const mentionsTresBien = useCountUp(results.filter(r => r.mention === 'Tres-Bien' || r.mention === 'Excellent').length, 1100)
 
   return (
     <TooltipProvider>
@@ -391,21 +336,19 @@ export function ResultsPage() {
                 <p className="text-sm text-white/70 mt-1">Publication, releves et suivi de la progression des etudiants</p>
               </div>
               <div className="flex flex-wrap gap-3">
-                <AnimatedStat value={12} label="Sessions validees" icon={Calendar} />
-                <AnimatedStat value={287} label="Resultats publies" icon={FileText} />
-                <AnimatedStat value={80} label="Taux reussite %" icon={TrendingUp} />
+                <AnimatedStat value={results.length} label="Resultats publies" icon={FileText} />
+                <AnimatedStat value={results.length > 0 ? Math.round((sessionStats.admis / results.length) * 100) : 0} label="Taux reussite %" icon={TrendingUp} />
               </div>
             </div>
           </div>
         </motion.div>
 
-        {/* ─── 4 Stats Cards ────────────────────────────────────────────────────── */}
-        <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* ─── Stats Cards -- all real, derived from the results already loaded above ── */}
+        <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
-            { label: 'Sessions validees', value: sessionsValidees, color: '#1a2744', icon: Calendar, trend: '+2', trendUp: true },
-            { label: 'Resultats publies', value: resultatsPublies, color: '#2d7a4f', icon: FileText, trend: '+28', trendUp: true },
-            { label: 'Taux de reussite global', value: tauxReussiteGlobal, color: '#d4a853', icon: TrendingUp, trend: '+3%', trendUp: true, suffix: '%' },
-            { label: 'Mentions Tres Bien', value: mentionsTresBien, color: '#2d7a4f', icon: Trophy, trend: '+5', trendUp: true },
+            { label: 'Resultats publies', value: resultatsPublies, color: '#2d7a4f', icon: FileText },
+            { label: 'Taux de reussite global', value: tauxReussiteGlobal, color: '#d4a853', icon: TrendingUp, suffix: '%' },
+            { label: 'Mentions Tres Bien', value: mentionsTresBien, color: '#2d7a4f', icon: Trophy },
           ].map((stat) => (
             <motion.div
               key={stat.label}
@@ -419,16 +362,6 @@ export function ResultsPage() {
                     <div>
                       <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{stat.label}</p>
                       <p className="text-2xl font-bold mt-1" style={{ color: stat.color }}>{stat.value}{stat.suffix || ''}</p>
-                      {stat.trend && (
-                        <div className="flex items-center gap-1 mt-1">
-                          {stat.trendUp ? (
-                            <TrendingUp className="size-3 text-[#2d7a4f]" />
-                          ) : (
-                            <TrendingDown className="size-3 text-[#2d7a4f]" />
-                          )}
-                          <span className="text-xs text-[#2d7a4f] font-medium">{stat.trend}</span>
-                        </div>
-                      )}
                     </div>
                     <div className="p-2.5 rounded-xl" style={{ backgroundColor: `${stat.color}15` }}>
                       <stat.icon className="size-5" style={{ color: stat.color }} />
@@ -514,23 +447,6 @@ export function ResultsPage() {
                         <SelectItem value="medecine">Medecine</SelectItem>
                       </SelectContent>
                     </Select>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-medium text-gray-500">Publier</span>
-                      <button
-                        onClick={() => setIsPublished(!isPublished)}
-                        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${isPublished ? 'bg-[#2d7a4f]' : 'bg-gray-300'}`}
-                      >
-                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isPublished ? 'translate-x-4' : 'translate-x-0.5'}`} />
-                      </button>
-                    </div>
-                    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                      <DialogTrigger asChild>
-                        <Button size="sm" className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs">
-                          <Plus className="size-3.5 mr-1.5" />
-                          Nouveau resultat
-                        </Button>
-                      </DialogTrigger>
-                    </Dialog>
                   </div>
                 </CardContent>
               </Card>
@@ -904,76 +820,56 @@ export function ResultsPage() {
                     </div>
                   </CardHeader>
                   <CardContent className="p-4 pt-0 space-y-4">
-                    {/* Student Header */}
-                    <div className="flex items-center gap-3 p-3 bg-[#1a274405] rounded-lg">
-                      <div className="w-10 h-10 rounded-full bg-[#1a2744] flex items-center justify-center text-sm font-bold text-white">
-                        MA
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-[#1a2744]">MAHAMAT Ali</p>
-                        <p className="text-xs text-gray-500">UDN-2021-0234 - Licence 3 Informatique</p>
-                      </div>
-                    </div>
-
-                    {/* Credits Progress */}
-                    <div>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-xs font-semibold text-gray-600">Credits accumules</span>
-                        <span className="text-xs font-bold text-[#2d7a4f]">150 / 180</span>
-                      </div>
-                      <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
-                        <motion.div
-                          className="h-full rounded-full bg-gradient-to-r from-[#1a2744] to-[#2d7a4f]"
-                          initial={{ width: 0 }}
-                          animate={{ width: '83.3%' }}
-                          transition={{ duration: 1.2, ease: 'easeOut', delay: 0.3 }}
-                        />
-                      </div>
-                      <p className="text-[10px] text-gray-400 mt-1">30 credits restants pour obtenir la Licence (systeme LMD)</p>
-                    </div>
-
-                    {/* Semesters Completed */}
-                    <div>
-                      <p className="text-xs font-semibold text-gray-600 mb-2">Semestres completes</p>
-                      <div className="flex items-center gap-1.5">
-                        {['S1 L1', 'S2 L1', 'S1 L2', 'S2 L2', 'S1 L3', 'S2 L3'].map((sem, i) => (
-                          <div key={sem} className="flex-1 text-center">
-                            <motion.div
-                              className={`h-8 rounded-md flex items-center justify-center text-[9px] font-bold ${i < 5 ? 'bg-[#2d7a4f15] text-[#2d7a4f]' : 'bg-gray-100 text-gray-400'}`}
-                              initial={{ scale: 0.8, opacity: 0 }}
-                              animate={{ scale: 1, opacity: 1 }}
-                              transition={{ delay: 0.1 * i, duration: 0.3 }}
-                            >
-                              {i < 5 ? <CheckCircle2 className="size-3.5" /> : <CircleDot className="size-3.5" />}
-                            </motion.div>
-                            <p className="text-[8px] text-gray-500 mt-0.5">{sem}</p>
+                    {progressionStudent ? (
+                      <>
+                        {/* Student Header */}
+                        <div className="flex items-center gap-3 p-3 bg-[#1a274405] rounded-lg">
+                          <div className="w-10 h-10 rounded-full bg-[#1a2744] flex items-center justify-center text-sm font-bold text-white">
+                            {progressionStudent.name.split(' ').map(p => p[0]).slice(0, 2).join('')}
                           </div>
-                        ))}
-                      </div>
-                    </div>
+                          <div>
+                            <p className="text-sm font-semibold text-[#1a2744]">{progressionStudent.name}</p>
+                            <p className="text-xs text-gray-500">{progressionStudent.matricule}</p>
+                          </div>
+                        </div>
 
-                    {/* Semester GPA Chart */}
-                    <div>
-                      <p className="text-xs font-semibold text-gray-600 mb-2">Moyenne par semestre</p>
-                      <div className="flex items-end gap-2 h-32">
-                        {semesterGPA.map((item, i) => (
-                          <div key={item.semester} className="flex-1 flex flex-col items-center">
-                            <span className="text-[9px] font-bold text-[#1a2744] mb-1">{item.gpa}</span>
+                        {/* Credits Progress (session en cours) */}
+                        <div>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-xs font-semibold text-gray-600">Credits valides (session en cours)</span>
+                            <span className="text-xs font-bold text-[#2d7a4f]">{progressionStudent.credits} / {creditsPerYear}</span>
+                          </div>
+                          <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
                             <motion.div
-                              className="w-full rounded-t-md bg-gradient-to-t from-[#1a2744] to-[#2d7a4f]"
-                              initial={{ height: 0 }}
-                              animate={{ height: `${(item.gpa / 20) * 100}%` }}
-                              transition={{ duration: 0.8, ease: 'easeOut', delay: 0.15 * i }}
+                              className="h-full rounded-full bg-gradient-to-r from-[#1a2744] to-[#2d7a4f]"
+                              initial={{ width: 0 }}
+                              animate={{ width: `${creditsPerYear > 0 ? Math.min(100, Math.round((progressionStudent.credits / creditsPerYear) * 100)) : 0}%` }}
+                              transition={{ duration: 1.2, ease: 'easeOut', delay: 0.3 }}
                             />
-                            <p className="text-[8px] text-gray-500 mt-1">{item.semester}</p>
                           </div>
-                        ))}
-                      </div>
-                    </div>
+                        </div>
+
+                        {/* Session average & decision */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="p-3 bg-gray-50 rounded-lg text-center">
+                            <p className="text-[10px] text-gray-500">Moyenne de la session</p>
+                            <p className={`text-lg font-bold ${progressionStudent.moyenne >= passingGrade ? 'text-[#2d7a4f]' : 'text-[#c62828]'}`}>{progressionStudent.moyenne.toFixed(1)}</p>
+                          </div>
+                          <div className="p-3 bg-gray-50 rounded-lg text-center">
+                            <p className="text-[10px] text-gray-500">Decision</p>
+                            <p className="text-lg font-bold text-[#1a2744]">{progressionStudent.decision}</p>
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <p className="text-sm text-gray-400 text-center py-8">
+                        {searchProgression ? 'Aucun etudiant trouve' : 'Recherchez un etudiant pour voir sa progression'}
+                      </p>
+                    )}
                   </CardContent>
                 </Card>
 
-                {/* At Risk Students */}
+                {/* At Risk Students -- derived from real results below the passing grade */}
                 <Card className="border-l-4 border-l-[#c62828]">
                   <CardHeader className="pb-3">
                     <div className="flex items-center gap-2">
@@ -984,7 +880,10 @@ export function ResultsPage() {
                   <CardContent className="p-4 pt-0">
                     <ScrollArea className="max-h-80">
                       <div className="space-y-2.5">
-                        {demoAtRiskStudents.map((student) => (
+                        {atRiskStudents.length === 0 && (
+                          <p className="text-xs text-gray-400 text-center py-6">Aucun etudiant en difficulte pour la session en cours</p>
+                        )}
+                        {atRiskStudents.map((student) => (
                           <motion.div
                             key={student.id}
                             className={`p-3 rounded-lg border ${student.risk === 'critical' ? 'bg-[#c6282808] border-[#c6282820]' : 'bg-[#d4a85308] border-[#d4a85320]'}`}
@@ -1218,114 +1117,6 @@ export function ResultsPage() {
           </Tabs>
         </motion.div>
 
-        {/* ─── New Result Dialog ────────────────────────────────────────────────── */}
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogContent className="sm:max-w-[560px] max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="text-[#1a2744] flex items-center gap-2">
-                <Plus className="size-5" />
-                Nouveau resultat
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 mt-2">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-gray-600">Session</Label>
-                  <Select value={newResultSession} onValueChange={setNewResultSession}>
-                    <SelectTrigger className="h-9 text-sm">
-                      <SelectValue placeholder="Choisir une session" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="S1-2024-2025">S1 2024-2025</SelectItem>
-                      <SelectItem value="S2-2024-2025">S2 2024-2025</SelectItem>
-                      <SelectItem value="S1-2023-2024">S1 2023-2024</SelectItem>
-                      <SelectItem value="S2-2023-2024">S2 2023-2024</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-gray-600">Etudiant</Label>
-                  <Select value={newResultStudent} onValueChange={setNewResultStudent}>
-                    <SelectTrigger className="h-9 text-sm">
-                      <SelectValue placeholder="Choisir un etudiant" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {demoStudentResults.map(s => (
-                        <SelectItem key={s.id} value={s.matricule}>{s.name} ({s.matricule})</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <Separator />
-              <p className="text-xs font-semibold text-gray-600">Notes par UE (sur 20)</p>
-
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                <div className="space-y-1.5">
-                  <Label className="text-[10px] text-gray-500">UE301 - Prog. avancee (6 cr.)</Label>
-                  <Input type="number" min="0" max="20" step="0.5" placeholder="0" className="h-9 text-sm" value={ue1Note} onChange={(e) => setUe1Note(e.target.value)} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-[10px] text-gray-500">UE302 - BDD II (5 cr.)</Label>
-                  <Input type="number" min="0" max="20" step="0.5" placeholder="0" className="h-9 text-sm" value={ue2Note} onChange={(e) => setUe2Note(e.target.value)} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-[10px] text-gray-500">UE303 - Reseaux (5 cr.)</Label>
-                  <Input type="number" min="0" max="20" step="0.5" placeholder="0" className="h-9 text-sm" value={ue3Note} onChange={(e) => setUe3Note(e.target.value)} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-[10px] text-gray-500">UE304 - IA (6 cr.)</Label>
-                  <Input type="number" min="0" max="20" step="0.5" placeholder="0" className="h-9 text-sm" value={ue4Note} onChange={(e) => setUe4Note(e.target.value)} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-[10px] text-gray-500">UE305 - Genie log. (4 cr.)</Label>
-                  <Input type="number" min="0" max="20" step="0.5" placeholder="0" className="h-9 text-sm" value={ue5Note} onChange={(e) => setUe5Note(e.target.value)} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-[10px] text-gray-500">UE306 - Anglais tech. (4 cr.)</Label>
-                  <Input type="number" min="0" max="20" step="0.5" placeholder="0" className="h-9 text-sm" value={ue6Note} onChange={(e) => setUe6Note(e.target.value)} />
-                </div>
-              </div>
-
-              {/* Auto-calculated moyenne & credits */}
-              <div className="p-3 bg-[#1a274405] rounded-lg border border-[#1a274410]">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Zap className="size-4 text-[#2d7a4f]" />
-                    <span className="text-xs font-semibold text-gray-600">Calcul automatique</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-6 mt-2">
-                  <div>
-                    <p className="text-[10px] text-gray-500">Moyenne</p>
-                    <p className={`text-lg font-bold ${newResultMoyenne >= 10 ? 'text-[#2d7a4f]' : 'text-[#c62828]'}`}>{newResultMoyenne || '—'}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-gray-500">Credits valides</p>
-                    <p className={`text-lg font-bold ${newResultCredits >= 30 ? 'text-[#2d7a4f]' : newResultCredits >= 20 ? 'text-[#d4a853]' : 'text-[#c62828]'}`}>{newResultCredits}/30</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-gray-500">Mention</p>
-                    <p className="text-sm font-semibold text-[#1a2744]">
-                      {newResultMoyenne >= 16 ? 'Tres-Bien' : newResultMoyenne >= 14 ? 'Bien' : newResultMoyenne >= 12 ? 'Assez-Bien' : newResultMoyenne >= 10 ? 'Passable' : '—'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <Button variant="outline" size="sm" className="text-xs" onClick={() => setDialogOpen(false)}>
-                  Annuler
-                </Button>
-                <Button size="sm" className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs" disabled={!newResultSession || !newResultStudent || newResultMoyenne === 0}>
-                  <CheckCircle2 className="size-3.5 mr-1.5" />
-                  Enregistrer le resultat
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
 
         {/* ─── African Context Card ──────────────────────────────────────────────── */}
         <motion.div variants={itemVariants}>

@@ -48,7 +48,7 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
     const body = await request.json()
     const {
       academicYearId, candidateFirstName, candidateLastName, candidateEmail, candidatePhone,
-      programId, niveau, type, bacSeries, bacYear,
+      programId, niveau, type, bacSeries, bacYear, documents,
     } = body
 
     if (!academicYearId || !candidateFirstName || !candidateLastName) {
@@ -91,6 +91,7 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
         type: type ?? undefined,
         bacSeries: bacSeries ?? null,
         bacYear: typeof bacYear === 'number' ? bacYear : null,
+        documents: typeof documents === 'string' ? documents : null,
         numero: generateNumero(countThisYear + 1),
         status: 'en_attente',
       },
