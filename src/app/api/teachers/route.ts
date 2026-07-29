@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
+import bcrypt from 'bcryptjs'
 import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
 import { isStudentSelfRole } from '@/lib/auth/student-scope'
+import { generateTempPassword } from '@/lib/password'
 import { paginationSchema, createTeacherSchema, updateTeacherSchema, validateQuery, validateBody, formatZodError } from '@/lib/validations/api'
 import { Prisma } from '@prisma/client'
 
@@ -107,10 +109,11 @@ async function createTeacherHandler(user: SessionUser, tenantId: string, request
   try {
     const body = await request.json()
     const validatedBody = validateBody(createTeacherSchema, body)
+    const { firstName, lastName, email, phone, employeeId, grade, specialization, departmentId, maxHoursPerWeek } = validatedBody
 
     // Verify department belongs to tenant
-    if (validatedBody.departmentId) {
-      const department = await db.department.findFirst({ where: { id: validatedBody.departmentId, tenantId } })
+    if (departmentId) {
+      const department = await db.department.findFirst({ where: { id: departmentId, tenantId } })
       if (!department) {
         return NextResponse.json(
           { error: 'Department not found in this tenant' },
@@ -120,8 +123,8 @@ async function createTeacherHandler(user: SessionUser, tenantId: string, request
     }
 
     // Check employeeId uniqueness if provided
-    if (validatedBody.employeeId) {
-      const existing = await db.teacher.findFirst({ where: { employeeId: validatedBody.employeeId, tenantId } })
+    if (employeeId) {
+      const existing = await db.teacher.findFirst({ where: { employeeId, tenantId } })
       if (existing) {
         return NextResponse.json(
           { error: 'Employee ID already exists' },
@@ -130,26 +133,52 @@ async function createTeacherHandler(user: SessionUser, tenantId: string, request
       }
     }
 
-    // Check email uniqueness if provided
-    if (validatedBody.email) {
-      const existingEmail = await db.user.findFirst({ where: { email: validatedBody.email, tenantId } })
-      if (existingEmail) {
-        return NextResponse.json(
-          { error: 'Email already exists' },
-          { status: 409 }
-        )
-      }
+    // User.email is unique platform-wide, not just per-tenant
+    const existingEmail = await db.user.findFirst({ where: { email } })
+    if (existingEmail) {
+      return NextResponse.json(
+        { error: 'Email already exists' },
+        { status: 409 }
+      )
     }
 
-    const teacher = await db.teacher.create({
-      data: {
-        ...validatedBody,
-        tenantId,
-      },
-      include: {
-        department: { select: { id: true, name: true, shortName: true } },
-        user: { select: { id: true, email: true, phone: true, photo: true, firstName: true, lastName: true } },
-      },
+    // A Teacher record has no name/contact fields of its own -- they live on
+    // the linked User, which also doubles as the teacher's own login account
+    // (previously this handler passed firstName/lastName/email/phone/hireDate
+    // straight into Teacher.create, none of which exist on that model, so
+    // every teacher creation threw a Prisma validation error at runtime).
+    const tempPassword = generateTempPassword()
+    const passwordHash = await bcrypt.hash(tempPassword, 12)
+
+    const teacher = await db.$transaction(async (tx) => {
+      const account = await tx.user.create({
+        data: {
+          tenantId,
+          firstName,
+          lastName,
+          email,
+          phone,
+          role: 'ENSEIGNANT',
+          passwordHash,
+          mustChangePassword: true,
+        },
+      })
+
+      return tx.teacher.create({
+        data: {
+          tenantId,
+          userId: account.id,
+          employeeId,
+          grade,
+          specialization,
+          departmentId,
+          maxHoursPerWeek,
+        },
+        include: {
+          department: { select: { id: true, name: true, shortName: true } },
+          user: { select: { id: true, email: true, phone: true, photo: true, firstName: true, lastName: true } },
+        },
+      })
     })
 
     // Audit log
@@ -164,7 +193,7 @@ async function createTeacherHandler(user: SessionUser, tenantId: string, request
       },
     })
 
-    return NextResponse.json({ data: teacher }, { status: 201 })
+    return NextResponse.json({ data: { ...teacher, tempPassword } }, { status: 201 })
   } catch (error) {
     console.error('Create teacher error:', error)
     if (error instanceof Error && error.name === 'ZodError') {
@@ -184,12 +213,12 @@ async function updateTeacherHandler(user: SessionUser, tenantId: string, request
   try {
     const body = await request.json()
     const validatedBody = validateBody(updateTeacherSchema, body)
-    const { id, ...data } = validatedBody
+    const { id, firstName, lastName, email, phone, currentHours, isActive, ...teacherData } = validatedBody
 
     // Verify teacher belongs to tenant
     const existing = await db.teacher.findFirst({
       where: { id, tenantId },
-      include: { user: { select: { firstName: true, lastName: true } } },
+      include: { user: { select: { id: true, firstName: true, lastName: true } } },
     })
     if (!existing) {
       return NextResponse.json(
@@ -199,8 +228,8 @@ async function updateTeacherHandler(user: SessionUser, tenantId: string, request
     }
 
     // Check department if changed
-    if (data.departmentId && data.departmentId !== existing.departmentId) {
-      const department = await db.department.findFirst({ where: { id: data.departmentId, tenantId } })
+    if (teacherData.departmentId && teacherData.departmentId !== existing.departmentId) {
+      const department = await db.department.findFirst({ where: { id: teacherData.departmentId, tenantId } })
       if (!department) {
         return NextResponse.json(
           { error: 'Department not found in this tenant' },
@@ -210,8 +239,8 @@ async function updateTeacherHandler(user: SessionUser, tenantId: string, request
     }
 
     // Check employeeId uniqueness if changed
-    if (data.employeeId && data.employeeId !== existing.employeeId) {
-      const existingEmp = await db.teacher.findFirst({ where: { employeeId: data.employeeId, tenantId, NOT: { id } } })
+    if (teacherData.employeeId && teacherData.employeeId !== existing.employeeId) {
+      const existingEmp = await db.teacher.findFirst({ where: { employeeId: teacherData.employeeId, tenantId, NOT: { id } } })
       if (existingEmp) {
         return NextResponse.json(
           { error: 'Employee ID already exists' },
@@ -220,17 +249,48 @@ async function updateTeacherHandler(user: SessionUser, tenantId: string, request
       }
     }
 
-    const updateData: Prisma.TeacherUpdateInput = {
-      ...data,
+    // User.email is unique platform-wide, not just per-tenant
+    if (email && existing.userId) {
+      const existingEmail = await db.user.findFirst({ where: { email, NOT: { id: existing.userId } } })
+      if (existingEmail) {
+        return NextResponse.json(
+          { error: 'Email already exists' },
+          { status: 409 }
+        )
+      }
     }
 
-    const teacher = await db.teacher.update({
-      where: { id },
-      data: updateData,
-      include: {
-        department: { select: { id: true, name: true, shortName: true } },
-        user: { select: { id: true, email: true, phone: true, photo: true, firstName: true, lastName: true } },
-      },
+    const teacher = await db.$transaction(async (tx) => {
+      // firstName/lastName/email/phone/isActive live on the linked User, not
+      // on Teacher itself -- previously passed straight into Teacher.update,
+      // which has none of these fields and threw at runtime.
+      if (existing.userId && (firstName || lastName || email || phone !== undefined || isActive !== undefined)) {
+        await tx.user.update({
+          where: { id: existing.userId },
+          data: {
+            ...(firstName ? { firstName } : {}),
+            ...(lastName ? { lastName } : {}),
+            ...(email ? { email } : {}),
+            ...(phone !== undefined ? { phone } : {}),
+            ...(isActive !== undefined ? { isActive } : {}),
+          },
+        })
+      }
+
+      const updateData: Prisma.TeacherUpdateInput = {
+        ...teacherData,
+        ...(currentHours !== undefined ? { currentHours } : {}),
+        ...(isActive !== undefined ? { isActive } : {}),
+      }
+
+      return tx.teacher.update({
+        where: { id },
+        data: updateData,
+        include: {
+          department: { select: { id: true, name: true, shortName: true } },
+          user: { select: { id: true, email: true, phone: true, photo: true, firstName: true, lastName: true } },
+        },
+      })
     })
 
     // Audit log
@@ -276,7 +336,7 @@ async function deleteTeacherHandler(user: SessionUser, tenantId: string, request
     // Verify teacher belongs to tenant
     const existing = await db.teacher.findFirst({
       where: { id, tenantId },
-      include: { user: { select: { firstName: true, lastName: true } } },
+      include: { user: { select: { id: true, firstName: true, lastName: true } } },
     })
     if (!existing) {
       return NextResponse.json(
@@ -285,10 +345,12 @@ async function deleteTeacherHandler(user: SessionUser, tenantId: string, request
       )
     }
 
-    // Soft delete - set isActive to false
-    const teacher = await db.teacher.update({
-      where: { id },
-      data: { isActive: false },
+    // Soft delete - set isActive to false, and lock out the linked login too
+    const teacher = await db.$transaction(async (tx) => {
+      if (existing.userId) {
+        await tx.user.update({ where: { id: existing.userId }, data: { isActive: false } })
+      }
+      return tx.teacher.update({ where: { id }, data: { isActive: false } })
     })
 
     // Audit log

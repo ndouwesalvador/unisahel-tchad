@@ -23,6 +23,7 @@ export type AppView =
   | 'settings'
   | 'institution'
   | 'platform-institutions'
+  | 'staff-users'
   | 'verify'
   | 'announcements'
   | 'timetable'
@@ -73,6 +74,7 @@ export interface AppUser {
   tenantName?: string
   tenantLogo?: string
   tenantSlug?: string
+  mustChangePassword?: boolean
 }
 
 export interface ChatMessage {

@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
+import { toast } from 'sonner'
+import { useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -46,9 +48,10 @@ import {
   Mail,
   Phone,
   Building2,
+  Copy,
 } from 'lucide-react'
 import { useAppStore } from '@/lib/store'
-import { useTeachers } from '@/lib/api-hooks'
+import { useTeachers, useStructure } from '@/lib/api-hooks'
 import {
   Dialog,
   DialogContent,
@@ -56,6 +59,38 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
+
+const gradeUiToApi: Record<string, string> = {
+  Professeur: 'PROFESSEUR_TITULAIRE',
+  MCF: 'MAITRE_CONFERENCES',
+  MA: 'MAITRE_ASSISTANT',
+  Assistant: 'ASSISTANT',
+  Vacataire: 'VACATAIRE',
+}
+
+interface NewTeacherForm {
+  firstName: string
+  lastName: string
+  email: string
+  phone: string
+  employeeId: string
+  grade: string
+  specialization: string
+  departmentId: string
+  maxHoursPerWeek: string
+}
+
+const emptyNewTeacherForm: NewTeacherForm = {
+  firstName: '',
+  lastName: '',
+  email: '',
+  phone: '',
+  employeeId: '',
+  grade: '',
+  specialization: '',
+  departmentId: '',
+  maxHoursPerWeek: '20',
+}
 
 // ─── Custom useCountUp Hook ────────────────────────────────────────────────────
 
@@ -156,15 +191,67 @@ const grades = ['Tous', 'Professeur', 'MCF', 'MA', 'Assistant', 'Vacataire', 'Pr
 
 export function TeachersPage() {
   const { selectTeacher, setView } = useAppStore()
+  const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
   const [filterDept, setFilterDept] = useState('Tous')
   const [filterGrade, setFilterGrade] = useState('Tous')
   const [showNewTeacher, setShowNewTeacher] = useState(false)
+  const [newTeacherForm, setNewTeacherForm] = useState<NewTeacherForm>(emptyNewTeacherForm)
+  const [isCreating, setIsCreating] = useState(false)
+  const [createdCredentials, setCreatedCredentials] = useState<{ email: string; tempPassword: string; name: string } | null>(null)
 
   const { data: teachersQuery, isLoading } = useTeachers({ limit: 1000 })
   const teachers: Teacher[] = (teachersQuery?.data || []).map(mapTeacher)
 
+  const { data: structureQuery } = useStructure() as { data: { faculties: Array<{ departments: Array<{ id: string; name: string }> }> } | undefined }
+  const realDepartments = (structureQuery?.faculties || []).flatMap((f) => f.departments)
+
   const departements = ['Tous', ...Array.from(new Set(teachers.map(t => t.departement))).sort()]
+
+  const handleCreateTeacher = async () => {
+    const f = newTeacherForm
+    if (!f.firstName || !f.lastName || !f.email || !f.employeeId || !f.grade || !f.departmentId) {
+      toast.error('Champs requis', { description: 'Nom, prenom, email, matricule, grade et departement sont obligatoires' })
+      return
+    }
+    setIsCreating(true)
+    try {
+      const res = await fetch('/api/teachers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          firstName: f.firstName,
+          lastName: f.lastName,
+          email: f.email,
+          phone: f.phone || undefined,
+          employeeId: f.employeeId,
+          grade: gradeUiToApi[f.grade],
+          specialization: f.specialization,
+          departmentId: f.departmentId,
+          maxHoursPerWeek: Number(f.maxHoursPerWeek) || 20,
+        }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json.error || 'Echec de la creation')
+      toast.success('Enseignant ajoute', { description: `${f.firstName} ${f.lastName}` })
+      queryClient.invalidateQueries({ queryKey: ['teachers'] })
+      setShowNewTeacher(false)
+      setCreatedCredentials({ email: json.data.user.email, tempPassword: json.data.tempPassword, name: `${f.firstName} ${f.lastName}` })
+      setNewTeacherForm(emptyNewTeacherForm)
+    } catch (error) {
+      toast.error('Erreur', { description: error instanceof Error ? error.message : 'Echec de la creation' })
+    } finally {
+      setIsCreating(false)
+    }
+  }
+
+  const copyPassword = () => {
+    if (!createdCredentials) return
+    navigator.clipboard.writeText(createdCredentials.tempPassword).then(
+      () => toast.success('Mot de passe copie'),
+      () => toast.error('Copie impossible')
+    )
+  }
 
   const totalEnseignants = teachers.filter(t => t.statut === 'Actif').length
   const totalHeures = teachers.reduce((acc, t) => acc + t.heuresSem, 0)
@@ -591,26 +678,30 @@ export function TeachersPage() {
       </motion.div>
 
       {/* ─── New Teacher Dialog ────────────────────────────────────────────────── */}
-      <Dialog open={showNewTeacher} onOpenChange={setShowNewTeacher}>
+      <Dialog open={showNewTeacher} onOpenChange={(open) => { setShowNewTeacher(open); if (!open) setNewTeacherForm(emptyNewTeacherForm) }}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="text-[#1a2744]">Ajouter un enseignant</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-1">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-sm">Nom</Label>
-                <Input placeholder="Nom de famille" />
+                <Input placeholder="Nom de famille" value={newTeacherForm.lastName} onChange={(e) => setNewTeacherForm((f) => ({ ...f, lastName: e.target.value }))} />
               </div>
               <div className="space-y-2">
                 <Label className="text-sm">Prenom</Label>
-                <Input placeholder="Prenom" />
+                <Input placeholder="Prenom" value={newTeacherForm.firstName} onChange={(e) => setNewTeacherForm((f) => ({ ...f, firstName: e.target.value }))} />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm">Matricule</Label>
+              <Input placeholder="ENS-2026-001" value={newTeacherForm.employeeId} onChange={(e) => setNewTeacherForm((f) => ({ ...f, employeeId: e.target.value }))} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-sm">Grade</Label>
-                <Select>
+                <Select value={newTeacherForm.grade} onValueChange={(v) => setNewTeacherForm((f) => ({ ...f, grade: v }))}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selectionner" />
                   </SelectTrigger>
@@ -623,13 +714,13 @@ export function TeachersPage() {
               </div>
               <div className="space-y-2">
                 <Label className="text-sm">Departement</Label>
-                <Select>
+                <Select value={newTeacherForm.departmentId} onValueChange={(v) => setNewTeacherForm((f) => ({ ...f, departmentId: v }))}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selectionner" />
                   </SelectTrigger>
                   <SelectContent>
-                    {departements.filter(d => d !== 'Tous').map(d => (
-                      <SelectItem key={d} value={d}>{d}</SelectItem>
+                    {realDepartments.map(d => (
+                      <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -637,22 +728,57 @@ export function TeachersPage() {
             </div>
             <div className="space-y-2">
               <Label className="text-sm">Specialisation</Label>
-              <Input placeholder="Domaine de specialisation" />
+              <Input placeholder="Domaine de specialisation" value={newTeacherForm.specialization} onChange={(e) => setNewTeacherForm((f) => ({ ...f, specialization: e.target.value }))} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-sm">Telephone</Label>
-                <Input placeholder="+235 66 XX XX XX" />
+                <Input placeholder="+235 66 XX XX XX" value={newTeacherForm.phone} onChange={(e) => setNewTeacherForm((f) => ({ ...f, phone: e.target.value }))} />
               </div>
               <div className="space-y-2">
                 <Label className="text-sm">Email</Label>
-                <Input placeholder="email@univ.td" type="email" />
+                <Input placeholder="email@univ.td" type="email" value={newTeacherForm.email} onChange={(e) => setNewTeacherForm((f) => ({ ...f, email: e.target.value }))} />
               </div>
             </div>
-            <Button className="w-full bg-[#2d7a4f] hover:bg-[#236b40] text-white" onClick={() => setShowNewTeacher(false)}>
-              Enregistrer l&apos;enseignant
+            <p className="text-[11px] text-gray-400">Un compte de connexion sera cree avec un mot de passe temporaire, affiche une seule fois.</p>
+            <Button className="w-full bg-[#2d7a4f] hover:bg-[#236b40] text-white" disabled={isCreating} onClick={handleCreateTeacher}>
+              {isCreating ? 'Creation...' : "Enregistrer l'enseignant"}
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── One-time credentials reveal ───────────────────────────────────────── */}
+      <Dialog open={Boolean(createdCredentials)} onOpenChange={(open) => { if (!open) setCreatedCredentials(null) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Enseignant ajoute</DialogTitle>
+          </DialogHeader>
+          {createdCredentials && (
+            <div className="space-y-4 py-2">
+              <p className="text-sm text-gray-600">
+                Le compte de <span className="font-semibold text-[#1a2744]">{createdCredentials.name}</span> est pret.
+                Transmettez ces identifiants — ce mot de passe ne sera plus jamais affiche.
+              </p>
+              <div className="rounded-lg border bg-gray-50 p-3 space-y-2">
+                <div>
+                  <p className="text-[10px] text-gray-400">Email</p>
+                  <p className="text-sm font-mono text-[#1a2744]">{createdCredentials.email}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-gray-400">Mot de passe temporaire</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-mono font-semibold text-[#2d7a4f]">{createdCredentials.tempPassword}</p>
+                    <Button variant="ghost" size="sm" className="h-6 px-1.5" onClick={copyPassword}>
+                      <Copy className="size-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+              <p className="text-[11px] text-[#d4a853]">Un changement de mot de passe sera demande a la premiere connexion.</p>
+              <Button className="w-full" variant="outline" onClick={() => setCreatedCredentials(null)}>Fermer</Button>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </motion.div>

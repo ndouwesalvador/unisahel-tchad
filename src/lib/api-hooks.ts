@@ -119,6 +119,10 @@ export function useTenants() {
   return useSimpleGet('tenants', '/api/tenants');
 }
 
+export function useStaffUsers() {
+  return useSimpleGet('staffUsers', '/api/users');
+}
+
 export function useProfileActivity() {
   return useSimpleGet('profileActivity', '/api/profile');
 }

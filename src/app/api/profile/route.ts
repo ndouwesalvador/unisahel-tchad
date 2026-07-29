@@ -6,6 +6,7 @@ import { withAuth, type SessionUser } from '@/lib/auth/helpers'
 const ENTITY_LABELS: Record<string, string> = {
   Student: 'un etudiant',
   Teacher: 'un enseignant',
+  User: 'un compte utilisateur',
   Payment: 'un paiement',
   Grade: 'une note',
   Program: 'un programme',
@@ -129,7 +130,7 @@ async function handlePut(user: SessionUser, request: NextRequest) {
         return NextResponse.json({ error: 'Mot de passe actuel incorrect' }, { status: 403 })
       }
       const newHash = await bcrypt.hash(newPassword, 12)
-      await db.user.update({ where: { id: user.id }, data: { passwordHash: newHash } })
+      await db.user.update({ where: { id: user.id }, data: { passwordHash: newHash, mustChangePassword: false } })
       return NextResponse.json({ ok: true })
     }
 

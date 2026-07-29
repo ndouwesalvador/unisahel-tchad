@@ -165,9 +165,9 @@ export const createTeacherSchema = z.object({
   specialization: z.string().max(200),
   departmentId: z.string().cuid(),
   maxHoursPerWeek: z.number().int().positive().default(20),
-  email: z.string().email().optional(),
+  // Required: becomes the login identifier for the teacher's own account.
+  email: z.string().email(),
   phone: z.string().max(30).optional(),
-  hireDate: z.string().datetime().optional(),
 })
 
 export const updateTeacherSchema = createTeacherSchema.partial().extend({

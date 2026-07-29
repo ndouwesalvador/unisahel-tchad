@@ -82,12 +82,13 @@ export const authConfig = {
           tenantName: user.tenant?.name,
           tenantSlug: user.tenant?.slug,
           image: user.photo,
+          mustChangePassword: user.mustChangePassword,
         }
       },
     }),
   ],
   callbacks: {
-    async jwt({ token, user }: { token: JWT; user?: User }) {
+    async jwt({ token, user, trigger }: { token: JWT; user?: User; trigger?: 'signIn' | 'signUp' | 'update' }) {
       if (user) {
         const raw = user as unknown as Record<string, unknown>
         token.id = user.id
@@ -97,6 +98,14 @@ export const authConfig = {
         token.tenantSlug = raw.tenantSlug as string
         token.firstName = raw.firstName as JWT['firstName']
         token.lastName = raw.lastName as JWT['lastName']
+        token.mustChangePassword = Boolean(raw.mustChangePassword)
+      }
+      // The client calls session.update() right after a successful password
+      // change so the forced-change gate clears without a full re-login --
+      // re-read from the DB rather than trusting client-supplied data.
+      if (trigger === 'update' && token.id) {
+        const dbUser = await db.user.findUnique({ where: { id: token.id as string }, select: { mustChangePassword: true } })
+        if (dbUser) token.mustChangePassword = dbUser.mustChangePassword
       }
       return token
     },
@@ -110,6 +119,7 @@ export const authConfig = {
         session.user.tenantSlug = raw.tenantSlug as string
         session.user.firstName = raw.firstName as Session['user']['firstName']
         session.user.lastName = raw.lastName as Session['user']['lastName']
+        session.user.mustChangePassword = Boolean(raw.mustChangePassword)
       }
       return session
     },

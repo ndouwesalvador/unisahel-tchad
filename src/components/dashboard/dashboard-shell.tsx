@@ -63,6 +63,7 @@ import {
   Search,
   DoorOpen,
   Bus,
+  UserCog,
 } from 'lucide-react'
 import { DashboardHome } from './dashboard-home'
 import { StudentsList } from '@/components/students/students-list'
@@ -78,6 +79,8 @@ import { VerifyPage } from '@/components/verify/verify-page'
 import { SettingsPage } from '@/components/settings/settings-page'
 import { InstitutionPage } from '@/components/institution/institution-page'
 import { PlatformInstitutionsPage } from '@/components/platform/platform-institutions-page'
+import { ForcedPasswordChange } from '@/components/auth/forced-password-change'
+import { StaffUsersPage } from '@/components/users/staff-users-page'
 import { TeachersPage } from '@/components/teachers/teachers-page'
 import { TeacherDetail } from '@/components/teachers/teacher-detail'
 import { MaquettePage } from '@/components/maquette/maquette-page'
@@ -126,6 +129,7 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
     { icon: LayoutDashboard, label: 'Tableau de bord', view: 'dashboard' },
     { icon: Users, label: 'Étudiants', view: 'students' },
     { icon: GraduationCap, label: 'Enseignants', view: 'teachers' },
+    { icon: UserCog, label: 'Utilisateurs', view: 'staff-users' },
     { icon: UserPlus, label: 'Candidatures', view: 'candidature' },
     { icon: Building2, label: 'Structure', view: 'structure' },
     { icon: BookOpen, label: 'Programmes', view: 'programs' },
@@ -305,6 +309,7 @@ const viewLabels: Record<AppView, string> = {
   settings: 'Paramètres',
   institution: 'Institution',
   'platform-institutions': 'Institutions',
+  'staff-users': 'Utilisateurs',
   verify: 'Vérification',
   announcements: 'Annonces',
   timetable: 'Emploi du temps',
@@ -476,6 +481,8 @@ function MainContent({ view }: { view: AppView }) {
       return user?.role === 'SUPER_ADMIN' ? <PlatformInstitutionsPage /> : <DashboardHome />
     case 'platform-institutions':
       return <PlatformInstitutionsPage />
+    case 'staff-users':
+      return <StaffUsersPage />
     case 'students':
       return <StudentsList />
     case 'student-detail':
@@ -568,6 +575,8 @@ export function DashboardShell() {
   }
 
   if (!user) return null
+
+  if (user.mustChangePassword) return <ForcedPasswordChange />
 
   const initials = `${user.firstName[0]}${user.lastName[0]}`
   const academicYears = [

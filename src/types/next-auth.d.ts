@@ -10,6 +10,7 @@ declare module 'next-auth' {
     tenantSlug?: string
     firstName: string
     lastName: string
+    mustChangePassword?: boolean
   }
 
   interface Session {
@@ -24,6 +25,7 @@ declare module 'next-auth' {
       tenantSlug?: string
       firstName: string
       lastName: string
+      mustChangePassword: boolean
     }
   }
 }
@@ -37,5 +39,6 @@ declare module 'next-auth/jwt' {
     tenantSlug?: string
     firstName: string
     lastName: string
+    mustChangePassword: boolean
   }
 }
