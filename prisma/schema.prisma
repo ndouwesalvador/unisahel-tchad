@@ -383,8 +383,10 @@ model ExamSession {
 
 model User {
   id                  String    @id @default(cuid())
-  tenantId            String
-  tenant              Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  // Nullable: a SUPER_ADMIN manages the whole platform and belongs to no
+  // single institution (mirrors a real multi-tenant SaaS control plane).
+  tenantId            String?
+  tenant              Tenant?   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   email               String?   @unique
   passwordHash        String?
   login               String?   @unique
@@ -1060,8 +1062,10 @@ model Announcement {
 
 model AuditLog {
   id        String   @id @default(cuid())
-  tenantId  String
-  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  // Nullable for platform-level events with no single institution (a
+  // SUPER_ADMIN signing in, creating a new tenant, etc).
+  tenantId  String?
+  tenant    Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   userId    String?
   user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   action    String

@@ -6,7 +6,9 @@ export interface SessionUser {
   email?: string | null
   name?: string | null
   role: string
-  tenantId: string
+  // Null only for a platform-level SUPER_ADMIN, who belongs to no single
+  // institution. Every other role always has a real tenantId.
+  tenantId: string | null
   tenantName?: string
   tenantSlug?: string
   firstName: string
@@ -49,7 +51,7 @@ export async function requireRole(allowedRoles: string[]): Promise<SessionUser> 
   return user
 }
 
-export async function getTenantId(): Promise<string> {
+export async function getTenantId(): Promise<string | null> {
   const user = await requireAuth()
   return user.tenantId
 }

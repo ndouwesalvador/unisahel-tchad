@@ -5,7 +5,7 @@ declare module 'next-auth' {
   interface User {
     id: string
     role: UserRole
-    tenantId: string
+    tenantId: string | null
     tenantName?: string
     tenantSlug?: string
     firstName: string
@@ -19,7 +19,7 @@ declare module 'next-auth' {
       email?: string | null
       image?: string | null
       role: UserRole
-      tenantId: string
+      tenantId: string | null
       tenantName?: string
       tenantSlug?: string
       firstName: string
@@ -32,7 +32,7 @@ declare module 'next-auth/jwt' {
   interface JWT {
     id: string
     role: UserRole
-    tenantId: string
+    tenantId: string | null
     tenantName?: string
     tenantSlug?: string
     firstName: string

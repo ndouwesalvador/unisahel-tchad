@@ -13,7 +13,9 @@ export function isStudentSelfRole(role: string): boolean {
 // Resolves the Student row linked to this session's User, if the caller is a
 // student-tier account. Returns null for staff roles (no restriction applies).
 export async function resolveOwnStudentId(user: SessionUser): Promise<string | null> {
-  if (!isStudentSelfRole(user.role)) return null
+  // Student-self roles always belong to a real tenant (only a platform-level
+  // SUPER_ADMIN has a null tenantId, and that role is never student-self).
+  if (!isStudentSelfRole(user.role) || !user.tenantId) return null
   const student = await db.student.findFirst({
     where: { userId: user.id, tenantId: user.tenantId },
     select: { id: true },

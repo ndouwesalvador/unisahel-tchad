@@ -115,6 +115,10 @@ export function useAcademicYears() {
   return useSimpleGet('academicYears', '/api/academic-years');
 }
 
+export function useTenants() {
+  return useSimpleGet('tenants', '/api/tenants');
+}
+
 export function useProfileActivity() {
   return useSimpleGet('profileActivity', '/api/profile');
 }

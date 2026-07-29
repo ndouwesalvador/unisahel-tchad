@@ -92,7 +92,7 @@ export const authConfig = {
         const raw = user as unknown as Record<string, unknown>
         token.id = user.id
         token.role = raw.role as JWT['role']
-        token.tenantId = raw.tenantId as string
+        token.tenantId = raw.tenantId as string | null
         token.tenantName = raw.tenantName as string
         token.tenantSlug = raw.tenantSlug as string
         token.firstName = raw.firstName as JWT['firstName']
@@ -105,7 +105,7 @@ export const authConfig = {
         const raw = token as unknown as Record<string, unknown>
         session.user.id = raw.id as string
         session.user.role = raw.role as Session['user']['role']
-        session.user.tenantId = raw.tenantId as string
+        session.user.tenantId = raw.tenantId as string | null
         session.user.tenantName = raw.tenantName as string
         session.user.tenantSlug = raw.tenantSlug as string
         session.user.firstName = raw.firstName as Session['user']['firstName']
@@ -119,7 +119,7 @@ export const authConfig = {
       const { user, isNewUser } = message
       if (!user?.id) return
       const raw = user as unknown as Record<string, unknown>
-      const tenantId = raw.tenantId as string
+      const tenantId = raw.tenantId as string | null
 
       let ipAddress: string | undefined
       let userAgent: string | undefined

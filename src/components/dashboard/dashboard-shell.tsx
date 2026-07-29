@@ -76,6 +76,8 @@ import { HealthPage } from '@/components/health/health-page'
 import { StatisticsPage } from '@/components/statistics/statistics-page'
 import { VerifyPage } from '@/components/verify/verify-page'
 import { SettingsPage } from '@/components/settings/settings-page'
+import { InstitutionPage } from '@/components/institution/institution-page'
+import { PlatformInstitutionsPage } from '@/components/platform/platform-institutions-page'
 import { TeachersPage } from '@/components/teachers/teachers-page'
 import { TeacherDetail } from '@/components/teachers/teacher-detail'
 import { MaquettePage } from '@/components/maquette/maquette-page'
@@ -112,12 +114,13 @@ interface NavItem {
 }
 
 const roleNavItems: Record<UserRole, NavItem[]> = {
+  // A SUPER_ADMIN belongs to no single institution (tenantId is null), so
+  // every tenant-scoped view (dashboard stats, teachers, statistics,
+  // settings) would 400. Their only real, functional view is the
+  // platform-wide institutions list -- everything else lives inside a
+  // specific institution once an ADMIN_INSTITUTION account is provisioned.
   SUPER_ADMIN: [
-    { icon: LayoutDashboard, label: 'Tableau de bord', view: 'dashboard' },
-    { icon: School, label: 'Institutions', view: 'institution' },
-    { icon: Users, label: 'Utilisateurs', view: 'teachers' },
-    { icon: BarChart3, label: 'Statistiques', view: 'statistics' },
-    { icon: Settings, label: 'Paramètres', view: 'settings' },
+    { icon: School, label: 'Institutions', view: 'platform-institutions' },
   ],
   ADMIN_INSTITUTION: [
     { icon: LayoutDashboard, label: 'Tableau de bord', view: 'dashboard' },
@@ -301,6 +304,7 @@ const viewLabels: Record<AppView, string> = {
   statistics: 'Statistiques',
   settings: 'Paramètres',
   institution: 'Institution',
+  'platform-institutions': 'Institutions',
   verify: 'Vérification',
   announcements: 'Annonces',
   timetable: 'Emploi du temps',
@@ -362,7 +366,7 @@ function SidebarContent() {
               Uni<span className="text-[#3da66a]">Sahel</span>
             </div>
             <div className="text-[10px] text-white/50 truncate">
-              {user.tenantName || 'Université'}
+              {user.role === 'SUPER_ADMIN' ? 'Administration plateforme' : (user.tenantName || 'Établissement')}
             </div>
           </motion.div>
         )}
@@ -464,9 +468,14 @@ function SidebarContent() {
 // ─── Main Content Renderer ────────────────────────────────────────────────────
 
 function MainContent({ view }: { view: AppView }) {
+  const { user } = useAppStore()
   switch (view) {
     case 'dashboard':
-      return <DashboardHome />
+      // A SUPER_ADMIN has no tenant of their own -- /api/dashboard is
+      // tenant-scoped, so their "dashboard" is the platform-wide view.
+      return user?.role === 'SUPER_ADMIN' ? <PlatformInstitutionsPage /> : <DashboardHome />
+    case 'platform-institutions':
+      return <PlatformInstitutionsPage />
     case 'students':
       return <StudentsList />
     case 'student-detail':
@@ -492,8 +501,9 @@ function MainContent({ view }: { view: AppView }) {
     case 'profile':
       return <ProfilePage />
     case 'settings':
-    case 'institution':
       return <SettingsPage />
+    case 'institution':
+      return <InstitutionPage />
     case 'teachers':
       return <TeachersPage />
     case 'teacher-detail':

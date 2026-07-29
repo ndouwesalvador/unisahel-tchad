@@ -22,6 +22,7 @@ export type AppView =
   | 'statistics'
   | 'settings'
   | 'institution'
+  | 'platform-institutions'
   | 'verify'
   | 'announcements'
   | 'timetable'

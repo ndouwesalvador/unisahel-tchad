@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { db } from '@/lib/db'
-import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
+import { withAuth, type SessionUser } from '@/lib/auth/helpers'
 
 const ENTITY_LABELS: Record<string, string> = {
   Student: 'un etudiant',
@@ -110,7 +110,7 @@ async function handleGet(user: SessionUser) {
 // PUT /api/profile - update own firstName/lastName/phone, or (with
 // ?action=password) change own password. Email is intentionally not
 // editable here - it doubles as the login identifier for Credentials auth.
-async function handlePut(user: SessionUser, _tenantId: string, request: NextRequest) {
+async function handlePut(user: SessionUser, request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const body = await request.json()
@@ -149,5 +149,5 @@ async function handlePut(user: SessionUser, _tenantId: string, request: NextRequ
   }
 }
 
-export const GET = withTenantAuth(handleGet)
-export const PUT = withTenantAuth(handlePut)
+export const GET = withAuth(handleGet)
+export const PUT = withAuth(handlePut)
