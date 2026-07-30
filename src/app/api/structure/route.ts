@@ -41,9 +41,11 @@ async function handler(_user: SessionUser, tenantId: string, _request: NextReque
       )
     }
 
-    // Get faculties with nested structure
+    // Get faculties with nested structure. isActive:true hides soft-deleted
+    // faculties, mirroring the isActive filters already applied to the nested
+    // departments/programs/levels below.
     const faculties = await db.faculty.findMany({
-      where: { tenantId },
+      where: { tenantId, isActive: true },
       include: {
         departments: {
           where: { isActive: true },
@@ -455,6 +457,160 @@ async function createCourseElementHandler(user: SessionUser, tenantId: string, r
   }
 }
 
+// ─── Edit / delete across the hierarchy ─────────────────────────────────────
+//
+// Shared helpers so PUT and DELETE cover all seven entity types uniformly.
+// Only Program carries tenantId directly; ownership for the deeper levels is
+// proven by walking the parent chain up to Program.tenantId (same rule as the
+// create handlers above).
+
+type EntityType = 'faculty' | 'department' | 'program' | 'level' | 'semester' | 'teaching-unit' | 'course-element'
+
+const ENTITY_LABEL: Record<EntityType, string> = {
+  faculty: 'Faculty',
+  department: 'Department',
+  program: 'Program',
+  level: 'Level',
+  semester: 'Semester',
+  'teaching-unit': 'TeachingUnit',
+  'course-element': 'CourseElement',
+}
+
+// Fields the client may update, per type. Anything else in the body is ignored.
+const UPDATABLE: Record<EntityType, string[]> = {
+  faculty: ['name', 'shortName', 'deanName', 'deanTitle', 'email', 'phone', 'isActive'],
+  department: ['name', 'shortName', 'headName', 'isActive'],
+  program: ['name', 'code', 'cycle', 'diplomaType', 'duration', 'isActive'],
+  level: ['name', 'code', 'orderIndex', 'isActive'],
+  semester: ['name', 'code', 'orderIndex'],
+  'teaching-unit': ['code', 'name', 'credits', 'type', 'compensable', 'responsibleId', 'orderIndex'],
+  'course-element': ['code', 'name', 'coefficient', 'hoursCM', 'hoursTD', 'hoursTP', 'teacherId', 'orderIndex'],
+}
+
+const NUMERIC_FIELDS = new Set(['duration', 'orderIndex', 'credits', 'coefficient', 'hoursCM', 'hoursTD', 'hoursTP'])
+const SOFT_DELETE_TYPES = new Set<EntityType>(['faculty', 'department', 'program', 'level'])
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function delegate(type: EntityType): any {
+  switch (type) {
+    case 'faculty': return db.faculty
+    case 'department': return db.department
+    case 'program': return db.program
+    case 'level': return db.level
+    case 'semester': return db.semester
+    case 'teaching-unit': return db.teachingUnit
+    case 'course-element': return db.courseElement
+  }
+}
+
+async function ownsEntity(type: EntityType, id: string, tenantId: string): Promise<boolean> {
+  const found = await (async () => {
+    switch (type) {
+      case 'faculty': return db.faculty.findFirst({ where: { id, tenantId }, select: { id: true } })
+      case 'department': return db.department.findFirst({ where: { id, tenantId }, select: { id: true } })
+      case 'program': return db.program.findFirst({ where: { id, tenantId }, select: { id: true } })
+      case 'level': return db.level.findFirst({ where: { id, program: { tenantId } }, select: { id: true } })
+      case 'semester': return db.semester.findFirst({ where: { id, level: { program: { tenantId } } }, select: { id: true } })
+      case 'teaching-unit': return db.teachingUnit.findFirst({ where: { id, semester: { level: { program: { tenantId } } } }, select: { id: true } })
+      case 'course-element': return db.courseElement.findFirst({ where: { id, teachingUnit: { semester: { level: { program: { tenantId } } } } }, select: { id: true } })
+    }
+  })()
+  return Boolean(found)
+}
+
+async function updateEntityHandler(user: SessionUser, tenantId: string, request: NextRequest, type: EntityType) {
+  try {
+    const body = await request.json()
+    const id = body?.id
+    if (!id || typeof id !== 'string') {
+      return NextResponse.json({ error: 'id is required' }, { status: 400 })
+    }
+    if (!(await ownsEntity(type, id, tenantId))) {
+      return NextResponse.json({ error: 'Entity not found in this tenant' }, { status: 404 })
+    }
+
+    // Optional teacher references must belong to the tenant.
+    if (type === 'teaching-unit' && body.responsibleId) {
+      const t = await db.teacher.findFirst({ where: { id: body.responsibleId, tenantId }, select: { id: true } })
+      if (!t) return NextResponse.json({ error: 'Responsible teacher not found in this tenant' }, { status: 404 })
+    }
+    if (type === 'course-element' && body.teacherId) {
+      const t = await db.teacher.findFirst({ where: { id: body.teacherId, tenantId }, select: { id: true } })
+      if (!t) return NextResponse.json({ error: 'Teacher not found in this tenant' }, { status: 404 })
+    }
+
+    const data: Record<string, unknown> = {}
+    for (const key of UPDATABLE[type]) {
+      if (body[key] !== undefined) {
+        data[key] = NUMERIC_FIELDS.has(key) ? Number(body[key]) : body[key]
+      }
+    }
+    if (Object.keys(data).length === 0) {
+      return NextResponse.json({ error: 'No updatable fields provided' }, { status: 400 })
+    }
+
+    const updated = await delegate(type).update({ where: { id }, data })
+    await db.auditLog.create({
+      data: { tenantId, userId: user.id, action: 'UPDATE', entity: ENTITY_LABEL[type], entityId: id, details: JSON.stringify(data) },
+    })
+    return NextResponse.json({ data: updated })
+  } catch (error) {
+    console.error(`Update ${type} error:`, error)
+    return NextResponse.json({ error: `Failed to update ${type}` }, { status: 500 })
+  }
+}
+
+async function deleteEntityHandler(user: SessionUser, tenantId: string, request: NextRequest, type: EntityType) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const id = searchParams.get('id')
+    if (!id) {
+      return NextResponse.json({ error: 'id query parameter is required' }, { status: 400 })
+    }
+    if (!(await ownsEntity(type, id, tenantId))) {
+      return NextResponse.json({ error: 'Entity not found in this tenant' }, { status: 404 })
+    }
+
+    // Faculty/Department/Program/Level are deactivated (isActive:false), the
+    // same soft-delete used for teachers and reflected by the GET filters, so
+    // students/grades that reference them are never destroyed.
+    if (SOFT_DELETE_TYPES.has(type)) {
+      await delegate(type).update({ where: { id }, data: { isActive: false } })
+      await db.auditLog.create({
+        data: { tenantId, userId: user.id, action: 'DELETE', entity: ENTITY_LABEL[type], entityId: id, details: JSON.stringify({ soft: true }) },
+      })
+      return NextResponse.json({ data: { id, isActive: false } })
+    }
+
+    // Semester/UE/EC have no isActive column, so they are hard-deleted — but
+    // never when real academic data hangs off them (a cascade would silently
+    // erase student grades).
+    if (type === 'course-element') {
+      const grades = await db.grade.count({ where: { courseElementId: id } })
+      if (grades > 0) return NextResponse.json({ error: 'Des notes sont rattachées à cette matière (EC).' }, { status: 409 })
+    }
+    if (type === 'teaching-unit') {
+      const grades = await db.grade.count({ where: { teachingUnitId: id } })
+      if (grades > 0) return NextResponse.json({ error: 'Des notes sont rattachées à cette UE.' }, { status: 409 })
+    }
+    if (type === 'semester') {
+      const units = await db.teachingUnit.count({ where: { semesterId: id } })
+      if (units > 0) return NextResponse.json({ error: "Ce semestre contient des UE ; supprimez-les d'abord." }, { status: 409 })
+    }
+
+    await delegate(type).delete({ where: { id } })
+    await db.auditLog.create({
+      data: { tenantId, userId: user.id, action: 'DELETE', entity: ENTITY_LABEL[type], entityId: id, details: JSON.stringify({ soft: false }) },
+    })
+    return NextResponse.json({ data: { id, deleted: true } })
+  } catch (error) {
+    console.error(`Delete ${type} error:`, error)
+    return NextResponse.json({ error: `Failed to delete ${type}` }, { status: 500 })
+  }
+}
+
+const KNOWN_TYPES = new Set<string>(['faculty', 'department', 'program', 'level', 'semester', 'teaching-unit', 'course-element'])
+
 export const GET = withTenantAuth(handler)
 
 // One POST endpoint fans out by ?type= across the whole academic hierarchy so
@@ -473,4 +629,23 @@ export const POST = withTenantAuth(async (user: SessionUser, tenantId: string, r
     case 'faculty':
     default: return createFacultyHandler(user, tenantId, request)
   }
+}, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'RECTORAT'])
+
+// PUT /api/structure?type=<entity> — edit any node in the hierarchy (id in body).
+export const PUT = withTenantAuth(async (user: SessionUser, tenantId: string, request: NextRequest) => {
+  const type = new URL(request.url).searchParams.get('type') || 'faculty'
+  if (!KNOWN_TYPES.has(type)) {
+    return NextResponse.json({ error: `Unknown type: ${type}` }, { status: 400 })
+  }
+  return updateEntityHandler(user, tenantId, request, type as EntityType)
+}, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'RECTORAT'])
+
+// DELETE /api/structure?type=<entity>&id=<id> — soft-delete (faculty/department/
+// program/level) or guarded hard-delete (semester/teaching-unit/course-element).
+export const DELETE = withTenantAuth(async (user: SessionUser, tenantId: string, request: NextRequest) => {
+  const type = new URL(request.url).searchParams.get('type') || 'faculty'
+  if (!KNOWN_TYPES.has(type)) {
+    return NextResponse.json({ error: `Unknown type: ${type}` }, { status: 400 })
+  }
+  return deleteEntityHandler(user, tenantId, request, type as EntityType)
 }, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'RECTORAT'])
