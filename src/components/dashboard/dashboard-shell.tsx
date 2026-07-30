@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type ComponentType } from 'react'
 import { motion } from 'framer-motion'
 import { signOut } from 'next-auth/react'
 import { useAppStore, type AppView, type UserRole } from '@/lib/store'
@@ -65,48 +65,68 @@ import {
   Bus,
   UserCog,
 } from 'lucide-react'
-import { DashboardHome } from './dashboard-home'
-import { StudentsList } from '@/components/students/students-list'
-import { StudentDetail } from '@/components/students/student-detail'
-import { StructurePage } from '@/components/structure/structure-page'
-import { GradesPage } from '@/components/grades/grades-page'
-import { DeliberationPage } from '@/components/deliberation/deliberation-page'
-import { DocumentsPage } from '@/components/documents/documents-page'
-import { PaymentsPage } from '@/components/payments/payments-page'
-import { HealthPage } from '@/components/health/health-page'
-import { StatisticsPage } from '@/components/statistics/statistics-page'
-import { VerifyPage } from '@/components/verify/verify-page'
-import { SettingsPage } from '@/components/settings/settings-page'
-import { InstitutionPage } from '@/components/institution/institution-page'
-import { PlatformInstitutionsPage } from '@/components/platform/platform-institutions-page'
-import { ForcedPasswordChange } from '@/components/auth/forced-password-change'
-import { StaffUsersPage } from '@/components/users/staff-users-page'
-import { TeachersPage } from '@/components/teachers/teachers-page'
-import { TeacherDetail } from '@/components/teachers/teacher-detail'
-import { MaquettePage } from '@/components/maquette/maquette-page'
-import { AnnouncementsPage } from '@/components/announcements/announcements-page'
-import { ImportExportPage } from '@/components/import-export/import-export-page'
-import { TimetablePage } from '@/components/timetable/timetable-page'
-import { CandidaturePage } from '@/components/candidature/candidature-page'
-import { InscriptionPedagogiquePage } from '@/components/inscription-pedagogique/inscription-pedagogique-page'
-import { ProfilePage } from '@/components/profile/profile-page'
-import { ExamSchedulingPage } from '@/components/exam-scheduling/exam-scheduling-page'
-import { ScholarshipsPage } from '@/components/scholarships/scholarships-page'
-import { AlumniPage } from '@/components/alumni/alumni-page'
-import { AdvisingPage } from '@/components/advising/advising-page'
-import { LibraryPage } from '@/components/library/library-page'
-import { AttendancePage } from '@/components/attendance/attendance-page'
-import { CommunicationPage } from '@/components/communication/communication-page'
-import { OnlineExamPage } from '@/components/online-exam/online-exam-page'
-import { ReportsPage } from '@/components/reports/reports-page'
-import { InternshipsPage } from '@/components/internships/internships-page'
-import { HrPage } from '@/components/hr/hr-page'
-import { RoomBookingPage } from '@/components/room-booking/room-booking-page'
-import { ResultsPage } from '@/components/results/results-page'
-import { TransportPage } from '@/components/transport/transport-page'
+import dynamic from 'next/dynamic'
+import { Loader2 } from 'lucide-react'
 import { NotificationPanel } from '@/components/notifications/notification-panel'
-import { StudentExamPage } from '@/components/online-exam/student-exam-page'
 import { AIAssistantWidget } from '@/components/ai-assistant/ai-assistant-widget'
+
+// ─── Lazy-loaded views ──────────────────────────────────────────────────────
+//
+// dashboard-shell.tsx used to statically import all ~40 view components,
+// which bundled every module (payments, results, deliberation, statistics...)
+// into the single JS chunk loaded on first paint, regardless of which view
+// the user actually opens. That chunk measured 2.3MB. Loading each view on
+// demand via next/dynamic means only the current view's code is fetched.
+function ViewLoading() {
+  return (
+    <div className="flex items-center justify-center py-24">
+      <Loader2 className="size-6 animate-spin text-[#2d7a4f]" />
+    </div>
+  )
+}
+const lazyView = <P extends object>(loader: () => Promise<ComponentType<P>>) =>
+  dynamic(loader, { loading: ViewLoading })
+
+const DashboardHome = lazyView(() => import('./dashboard-home').then(m => m.DashboardHome))
+const StudentsList = lazyView(() => import('@/components/students/students-list').then(m => m.StudentsList))
+const StudentDetail = lazyView(() => import('@/components/students/student-detail').then(m => m.StudentDetail))
+const StructurePage = lazyView(() => import('@/components/structure/structure-page').then(m => m.StructurePage))
+const GradesPage = lazyView(() => import('@/components/grades/grades-page').then(m => m.GradesPage))
+const DeliberationPage = lazyView(() => import('@/components/deliberation/deliberation-page').then(m => m.DeliberationPage))
+const DocumentsPage = lazyView(() => import('@/components/documents/documents-page').then(m => m.DocumentsPage))
+const PaymentsPage = lazyView(() => import('@/components/payments/payments-page').then(m => m.PaymentsPage))
+const HealthPage = lazyView(() => import('@/components/health/health-page').then(m => m.HealthPage))
+const StatisticsPage = lazyView(() => import('@/components/statistics/statistics-page').then(m => m.StatisticsPage))
+const VerifyPage = lazyView(() => import('@/components/verify/verify-page').then(m => m.VerifyPage))
+const SettingsPage = lazyView(() => import('@/components/settings/settings-page').then(m => m.SettingsPage))
+const InstitutionPage = lazyView(() => import('@/components/institution/institution-page').then(m => m.InstitutionPage))
+const PlatformInstitutionsPage = lazyView(() => import('@/components/platform/platform-institutions-page').then(m => m.PlatformInstitutionsPage))
+const ForcedPasswordChange = lazyView(() => import('@/components/auth/forced-password-change').then(m => m.ForcedPasswordChange))
+const StaffUsersPage = lazyView(() => import('@/components/users/staff-users-page').then(m => m.StaffUsersPage))
+const TeachersPage = lazyView(() => import('@/components/teachers/teachers-page').then(m => m.TeachersPage))
+const TeacherDetail = lazyView(() => import('@/components/teachers/teacher-detail').then(m => m.TeacherDetail))
+const MaquettePage = lazyView(() => import('@/components/maquette/maquette-page').then(m => m.MaquettePage))
+const AnnouncementsPage = lazyView(() => import('@/components/announcements/announcements-page').then(m => m.AnnouncementsPage))
+const ImportExportPage = lazyView(() => import('@/components/import-export/import-export-page').then(m => m.ImportExportPage))
+const TimetablePage = lazyView(() => import('@/components/timetable/timetable-page').then(m => m.TimetablePage))
+const CandidaturePage = lazyView(() => import('@/components/candidature/candidature-page').then(m => m.CandidaturePage))
+const InscriptionPedagogiquePage = lazyView(() => import('@/components/inscription-pedagogique/inscription-pedagogique-page').then(m => m.InscriptionPedagogiquePage))
+const ProfilePage = lazyView(() => import('@/components/profile/profile-page').then(m => m.ProfilePage))
+const ExamSchedulingPage = lazyView(() => import('@/components/exam-scheduling/exam-scheduling-page').then(m => m.ExamSchedulingPage))
+const ScholarshipsPage = lazyView(() => import('@/components/scholarships/scholarships-page').then(m => m.ScholarshipsPage))
+const AlumniPage = lazyView(() => import('@/components/alumni/alumni-page').then(m => m.AlumniPage))
+const AdvisingPage = lazyView(() => import('@/components/advising/advising-page').then(m => m.AdvisingPage))
+const LibraryPage = lazyView(() => import('@/components/library/library-page').then(m => m.LibraryPage))
+const AttendancePage = lazyView(() => import('@/components/attendance/attendance-page').then(m => m.AttendancePage))
+const CommunicationPage = lazyView(() => import('@/components/communication/communication-page').then(m => m.CommunicationPage))
+const OnlineExamPage = lazyView(() => import('@/components/online-exam/online-exam-page').then(m => m.OnlineExamPage))
+const ReportsPage = lazyView(() => import('@/components/reports/reports-page').then(m => m.ReportsPage))
+const InternshipsPage = lazyView(() => import('@/components/internships/internships-page').then(m => m.InternshipsPage))
+const HrPage = lazyView(() => import('@/components/hr/hr-page').then(m => m.HrPage))
+const RoomBookingPage = lazyView(() => import('@/components/room-booking/room-booking-page').then(m => m.RoomBookingPage))
+const ResultsPage = lazyView(() => import('@/components/results/results-page').then(m => m.ResultsPage))
+const TransportPage = lazyView(() => import('@/components/transport/transport-page').then(m => m.TransportPage))
+const StudentExamPage = lazyView(() => import('@/components/online-exam/student-exam-page').then(m => m.StudentExamPage))
 
 // ─── Navigation Config ────────────────────────────────────────────────────────
 
