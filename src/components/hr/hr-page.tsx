@@ -346,7 +346,8 @@ export function HrPage() {
   const adminCount = useCountUp(staff.filter(s => ['Administration', 'Scolarite', 'Comptabilite'].includes(s.department)).length, 1100)
   const permCount = useCountUp(staff.filter(s => s.contract === 'cdi').length, 1200)
   const vacCount = useCountUp(staff.filter(s => s.contract === 'vacataire').length, 1000)
-  const vacantPosts = useCountUp(5, 1000)
+  const enCongeCount = useCountUp(staff.filter(s => s.status === 'en_conge').length, 1000)
+  const pendingLeaveCount = leaveRequests.filter(l => l.status === 'en_attente').length
 
   // Filtered staff
   const filteredStaff = staff.filter(s => {
@@ -525,18 +526,18 @@ export function HrPage() {
           </Card>
         </motion.div>
 
-        {/* Postes vacants */}
+        {/* En conge */}
         <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
           <Card className="overflow-hidden relative border-l-4 border-l-[#c62828]">
             <div className="h-1 bg-gradient-to-r from-[#c62828] to-[#e53935]" />
             <CardContent className="p-4">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Postes vacants</p>
-                  <p className="text-xl font-bold text-[#c62828] mt-1">{vacantPosts}</p>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Personnel en conge</p>
+                  <p className="text-xl font-bold text-[#c62828] mt-1">{enCongeCount}</p>
                   <div className="flex items-center gap-1 mt-1">
                     <Clock className="size-3 text-[#d4a853]" />
-                    <span className="text-[10px] text-[#d4a853] font-medium">3 en recrutement</span>
+                    <span className="text-[10px] text-[#d4a853] font-medium">{pendingLeaveCount} demande(s) en attente</span>
                   </div>
                 </div>
                 <div className="w-10 h-10 rounded-xl bg-[#c6282815] flex items-center justify-center">

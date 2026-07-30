@@ -269,7 +269,6 @@ export function ReportsPage() {
   const reportStats = reportsQuery?.stats
 
   const rapportsGeneres = useCountUp(reportStats?.total ?? 0, 1400)
-  const rapportsPlanifies = useCountUp(12, 1200)
   const telechargements = useCountUp(reportStats?.totalDownloads ?? 0, 1500)
 
   const [selectedType, setSelectedType] = useState<string | null>(null)
@@ -285,6 +284,7 @@ export function ReportsPage() {
   const [scheduledState, setScheduledState] = useState<Record<string, boolean>>(
     Object.fromEntries(scheduledReports.map(s => [s.id, s.active]))
   )
+  const rapportsPlanifies = useCountUp(Object.values(scheduledState).filter(Boolean).length, 1200)
 
   // Filter reports
   const filteredReports = reportsList.filter(r => {

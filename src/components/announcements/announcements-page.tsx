@@ -195,7 +195,7 @@ function mapAnnouncement(r: AnnouncementRecord): Announcement {
 
 // ─── Announcement Card Component ──────────────────────────────────────────────
 
-function AnnouncementCard({ announcement, index }: { announcement: Announcement; index: number }) {
+function AnnouncementCard({ announcement, index, onDelete, deletingId }: { announcement: Announcement; index: number; onDelete: (id: string) => void; deletingId: string | null }) {
   const typeConf = typeConfig[announcement.type]
   const prioConf = priorityConfig[announcement.priority]
   const catConf = categoryConfig[announcement.category]
@@ -264,13 +264,13 @@ function AnnouncementCard({ announcement, index }: { announcement: Announcement;
                 </div>
               </div>
               <div className="flex items-center gap-1">
-                <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-gray-600 hover:text-[#1a2744]">
-                  <Eye className="size-3" />
-                </Button>
-                <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-gray-600 hover:text-[#2d7a4f]">
-                  <Edit className="size-3" />
-                </Button>
-                <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-gray-600 hover:text-red-500">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0 text-gray-600 hover:text-red-500"
+                  disabled={deletingId === announcement.id}
+                  onClick={() => onDelete(announcement.id)}
+                >
                   <Trash2 className="size-3" />
                 </Button>
               </div>
@@ -288,8 +288,9 @@ export function AnnouncementsPage() {
   const { data: announcementsQuery, isLoading, refetch } = useAnnouncements()
   const announcements: Announcement[] = (announcementsQuery?.announcements || []).map(mapAnnouncement)
 
-  const annoncesActives = useCountUp(12, 1400)
-  const tauxLecture = useCountUp(94, 1300)
+  const annoncesActives = useCountUp(announcements.length, 1400)
+  const urgentesCount = useCountUp(announcements.filter(a => a.priority === 'urgent').length, 1300)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [activeTab, setActiveTab] = useState('toutes')
   const [newTitle, setNewTitle] = useState('')
@@ -318,8 +319,14 @@ export function AnnouncementsPage() {
     return 0
   })
 
-  // Stats
+  // Stats (all real -- no read-tracking model exists, so no "taux de lecture")
   const totalUrgentes = announcements.filter(a => a.priority === 'urgent').length
+  const totalEpinglees = announcements.filter(a => a.isPinned).length
+  const annoncesCeMois = (announcementsQuery?.announcements || []).filter((r: { createdAt: string }) => {
+    const d = new Date(r.createdAt)
+    const now = new Date()
+    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()
+  }).length
 
   const getCategoryCount = (cat: Category | null) => {
     if (!cat) return announcements.length
@@ -367,6 +374,20 @@ export function AnnouncementsPage() {
     }
   }
 
+  async function handleDeleteAnnouncement(id: string) {
+    setDeletingId(id)
+    try {
+      const res = await fetch(`/api/announcements?id=${id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('failed')
+      toast.success('Annonce supprimee')
+      refetch()
+    } catch {
+      toast.error('Echec de la suppression')
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
   return (
     <motion.div
       className="space-y-6"
@@ -384,29 +405,8 @@ export function AnnouncementsPage() {
               <h1 className="text-xl md:text-2xl font-bold text-white">Annonces & Communications</h1>
               <p className="text-sm text-white/70 mt-1">Gestion des annonces institutionnelles et communications urgentes</p>
             </div>
-            <div className="flex gap-2 flex-wrap">
-              <Button
-                size="sm"
-                className="bg-white/10 backdrop-blur border border-white/20 hover:bg-white/20 text-white text-xs"
-              >
-                <Plus className="size-3.5 mr-1.5" />
-                Nouvelle annonce
-              </Button>
-              <Button
-                size="sm"
-                className="bg-white/10 backdrop-blur border border-white/20 hover:bg-white/20 text-white text-xs"
-              >
-                <Send className="size-3.5 mr-1.5" />
-                Diffuser
-              </Button>
-              <Button
-                size="sm"
-                className="bg-white/10 backdrop-blur border border-white/20 hover:bg-white/20 text-white text-xs"
-              >
-                <BarChart3 className="size-3.5 mr-1.5" />
-                Statistiques
-              </Button>
-            </div>
+            {/* The create form is inline below (with a real "Publier" button),
+                so no header action buttons are needed here. */}
           </div>
           {/* Glass-morphism stat cards */}
           <div className="flex gap-4 mt-4">
@@ -415,8 +415,8 @@ export function AnnouncementsPage() {
               <div className="text-white text-2xl font-bold">{annoncesActives}</div>
             </motion.div>
             <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }} className="bg-white/10 backdrop-blur border border-white/15 rounded-lg px-4 py-3">
-              <div className="text-white/60 text-xs">Taux de lecture</div>
-              <div className="text-white text-2xl font-bold">{tauxLecture}%</div>
+              <div className="text-white/60 text-xs">Annonces urgentes</div>
+              <div className="text-white text-2xl font-bold">{urgentesCount}</div>
             </motion.div>
           </div>
         </div>
@@ -431,7 +431,7 @@ export function AnnouncementsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-[10px] text-gray-500 uppercase font-medium">Annonces ce mois</p>
-                  <p className="text-2xl font-bold text-[#1a2744]">12</p>
+                  <p className="text-2xl font-bold text-[#1a2744]">{annoncesCeMois}</p>
                 </div>
                 <div className="w-10 h-10 rounded-xl bg-[#1a274415] flex items-center justify-center">
                   <Megaphone className="size-5 text-[#1a2744]" />
@@ -446,8 +446,8 @@ export function AnnouncementsPage() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-[10px] text-gray-500 uppercase font-medium">Taux de lecture</p>
-                  <p className="text-2xl font-bold text-[#2d7a4f]">78%</p>
+                  <p className="text-[10px] text-gray-500 uppercase font-medium">Total annonces</p>
+                  <p className="text-2xl font-bold text-[#2d7a4f]">{announcements.length}</p>
                 </div>
                 <div className="w-10 h-10 rounded-xl bg-[#2d7a4f15] flex items-center justify-center">
                   <BarChart3 className="size-5 text-[#2d7a4f]" />
@@ -462,8 +462,8 @@ export function AnnouncementsPage() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-[10px] text-gray-500 uppercase font-medium">Non lues</p>
-                  <p className="text-2xl font-bold text-[#d4a853]">23</p>
+                  <p className="text-[10px] text-gray-500 uppercase font-medium">Epinglees</p>
+                  <p className="text-2xl font-bold text-[#d4a853]">{totalEpinglees}</p>
                 </div>
                 <div className="w-10 h-10 rounded-xl bg-[#d4a85315] flex items-center justify-center">
                   <Eye className="size-5 text-[#d4a853]" />
@@ -539,7 +539,7 @@ export function AnnouncementsPage() {
                         </div>
                         <div className="space-y-3">
                           {sortedAnnouncements.filter(a => a.isPinned).map((announcement, idx) => (
-                            <AnnouncementCard key={announcement.id} announcement={announcement} index={idx} />
+                            <AnnouncementCard key={announcement.id} announcement={announcement} index={idx} onDelete={handleDeleteAnnouncement} deletingId={deletingId} />
                           ))}
                         </div>
                       </div>
@@ -556,7 +556,7 @@ export function AnnouncementsPage() {
                         )}
                         <div className="space-y-3">
                           {sortedAnnouncements.filter(a => !a.isPinned).map((announcement, idx) => (
-                            <AnnouncementCard key={announcement.id} announcement={announcement} index={idx + sortedAnnouncements.filter(a => a.isPinned).length} />
+                            <AnnouncementCard key={announcement.id} announcement={announcement} index={idx + sortedAnnouncements.filter(a => a.isPinned).length} onDelete={handleDeleteAnnouncement} deletingId={deletingId} />
                           ))}
                         </div>
                       </div>

@@ -366,8 +366,13 @@ export function OnlineExamPage() {
     }
   }
 
-  const examensPrevus = useCountUp(12, 1400)
-  const tauxCompletion = useCountUp(87, 1300)
+  const examensPrevus = useCountUp(upcomingExams.length, 1400)
+  const tauxCompletion = useCountUp(
+    studentResults.length > 0
+      ? Math.round((studentResults.filter((r) => r.status !== 'En correction').length / studentResults.length) * 100)
+      : 0,
+    1300,
+  )
 
   // Active exam state
   const [currentQuestion, setCurrentQuestion] = useState(11) // 0-indexed, showing question 12

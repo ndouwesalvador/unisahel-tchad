@@ -236,8 +236,6 @@ const itemVariants = {
 // ─── Main Component ────────────────────────────────────────────────────────────
 
 export function CommunicationPage() {
-  const messagesCount = useCountUp(45, 1400)
-  const tauxLecture = useCountUp(87, 1300)
   const [selectedConversation, setSelectedConversation] = useState<number | null>(1)
   const [filterType, setFilterType] = useState('Tous')
   const [searchQuery, setSearchQuery] = useState('')
@@ -248,6 +246,11 @@ export function CommunicationPage() {
 
   const { data: communicationsQuery, isLoading: broadcastsLoading } = useCommunications()
   const broadcasts: Broadcast[] = (communicationsQuery?.communications || []).map(mapBroadcast)
+  const broadcastStats = communicationsQuery?.stats
+  // Header stats: real broadcast counts (no per-message read-tracking exists,
+  // so we surface sent vs total instead of a fabricated "taux de lecture").
+  const messagesCount = useCountUp(broadcastStats?.total ?? 0, 1400)
+  const sentCount = useCountUp(broadcastStats?.sent ?? 0, 1300)
 
   // Filter conversations
   const filteredConversations = conversations.filter((c) => {
@@ -420,12 +423,12 @@ export function CommunicationPage() {
               {/* Glass-morphism stat cards */}
               <div className="flex gap-4 mt-4">
                 <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }} className="bg-white/10 backdrop-blur border border-white/15 rounded-lg px-4 py-3">
-                  <div className="text-white/60 text-xs">Messages aujourd&apos;hui</div>
+                  <div className="text-white/60 text-xs">Diffusions</div>
                   <div className="text-white text-2xl font-bold">{messagesCount}</div>
                 </motion.div>
                 <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }} className="bg-white/10 backdrop-blur border border-white/15 rounded-lg px-4 py-3">
-                  <div className="text-white/60 text-xs">Taux de lecture</div>
-                  <div className="text-white text-2xl font-bold">{tauxLecture}%</div>
+                  <div className="text-white/60 text-xs">Envoyees</div>
+                  <div className="text-white text-2xl font-bold">{sentCount}</div>
                 </motion.div>
               </div>
             </div>

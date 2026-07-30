@@ -291,8 +291,8 @@ export function TimetablePage() {
   const rooms: RoomInfo[] = (roomsQuery?.data || []).map(mapRoom)
 
   // Animated stats for header
-  const animatedCours = useCountUp(48, 1400)
-  const animatedSalles = useCountUp(12, 1200)
+  const animatedCours = useCountUp(timeSlots.length, 1400)
+  const animatedSalles = useCountUp(rooms.length, 1200)
 
   useEffect(() => {
     const interval = setInterval(() => setCurrentTime(new Date()), 60000)

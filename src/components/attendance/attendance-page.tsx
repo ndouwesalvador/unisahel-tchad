@@ -238,8 +238,6 @@ function useCountUp(target: number, duration: number = 1400) {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function AttendancePage() {
-  const presencesCount = useCountUp(1247, 1400)
-  const tauxPresence = useCountUp(93, 1300)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterDate, setFilterDate] = useState('tous')
   const [filterProgram, setFilterProgram] = useState('tous')
@@ -321,8 +319,13 @@ export function AttendancePage() {
   const absentCount = attendanceData.filter(r => r.status === 'Absent').length
   const justifieCount = attendanceData.filter(r => r.status === 'Justifie').length
   const retardCount = attendanceData.filter(r => r.status === 'Retard').length
-  void Math.round(((presentCount + retardCount) / attendanceData.length) * 100)
+  const presenceRate = attendanceData.length > 0 ? Math.round(((presentCount + retardCount) / attendanceData.length) * 100) : 0
   void absentCount
+  void justifieCount
+
+  // Header stats (real, derived from the loaded attendance records)
+  const presencesCount = useCountUp(presentCount, 1400)
+  const tauxPresence = useCountUp(presenceRate, 1300)
 
   // Weekly totals
   const totalWeeklyHours = weeklyData.reduce((sum, d) => sum + d.hours, 0)

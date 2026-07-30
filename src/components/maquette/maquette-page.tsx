@@ -2,6 +2,7 @@
 
 import { exportToExcel } from '@/lib/export'
 import { useStructure } from '@/lib/api-hooks'
+import { useAppStore } from '@/lib/store'
 import { useState, useEffect, useRef, Fragment } from 'react'
 import { motion } from 'framer-motion'
 import { Card, CardContent } from '@/components/ui/card'
@@ -33,7 +34,6 @@ import {
   GraduationCap,
   Layers,
   Download,
-  Upload,
 } from 'lucide-react'
 
 // ─── Demo Data ────────────────────────────────────────────────────────────────
@@ -369,17 +369,6 @@ function SemesterView({ semester }: { semester: Semester }) {
         </CardContent>
       </Card>
 
-      {/* Action buttons */}
-      <div className="flex gap-2">
-        <Button size="sm" className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs">
-          <Plus className="size-3.5 mr-1.5" />
-          Ajouter UE
-        </Button>
-        <Button variant="outline" size="sm" className="text-xs">
-          <Plus className="size-3.5 mr-1.5" />
-          Ajouter ECUE
-        </Button>
-      </div>
     </div>
   )
 }
@@ -387,10 +376,35 @@ function SemesterView({ semester }: { semester: Semester }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function MaquettePage() {
+  const setView = useAppStore((s) => s.setView)
   const { data: structureData, isLoading } = useStructure()
   const programs = mapStructureToPrograms(structureData?.faculties || [])
   const [selectedProgram, setSelectedProgram] = useState<string | undefined>(undefined)
   const program = programs.find(p => p.id === selectedProgram) || programs[0]
+
+  const handleExportMaquette = () => {
+    if (!program) return
+    const rows = program.levels.flatMap((lvl) =>
+      lvl.semesters.flatMap((sem) =>
+        sem.ues.flatMap((ue) =>
+          (ue.ecues.length > 0 ? ue.ecues : [null]).map((ec) => ({
+            Programme: program.label,
+            Niveau: lvl.label,
+            Semestre: sem.label,
+            'Code UE': ue.code,
+            UE: ue.nom,
+            Credits: ue.credits,
+            Type: ue.type,
+            'Code ECUE': ec?.code || '',
+            ECUE: ec?.nom || '',
+            Coefficient: ec?.coefficient ?? '',
+            Enseignant: ec?.enseignant || '',
+          })),
+        ),
+      ),
+    )
+    exportToExcel(rows, `maquette_${program.label.replace(/\s+/g, '_')}`)
+  }
 
   const totalUEs = programs.reduce(
     (a, p) => a + p.levels.reduce((b, l) => b + l.semesters.reduce((c, s) => c + s.ues.length, 0), 0),
@@ -436,23 +450,18 @@ export function MaquettePage() {
               <Button
                 size="sm"
                 className="bg-white/10 backdrop-blur border border-white/20 hover:bg-white/20 text-white text-xs"
+                onClick={() => setView('structure')}
               >
                 <Plus className="size-3.5 mr-1.5" />
-                Nouvelle maquette
+                Gerer la structure
               </Button>
               <Button
                 size="sm"
                 className="bg-white/10 backdrop-blur border border-white/20 hover:bg-white/20 text-white text-xs"
-               onClick={() => exportToExcel([{ 'Message': 'Données en cours de synchronisation' }], 'export_maquette')}>
+                onClick={handleExportMaquette}
+              >
                 <Download className="size-3.5 mr-1.5" />
                 Exporter
-              </Button>
-              <Button
-                size="sm"
-                className="bg-white/10 backdrop-blur border border-white/20 hover:bg-white/20 text-white text-xs"
-              >
-                <Upload className="size-3.5 mr-1.5" />
-                Importer
               </Button>
             </div>
           </div>

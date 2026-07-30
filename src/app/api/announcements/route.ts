@@ -87,5 +87,29 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
   }
 }
 
+// DELETE /api/announcements?id=X - remove an announcement
+async function handleDelete(user: SessionUser, tenantId: string, request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const id = searchParams.get('id')
+    if (!id) {
+      return NextResponse.json({ error: 'id query parameter is required' }, { status: 400 })
+    }
+    const existing = await db.announcement.findFirst({ where: { id, tenantId } })
+    if (!existing) {
+      return NextResponse.json({ error: 'Announcement not found' }, { status: 404 })
+    }
+    await db.announcement.delete({ where: { id } })
+    await db.auditLog.create({
+      data: { tenantId, userId: user.id, action: 'DELETE', entity: 'Announcement', entityId: id, details: JSON.stringify({ title: existing.title }) },
+    })
+    return NextResponse.json({ ok: true })
+  } catch (error) {
+    console.error('Delete announcement error:', error)
+    return NextResponse.json({ error: 'Failed to delete announcement' }, { status: 500 })
+  }
+}
+
 export const GET = withTenantAuth(handleGet)
 export const POST = withTenantAuth(handlePost)
+export const DELETE = withTenantAuth(handleDelete, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'RECTORAT', 'SCOLARITE'])
