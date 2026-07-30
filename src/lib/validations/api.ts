@@ -137,7 +137,10 @@ export const createPaymentSchema = z.object({
   academicYearId: z.string().cuid(),
   feeStructureId: z.string().cuid().optional(),
   amount: z.number().positive(),
-  currency: z.string().length(3).default('FCFA'),
+  // Stored as a free label (default "FCFA", the CEMAC currency). A hard
+  // length(3) here rejected the very default it declared and any "FCFA"
+  // the UI sends explicitly.
+  currency: z.string().min(1).max(10).default('FCFA'),
   paymentMethod: z.enum(['CASH', 'MOBILE_MONEY', 'BANK_TRANSFER', 'CARD']),
   mobileMoneyProvider: z.enum(['AIRTEL', 'ORANGE', 'MTN', 'MOOV']).optional(),
   mobileMoneyPhone: z.string().max(20).optional(),

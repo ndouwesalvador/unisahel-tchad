@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { toast } from 'sonner'
+import { useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -45,6 +47,10 @@ import {
   Landmark,
   Handshake,
   TrendingUp,
+  Layers,
+  CalendarRange,
+  BookMarked,
+  FileText,
 } from 'lucide-react'
 import { useStructure } from '@/lib/api-hooks'
 
@@ -88,12 +94,16 @@ interface ApiCourseElement {
 
 interface ApiTeachingUnit {
   id: string
+  name: string
+  code?: string | null
   responsible: ApiTeacherRef | null
   courseElements: ApiCourseElement[]
 }
 
 interface ApiSemester {
   id: string
+  name: string
+  code?: string | null
   teachingUnits: ApiTeachingUnit[]
 }
 
@@ -474,23 +484,75 @@ function FacultyCard({ faculty, index }: { faculty: Faculty; index: number }) {
 
 // ─── Add Entity Dialog ──────────────────────────────────────────────────────
 
+interface DialogField {
+  id: string
+  label: string
+  type?: string
+  placeholder?: string
+  numeric?: boolean
+  defaultValue?: string
+  options?: { value: string; label: string }[]
+}
+
+// Real create dialog: controlled inputs, a POST to /api/structure?type=<type>,
+// a toast, and a cache invalidation so the tree refreshes. Previously this
+// dialog rendered uncontrolled inputs and its "Ajouter" button just closed
+// the modal -- faculty/department/program creation looked available in the UI
+// but never called the backend at all.
 function AddEntityDialog({
   triggerLabel,
   triggerIcon: TriggerIcon,
   title,
   description,
   fields,
+  type,
+  buildBody,
 }: {
   triggerLabel: string
   triggerIcon: React.ElementType
   title: string
   description: string
-  fields: { id: string; label: string; type?: string; placeholder?: string; options?: { value: string; label: string }[] }[]
+  fields: DialogField[]
+  type: string
+  buildBody: (values: Record<string, string>) => Record<string, unknown> | string
 }) {
   const [open, setOpen] = useState(false)
+  const [values, setValues] = useState<Record<string, string>>({})
+  const [submitting, setSubmitting] = useState(false)
+  const queryClient = useQueryClient()
+
+  const setField = (id: string, v: string) => setValues(prev => ({ ...prev, [id]: v }))
+
+  const reset = () => setValues({})
+
+  const handleSubmit = async () => {
+    const body = buildBody(values)
+    if (typeof body === 'string') {
+      toast.error('Champs requis', { description: body })
+      return
+    }
+    setSubmitting(true)
+    try {
+      const res = await fetch(`/api/structure?type=${type}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json.error || "Échec de l'enregistrement")
+      toast.success(`${title} — enregistré`)
+      queryClient.invalidateQueries({ queryKey: ['structure'] })
+      reset()
+      setOpen(false)
+    } catch (e) {
+      toast.error('Erreur', { description: e instanceof Error ? e.message : "Échec de l'enregistrement" })
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) reset() }}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="text-xs h-9">
           <TriggerIcon className="size-3.5 mr-1.5" />
@@ -507,7 +569,7 @@ function AddEntityDialog({
             <div key={field.id} className="space-y-2">
               <Label className="text-sm font-medium">{field.label}</Label>
               {field.options ? (
-                <Select>
+                <Select value={values[field.id] ?? ''} onValueChange={(v) => setField(field.id, v)}>
                   <SelectTrigger className="h-10">
                     <SelectValue placeholder={field.placeholder || 'Sélectionner...'} />
                   </SelectTrigger>
@@ -519,24 +581,27 @@ function AddEntityDialog({
                 </Select>
               ) : (
                 <Input
-                  type={field.type || 'text'}
+                  type={field.numeric ? 'number' : (field.type || 'text')}
                   placeholder={field.placeholder || ''}
                   className="h-10"
+                  value={values[field.id] ?? field.defaultValue ?? ''}
+                  onChange={(e) => setField(field.id, e.target.value)}
                 />
               )}
             </div>
           ))}
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)} className="text-xs">
+          <Button variant="outline" onClick={() => { reset(); setOpen(false) }} className="text-xs" disabled={submitting}>
             Annuler
           </Button>
           <Button
             className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs"
-            onClick={() => setOpen(false)}
+            onClick={handleSubmit}
+            disabled={submitting}
           >
             <Plus className="size-3.5 mr-1.5" />
-            Ajouter
+            {submitting ? 'Enregistrement…' : 'Ajouter'}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -568,6 +633,56 @@ export function StructurePage() {
     { label: 'Programmes', value: totalPrograms, icon: GraduationCap, color: '#d4a853' },
   ]
 
+  // Flat option lists (each carrying the parent ids it needs) built from the
+  // raw API tree, so every create dialog can offer the correct parent to
+  // attach the new entity to -- faculty -> department -> program -> level ->
+  // semester -> teaching unit -> course element.
+  const rawFaculties = (structureQuery?.faculties || []) as ApiFaculty[]
+  const facultyOptions: { value: string; label: string }[] = []
+  const departmentOptions: { value: string; label: string }[] = []
+  const deptToFaculty: Record<string, string> = {}
+  const programOptions: { value: string; label: string }[] = []
+  const levelOptions: { value: string; label: string }[] = []
+  const semesterOptions: { value: string; label: string }[] = []
+  const unitOptions: { value: string; label: string }[] = []
+  rawFaculties.forEach((f) => {
+    facultyOptions.push({ value: f.id, label: f.name })
+    f.departments.forEach((d) => {
+      deptToFaculty[d.id] = f.id
+      departmentOptions.push({ value: d.id, label: `${f.name} — ${d.name}` })
+      d.programs.forEach((p) => {
+        programOptions.push({ value: p.id, label: p.name })
+        p.levels.forEach((l) => {
+          levelOptions.push({ value: l.id, label: `${p.name} — ${l.name}` })
+          l.semesters.forEach((s) => {
+            semesterOptions.push({ value: s.id, label: `${p.name} · ${l.name} · ${s.name}` })
+            s.teachingUnits.forEach((u) => {
+              unitOptions.push({ value: u.id, label: `${s.name} · ${u.code ? u.code + ' ' : ''}${u.name}` })
+            })
+          })
+        })
+      })
+    })
+  })
+
+  const CYCLE_OPTIONS = [
+    { value: 'LICENCE', label: 'Licence' },
+    { value: 'MASTER', label: 'Master' },
+    { value: 'DOCTORAT', label: 'Doctorat' },
+    { value: 'INGENIEUR', label: 'Ingénieur' },
+    { value: 'DUT', label: 'DUT' },
+    { value: 'BTS', label: 'BTS' },
+  ]
+  const UE_TYPE_OPTIONS = [
+    { value: 'FONDAMENTALE', label: 'Fondamentale' },
+    { value: 'COMPLEMENTAIRE', label: 'Complémentaire' },
+    { value: 'TRANSVERSALE', label: 'Transversale' },
+    { value: 'METHODE', label: 'Méthodologie' },
+    { value: 'LANGUE', label: 'Langue' },
+    { value: 'STAGE', label: 'Stage' },
+    { value: 'MEMOIRE', label: 'Mémoire' },
+  ]
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -585,53 +700,155 @@ export function StructurePage() {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <AddEntityDialog
-            triggerLabel="Ajouter une faculté"
+            triggerLabel="Faculté"
             triggerIcon={Building2}
             title="Nouvelle faculté"
             description="Ajoutez une nouvelle faculté à l'institution."
+            type="faculty"
             fields={[
               { id: 'name', label: 'Nom de la faculté', placeholder: 'Ex: Faculté des Sciences' },
-              { id: 'dean', label: 'Nom du doyen', placeholder: 'Ex: Pr. Nom Prénom' },
               { id: 'code', label: 'Code', placeholder: 'Ex: FST' },
+              { id: 'dean', label: 'Nom du doyen (optionnel)', placeholder: 'Ex: Pr. Nom Prénom' },
             ]}
+            buildBody={(v) =>
+              v.name?.trim() && v.code?.trim()
+                ? { name: v.name.trim(), shortName: v.code.trim(), deanName: v.dean?.trim() || undefined }
+                : 'Le nom et le code de la faculté sont requis.'
+            }
           />
           <AddEntityDialog
-            triggerLabel="Ajouter un département"
+            triggerLabel="Département"
             triggerIcon={BookOpen}
             title="Nouveau département"
             description="Ajoutez un département à une faculté existante."
+            type="department"
             fields={[
               { id: 'name', label: 'Nom du département', placeholder: 'Ex: Département d\'Informatique' },
-              {
-                id: 'faculty',
-                label: 'Faculté rattachée',
-                placeholder: 'Sélectionner la faculté',
-                options: faculties.map(f => ({ value: f.id, label: f.name })),
-              },
-              { id: 'head', label: 'Chef de département', placeholder: 'Ex: Dr. Nom Prénom' },
+              { id: 'code', label: 'Code', placeholder: 'Ex: INFO' },
+              { id: 'faculty', label: 'Faculté rattachée', placeholder: 'Sélectionner la faculté', options: facultyOptions },
+              { id: 'head', label: 'Chef de département (optionnel)', placeholder: 'Ex: Dr. Nom Prénom' },
             ]}
+            buildBody={(v) =>
+              v.name?.trim() && v.code?.trim() && v.faculty
+                ? { facultyId: v.faculty, name: v.name.trim(), shortName: v.code.trim(), headName: v.head?.trim() || undefined }
+                : 'Le nom, le code et la faculté sont requis.'
+            }
           />
           <AddEntityDialog
-            triggerLabel="Ajouter une filière"
+            triggerLabel="Programme"
             triggerIcon={GraduationCap}
-            title="Nouvelle filière"
-            description="Ajoutez une filière à un département existant."
+            title="Nouveau programme (filière)"
+            description="Ajoutez un programme diplômant à un département existant."
+            type="program"
             fields={[
-              { id: 'name', label: 'Nom de la filière', placeholder: 'Ex: Informatique' },
-              {
-                id: 'faculty',
-                label: 'Faculté',
-                placeholder: 'Sélectionner la faculté',
-                options: faculties.map(f => ({ value: f.id, label: f.name })),
-              },
-              {
-                id: 'department',
-                label: 'Département',
-                placeholder: 'Sélectionner le département',
-                options: faculties.flatMap(f => f.departments.map(d => ({ value: d.id, label: d.name }))),
-              },
-              { id: 'code', label: 'Code', placeholder: 'Ex: INF' },
+              { id: 'name', label: 'Nom du programme', placeholder: 'Ex: Licence en Informatique' },
+              { id: 'code', label: 'Code', placeholder: 'Ex: LINF' },
+              { id: 'department', label: 'Département', placeholder: 'Sélectionner le département', options: departmentOptions },
+              { id: 'cycle', label: 'Cycle', placeholder: 'Sélectionner le cycle', options: CYCLE_OPTIONS },
+              { id: 'diplomaType', label: 'Type de diplôme', placeholder: 'Ex: Licence' },
+              { id: 'duration', label: 'Durée (années)', placeholder: 'Ex: 3', numeric: true },
             ]}
+            buildBody={(v) => {
+              if (!v.name?.trim() || !v.code?.trim() || !v.department || !v.cycle || !v.diplomaType?.trim() || !v.duration) {
+                return 'Nom, code, département, cycle, type de diplôme et durée sont requis.'
+              }
+              return {
+                facultyId: deptToFaculty[v.department],
+                departmentId: v.department,
+                name: v.name.trim(),
+                code: v.code.trim(),
+                cycle: v.cycle,
+                diplomaType: v.diplomaType.trim(),
+                duration: Number(v.duration),
+              }
+            }}
+          />
+          <AddEntityDialog
+            triggerLabel="Niveau"
+            triggerIcon={Layers}
+            title="Nouveau niveau"
+            description="Ajoutez un niveau (ex: Licence 1) à un programme."
+            type="level"
+            fields={[
+              { id: 'program', label: 'Programme', placeholder: 'Sélectionner le programme', options: programOptions },
+              { id: 'name', label: 'Nom du niveau', placeholder: 'Ex: Licence 1' },
+              { id: 'code', label: 'Code', placeholder: 'Ex: L1' },
+              { id: 'orderIndex', label: 'Ordre', placeholder: 'Ex: 1', numeric: true },
+            ]}
+            buildBody={(v) =>
+              v.program && v.name?.trim() && v.code?.trim() && v.orderIndex
+                ? { programId: v.program, name: v.name.trim(), code: v.code.trim(), orderIndex: Number(v.orderIndex) }
+                : 'Programme, nom, code et ordre sont requis.'
+            }
+          />
+          <AddEntityDialog
+            triggerLabel="Semestre"
+            triggerIcon={CalendarRange}
+            title="Nouveau semestre"
+            description="Ajoutez un semestre à un niveau."
+            type="semester"
+            fields={[
+              { id: 'level', label: 'Niveau', placeholder: 'Sélectionner le niveau', options: levelOptions },
+              { id: 'name', label: 'Nom du semestre', placeholder: 'Ex: Semestre 1' },
+              { id: 'code', label: 'Code', placeholder: 'Ex: S1' },
+              { id: 'orderIndex', label: 'Ordre', placeholder: 'Ex: 1', numeric: true },
+            ]}
+            buildBody={(v) =>
+              v.level && v.name?.trim() && v.code?.trim() && v.orderIndex
+                ? { levelId: v.level, name: v.name.trim(), code: v.code.trim(), orderIndex: Number(v.orderIndex) }
+                : 'Niveau, nom, code et ordre sont requis.'
+            }
+          />
+          <AddEntityDialog
+            triggerLabel="UE"
+            triggerIcon={BookMarked}
+            title="Nouvelle unité d'enseignement (UE)"
+            description="Ajoutez une UE à un semestre."
+            type="teaching-unit"
+            fields={[
+              { id: 'semester', label: 'Semestre', placeholder: 'Sélectionner le semestre', options: semesterOptions },
+              { id: 'code', label: 'Code', placeholder: 'Ex: INF101' },
+              { id: 'name', label: 'Intitulé', placeholder: 'Ex: Algorithmique' },
+              { id: 'credits', label: 'Crédits', placeholder: 'Ex: 6', numeric: true },
+              { id: 'type', label: 'Type', placeholder: 'Sélectionner le type', options: UE_TYPE_OPTIONS },
+              { id: 'orderIndex', label: 'Ordre', placeholder: 'Ex: 1', numeric: true },
+            ]}
+            buildBody={(v) =>
+              v.semester && v.code?.trim() && v.name?.trim() && v.credits && v.type && v.orderIndex
+                ? { semesterId: v.semester, code: v.code.trim(), name: v.name.trim(), credits: Number(v.credits), type: v.type, orderIndex: Number(v.orderIndex) }
+                : 'Semestre, code, intitulé, crédits, type et ordre sont requis.'
+            }
+          />
+          <AddEntityDialog
+            triggerLabel="EC / Matière"
+            triggerIcon={FileText}
+            title="Nouvel élément constitutif (EC)"
+            description="Ajoutez une matière (EC) à une UE."
+            type="course-element"
+            fields={[
+              { id: 'unit', label: 'UE', placeholder: 'Sélectionner l\'UE', options: unitOptions },
+              { id: 'code', label: 'Code', placeholder: 'Ex: INF101-1' },
+              { id: 'name', label: 'Intitulé de la matière', placeholder: 'Ex: Structures de données' },
+              { id: 'coefficient', label: 'Coefficient', placeholder: 'Ex: 2', numeric: true },
+              { id: 'hoursCM', label: 'Heures CM', placeholder: 'Ex: 30', numeric: true },
+              { id: 'hoursTD', label: 'Heures TD', placeholder: 'Ex: 15', numeric: true },
+              { id: 'hoursTP', label: 'Heures TP', placeholder: 'Ex: 0', numeric: true },
+              { id: 'orderIndex', label: 'Ordre', placeholder: 'Ex: 1', numeric: true },
+            ]}
+            buildBody={(v) =>
+              v.unit && v.code?.trim() && v.name?.trim() && v.coefficient && v.orderIndex
+                ? {
+                    teachingUnitId: v.unit,
+                    code: v.code.trim(),
+                    name: v.name.trim(),
+                    coefficient: Number(v.coefficient),
+                    hoursCM: Number(v.hoursCM || 0),
+                    hoursTD: Number(v.hoursTD || 0),
+                    hoursTP: Number(v.hoursTP || 0),
+                    orderIndex: Number(v.orderIndex),
+                  }
+                : 'UE, code, intitulé, coefficient et ordre sont requis.'
+            }
           />
         </div>
       </motion.div>
