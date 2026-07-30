@@ -159,6 +159,17 @@ async function createPaymentHandler(user: SessionUser, tenantId: string, request
       validationDate: validatedBody.status === 'VALIDATED' ? new Date() : undefined,
     }
 
+    // createPaymentSchema accepts `description` and `mobileMoneyPhone` for the
+    // UI, but the Payment model stores the note as `comment` and has no phone
+    // column. Map/drop them so Prisma doesn't reject unknown arguments -- this
+    // is what broke every payment where the cashier filled the Description
+    // field or a Mobile Money phone.
+    if ((paymentData as any).description !== undefined) {
+      paymentData.comment = (paymentData as any).description
+    }
+    delete (paymentData as any).description
+    delete (paymentData as any).mobileMoneyPhone
+
     // Remove fields not in Prisma model
     delete (paymentData as any).feeStructureId
     delete (paymentData as any).studentId
@@ -213,7 +224,9 @@ async function updatePaymentHandler(user: SessionUser, tenantId: string, request
   try {
     const body = await request.json()
     const validatedBody = validateBody(updatePaymentSchema, body)
-    const { id, validationDate, feeStructureId, ...data } = validatedBody
+    // `description` maps to the model's `comment`; `mobileMoneyPhone` and
+    // `feeStructureId` have no column -- keep them out of the Prisma update.
+    const { id, validationDate, feeStructureId, description, mobileMoneyPhone, ...data } = validatedBody
 
     // Verify payment belongs to tenant
     const existing = await db.payment.findFirst({ where: { id, tenantId } })
@@ -225,7 +238,10 @@ async function updatePaymentHandler(user: SessionUser, tenantId: string, request
     }
 
     // Prepare update data
-    const updateData: Prisma.PaymentUpdateInput = { ...data }
+    const updateData: Prisma.PaymentUpdateInput = {
+      ...data,
+      ...(description !== undefined ? { comment: description } : {}),
+    }
 
     // If status is changing to VALIDATED, set validation date and validated by
     if (data.status === 'VALIDATED' && existing.status !== 'VALIDATED') {
