@@ -158,7 +158,7 @@ export const updatePaymentSchema = createPaymentSchema.partial().extend({
 // ========================================
 
 export const createTeacherSchema = z.object({
-  employeeId: z.string().max(50),
+  employeeId: z.string().max(50).optional(), // Auto-generated if not provided
   firstName: z.string().min(1).max(100),
   lastName: z.string().min(1).max(100),
   grade: z.enum(['PROFESSEUR_TITULAIRE', 'MAITRE_CONFERENCES', 'MAITRE_ASSISTANT', 'ASSISTANT', 'VACATAIRE']),

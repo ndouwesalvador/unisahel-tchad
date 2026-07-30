@@ -34,10 +34,8 @@ import {
   Users,
   Plus,
   Search,
-  Download,
   MoreVertical,
   Eye,
-  BookOpen,
   FileText,
   GraduationCap,
   Clock,
@@ -46,12 +44,15 @@ import {
   UserCheck,
   Award,
   Mail,
-  Phone,
   Building2,
   Copy,
+  Upload,
+  FileSpreadsheet,
 } from 'lucide-react'
 import { useAppStore } from '@/lib/store'
 import { useTeachers, useStructure } from '@/lib/api-hooks'
+import { exportToExcel } from '@/lib/export'
+import { exportListToPDF } from '@/lib/pdf-list'
 import {
   Dialog,
   DialogContent,
@@ -210,8 +211,8 @@ export function TeachersPage() {
 
   const handleCreateTeacher = async () => {
     const f = newTeacherForm
-    if (!f.firstName || !f.lastName || !f.email || !f.employeeId || !f.grade || !f.departmentId) {
-      toast.error('Champs requis', { description: 'Nom, prenom, email, matricule, grade et departement sont obligatoires' })
+    if (!f.firstName || !f.lastName || !f.email || !f.grade || !f.departmentId) {
+      toast.error('Champs requis', { description: 'Nom, prenom, email, grade et departement sont obligatoires' })
       return
     }
     setIsCreating(true)
@@ -224,7 +225,7 @@ export function TeachersPage() {
           lastName: f.lastName,
           email: f.email,
           phone: f.phone || undefined,
-          employeeId: f.employeeId,
+          employeeId: f.employeeId || undefined, // auto-generated server-side if empty
           grade: gradeUiToApi[f.grade],
           specialization: f.specialization,
           departmentId: f.departmentId,
@@ -250,6 +251,34 @@ export function TeachersPage() {
     navigator.clipboard.writeText(createdCredentials.tempPassword).then(
       () => toast.success('Mot de passe copie'),
       () => toast.error('Copie impossible')
+    )
+  }
+
+  const handleExportExcel = () => {
+    exportToExcel(
+      filteredTeachers.map((t) => ({
+        Matricule: t.matricule, Nom: t.nom, Prenom: t.prenom, Grade: gradeFullNames[t.grade] || t.grade,
+        Departement: t.departement, Specialisation: t.specialisation, Statut: t.statut,
+        Email: t.email || '', Telephone: t.telephone || '',
+      })),
+      'annuaire_enseignants',
+    )
+  }
+
+  const handleExportPDF = () => {
+    exportListToPDF(
+      'annuaire_enseignants',
+      'Annuaire des enseignants',
+      `${filteredTeachers.length} enseignant(s)`,
+      [
+        { header: 'Matricule', width: 0.18, value: (t: Teacher) => t.matricule },
+        { header: 'Nom', width: 0.15, value: (t: Teacher) => t.nom },
+        { header: 'Prenom', width: 0.15, value: (t: Teacher) => t.prenom },
+        { header: 'Grade', width: 0.16, value: (t: Teacher) => gradeFullNames[t.grade] || t.grade },
+        { header: 'Departement', width: 0.2, value: (t: Teacher) => t.departement },
+        { header: 'Email', width: 0.16, value: (t: Teacher) => t.email || '' },
+      ],
+      filteredTeachers,
     )
   }
 
@@ -481,10 +510,18 @@ export function TeachersPage() {
                   ))}
                 </SelectContent>
               </Select>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" className="text-xs h-9 border-[#1a274430] text-[#1a2744] hover:bg-[#1a274408]">
-                  <Download className="size-3.5 mr-1.5" />
-                  Export
+              <div className="flex gap-2 flex-wrap">
+                <Button variant="outline" size="sm" className="text-xs h-9 border-[#1a274430] text-[#1a2744] hover:bg-[#1a274408]" onClick={() => setView('import-export')}>
+                  <Upload className="size-3.5 mr-1.5" />
+                  Importer
+                </Button>
+                <Button variant="outline" size="sm" className="text-xs h-9 border-[#1a274430] text-[#1a2744] hover:bg-[#1a274408]" onClick={handleExportExcel}>
+                  <FileSpreadsheet className="size-3.5 mr-1.5" />
+                  Excel
+                </Button>
+                <Button variant="outline" size="sm" className="text-xs h-9 border-[#1a274430] text-[#1a2744] hover:bg-[#1a274408]" onClick={handleExportPDF}>
+                  <FileText className="size-3.5 mr-1.5" />
+                  PDF
                 </Button>
                 <Button size="sm" className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs h-9" onClick={() => setShowNewTeacher(true)}>
                   <Plus className="size-3.5 mr-1.5" />
@@ -594,16 +631,12 @@ export function TeachersPage() {
                                   <Eye className="size-3.5 mr-2" />
                                   Voir profil
                                 </DropdownMenuItem>
-                                <DropdownMenuItem className="text-xs">
-                                  <BookOpen className="size-3.5 mr-2" />
-                                  Affecter UE
-                                </DropdownMenuItem>
-                                <DropdownMenuItem className="text-xs">
-                                  <FileText className="size-3.5 mr-2" />
-                                  Export services
-                                </DropdownMenuItem>
-                                <DropdownMenuItem className="text-xs">
-                                  <Phone className="size-3.5 mr-2" />
+                                <DropdownMenuItem
+                                  className="text-xs"
+                                  disabled={!teacher.email}
+                                  onClick={() => { if (teacher.email) window.location.href = `mailto:${teacher.email}` }}
+                                >
+                                  <Mail className="size-3.5 mr-2" />
                                   Contacter
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
@@ -695,8 +728,8 @@ export function TeachersPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label className="text-sm">Matricule</Label>
-              <Input placeholder="ENS-2026-001" value={newTeacherForm.employeeId} onChange={(e) => setNewTeacherForm((f) => ({ ...f, employeeId: e.target.value }))} />
+              <Label className="text-sm">Matricule (optionnel)</Label>
+              <Input placeholder="Genere automatiquement si vide" value={newTeacherForm.employeeId} onChange={(e) => setNewTeacherForm((f) => ({ ...f, employeeId: e.target.value }))} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">

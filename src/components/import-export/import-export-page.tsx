@@ -91,7 +91,11 @@ const importStatusConfig: Record<ImportStatus, { label: ImportStatusLabel; class
 // en charge par /api/import-export — voir handleImport). Les autres types (Enseignants,
 // Notes, Paiements, Structure) affichent un apercu du fichier mais l'import reste
 // desactive tant que le mapping serveur correspondant n'existe pas.
-const previewColumns = ['Matricule', 'Nom', 'Prénom', 'Date naissance', 'Filière', 'Statut']
+// Expected columns per import type. Students carry a Matricule (auto-filled if
+// blank); teachers are keyed by Email (their login identifier) with an
+// auto-generated matricule server-side.
+const STUDENT_PREVIEW_COLUMNS = ['Matricule', 'Nom', 'Prénom', 'Date naissance', 'Filière', 'Statut']
+const TEACHER_PREVIEW_COLUMNS = ['Nom', 'Prénom', 'Email', 'Grade', 'Spécialisation', 'Département']
 
 interface RowIssue {
   line: number
@@ -99,7 +103,7 @@ interface RowIssue {
   issue: string
 }
 
-function computeRowIssues(rows: Record<string, unknown>[]): RowIssue[] {
+function computeStudentRowIssues(rows: Record<string, unknown>[]): RowIssue[] {
   const seenMatricules = new Map<string, number>()
   const issues: RowIssue[] = []
 
@@ -125,12 +129,47 @@ function computeRowIssues(rows: Record<string, unknown>[]): RowIssue[] {
         return
       }
       seenMatricules.set(matricule, line)
-    } else {
-      issues.push({ line, matricule: '—', issue: 'Matricule manquant' })
     }
   })
 
   return issues
+}
+
+function computeTeacherRowIssues(rows: Record<string, unknown>[]): RowIssue[] {
+  const seenEmails = new Map<string, number>()
+  const issues: RowIssue[] = []
+
+  rows.forEach((row, index) => {
+    const line = index + 2
+    const firstName = String(row['Prénom'] ?? row['Prenom'] ?? '').trim()
+    const lastName = String(row['Nom'] ?? '').trim()
+    const email = String(row['Email'] ?? row['email'] ?? '').trim()
+
+    if (!firstName || !lastName) {
+      issues.push({ line, matricule: email || '—', issue: 'Nom ou prenom manquant' })
+      return
+    }
+    if (!email) {
+      issues.push({ line, matricule: '—', issue: "Email manquant (obligatoire — sert d'identifiant de connexion)" })
+      return
+    }
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+      issues.push({ line, matricule: email, issue: 'Email invalide' })
+      return
+    }
+    const firstSeen = seenEmails.get(email.toLowerCase())
+    if (firstSeen) {
+      issues.push({ line, matricule: email, issue: `Doublon de l'email vu ligne ${firstSeen}` })
+      return
+    }
+    seenEmails.set(email.toLowerCase(), line)
+  })
+
+  return issues
+}
+
+function computeRowIssues(rows: Record<string, unknown>[], type: string): RowIssue[] {
+  return type === 'Enseignants' ? computeTeacherRowIssues(rows) : computeStudentRowIssues(rows)
 }
 
 // ─── Custom useCountUp Hook ────────────────────────────────────────────────────
@@ -189,7 +228,7 @@ export function ImportExportPage() {
   const [isImporting, setIsImporting] = useState(false)
   const [isDragOver, setIsDragOver] = useState(false)
   
-  const [dynamicPreviewCols, setDynamicPreviewCols] = useState<string[]>(previewColumns)
+  const [dynamicPreviewCols, setDynamicPreviewCols] = useState<string[]>(STUDENT_PREVIEW_COLUMNS)
   const [dynamicPreviewRows, setDynamicPreviewRows] = useState<any[][]>([])
   const [fullParsedRows, setFullParsedRows] = useState<Record<string, unknown>[]>([])
   const [uploadedFileName, setUploadedFileName] = useState('')
@@ -204,7 +243,7 @@ export function ImportExportPage() {
   const { data: dashboardStats } = useDashboardStats()
   const { data: structureQuery } = useStructure()
 
-  const rowIssues = useMemo(() => computeRowIssues(fullParsedRows), [fullParsedRows])
+  const rowIssues = useMemo(() => computeRowIssues(fullParsedRows, importType), [fullParsedRows, importType])
 
   const logExport = async (type: string, format: string, rowCount: number) => {
     try {
@@ -341,7 +380,7 @@ export function ImportExportPage() {
         setDynamicPreviewRows(data.slice(0, 10).map(row => cols.map(col => String(row[col] || ''))))
         setFullParsedRows(data)
         setUploadedFileName(file.name)
-        const issues = computeRowIssues(data)
+        const issues = computeRowIssues(data, importType)
         const duplicateCount = issues.filter(i => i.issue.startsWith('Doublon')).length
         setValidationSummary({
           validLines: data.length - issues.length,
@@ -360,9 +399,9 @@ export function ImportExportPage() {
   }
 
   const handleImport = useCallback(async () => {
-    if (importType !== 'Etudiants') {
+    if (importType !== 'Etudiants' && importType !== 'Enseignants') {
       toast.error(`L'import de type "${importTypeMap[importType]}" n'est pas encore disponible.`, {
-        description: 'Seul l’import d’etudiants est pris en charge pour le moment.',
+        description: 'Types pris en charge : Etudiants et Enseignants.',
       })
       return
     }
@@ -392,12 +431,14 @@ export function ImportExportPage() {
       } else if (result.errorRows > 0) {
         toast.error('Import echoue', { description: `${result.errorRows} ligne(s) en erreur.` })
       } else {
+        const noun = importType === 'Enseignants' ? 'enseignant(s)' : 'etudiant(s)'
         toast.success('Import terminé avec succès', {
-          description: `${result.successRows} etudiant(s) importe(s)${result.portalAccountsCreated ? `, ${result.portalAccountsCreated} compte(s) Espace Etudiant cree(s) (PIN a communiquer via la fiche etudiant)` : ''}.`,
+          description: `${result.successRows} ${noun} importe(s)${result.portalAccountsCreated ? `, ${result.portalAccountsCreated} compte(s) Espace Etudiant cree(s) (PIN a communiquer via la fiche etudiant)` : ''}.`,
         })
       }
       queryClient.invalidateQueries({ queryKey: ['importExport'] })
       queryClient.invalidateQueries({ queryKey: ['students'] })
+      queryClient.invalidateQueries({ queryKey: ['teachers'] })
       setShowPreview(false)
       setShowValidation(false)
       setFullParsedRows([])
@@ -415,6 +456,28 @@ export function ImportExportPage() {
     { label: 'Exports ce mois', value: stats?.exportsThisMonth ?? 0, icon: Download, color: '#2d7a4f' },
     { label: 'Erreurs', value: stats?.errors ?? 0, icon: XCircle, color: '#c62828' },
   ]
+
+  // Real recent activity: newest import/export log entries, merged.
+  const recentActivity = useMemo(() => {
+    type Log = { createdAt: string; type: string; fileName?: string; format?: string; status?: string }
+    const imports = (importExportData?.importHistory ?? []).map((l: Log) => ({
+      icon: Upload,
+      label: `Import ${l.type}`,
+      file: l.fileName || '',
+      date: new Date(l.createdAt),
+      status: l.status || '—',
+      statusColor: l.status === 'Succes' ? '#2d7a4f' : l.status === 'Partiel' ? '#d4a853' : '#c62828',
+    }))
+    const exports = (importExportData?.exportHistory ?? []).map((l: Log) => ({
+      icon: Download,
+      label: `Export ${l.type}`,
+      file: `${l.type}.${(l.format || 'xlsx').toLowerCase()}`,
+      date: new Date(l.createdAt),
+      status: 'Termine',
+      statusColor: '#2d7a4f',
+    }))
+    return [...imports, ...exports].sort((a, b) => b.date.getTime() - a.date.getTime()).slice(0, 5)
+  }, [importExportData])
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -476,11 +539,10 @@ export function ImportExportPage() {
               <span className="text-xs font-semibold text-[#1a2744]">Activite recente</span>
             </div>
             <div className="space-y-2">
-              {[
-                { icon: Upload, label: 'Import Etudiants', file: 'etudiants_l1_2024.xlsx', date: '15/09 10:30', status: 'Succes', statusColor: '#2d7a4f' },
-                { icon: Download, label: 'Export Releves', file: 'releves_s1_2025.pdf', date: '25/01 08:00', status: 'Termine', statusColor: '#2d7a4f' },
-                { icon: ArrowRightLeft, label: 'Import Notes', file: 'notes_s1_droit.xlsx', date: '20/01 14:15', status: 'Partiel', statusColor: '#d4a853' },
-              ].map((activity, idx) => (
+              {recentActivity.length === 0 && (
+                <p className="text-xs text-gray-400 text-center py-3">Aucune activite d&apos;import/export pour le moment</p>
+              )}
+              {recentActivity.map((activity, idx) => (
                 <motion.div
                   key={idx}
                   initial={{ opacity: 0, x: -12 }}
@@ -495,7 +557,7 @@ export function ImportExportPage() {
                     <p className="text-xs font-medium text-[#1a2744]">{activity.label}</p>
                     <p className="text-[10px] text-gray-400 font-mono truncate">{activity.file}</p>
                   </div>
-                  <span className="text-[10px] text-gray-400">{activity.date}</span>
+                  <span className="text-[10px] text-gray-400">{activity.date.toLocaleDateString('fr-FR')}</span>
                   <Badge className="text-[9px] border-0" style={{ backgroundColor: `${activity.statusColor}15`, color: activity.statusColor }}>{activity.status}</Badge>
                 </motion.div>
               ))}
@@ -587,11 +649,13 @@ export function ImportExportPage() {
                       </Select>
                     </div>
 
-                    {/* Download Template Buttons */}
+                    {/* Download Template Buttons -- only the import types actually
+                        supported by the server (Etudiants, Enseignants). Each
+                        downloads a real .xlsx with the expected header columns. */}
                     <div className="space-y-2">
                       <Label className="text-sm font-medium">Modèles disponibles</Label>
                       <div className="space-y-1.5">
-                        {(Object.entries(importTypeMap) as [ImportType, ImportTypeLabel][]).map(([key, label]) => (
+                        {([['Etudiants', 'Étudiants', STUDENT_PREVIEW_COLUMNS], ['Enseignants', 'Enseignants', TEACHER_PREVIEW_COLUMNS]] as [ImportType, string, string[]][]).map(([key, label, cols]) => (
                           <Button
                             key={key}
                             variant="outline"
@@ -599,13 +663,12 @@ export function ImportExportPage() {
                             className="w-full text-xs h-8 justify-start"
                             onClick={() => {
                               setImportType(key)
-                              toast.info('Téléchargement du modèle...', {
-                                description: `Le modèle Excel pour ${label} est en cours de téléchargement.`
-                              })
+                              exportToExcel([Object.fromEntries(cols.map((c) => [c, '']))], `modele_import_${key.toLowerCase()}`)
+                              toast.success('Modèle téléchargé', { description: `Remplissez les colonnes puis importez le fichier ${label}.` })
                             }}
                           >
                             <FileDown className="size-3 mr-1.5 text-[#2d7a4f]" />
-                            {label}
+                            Modèle {label}
                             <Download className="size-3 ml-auto text-gray-400" />
                           </Button>
                         ))}

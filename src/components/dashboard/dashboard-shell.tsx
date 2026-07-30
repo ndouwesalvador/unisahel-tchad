@@ -428,8 +428,11 @@ function SidebarContent() {
         )}
       </div>
 
-      {/* Navigation */}
-      <ScrollArea className="flex-1 py-2">
+      {/* Navigation -- min-h-0 lets this flex child shrink below its content
+          height so the ScrollArea actually clips and scrolls, instead of
+          growing to fit every item and pushing the bottom actions off-screen
+          (the classic flexbox min-height:auto trap). */}
+      <ScrollArea className="flex-1 min-h-0 py-2">
         <nav className="space-y-0.5 px-2">
           {navItems.map((item) => {
             const isActive = currentView === item.view

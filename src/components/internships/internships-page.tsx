@@ -2,11 +2,20 @@
 
 import { exportToExcel } from '@/lib/export'
 import { useState, useEffect, useRef } from 'react'
-import { useInternships } from '@/lib/api-hooks'
+import { toast } from 'sonner'
+import { useQueryClient } from '@tanstack/react-query'
+import { useInternships, useStudents } from '@/lib/api-hooks'
 import { motion } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Textarea } from '@/components/ui/textarea'
@@ -302,7 +311,10 @@ const workflowSteps = ['Soumission', 'Validation etablissement', 'Signature entr
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function InternshipsPage() {
+  const queryClient = useQueryClient()
   const { data: internshipsQuery, isLoading } = useInternships()
+  const { data: studentsData } = useStudents({ limit: 1000 })
+  const realStudents = (studentsData?.data || []) as Array<{ id: string; firstName: string; lastName: string; matricule: string | null }>
   const rawInternships: InternshipRecord[] = internshipsQuery?.internships || []
   const internships: InternshipEntry[] = rawInternships.map(mapInternship)
   const partners: PartnerDisplay[] = (internshipsQuery?.partners || []).map(mapPartner)
@@ -323,8 +335,9 @@ export function InternshipsPage() {
   const [periodFilter, setPeriodFilter] = useState('tous')
   const [entrepriseFilter, setEntrepriseFilter] = useState('tous')
 
-  // Convention validation state
+  // Convention validation state (mirrors persisted status for optimistic UI)
   const [conventionStatuses, setConventionStatuses] = useState<Record<string, 'pending' | 'approved' | 'rejected'>>({})
+  const [validatingId, setValidatingId] = useState<string | null>(null)
 
   // Evaluation state
   const [ratings, setRatings] = useState<Record<string, number>>({
@@ -337,10 +350,32 @@ export function InternshipsPage() {
   const [appreciation, setAppreciation] = useState('')
   const [commentaire, setCommentaire] = useState('')
   const [evaluationSubmitted, setEvaluationSubmitted] = useState(false)
+  const [evalInternshipId, setEvalInternshipId] = useState('')
+  const [isSubmittingEval, setIsSubmittingEval] = useState(false)
 
-  // Count-up hooks for header stats
-  const countStagesActifs = useCountUp(87, 1400)
-  const countTauxCompletion = useCountUp(92, 1300)
+  // New internship dialog
+  const [showNewStage, setShowNewStage] = useState(false)
+  const [isCreatingStage, setIsCreatingStage] = useState(false)
+  const [stageForm, setStageForm] = useState({ studentId: '', entreprise: '', type: '', period: '', tuteur: '', startDate: '', endDate: '' })
+
+  // Default the evaluation target to the first in-progress internship
+  const evalTarget = rawInternships.find((r) => r.id === evalInternshipId)
+    || rawInternships.find((r) => r.status === 'EN_COURS' || r.status === 'CONVENTION_SIGNEE')
+    || rawInternships[0]
+    || null
+
+  // Real stats derived from the actual internship records
+  const total = internships.length
+  const stagesActifs = internships.filter(i => i.status === 'en-cours' || i.status === 'convention-signee').length
+  const stagesTermines = internships.filter(i => i.status === 'termine').length
+  const conventionsEnAttente = internships.filter(i => i.status === 'en-attente').length
+  const nonAnnules = internships.filter(i => i.status !== 'annule').length
+  const tauxValidation = total > 0 ? Math.round((nonAnnules / total) * 100) : 0
+  const tauxCompletion = total > 0 ? Math.round((stagesTermines / total) * 100) : 0
+
+  // Count-up hooks for header stats (real values)
+  const countStagesActifs = useCountUp(stagesActifs, 1400)
+  const countTauxCompletion = useCountUp(tauxCompletion, 1300)
 
   // Filter internships
   const filteredInternships = internships.filter(i => {
@@ -357,17 +392,95 @@ export function InternshipsPage() {
 
   const uniqueEntreprises = [...new Set(internships.map(i => i.entreprise))]
 
-  const handleValidateConvention = (id: string, action: 'approved' | 'rejected') => {
-    setConventionStatuses(prev => ({ ...prev, [id]: action }))
+  const handleValidateConvention = async (id: string, action: 'approved' | 'rejected') => {
+    setValidatingId(id)
+    try {
+      const res = await fetch(`/api/internships?id=${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: action === 'approved' ? 'CONVENTION_SIGNEE' : 'ANNULE' }),
+      })
+      if (!res.ok) throw new Error('failed')
+      setConventionStatuses(prev => ({ ...prev, [id]: action }))
+      toast.success(action === 'approved' ? 'Convention validee' : 'Convention rejetee')
+      queryClient.invalidateQueries({ queryKey: ['internships'] })
+    } catch {
+      toast.error('Echec de la mise a jour de la convention')
+    } finally {
+      setValidatingId(null)
+    }
   }
 
   const handleRatingChange = (criterion: string, value: number) => {
     setRatings(prev => ({ ...prev, [criterion]: value }))
   }
 
-  const handleSubmitEvaluation = () => {
-    setEvaluationSubmitted(true)
-    setTimeout(() => setEvaluationSubmitted(false), 3000)
+  const handleSubmitEvaluation = async () => {
+    if (!evalTarget) {
+      toast.error('Aucun stage a evaluer')
+      return
+    }
+    if (!appreciation) {
+      toast.error('Selectionnez une appreciation globale')
+      return
+    }
+    setIsSubmittingEval(true)
+    try {
+      const res = await fetch(`/api/internships?id=${evalTarget.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'TERMINE',
+          evaluation: JSON.stringify({ ratings, appreciation, commentaire }),
+        }),
+      })
+      if (!res.ok) throw new Error('failed')
+      setEvaluationSubmitted(true)
+      toast.success('Evaluation enregistree')
+      queryClient.invalidateQueries({ queryKey: ['internships'] })
+      setTimeout(() => setEvaluationSubmitted(false), 3000)
+    } catch {
+      toast.error("Echec de l'enregistrement de l'evaluation")
+    } finally {
+      setIsSubmittingEval(false)
+    }
+  }
+
+  const handleCreateStage = async () => {
+    const f = stageForm
+    const student = realStudents.find((s) => s.id === f.studentId)
+    if (!student || !f.entreprise || !f.type) {
+      toast.error('Champs requis', { description: 'Etudiant, entreprise et type sont obligatoires' })
+      return
+    }
+    setIsCreatingStage(true)
+    try {
+      const res = await fetch('/api/internships', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentName: `${student.lastName} ${student.firstName}`,
+          matricule: student.matricule || '—',
+          entreprise: f.entreprise,
+          type: f.type,
+          period: f.period || undefined,
+          tuteur: f.tuteur || undefined,
+          startDate: f.startDate || undefined,
+          endDate: f.endDate || undefined,
+          status: 'EN_ATTENTE',
+        }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.error || 'Echec de la creation')
+      toast.success('Stage enregistre', { description: `${student.lastName} ${student.firstName} — ${f.entreprise}` })
+      queryClient.invalidateQueries({ queryKey: ['internships'] })
+      setShowNewStage(false)
+      setStageForm({ studentId: '', entreprise: '', type: '', period: '', tuteur: '', startDate: '', endDate: '' })
+    } catch (e) {
+      toast.error('Erreur', { description: e instanceof Error ? e.message : 'Echec de la creation' })
+    } finally {
+      setIsCreatingStage(false)
+    }
   }
 
   const containerVariants = {
@@ -420,13 +533,9 @@ export function InternshipsPage() {
                 </p>
               </div>
               <div className="flex gap-2 flex-wrap">
-                <Button size="sm" className="bg-white/10 backdrop-blur border border-white/15 text-white hover:bg-white/20 text-xs">
+                <Button size="sm" className="bg-white/10 backdrop-blur border border-white/15 text-white hover:bg-white/20 text-xs" onClick={() => setShowNewStage(true)}>
                   <Plus className="size-3.5 mr-1.5" />
                   Nouveau stage
-                </Button>
-                <Button size="sm" className="bg-white/10 backdrop-blur border border-white/15 text-white hover:bg-white/20 text-xs">
-                  <FileCheck className="size-3.5 mr-1.5" />
-                  Valider convention
                 </Button>
                 <Button size="sm" className="bg-white/10 backdrop-blur border border-white/15 text-white hover:bg-white/20 text-xs" onClick={() => exportToExcel(filteredInternships, 'export_internships')}>
                   <Download className="size-3.5 mr-1.5" />
@@ -474,10 +583,10 @@ export function InternshipsPage() {
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Stages actifs</p>
-                    <p className="text-2xl font-bold text-[#2d7a4f] mt-1">87</p>
-                    <p className="text-xs text-[#2d7a4f] mt-1 flex items-center gap-1">
-                      <TrendingUp className="size-3" />
-                      +12% vs semestre dernier
+                    <p className="text-2xl font-bold text-[#2d7a4f] mt-1">{stagesActifs}</p>
+                    <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
+                      <Briefcase className="size-3" />
+                      En cours ou convention signee
                     </p>
                   </div>
                   <div className="w-10 h-10 rounded-xl bg-[#2d7a4f15] flex items-center justify-center">
@@ -485,7 +594,7 @@ export function InternshipsPage() {
                   </div>
                 </div>
                 <div className="mt-3">
-                  <Progress value={72} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#2d7a4f]" />
+                  <Progress value={total > 0 ? (stagesActifs / total) * 100 : 0} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#2d7a4f]" />
                 </div>
               </CardContent>
             </Card>
@@ -500,10 +609,10 @@ export function InternshipsPage() {
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Conventions en attente</p>
-                    <p className="text-2xl font-bold text-[#1a2744] mt-1">14</p>
+                    <p className="text-2xl font-bold text-[#1a2744] mt-1">{conventionsEnAttente}</p>
                     <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
                       <Clock className="size-3" />
-                      5 a valider cette semaine
+                      Stages en attente de validation
                     </p>
                   </div>
                   <div className="w-10 h-10 rounded-xl bg-[#1a274415] flex items-center justify-center">
@@ -511,7 +620,7 @@ export function InternshipsPage() {
                   </div>
                 </div>
                 <div className="mt-3">
-                  <Progress value={36} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#1a2744]" />
+                  <Progress value={total > 0 ? (conventionsEnAttente / total) * 100 : 0} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#1a2744]" />
                 </div>
               </CardContent>
             </Card>
@@ -526,10 +635,10 @@ export function InternshipsPage() {
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Taux de validation</p>
-                    <p className="text-2xl font-bold text-[#d4a853] mt-1">92%</p>
-                    <p className="text-xs text-[#2d7a4f] mt-1 flex items-center gap-1">
-                      <TrendingUp className="size-3" />
-                      +3% vs annee derniere
+                    <p className="text-2xl font-bold text-[#d4a853] mt-1">{tauxValidation}%</p>
+                    <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
+                      <CheckCircle2 className="size-3" />
+                      Stages non annules
                     </p>
                   </div>
                   <div className="w-10 h-10 rounded-xl bg-[#d4a85315] flex items-center justify-center">
@@ -537,7 +646,7 @@ export function InternshipsPage() {
                   </div>
                 </div>
                 <div className="mt-3">
-                  <Progress value={92} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#d4a853]" />
+                  <Progress value={tauxValidation} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#d4a853]" />
                 </div>
               </CardContent>
             </Card>
@@ -552,10 +661,10 @@ export function InternshipsPage() {
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Stages termines</p>
-                    <p className="text-2xl font-bold text-[#2d7a4f] mt-1">156</p>
+                    <p className="text-2xl font-bold text-[#2d7a4f] mt-1">{stagesTermines}</p>
                     <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
                       <Award className="size-3" />
-                      Annee universitaire 2024-2025
+                      {tauxCompletion}% des stages
                     </p>
                   </div>
                   <div className="w-10 h-10 rounded-xl bg-[#2d7a4f15] flex items-center justify-center">
@@ -563,7 +672,7 @@ export function InternshipsPage() {
                   </div>
                 </div>
                 <div className="mt-3">
-                  <Progress value={85} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#2d7a4f]" />
+                  <Progress value={tauxCompletion} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#2d7a4f]" />
                 </div>
               </CardContent>
             </Card>
@@ -843,6 +952,7 @@ export function InternshipsPage() {
                               <Button
                                 size="sm"
                                 className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs h-7"
+                                disabled={validatingId === conv.id}
                                 onClick={() => handleValidateConvention(conv.id, 'approved')}
                               >
                                 <CheckCircle2 className="size-3 mr-1" />
@@ -852,6 +962,7 @@ export function InternshipsPage() {
                                 size="sm"
                                 variant="outline"
                                 className="text-[#c62828] border-[#c6282830] hover:bg-[#c6282810] text-xs h-7"
+                                disabled={validatingId === conv.id}
                                 onClick={() => handleValidateConvention(conv.id, 'rejected')}
                               >
                                 <XCircle className="size-3 mr-1" />
@@ -893,13 +1004,26 @@ export function InternshipsPage() {
               </CardHeader>
               <CardContent className="p-4 pt-0">
                 <div className="p-3 bg-gray-50 rounded-lg mb-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-[#1a2744]">ABAKAR Adam Hassane</p>
-                      <p className="text-[10px] text-gray-400">UDN/M2/2024/005 - Stage a UNICEF Tchad</p>
+                  {evalTarget ? (
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-[#1a2744]">{evalTarget.studentName}</p>
+                        <p className="text-[10px] text-gray-400">{evalTarget.matricule} - Stage a {evalTarget.entreprise}</p>
+                      </div>
+                      {rawInternships.length > 1 && (
+                        <Select value={evalTarget.id} onValueChange={setEvalInternshipId}>
+                          <SelectTrigger className="h-7 text-[10px] w-32"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {rawInternships.map((r) => (
+                              <SelectItem key={r.id} value={r.id} className="text-xs">{r.studentName} — {r.entreprise}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
                     </div>
-                    <Badge className="bg-[#2d7a4f15] text-[#2d7a4f] border-0 text-[10px]">En cours</Badge>
-                  </div>
+                  ) : (
+                    <p className="text-xs text-gray-400">Aucun stage a evaluer pour le moment</p>
+                  )}
                 </div>
 
                 {/* Evaluation criteria with star ratings */}
@@ -969,9 +1093,10 @@ export function InternshipsPage() {
                 <Button
                   className="w-full mt-4 bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs"
                   onClick={handleSubmitEvaluation}
+                  disabled={!evalTarget || isSubmittingEval}
                 >
                   <Send className="size-3.5 mr-1.5" />
-                  {evaluationSubmitted ? 'Evaluation soumise !' : "Soumettre l'evaluation"}
+                  {evaluationSubmitted ? 'Evaluation soumise !' : isSubmittingEval ? 'Enregistrement...' : "Soumettre l'evaluation"}
                 </Button>
               </CardContent>
             </Card>
@@ -1333,6 +1458,69 @@ export function InternshipsPage() {
           </Card>
         </motion.div>
       </motion.div>
+
+      {/* New internship dialog */}
+      <Dialog open={showNewStage} onOpenChange={(o) => { setShowNewStage(o); if (!o) setStageForm({ studentId: '', entreprise: '', type: '', period: '', tuteur: '', startDate: '', endDate: '' }) }}>
+        <DialogContent className="sm:max-w-[520px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-[#1a2744]">Nouveau stage</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label className="text-sm">Etudiant</Label>
+              <Select value={stageForm.studentId} onValueChange={(v) => setStageForm((f) => ({ ...f, studentId: v }))}>
+                <SelectTrigger><SelectValue placeholder="Selectionner un etudiant" /></SelectTrigger>
+                <SelectContent>
+                  {realStudents.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{s.lastName} {s.firstName} ({s.matricule || '—'})</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-sm">Entreprise / Structure</Label>
+                <Input value={stageForm.entreprise} onChange={(e) => setStageForm((f) => ({ ...f, entreprise: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm">Type</Label>
+                <Select value={stageForm.type} onValueChange={(v) => setStageForm((f) => ({ ...f, type: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Type" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="PROFESSIONNEL">Professionnel</SelectItem>
+                    <SelectItem value="HOSPITALIER">Hospitalier</SelectItem>
+                    <SelectItem value="RECHERCHE">Recherche</SelectItem>
+                    <SelectItem value="FIN_ETUDES">Fin d&apos;etudes</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-sm">Periode (optionnel)</Label>
+                <Input placeholder="Ex: Semestre 2 2024-2025" value={stageForm.period} onChange={(e) => setStageForm((f) => ({ ...f, period: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm">Tuteur (optionnel)</Label>
+                <Input value={stageForm.tuteur} onChange={(e) => setStageForm((f) => ({ ...f, tuteur: e.target.value }))} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-sm">Date de debut (optionnel)</Label>
+                <Input type="date" value={stageForm.startDate} onChange={(e) => setStageForm((f) => ({ ...f, startDate: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm">Date de fin (optionnel)</Label>
+                <Input type="date" value={stageForm.endDate} onChange={(e) => setStageForm((f) => ({ ...f, endDate: e.target.value }))} />
+              </div>
+            </div>
+            <Button className="w-full bg-[#2d7a4f] hover:bg-[#236b40] text-white" disabled={isCreatingStage} onClick={handleCreateStage}>
+              {isCreatingStage ? 'Enregistrement...' : 'Enregistrer le stage'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </TooltipProvider>
   )
 }

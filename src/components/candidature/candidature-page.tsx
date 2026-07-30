@@ -1,6 +1,7 @@
 'use client'
 
 import { exportToExcel } from '@/lib/export'
+import { exportListToPDF } from '@/lib/pdf-list'
 import { useState, useMemo } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -401,9 +402,35 @@ export function CandidaturePage() {
               <Button
                 size="sm"
                 className="bg-white/10 backdrop-blur border border-white/20 hover:bg-white/20 text-white text-xs"
-               onClick={() => exportToExcel(filteredCandidatures, 'export_candidature')}>
+                onClick={() => exportToExcel(
+                  filteredCandidatures.map((c) => ({
+                    Numero: c.numero, Candidat: c.candidat, Filiere: c.filiere, Niveau: c.niveau,
+                    Type: c.type, Statut: statutConfig[c.statut].label, Email: c.email, Telephone: c.telephone, Date: c.date,
+                  })),
+                  'export_candidatures',
+                )}>
                 <Download className="size-3.5 mr-1.5" />
-                Exporter
+                Excel
+              </Button>
+              <Button
+                size="sm"
+                className="bg-white/10 backdrop-blur border border-white/20 hover:bg-white/20 text-white text-xs"
+                onClick={() => exportListToPDF(
+                  'export_candidatures',
+                  'Liste des candidatures',
+                  `${filteredCandidatures.length} candidature(s)`,
+                  [
+                    { header: 'Numero', width: 0.15, value: (c: Candidature) => c.numero },
+                    { header: 'Candidat', width: 0.22, value: (c: Candidature) => c.candidat },
+                    { header: 'Filiere', width: 0.22, value: (c: Candidature) => c.filiere },
+                    { header: 'Niveau', width: 0.1, value: (c: Candidature) => c.niveau },
+                    { header: 'Statut', width: 0.16, value: (c: Candidature) => statutConfig[c.statut].label },
+                    { header: 'Date', width: 0.15, value: (c: Candidature) => c.date },
+                  ],
+                  filteredCandidatures,
+                )}>
+                <FileText className="size-3.5 mr-1.5" />
+                PDF
               </Button>
               <Button
                 size="sm"

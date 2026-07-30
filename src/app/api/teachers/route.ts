@@ -109,7 +109,7 @@ async function createTeacherHandler(user: SessionUser, tenantId: string, request
   try {
     const body = await request.json()
     const validatedBody = validateBody(createTeacherSchema, body)
-    const { firstName, lastName, email, phone, employeeId, grade, specialization, departmentId, maxHoursPerWeek } = validatedBody
+    const { firstName, lastName, email, phone, grade, specialization, departmentId, maxHoursPerWeek } = validatedBody
 
     // Verify department belongs to tenant
     if (departmentId) {
@@ -122,15 +122,25 @@ async function createTeacherHandler(user: SessionUser, tenantId: string, request
       }
     }
 
-    // Check employeeId uniqueness if provided
-    if (employeeId) {
-      const existing = await db.teacher.findFirst({ where: { employeeId, tenantId } })
-      if (existing) {
-        return NextResponse.json(
-          { error: 'Employee ID already exists' },
-          { status: 409 }
-        )
-      }
+    // Auto-generate a teacher matricule (employeeId) when the caller doesn't
+    // supply one -- same auto-numbering UX as student matricules, using the
+    // tenant's matriculePrefix. Format: {PREFIX}-ENS-{YEAR}-{SEQ}.
+    let employeeId = validatedBody.employeeId
+    if (!employeeId) {
+      const settings = await db.tenantSettings.findUnique({ where: { tenantId }, select: { matriculePrefix: true } })
+      const prefix = settings?.matriculePrefix || 'UNSH'
+      const year = new Date().getFullYear()
+      const count = await db.teacher.count({ where: { tenantId } })
+      employeeId = `${prefix}-ENS-${year}-${String(count + 1).padStart(4, '0')}`
+    }
+
+    // Ensure uniqueness (whether provided or generated)
+    const existing = await db.teacher.findFirst({ where: { employeeId, tenantId } })
+    if (existing) {
+      return NextResponse.json(
+        { error: 'Employee ID already exists' },
+        { status: 409 }
+      )
     }
 
     // User.email is unique platform-wide, not just per-tenant

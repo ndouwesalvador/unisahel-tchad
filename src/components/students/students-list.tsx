@@ -2,11 +2,14 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { motion } from 'framer-motion'
+import { toast } from 'sonner'
+import { useQueryClient } from '@tanstack/react-query'
 import { useAppStore } from '@/lib/store'
-import { useStudents } from '@/lib/api-hooks'
+import { useStudents, useStructure } from '@/lib/api-hooks'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import {
   Table,
@@ -17,12 +20,13 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { exportToExcel } from '@/lib/export'
+import { exportListToPDF } from '@/lib/pdf-list'
 import {
   Select,
   SelectContent,
@@ -35,12 +39,14 @@ import {
   UserPlus,
   FileSpreadsheet,
   FileText,
+  Upload,
   ChevronLeft,
   ChevronRight,
   Eye,
   Users,
   UserCheck,
   Calendar,
+  Copy,
 } from 'lucide-react'
 
 // ─── Demo Data ────────────────────────────────────────────────────────────────
@@ -127,15 +133,111 @@ function StatIndicator({ value, label, icon: Icon, color }: {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
+interface ApiLevel { id: string; name: string; code: string | null }
+interface ApiProgram { id: string; name: string; levels: ApiLevel[] }
+interface ApiDepartment { programs: ApiProgram[] }
+interface ApiFaculty { departments: ApiDepartment[] }
+
+const emptyStudentForm = {
+  firstName: '', lastName: '', gender: '', dateOfBirth: '', placeOfBirth: '',
+  nationality: 'Tchadienne', currentProgramId: '', currentLevelId: '',
+  email: '', phone: '', bacSeries: '', bacYear: '',
+}
+
 export function StudentsList() {
   const { setView, selectStudent } = useAppStore()
+  const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
   const [filiereFilter, setFiliereFilter] = useState('all')
   const [niveauFilter, setNiveauFilter] = useState('all')
   const [statutFilter, setStatutFilter] = useState('all')
   const [currentPage, setCurrentPage] = useState(1)
 
+  const [showCreate, setShowCreate] = useState(false)
+  const [isCreating, setIsCreating] = useState(false)
+  const [form, setForm] = useState(emptyStudentForm)
+  const [createdCredentials, setCreatedCredentials] = useState<{ matricule: string; login: string; pin: string; name: string } | null>(null)
+
   const { data: studentsData, isLoading } = useStudents({ limit: 1000 })
+  const { data: structureData } = useStructure() as { data: { faculties?: ApiFaculty[] } | undefined }
+
+  const realPrograms: ApiProgram[] = useMemo(
+    () => (structureData?.faculties || []).flatMap((f) => f.departments.flatMap((d) => d.programs)),
+    [structureData],
+  )
+  const selectedProgramLevels = realPrograms.find((p) => p.id === form.currentProgramId)?.levels || []
+
+  const handleCreateStudent = async () => {
+    if (!form.firstName || !form.lastName || !form.gender || !form.dateOfBirth || !form.placeOfBirth || !form.currentProgramId || !form.currentLevelId) {
+      toast.error('Champs requis', { description: 'Nom, prenom, sexe, date/lieu de naissance, filiere et niveau sont obligatoires' })
+      return
+    }
+    setIsCreating(true)
+    try {
+      const res = await fetch('/api/students', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          firstName: form.firstName,
+          lastName: form.lastName,
+          gender: form.gender,
+          nationality: form.nationality || 'Tchadienne',
+          dateOfBirth: new Date(form.dateOfBirth).toISOString(),
+          placeOfBirth: form.placeOfBirth,
+          currentProgramId: form.currentProgramId,
+          currentLevelId: form.currentLevelId,
+          email: form.email || undefined,
+          phone: form.phone || undefined,
+          bacSeries: form.bacSeries || undefined,
+          bacYear: form.bacYear ? Number(form.bacYear) : undefined,
+        }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.error || 'Echec de la creation')
+      toast.success('Etudiant enregistre', { description: `Matricule ${body.data?.matricule}` })
+      queryClient.invalidateQueries({ queryKey: ['students'] })
+      setShowCreate(false)
+      setForm(emptyStudentForm)
+      if (body.portalAccount) {
+        setCreatedCredentials({
+          matricule: body.data.matricule,
+          login: body.portalAccount.login,
+          pin: body.portalAccount.pin,
+          name: `${form.firstName} ${form.lastName}`,
+        })
+      }
+    } catch (e) {
+      toast.error('Erreur', { description: e instanceof Error ? e.message : 'Echec de la creation' })
+    } finally {
+      setIsCreating(false)
+    }
+  }
+
+  const handleExportPDF = () => {
+    exportListToPDF(
+      'liste_etudiants',
+      'Liste des etudiants',
+      `${filteredStudents.length} etudiant(s)`,
+      [
+        { header: 'Matricule', width: 0.18, value: (s: DemoStudent) => s.matricule },
+        { header: 'Nom', width: 0.16, value: (s: DemoStudent) => s.nom },
+        { header: 'Prenom', width: 0.16, value: (s: DemoStudent) => s.prenom },
+        { header: 'Filiere', width: 0.2, value: (s: DemoStudent) => s.filiere },
+        { header: 'Niveau', width: 0.08, value: (s: DemoStudent) => s.niveau },
+        { header: 'Statut', width: 0.12, value: (s: DemoStudent) => statusConfig[s.statut]?.label || s.statut },
+        { header: 'Sexe', width: 0.1, value: (s: DemoStudent) => s.sexe },
+      ],
+      filteredStudents,
+    )
+  }
+
+  const copyPin = () => {
+    if (!createdCredentials) return
+    navigator.clipboard.writeText(createdCredentials.pin).then(
+      () => toast.success('Code PIN copie'),
+      () => toast.error('Copie impossible'),
+    )
+  }
 
   const realStudents = useMemo(() => {
     if (!studentsData?.data) return []
@@ -159,7 +261,7 @@ export function StudentsList() {
         credits: s.totalCreditsAcquired || 0,
         email: s.email || '',
         telephone: s.phone || '',
-        sexe: s.sex as 'M' | 'F',
+        sexe: (s.gender as 'M' | 'F') || 'M',
         age: age || 0,
       } as DemoStudent
     })
@@ -235,20 +337,29 @@ export function StudentsList() {
               </motion.p>
             </div>
             <div className="flex items-center gap-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"
+                onClick={() => setView('import-export')}
+              >
+                <Upload className="size-3.5 mr-1.5" />
+                Importer
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
                 className="text-xs bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"
                 onClick={() => exportToExcel(filteredStudents, 'liste_etudiants')}
               >
                 <FileSpreadsheet className="size-3.5 mr-1.5" />
                 Excel
               </Button>
-              <Button variant="outline" size="sm" className="text-xs bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white">
+              <Button variant="outline" size="sm" className="text-xs bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white" onClick={handleExportPDF}>
                 <FileText className="size-3.5 mr-1.5" />
                 PDF
               </Button>
-              <Button size="sm" className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs border border-white/20">
+              <Button size="sm" className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs border border-white/20" onClick={() => setShowCreate(true)}>
                 <UserPlus className="size-3.5 mr-1.5" />
                 Nouvel etudiant
               </Button>
@@ -378,6 +489,16 @@ export function StudentsList() {
                     </TableCell>
                   </motion.tr>
                 ))}
+                {isLoading && (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-10 text-sm text-gray-400">Chargement...</TableCell>
+                  </TableRow>
+                )}
+                {!isLoading && paginatedStudents.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-10 text-sm text-gray-400">Aucun etudiant trouve</TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </div>
@@ -421,6 +542,124 @@ export function StudentsList() {
           </div>
         </CardContent>
       </Card>
+
+      {/* New student dialog */}
+      <Dialog open={showCreate} onOpenChange={(o) => { setShowCreate(o); if (!o) setForm(emptyStudentForm) }}>
+        <DialogContent className="sm:max-w-[560px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-[#1a2744]">Nouvel etudiant</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-sm">Nom</Label>
+                <Input value={form.lastName} onChange={(e) => setForm((f) => ({ ...f, lastName: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm">Prenom</Label>
+                <Input value={form.firstName} onChange={(e) => setForm((f) => ({ ...f, firstName: e.target.value }))} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-sm">Sexe</Label>
+                <Select value={form.gender} onValueChange={(v) => setForm((f) => ({ ...f, gender: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Selectionner" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="M">Masculin</SelectItem>
+                    <SelectItem value="F">Feminin</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm">Nationalite</Label>
+                <Input value={form.nationality} onChange={(e) => setForm((f) => ({ ...f, nationality: e.target.value }))} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-sm">Date de naissance</Label>
+                <Input type="date" value={form.dateOfBirth} onChange={(e) => setForm((f) => ({ ...f, dateOfBirth: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm">Lieu de naissance</Label>
+                <Input value={form.placeOfBirth} onChange={(e) => setForm((f) => ({ ...f, placeOfBirth: e.target.value }))} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-sm">Filiere</Label>
+                <Select value={form.currentProgramId} onValueChange={(v) => setForm((f) => ({ ...f, currentProgramId: v, currentLevelId: '' }))}>
+                  <SelectTrigger><SelectValue placeholder="Selectionner" /></SelectTrigger>
+                  <SelectContent>
+                    {realPrograms.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm">Niveau</Label>
+                <Select value={form.currentLevelId} onValueChange={(v) => setForm((f) => ({ ...f, currentLevelId: v }))} disabled={!form.currentProgramId}>
+                  <SelectTrigger><SelectValue placeholder={form.currentProgramId ? 'Selectionner' : "Choisir d'abord une filiere"} /></SelectTrigger>
+                  <SelectContent>
+                    {selectedProgramLevels.map((l) => (
+                      <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-sm">Email (optionnel)</Label>
+                <Input type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm">Telephone (optionnel)</Label>
+                <Input value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
+              </div>
+            </div>
+            <p className="text-[11px] text-gray-400">Le matricule est genere automatiquement, et un compte Espace Etudiant (matricule + code PIN) sera cree.</p>
+            <Button className="w-full bg-[#2d7a4f] hover:bg-[#236b40] text-white" disabled={isCreating} onClick={handleCreateStudent}>
+              {isCreating ? 'Enregistrement...' : "Enregistrer l'etudiant"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* One-time portal credentials reveal */}
+      <Dialog open={Boolean(createdCredentials)} onOpenChange={(o) => { if (!o) setCreatedCredentials(null) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Etudiant enregistre</DialogTitle>
+          </DialogHeader>
+          {createdCredentials && (
+            <div className="space-y-4 py-2">
+              <p className="text-sm text-gray-600">
+                Le compte Espace Etudiant de <span className="font-semibold text-[#1a2744]">{createdCredentials.name}</span> est pret.
+                Transmettez ces identifiants — le code PIN ne sera plus jamais affiche.
+              </p>
+              <div className="rounded-lg border bg-gray-50 p-3 space-y-2">
+                <div>
+                  <p className="text-[10px] text-gray-400">Matricule / Identifiant</p>
+                  <p className="text-sm font-mono text-[#1a2744]">{createdCredentials.login}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-gray-400">Code PIN</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-mono font-semibold text-[#2d7a4f]">{createdCredentials.pin}</p>
+                    <Button variant="ghost" size="sm" className="h-6 px-1.5" onClick={copyPin}>
+                      <Copy className="size-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+              <Button className="w-full" variant="outline" onClick={() => setCreatedCredentials(null)}>Fermer</Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

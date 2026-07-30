@@ -106,5 +106,48 @@ async function handlePost(_user: SessionUser, tenantId: string, request: NextReq
   }
 }
 
+// PUT /api/internships?id=X - update status (convention validation) and/or
+// record an evaluation. Convention approve -> CONVENTION_SIGNEE, reject -> ANNULE.
+async function handlePut(_user: SessionUser, tenantId: string, request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const id = searchParams.get('id')
+    if (!id) {
+      return NextResponse.json({ error: 'id query parameter is required' }, { status: 400 })
+    }
+    const existing = await db.internship.findFirst({ where: { id, tenantId } })
+    if (!existing) {
+      return NextResponse.json({ error: 'Internship not found' }, { status: 404 })
+    }
+
+    const body = await request.json()
+    const { status, evaluation } = body
+
+    const validStatuses = ['EN_ATTENTE', 'CONVENTION_SIGNEE', 'EN_COURS', 'TERMINE', 'ANNULE']
+    const data: { status?: string; evaluation?: string; evaluationDate?: Date } = {}
+    if (status !== undefined) {
+      if (!validStatuses.includes(status)) {
+        return NextResponse.json({ error: `status must be one of: ${validStatuses.join(', ')}` }, { status: 400 })
+      }
+      data.status = status
+    }
+    if (evaluation !== undefined) {
+      data.evaluation = typeof evaluation === 'string' ? evaluation : JSON.stringify(evaluation)
+      data.evaluationDate = new Date()
+    }
+    if (Object.keys(data).length === 0) {
+      return NextResponse.json({ error: 'No recognized fields to update' }, { status: 400 })
+    }
+
+    const internship = await db.internship.update({ where: { id }, data })
+    return NextResponse.json({ internship })
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('Update internship error:', error)
+    return NextResponse.json({ error: 'Failed to update internship' }, { status: 500 })
+  }
+}
+
 export const GET = withTenantAuth(handleGet)
 export const POST = withTenantAuth(handlePost)
+export const PUT = withTenantAuth(handlePut, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE', 'FACULTE', 'DEPARTEMENT', 'MAITRE_STAGE'])

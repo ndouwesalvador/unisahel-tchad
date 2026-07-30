@@ -217,6 +217,12 @@ export function HealthPage() {
   const animatedStagesActifs = useCountUp(stagesEnCours, 1200)
   const animatedCompVal = useCountUp(competencePercent, 1300)
 
+  // Real, distinct hospital list derived from the actual clinical stages
+  const uniqueHopitaux = useMemo(
+    () => [...new Set(stages.map((s) => s.hopital).filter(Boolean))].sort(),
+    [stages],
+  )
+
   // Filtered stages
   const filteredStages = stages.filter((s: { hopital: string; statut: string }) => {
     const matchHopital = stageHopitalFilter === 'all' || s.hopital === stageHopitalFilter
@@ -471,9 +477,9 @@ export function HealthPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tous les hopitaux</SelectItem>
-                  <SelectItem value="Hopital General">Hopital General</SelectItem>
-                  <SelectItem value="Hopital de la Mere">Hopital de la Mere</SelectItem>
-                  <SelectItem value="Centre de Sante">Centre de Sante</SelectItem>
+                  {uniqueHopitaux.map((h) => (
+                    <SelectItem key={h} value={h}>{h}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <Select value={stageStatutFilter} onValueChange={setStageStatutFilter}>
