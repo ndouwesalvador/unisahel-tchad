@@ -1,7 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
-import { createFacultySchema, createDepartmentSchema, validateBody, formatZodError } from '@/lib/validations/api'
+import {
+  createFacultySchema,
+  createDepartmentSchema,
+  createProgramSchema,
+  createLevelSchema,
+  createSemesterSchema,
+  createTeachingUnitSchema,
+  createCourseElementSchema,
+  validateBody,
+  formatZodError,
+} from '@/lib/validations/api'
 
 async function handler(_user: SessionUser, tenantId: string, _request: NextRequest) {
   try {
@@ -244,11 +254,223 @@ async function createDepartmentHandler(user: SessionUser, tenantId: string, requ
   }
 }
 
+// The LMD hierarchy below a department -- Program -> Level -> Semester ->
+// TeachingUnit (UE) -> CourseElement (EC) -- previously had validation schemas
+// (createProgramSchema...createCourseElementSchema) but no route ever used
+// them: only the demo seed could build a curriculum, so a real institution
+// could create faculties/departments but never its own programs or courses,
+// which also blocked student enrolment (a student needs a real programId +
+// levelId). These handlers close that gap. Only Program carries a tenantId
+// column; ownership for the deeper levels is proven by walking the parent
+// chain up to Program.tenantId.
+
+async function createProgramHandler(user: SessionUser, tenantId: string, request: NextRequest) {
+  try {
+    const body = await request.json()
+    const data = validateBody(createProgramSchema, body)
+
+    const faculty = await db.faculty.findFirst({ where: { id: data.facultyId, tenantId } })
+    if (!faculty) {
+      return NextResponse.json({ error: 'Faculty not found in this tenant' }, { status: 404 })
+    }
+    const department = await db.department.findFirst({ where: { id: data.departmentId, tenantId, facultyId: data.facultyId } })
+    if (!department) {
+      return NextResponse.json({ error: 'Department not found in this faculty/tenant' }, { status: 404 })
+    }
+
+    // createProgramSchema carries creditsPerYear for the UI, but the Program
+    // model has no such column -- build the create input explicitly so Prisma
+    // never sees an unknown argument.
+    const program = await db.program.create({
+      data: {
+        tenantId,
+        facultyId: data.facultyId,
+        departmentId: data.departmentId,
+        name: data.name,
+        code: data.code,
+        cycle: data.cycle,
+        diplomaType: data.diplomaType,
+        duration: data.duration,
+        isActive: data.isActive,
+      },
+    })
+    await db.auditLog.create({
+      data: { tenantId, userId: user.id, action: 'CREATE', entity: 'Program', entityId: program.id, details: JSON.stringify({ name: program.name, code: program.code, cycle: program.cycle }) },
+    })
+    return NextResponse.json({ data: program }, { status: 201 })
+  } catch (error) {
+    if (error instanceof Error && error.name === 'ZodError') {
+      return NextResponse.json({ error: 'Validation failed', details: formatZodError(error as any) }, { status: 400 })
+    }
+    console.error('Create program error:', error)
+    return NextResponse.json({ error: 'Failed to create program' }, { status: 500 })
+  }
+}
+
+async function createLevelHandler(user: SessionUser, tenantId: string, request: NextRequest) {
+  try {
+    const body = await request.json()
+    const data = validateBody(createLevelSchema, body)
+
+    const program = await db.program.findFirst({ where: { id: data.programId, tenantId } })
+    if (!program) {
+      return NextResponse.json({ error: 'Program not found in this tenant' }, { status: 404 })
+    }
+
+    const level = await db.level.create({
+      data: {
+        programId: data.programId,
+        name: data.name,
+        code: data.code,
+        orderIndex: data.orderIndex,
+        isActive: data.isActive,
+      },
+    })
+    await db.auditLog.create({
+      data: { tenantId, userId: user.id, action: 'CREATE', entity: 'Level', entityId: level.id, details: JSON.stringify({ name: level.name, programId: data.programId }) },
+    })
+    return NextResponse.json({ data: level }, { status: 201 })
+  } catch (error) {
+    if (error instanceof Error && error.name === 'ZodError') {
+      return NextResponse.json({ error: 'Validation failed', details: formatZodError(error as any) }, { status: 400 })
+    }
+    console.error('Create level error:', error)
+    return NextResponse.json({ error: 'Failed to create level' }, { status: 500 })
+  }
+}
+
+async function createSemesterHandler(user: SessionUser, tenantId: string, request: NextRequest) {
+  try {
+    const body = await request.json()
+    const data = validateBody(createSemesterSchema, body)
+
+    const level = await db.level.findFirst({ where: { id: data.levelId, program: { tenantId } } })
+    if (!level) {
+      return NextResponse.json({ error: 'Level not found in this tenant' }, { status: 404 })
+    }
+
+    // startDate/endDate are accepted by the schema but the Semester model has
+    // no such columns -- omit them from the create input.
+    const semester = await db.semester.create({
+      data: {
+        levelId: data.levelId,
+        name: data.name,
+        code: data.code,
+        orderIndex: data.orderIndex,
+      },
+    })
+    await db.auditLog.create({
+      data: { tenantId, userId: user.id, action: 'CREATE', entity: 'Semester', entityId: semester.id, details: JSON.stringify({ name: semester.name, levelId: data.levelId }) },
+    })
+    return NextResponse.json({ data: semester }, { status: 201 })
+  } catch (error) {
+    if (error instanceof Error && error.name === 'ZodError') {
+      return NextResponse.json({ error: 'Validation failed', details: formatZodError(error as any) }, { status: 400 })
+    }
+    console.error('Create semester error:', error)
+    return NextResponse.json({ error: 'Failed to create semester' }, { status: 500 })
+  }
+}
+
+async function createTeachingUnitHandler(user: SessionUser, tenantId: string, request: NextRequest) {
+  try {
+    const body = await request.json()
+    const data = validateBody(createTeachingUnitSchema, body)
+
+    const semester = await db.semester.findFirst({ where: { id: data.semesterId, level: { program: { tenantId } } } })
+    if (!semester) {
+      return NextResponse.json({ error: 'Semester not found in this tenant' }, { status: 404 })
+    }
+    if (data.responsibleId) {
+      const teacher = await db.teacher.findFirst({ where: { id: data.responsibleId, tenantId } })
+      if (!teacher) {
+        return NextResponse.json({ error: 'Responsible teacher not found in this tenant' }, { status: 404 })
+      }
+    }
+
+    const unit = await db.teachingUnit.create({
+      data: {
+        semesterId: data.semesterId,
+        code: data.code,
+        name: data.name,
+        credits: data.credits,
+        type: data.type,
+        compensable: data.compensable,
+        responsibleId: data.responsibleId,
+        orderIndex: data.orderIndex,
+      },
+    })
+    await db.auditLog.create({
+      data: { tenantId, userId: user.id, action: 'CREATE', entity: 'TeachingUnit', entityId: unit.id, details: JSON.stringify({ name: unit.name, code: unit.code, credits: unit.credits }) },
+    })
+    return NextResponse.json({ data: unit }, { status: 201 })
+  } catch (error) {
+    if (error instanceof Error && error.name === 'ZodError') {
+      return NextResponse.json({ error: 'Validation failed', details: formatZodError(error as any) }, { status: 400 })
+    }
+    console.error('Create teaching unit error:', error)
+    return NextResponse.json({ error: 'Failed to create teaching unit' }, { status: 500 })
+  }
+}
+
+async function createCourseElementHandler(user: SessionUser, tenantId: string, request: NextRequest) {
+  try {
+    const body = await request.json()
+    const data = validateBody(createCourseElementSchema, body)
+
+    const unit = await db.teachingUnit.findFirst({ where: { id: data.teachingUnitId, semester: { level: { program: { tenantId } } } } })
+    if (!unit) {
+      return NextResponse.json({ error: 'Teaching unit not found in this tenant' }, { status: 404 })
+    }
+    if (data.teacherId) {
+      const teacher = await db.teacher.findFirst({ where: { id: data.teacherId, tenantId } })
+      if (!teacher) {
+        return NextResponse.json({ error: 'Teacher not found in this tenant' }, { status: 404 })
+      }
+    }
+
+    const element = await db.courseElement.create({
+      data: {
+        teachingUnitId: data.teachingUnitId,
+        code: data.code,
+        name: data.name,
+        coefficient: data.coefficient,
+        hoursCM: data.hoursCM,
+        hoursTD: data.hoursTD,
+        hoursTP: data.hoursTP,
+        teacherId: data.teacherId,
+        orderIndex: data.orderIndex,
+      },
+    })
+    await db.auditLog.create({
+      data: { tenantId, userId: user.id, action: 'CREATE', entity: 'CourseElement', entityId: element.id, details: JSON.stringify({ name: element.name, code: element.code, coefficient: element.coefficient }) },
+    })
+    return NextResponse.json({ data: element }, { status: 201 })
+  } catch (error) {
+    if (error instanceof Error && error.name === 'ZodError') {
+      return NextResponse.json({ error: 'Validation failed', details: formatZodError(error as any) }, { status: 400 })
+    }
+    console.error('Create course element error:', error)
+    return NextResponse.json({ error: 'Failed to create course element' }, { status: 500 })
+  }
+}
+
 export const GET = withTenantAuth(handler)
 
+// One POST endpoint fans out by ?type= across the whole academic hierarchy so
+// an institution can build its structure top-down: faculty -> department ->
+// program -> level -> semester -> teaching-unit -> course-element.
 export const POST = withTenantAuth(async (user: SessionUser, tenantId: string, request: NextRequest) => {
   const { searchParams } = new URL(request.url)
   const type = searchParams.get('type')
-  if (type === 'department') return createDepartmentHandler(user, tenantId, request)
-  return createFacultyHandler(user, tenantId, request)
-}, ['SUPER_ADMIN', 'ADMIN_INSTITUTION'])
+  switch (type) {
+    case 'department': return createDepartmentHandler(user, tenantId, request)
+    case 'program': return createProgramHandler(user, tenantId, request)
+    case 'level': return createLevelHandler(user, tenantId, request)
+    case 'semester': return createSemesterHandler(user, tenantId, request)
+    case 'teaching-unit': return createTeachingUnitHandler(user, tenantId, request)
+    case 'course-element': return createCourseElementHandler(user, tenantId, request)
+    case 'faculty':
+    default: return createFacultyHandler(user, tenantId, request)
+  }
+}, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'RECTORAT'])
