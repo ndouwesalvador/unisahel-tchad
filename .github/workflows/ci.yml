@@ -45,15 +45,31 @@ jobs:
 
   e2e:
     runs-on: ubuntu-latest
-    # Unlike `verify` above, a real login requires a real reachable database
-    # with real seeded users, so this job uses the actual Neon credentials
-    # (repo secrets) instead of dummy ones. It runs against the real
-    # database - login writes a real AuditLog row each run, same as any
-    # real login would; nothing destructive.
+    # A real login needs a real reachable database with seeded users. This job
+    # used to point at the production Neon database (repo secrets), which made
+    # it depend on whatever data happened to live there (it broke when that
+    # data drifted from prisma/seed.ts) and wrote an AuditLog row to prod on
+    # every run. Instead we stand up a throwaway Postgres, apply the committed
+    # migrations, and seed it with prisma/seed.ts - fully deterministic and
+    # isolated from production.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: unisahel_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     env:
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      DIRECT_URL: ${{ secrets.DIRECT_URL }}
-      NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+      DATABASE_URL: "postgresql://ci:ci@localhost:5432/unisahel_e2e"
+      DIRECT_URL: "postgresql://ci:ci@localhost:5432/unisahel_e2e"
+      NEXTAUTH_SECRET: "ci-only-dummy-secret-not-used-anywhere-else-32ch"
     steps:
       - uses: actions/checkout@v4
 
@@ -64,6 +80,12 @@ jobs:
 
       - name: Install dependencies (runs postinstall -> prisma generate)
         run: npm ci
+
+      - name: Apply migrations to the e2e database
+        run: npx prisma migrate deploy
+
+      - name: Seed the e2e database
+        run: npx tsx prisma/seed.ts
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium

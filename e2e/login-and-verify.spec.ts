@@ -9,14 +9,14 @@ import { test, expect } from '@playwright/test'
 test('login redirects to the dashboard with the real session user', async ({ page }) => {
   await page.goto('/login')
 
-  await page.getByPlaceholder('nom@universite.td').fill('admin@univ-ndjamena.td')
+  await page.getByPlaceholder('nom@universite.td').fill('admin@unive-ndjamena.td')
   await page.getByPlaceholder('Entrez votre mot de passe').fill('password123')
   await page.getByRole('button', { name: 'Connexion', exact: true }).click()
 
   // Greeting is time-of-day-dependent ("Bonjour"/"Bon apres-midi"/"Bonsoir",
   // see getGreeting() in dashboard-home.tsx) - match on the name only so
   // this test doesn't flake depending on when CI happens to run.
-  await expect(page.getByText('Admin Demo').first()).toBeVisible({ timeout: 15_000 })
+  await expect(page.getByText('Admin Principal').first()).toBeVisible({ timeout: 15_000 })
 })
 
 test('document verification reports an honest "not found" for an unknown code', async ({ page }) => {
