@@ -51,6 +51,7 @@ import {
   CalendarRange,
   BookMarked,
   FileText,
+  Trash2,
 } from 'lucide-react'
 import { useStructure } from '@/lib/api-hooks'
 
@@ -213,6 +214,9 @@ interface OrgNode {
   icon: React.ElementType
   color: string
   count?: number
+  // The /api/structure ?type= value used to edit/delete this node (absent on
+  // the institution root, which isn't editable here).
+  apiType?: 'faculty' | 'department' | 'program'
   children?: OrgNode[]
 }
 
@@ -228,6 +232,7 @@ function buildOrgTree(faculties: Faculty[]): OrgNode {
       id: f.id,
       name: f.name,
       type: 'faculte',
+      apiType: 'faculty' as const,
       icon: f.icon,
       color: f.gradientFrom,
       count: f.departments.length,
@@ -235,6 +240,7 @@ function buildOrgTree(faculties: Faculty[]): OrgNode {
         id: d.id,
         name: d.name,
         type: 'departement',
+        apiType: 'department' as const,
         icon: d.icon,
         color: '#2d7a4f',
         count: d.programs.length,
@@ -242,12 +248,124 @@ function buildOrgTree(faculties: Faculty[]): OrgNode {
           id: p.id,
           name: p.name,
           type: 'filiere',
+          apiType: 'program' as const,
           icon: GraduationCap,
           color: '#d4a853',
         })),
       })),
     })),
   }
+}
+
+// ─── Node edit / delete controls ────────────────────────────────────────────
+//
+// Rename (PUT) and delete (DELETE) a faculty/department/program straight from
+// the org tree. Deletion is soft on the backend (isActive:false) and the API
+// refuses to remove anything with real academic data hanging off it, so the
+// confirmation copy stays reassuring rather than alarming.
+
+const API_TYPE_LABEL: Record<string, string> = {
+  faculty: 'la faculté',
+  department: 'le département',
+  program: 'le programme',
+}
+
+function NodeActions({ apiType, id, name }: { apiType: 'faculty' | 'department' | 'program'; id: string; name: string }) {
+  const queryClient = useQueryClient()
+  const [editOpen, setEditOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [newName, setNewName] = useState(name)
+  const [busy, setBusy] = useState(false)
+
+  const doEdit = async () => {
+    if (!newName.trim()) {
+      toast.error('Nom requis')
+      return
+    }
+    setBusy(true)
+    try {
+      const res = await fetch(`/api/structure?type=${apiType}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, name: newName.trim() }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json.error || 'Échec de la modification')
+      toast.success('Modifié')
+      queryClient.invalidateQueries({ queryKey: ['structure'] })
+      setEditOpen(false)
+    } catch (e) {
+      toast.error('Erreur', { description: e instanceof Error ? e.message : 'Échec de la modification' })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const doDelete = async () => {
+    setBusy(true)
+    try {
+      const res = await fetch(`/api/structure?type=${apiType}&id=${id}`, { method: 'DELETE' })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json.error || 'Échec de la suppression')
+      toast.success('Supprimé')
+      queryClient.invalidateQueries({ queryKey: ['structure'] })
+      setDeleteOpen(false)
+    } catch (e) {
+      toast.error('Suppression impossible', { description: e instanceof Error ? e.message : 'Échec de la suppression' })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
+      <Dialog open={editOpen} onOpenChange={(o) => { setEditOpen(o); if (o) setNewName(name) }}>
+        <DialogTrigger asChild>
+          <Button variant="ghost" size="sm" className="h-6 w-6 p-0" title="Renommer">
+            <Edit3 className="size-3 text-gray-600" />
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-[#1a2744]">Renommer</DialogTitle>
+            <DialogDescription>Modifier le nom de {API_TYPE_LABEL[apiType]}.</DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-2">
+            <Label className="text-sm font-medium">Nom</Label>
+            <Input value={newName} onChange={(e) => setNewName(e.target.value)} className="h-10" />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditOpen(false)} className="text-xs" disabled={busy}>Annuler</Button>
+            <Button className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs" onClick={doEdit} disabled={busy}>
+              {busy ? 'Enregistrement…' : 'Enregistrer'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <DialogTrigger asChild>
+          <Button variant="ghost" size="sm" className="h-6 w-6 p-0" title="Supprimer">
+            <Trash2 className="size-3 text-red-500" />
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-[#1a2744]">Supprimer {API_TYPE_LABEL[apiType]}</DialogTitle>
+            <DialogDescription>
+              « {name} » sera désactivé et masqué de la structure. Les étudiants et notes déjà rattachés sont conservés. Continuer ?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteOpen(false)} className="text-xs" disabled={busy}>Annuler</Button>
+            <Button className="bg-red-600 hover:bg-red-700 text-white text-xs" onClick={doDelete} disabled={busy}>
+              {busy ? 'Suppression…' : 'Supprimer'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
 }
 
 // ─── Org Node Component ────────────────────────────────────────────────────
@@ -308,12 +426,12 @@ function OrgNodeComponent({ node, depth = 0 }: { node: OrgNode; depth?: number }
           {node.type === 'institution' ? 'Institution' : node.type === 'faculte' ? 'Faculté' : node.type === 'departement' ? 'Département' : 'Filière'}
         </Badge>
 
-        {/* Edit */}
-        <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-          <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-            <Edit3 className="size-3 text-gray-600" />
-          </Button>
-        </div>
+        {/* Edit / delete (faculties, departments, programs) */}
+        {node.apiType && (
+          <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+            <NodeActions apiType={node.apiType} id={node.id} name={node.name} />
+          </div>
+        )}
       </div>
 
       {/* Children */}
