@@ -43,12 +43,12 @@ import {
 // ─── Quick actions (navigation shortcuts, not data — fine to stay static) ─────
 
 const quickActions = [
-  { label: 'Nouvelle inscription', icon: UserPlus, color: '#2d7a4f', bgColor: '#2d7a4f15', view: 'students' as const },
-  { label: 'Saisir les notes', icon: FileCheck, color: '#1a2744', bgColor: '#1a274415', view: 'grades' as const },
-  { label: 'Generer un releve', icon: FileText, color: '#d4a853', bgColor: '#d4a85315', view: 'documents' as const },
-  { label: 'Ajouter un paiement', icon: CreditCard, color: '#2d7a4f', bgColor: '#2d7a4f15', view: 'payments' as const },
-  { label: 'Planifier un jury', icon: Gavel, color: '#1a2744', bgColor: '#1a274415', view: 'deliberation' as const },
-  { label: 'Envoyer une annonce', icon: Megaphone, color: '#d4a853', bgColor: '#d4a85315', view: 'announcements' as const },
+  { label: 'Gerer les inscriptions', icon: UserPlus, color: '#2d7a4f', bgColor: '#2d7a4f15', view: 'students' as const },
+  { label: 'Ouvrir les notes', icon: FileCheck, color: '#1a2744', bgColor: '#1a274415', view: 'grades' as const },
+  { label: 'Documents officiels', icon: FileText, color: '#d4a853', bgColor: '#d4a85315', view: 'documents' as const },
+  { label: 'Suivi des paiements', icon: CreditCard, color: '#2d7a4f', bgColor: '#2d7a4f15', view: 'payments' as const },
+  { label: 'Sessions de jury', icon: Gavel, color: '#1a2744', bgColor: '#1a274415', view: 'deliberation' as const },
+  { label: 'Annonces', icon: Megaphone, color: '#d4a853', bgColor: '#d4a85315', view: 'announcements' as const },
 ]
 
 // ─── Real-data label/color mappings (matches students-list.tsx conventions) ──

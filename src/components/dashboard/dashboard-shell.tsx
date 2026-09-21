@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, type ComponentType } from 'react'
+import { useEffect, useMemo, useRef, useState, type ComponentType } from 'react'
 import { motion } from 'framer-motion'
 import { signOut } from 'next-auth/react'
-import { useAppStore, type AppView, type UserRole } from '@/lib/store'
-import { useNotifications } from '@/lib/api-hooks'
+import { useAppStore, type AppUser, type AppView, type UserRole } from '@/lib/store'
+import { useAcademicYears, useNotifications } from '@/lib/api-hooks'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -143,6 +143,15 @@ function normalizeAcademicSystem(value?: string | null) {
 
 function isHealthAcademicSystem(value?: string | null) {
   return normalizeAcademicSystem(value) === 'sante'
+}
+
+function getVisibleNavItems(user: AppUser | null): NavItem[] {
+  if (!user) return []
+
+  return (roleNavItems[user.role] || []).filter((item) => {
+    if (item.module === 'health') return isHealthAcademicSystem(user.tenantAcademicSystem)
+    return true
+  })
 }
 
 const roleNavItems: Record<UserRole, NavItem[]> = {
@@ -373,10 +382,7 @@ function SidebarContent() {
     logout()
   }
 
-  const navItems = (roleNavItems[user.role] || []).filter((item) => {
-    if (item.module === 'health') return isHealthAcademicSystem(user.tenantAcademicSystem)
-    return true
-  })
+  const navItems = getVisibleNavItems(user)
   const initials = `${user.firstName[0]}${user.lastName[0]}`
 
   return (
@@ -601,26 +607,52 @@ function MainContent({ view }: { view: AppView }) {
 // ─── Dashboard Shell ──────────────────────────────────────────────────────────
 
 export function DashboardShell() {
-  const { user, currentView, setView, logout, sidebarCollapsed, toggleSidebarCollapse, toggleNotifications } = useAppStore()
+  const { user, currentView, setView, logout, sidebarCollapsed, toggleSidebarCollapse, toggleNotifications, selectedAcademicYearId, setAcademicYear } = useAppStore()
   const { data: notificationsData } = useNotifications()
+  const { data: academicYearsData } = useAcademicYears({ enabled: Boolean(user?.tenantId) && user?.role !== 'SUPER_ADMIN' })
   const unreadCount: number = notificationsData?.unreadCount ?? 0
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const searchInputRef = useRef<HTMLInputElement>(null)
 
   const handleLogout = async () => {
     await signOut({ redirect: false })
     logout()
   }
 
+  const academicYears: { id: string; name: string; isCurrent?: boolean }[] = academicYearsData?.data ?? []
+  const currentAcademicYearId = selectedAcademicYearId || academicYears.find((year) => year.isCurrent)?.id || academicYears[0]?.id
+  const visibleNavItems = useMemo(() => getVisibleNavItems(user), [user])
+  const searchTerm = searchQuery.trim().toLowerCase()
+  const searchResults = searchTerm
+    ? visibleNavItems.filter((item) => {
+        const viewLabel = viewLabels[item.view]?.toLowerCase() || ''
+        return item.label.toLowerCase().includes(searchTerm) || viewLabel.includes(searchTerm)
+      }).slice(0, 8)
+    : []
+
+  const openSearchResult = (view: AppView) => {
+    setView(view)
+    setSearchQuery('')
+  }
+
+  useEffect(() => {
+    const handleShortcut = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault()
+        searchInputRef.current?.focus()
+      }
+    }
+
+    window.addEventListener('keydown', handleShortcut)
+    return () => window.removeEventListener('keydown', handleShortcut)
+  }, [])
+
   if (!user) return null
 
   if (user.mustChangePassword) return <ForcedPasswordChange />
 
   const initials = `${user.firstName[0]}${user.lastName[0]}`
-  const academicYears = [
-    { id: '2024-2025', label: '2024 - 2025' },
-    { id: '2023-2024', label: '2023 - 2024' },
-    { id: '2022-2023', label: '2022 - 2023' },
-  ]
 
   return (
     <div className="min-h-screen flex bg-gray-50">
@@ -683,9 +715,40 @@ export function DashboardShell() {
               <div className="relative flex-1">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
                 <Input
+                  ref={searchInputRef}
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' && searchResults[0]) {
+                      event.preventDefault()
+                      openSearchResult(searchResults[0].view)
+                    }
+                    if (event.key === 'Escape') {
+                      setSearchQuery('')
+                    }
+                  }}
                   placeholder="Rechercher..."
                   className="pl-9 h-8 text-sm bg-gray-50 border-gray-200 focus:ring-2 focus:ring-[#2d7a4f20] focus:border-[#2d7a4f] transition-all"
                 />
+                {searchTerm && (
+                  <div className="absolute left-0 right-0 top-10 z-50 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg">
+                    {searchResults.length > 0 ? (
+                      searchResults.map((item) => (
+                        <button
+                          key={item.view}
+                          type="button"
+                          onClick={() => openSearchResult(item.view)}
+                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 transition-colors hover:bg-[#2d7a4f10] hover:text-[#1a2744]"
+                        >
+                          <item.icon className="size-4 text-[#2d7a4f]" />
+                          <span>{item.label}</span>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="px-3 py-2 text-sm text-gray-500">Aucun résultat</div>
+                    )}
+                  </div>
+                )}
               </div>
               <div className="flex items-center gap-1 px-1.5 py-0.5 rounded border border-gray-200 bg-gray-50 text-[10px] text-gray-400 font-medium shrink-0">
                 <span className="text-[11px]">⌘</span>
@@ -696,13 +759,13 @@ export function DashboardShell() {
             {/* Right: Actions */}
             <div className="flex items-center gap-2 lg:gap-3">
               {/* Academic Year Selector */}
-              <Select defaultValue="2024-2025">
+              <Select value={currentAcademicYearId} onValueChange={setAcademicYear} disabled={academicYears.length === 0}>
                 <SelectTrigger className="w-[140px] h-8 text-xs hidden sm:flex">
-                  <SelectValue />
+                  <SelectValue placeholder="Aucune année" />
                 </SelectTrigger>
                 <SelectContent>
                   {academicYears.map((y) => (
-                    <SelectItem key={y.id} value={y.id}>{y.label}</SelectItem>
+                    <SelectItem key={y.id} value={y.id}>{y.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
