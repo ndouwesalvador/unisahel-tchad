@@ -134,6 +134,15 @@ interface NavItem {
   icon: React.ElementType
   label: string
   view: AppView
+  module?: 'health'
+}
+
+function normalizeAcademicSystem(value?: string | null) {
+  return (value || 'lmd').trim().toLowerCase()
+}
+
+function isHealthAcademicSystem(value?: string | null) {
+  return normalizeAcademicSystem(value) === 'sante'
 }
 
 const roleNavItems: Record<UserRole, NavItem[]> = {
@@ -158,7 +167,7 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
     { icon: CheckSquare, label: 'Délibérations', view: 'deliberation' },
     { icon: FileText, label: 'Documents', view: 'documents' },
     { icon: CreditCard, label: 'Paiements', view: 'payments' },
-    { icon: Heart, label: 'Santé', view: 'health' },
+    { icon: Heart, label: 'Santé', view: 'health', module: 'health' },
     { icon: Briefcase, label: 'Stages', view: 'internships' },
     { icon: Calendar, label: 'Emploi du temps', view: 'timetable' },
     { icon: ClipboardCheck, label: 'Examens', view: 'exam-scheduling' },
@@ -176,8 +185,7 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
     { icon: Users, label: 'Personnel', view: 'hr' },
     { icon: DoorOpen, label: 'Salles', view: 'room-booking' },
     { icon: Bus, label: 'Transport', view: 'transport' },
-    { icon: Award, label: 'Resultats', view: 'results' },
-    { icon: Settings, label: 'Paramètres', view: 'settings' },
+    { icon: Award, label: 'Résultats', view: 'results' },
     { icon: School, label: 'Institution', view: 'institution' },
   ],
   RECTORAT: [
@@ -324,7 +332,7 @@ const viewLabels: Record<AppView, string> = {
   documents: 'Documents',
   payments: 'Paiements',
   health: 'Santé',
-  internships: 'Stages & Internships',
+  internships: 'Stages',
   statistics: 'Statistiques',
   settings: 'Paramètres',
   institution: 'Institution',
@@ -341,16 +349,16 @@ const viewLabels: Record<AppView, string> = {
   'exam-scheduling': 'Planification des Examens',
   alumni: 'Alumni & Anciens Étudiants',
   library: 'Bibliothèque & Ressources',
-  advising: 'Orientation & Conseils Academiques',
-  attendance: 'Presences & Absences',
+  advising: 'Orientation & Conseils académiques',
+  attendance: 'Présences & Absences',
   communication: 'Communication & Messagerie',
   'online-exam': 'Examens en Ligne',
   'student-exam': 'Mes Examens',
   reports: 'Rapports & Analyses',
   hr: 'Gestion du Personnel',
-  'room-booking': 'Reservation des Salles',
+  'room-booking': 'Réservation des Salles',
   transport: 'Transport & Navette',
-  results: 'Gestion des Resultats',
+  results: 'Gestion des Résultats',
 }
 
 // ─── Sidebar Component ────────────────────────────────────────────────────────
@@ -365,7 +373,10 @@ function SidebarContent() {
     logout()
   }
 
-  const navItems = roleNavItems[user.role] || []
+  const navItems = (roleNavItems[user.role] || []).filter((item) => {
+    if (item.module === 'health') return isHealthAcademicSystem(user.tenantAcademicSystem)
+    return true
+  })
   const initials = `${user.firstName[0]}${user.lastName[0]}`
 
   return (
@@ -497,6 +508,9 @@ function SidebarContent() {
 
 function MainContent({ view }: { view: AppView }) {
   const { user } = useAppStore()
+  if (view === 'health' && !isHealthAcademicSystem(user?.tenantAcademicSystem)) {
+    return <DashboardHome />
+  }
   switch (view) {
     case 'dashboard':
       // A SUPER_ADMIN has no tenant of their own -- /api/dashboard is

@@ -11,6 +11,7 @@ export interface SessionUser {
   tenantId: string | null
   tenantName?: string
   tenantSlug?: string
+  tenantAcademicSystem?: string
   firstName: string
   lastName: string
   image?: string | null
@@ -29,6 +30,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     tenantId: user.tenantId,
     tenantName: user.tenantName,
     tenantSlug: user.tenantSlug,
+    tenantAcademicSystem: user.tenantAcademicSystem,
     firstName: user.firstName,
     lastName: user.lastName,
     image: user.image,
@@ -89,6 +91,7 @@ export function withAuth<T extends unknown[]>(
         tenantId: u.tenantId,
         tenantName: u.tenantName,
         tenantSlug: u.tenantSlug,
+        tenantAcademicSystem: u.tenantAcademicSystem,
         firstName: u.firstName,
         lastName: u.lastName,
         image: u.image,
@@ -133,6 +136,7 @@ export function withTenantAuth(
         tenantId: u.tenantId,
         tenantName: u.tenantName,
         tenantSlug: u.tenantSlug,
+        tenantAcademicSystem: u.tenantAcademicSystem,
         firstName: u.firstName,
         lastName: u.lastName,
         image: u.image,

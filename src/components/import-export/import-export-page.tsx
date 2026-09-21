@@ -29,6 +29,12 @@ import {
 } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
   Upload,
   Download,
   FileSpreadsheet,
@@ -224,6 +230,7 @@ export function ImportExportPage() {
   const [showPreview, setShowPreview] = useState(false)
   const [showValidation, setShowValidation] = useState(false)
   const [activeMainTab, setActiveMainTab] = useState('import')
+  const [helpDialog, setHelpDialog] = useState<'guide' | 'formats' | null>(null)
   const [importProgress, setImportProgress] = useState(0)
   const [isImporting, setIsImporting] = useState(false)
   const [isDragOver, setIsDragOver] = useState(false)
@@ -1090,7 +1097,7 @@ export function ImportExportPage() {
                         variant="outline" 
                         size="sm" 
                         className="text-xs h-8"
-                        onClick={() => toast.info("Ouverture du guide d'importation...")}
+                        onClick={() => setHelpDialog('guide')}
                       >
                         <FileDown className="size-3 mr-1.5" />
                         Guide d&apos;import
@@ -1099,7 +1106,7 @@ export function ImportExportPage() {
                         variant="outline" 
                         size="sm" 
                         className="text-xs h-8"
-                        onClick={() => toast.info("Affichage des formats supportés...")}
+                        onClick={() => setHelpDialog('formats')}
                       >
                         <HardDrive className="size-3 mr-1.5" />
                         Formats supportés
@@ -1281,6 +1288,42 @@ export function ImportExportPage() {
           </motion.div>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={helpDialog === 'guide'} onOpenChange={(open) => !open && setHelpDialog(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Guide d importation</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 text-sm text-gray-600">
+            <p>1. Telechargez ou preparez un fichier Excel avec une ligne d en-tete claire.</p>
+            <p>2. Choisissez le type d import, puis deposez le fichier dans la zone d import.</p>
+            <p>3. Verifiez la previsualisation et les erreurs ligne par ligne avant de lancer l import.</p>
+            <p>4. Pour les etudiants, les colonnes minimales sont Nom et Prenom. Le matricule peut etre genere si absent.</p>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={helpDialog === 'formats'} onOpenChange={(open) => !open && setHelpDialog(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Formats supportes</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 text-sm text-gray-600">
+            <div>
+              <p className="font-semibold text-[#1a2744]">Fichiers acceptes</p>
+              <p>Excel .xlsx, .xls et CSV avec encodage UTF-8 recommande.</p>
+            </div>
+            <div>
+              <p className="font-semibold text-[#1a2744]">Etudiants</p>
+              <p>Colonnes recommandees : Matricule, Nom, Prenom, Date naissance, Filiere, Statut.</p>
+            </div>
+            <div>
+              <p className="font-semibold text-[#1a2744]">Enseignants</p>
+              <p>Colonnes recommandees : Nom, Prenom, Email, Grade, Specialisation, Departement.</p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   )
 }

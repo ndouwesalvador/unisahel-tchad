@@ -852,6 +852,7 @@ function AcademiqueTab() {
     data: { data: { id: string; name: string; startDate: string; endDate: string; isCurrent: boolean }[] } | undefined
   }
   const queryClient = useQueryClient()
+  const updateUser = useAppStore((s) => s.updateUser)
   const academicYears = academicYearsData?.data ?? []
 
   const [system, setSystem] = useState('lmd')
@@ -946,6 +947,7 @@ function AcademiqueTab() {
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || "Echec de l'enregistrement")
       toast.success('Configuration academique enregistree')
+      updateUser({ tenantAcademicSystem: system })
       refetch()
     } catch (error) {
       toast.error('Erreur', { description: error instanceof Error ? error.message : "Echec de l'enregistrement" })
