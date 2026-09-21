@@ -5,14 +5,20 @@ import { getAuthSecret } from '@/lib/auth/secret'
 
 export const runtime = 'nodejs'
 
-const publicRoutes = ['/', '/login', '/api/auth', '/verify']
+function isPublicPath(pathname: string) {
+  return (
+    pathname === '/' ||
+    pathname === '/login' ||
+    pathname === '/verify' ||
+    pathname.startsWith('/api/auth/') ||
+    pathname.startsWith('/api/documents/verify/')
+  )
+}
 
 export async function middleware(req: NextRequest) {
   const { nextUrl } = req
 
-  const isPublicRoute = publicRoutes.some((route) => nextUrl.pathname.startsWith(route))
-
-  if (isPublicRoute) {
+  if (isPublicPath(nextUrl.pathname)) {
     return NextResponse.next()
   }
 

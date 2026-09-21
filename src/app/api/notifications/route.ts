@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
+import { withAuth, type SessionUser } from '@/lib/auth/helpers'
 
 const NOTIFICATIONS_LIMIT = 50
 
 // GET /api/notifications - list the tenant's most recent notifications + unread count
-async function handleGet(_user: SessionUser, tenantId: string, _request: NextRequest) {
+async function handleGet(user: SessionUser, _request: NextRequest) {
   try {
+    if (!user.tenantId) {
+      return NextResponse.json({ notifications: [], unreadCount: 0 })
+    }
+
+    const tenantId = user.tenantId
     const where = { tenantId }
 
     const [notifications, unreadCount] = await Promise.all([
@@ -33,8 +38,13 @@ const NOTIFICATION_ACTIONS = ['read', 'read-all'] as const
 
 // PUT /api/notifications?id=X - mark one notification read (action: 'read')
 // PUT /api/notifications - mark every unread notification for the tenant read (action: 'read-all')
-async function handlePut(_user: SessionUser, tenantId: string, request: NextRequest) {
+async function handlePut(user: SessionUser, request: NextRequest) {
   try {
+    if (!user.tenantId) {
+      return NextResponse.json({ count: 0 })
+    }
+
+    const tenantId = user.tenantId
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
 
@@ -82,5 +92,5 @@ async function handlePut(_user: SessionUser, tenantId: string, request: NextRequ
   }
 }
 
-export const GET = withTenantAuth(handleGet)
-export const PUT = withTenantAuth(handlePut)
+export const GET = withAuth(handleGet)
+export const PUT = withAuth(handlePut)
