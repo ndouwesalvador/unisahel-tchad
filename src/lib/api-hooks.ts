@@ -111,8 +111,18 @@ export function useHrStaff() {
   return useSimpleGet('hrStaff', '/api/hr');
 }
 
-export function useAcademicYears() {
-  return useSimpleGet('academicYears', '/api/academic-years');
+export function useAcademicYears(options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: ['academicYears'],
+    enabled: options?.enabled ?? true,
+    queryFn: async () => {
+      const res = await fetch('/api/academic-years');
+      if (!res.ok) {
+        throw new Error('Failed to fetch academicYears');
+      }
+      return res.json();
+    },
+  });
 }
 
 export function useTenants() {
