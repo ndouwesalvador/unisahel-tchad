@@ -81,6 +81,7 @@ export const authConfig = {
           tenantId: user.tenantId,
           tenantName: user.tenant?.name,
           tenantSlug: user.tenant?.slug,
+          tenantAcademicSystem: user.tenant?.academicSystem,
           image: user.photo,
           mustChangePassword: user.mustChangePassword,
         }
@@ -96,6 +97,7 @@ export const authConfig = {
         token.tenantId = raw.tenantId as string | null
         token.tenantName = raw.tenantName as string
         token.tenantSlug = raw.tenantSlug as string
+        token.tenantAcademicSystem = raw.tenantAcademicSystem as string
         token.firstName = raw.firstName as JWT['firstName']
         token.lastName = raw.lastName as JWT['lastName']
         token.mustChangePassword = Boolean(raw.mustChangePassword)
@@ -117,6 +119,7 @@ export const authConfig = {
         session.user.tenantId = raw.tenantId as string | null
         session.user.tenantName = raw.tenantName as string
         session.user.tenantSlug = raw.tenantSlug as string
+        session.user.tenantAcademicSystem = raw.tenantAcademicSystem as string
         session.user.firstName = raw.firstName as Session['user']['firstName']
         session.user.lastName = raw.lastName as Session['user']['lastName']
         session.user.mustChangePassword = Boolean(raw.mustChangePassword)

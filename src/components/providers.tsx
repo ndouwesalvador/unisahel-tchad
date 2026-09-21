@@ -28,6 +28,7 @@ function SessionSync() {
         tenantName: u.tenantName,
         tenantLogo: u.tenantLogo,
         tenantSlug: u.tenantSlug,
+        tenantAcademicSystem: u.tenantAcademicSystem,
         mustChangePassword: Boolean(u.mustChangePassword),
       })
     } else {

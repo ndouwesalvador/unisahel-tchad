@@ -3,7 +3,9 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { motion } from 'framer-motion'
+import { useQueryClient } from '@tanstack/react-query'
 import { useScholarships } from '@/lib/api-hooks'
+import { exportToExcel } from '@/lib/export'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -73,6 +75,7 @@ interface Scholarship {
   beneficiaires: number
   status: 'active' | 'cloturee' | 'en_attente'
   duration: string
+  eligibility: string
 }
 
 // ─── API Mapping ────────────────────────────────────────────────────────────
@@ -128,6 +131,7 @@ function mapScholarship(r: ScholarshipRecord): Scholarship {
     beneficiaires: r.currentCount ?? 0,
     status,
     duration: r.duration || '',
+    eligibility: r.eligibility || '',
   }
 }
 
@@ -222,13 +226,18 @@ function formatShort(amount: number) {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function ScholarshipsPage() {
+  const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
   const [showNewScholarship, setShowNewScholarship] = useState(false)
+  const [selectedScholarship, setSelectedScholarship] = useState<Scholarship | null>(null)
+  const [editingScholarship, setEditingScholarship] = useState<Scholarship | null>(null)
   const [programFilter, setProgramFilter] = useState('tous')
   const [levelFilter, setLevelFilter] = useState('tous')
   const [statusFilter, setStatusFilter] = useState('tous')
   const [scholarshipSearch, setScholarshipSearch] = useState('')
-  const [newScholarshipForm, setNewScholarshipForm] = useState({ name: '', type: '', budget: '', duree: '', maxBeneficiaires: '' })
+  const [newScholarshipForm, setNewScholarshipForm] = useState({ name: '', type: '', budget: '', duree: '', maxBeneficiaires: '', eligibility: '' })
+  const [isSavingScholarship, setIsSavingScholarship] = useState(false)
+  const [deletingScholarshipId, setDeletingScholarshipId] = useState<string | null>(null)
 
   const { data: scholarshipsQuery, isLoading } = useScholarships()
   const scholarships: Scholarship[] = (scholarshipsQuery?.scholarships || []).map(mapScholarship)
@@ -260,18 +269,26 @@ export function ScholarshipsPage() {
   })
 
   // Financial summary data
-  const budgetByType = [
-    { type: 'Merite', amount: 15000000, color: '#2d7a4f' },
-    { type: 'Gouvernemental', amount: 10000000, color: '#1a2744' },
-    { type: 'Besoin', amount: 8000000, color: '#d4a853' },
-    { type: 'International', amount: 5000000, color: '#6366f1' },
-    { type: 'Urgence', amount: 3000000, color: '#c62828' },
-    { type: 'Recherche', amount: 2000000, color: '#8b5cf6' },
-    { type: 'Echange', amount: 1500000, color: '#0891b2' },
-    { type: 'Sportif', amount: 500000, color: '#ea580c' },
-  ].map(item => ({
-    ...item,
-    percent: totalBudget > 0 ? Math.round((item.amount / totalBudget) * 100) : 0,
+  const typeColors: Record<Scholarship['type'], string> = {
+    merite: '#2d7a4f',
+    besoin: '#d4a853',
+    gouvernemental: '#1a2744',
+    international: '#6366f1',
+    urgence: '#c62828',
+    recherche: '#8b5cf6',
+    echange: '#0891b2',
+    sportif: '#ea580c',
+  }
+  const budgetByType = Object.entries(
+    scholarships.reduce<Record<string, number>>((acc, scholarship) => {
+      acc[scholarship.type] = (acc[scholarship.type] || 0) + scholarship.budget
+      return acc
+    }, {})
+  ).map(([type, amount]) => ({
+    type: typeConfig[type]?.label || type,
+    amount,
+    color: typeColors[type as Scholarship['type']] || '#64748b',
+    percent: totalBudget > 0 ? Math.round((amount / totalBudget) * 100) : 0,
   }))
 
   const totalCommitted = beneficiaries.filter(b => b.status === 'beneficiaire').reduce((acc, b) => acc + b.amount, 0)
@@ -280,7 +297,87 @@ export function ScholarshipsPage() {
     return acc + (s.budget - committed)
   }, 0)
 
-  const maxBudget = Math.max(...budgetByType.map(b => b.amount))
+  const maxBudget = Math.max(0, ...budgetByType.map(b => b.amount))
+
+  const resetScholarshipForm = () => {
+    setNewScholarshipForm({ name: '', type: '', budget: '', duree: '', maxBeneficiaires: '', eligibility: '' })
+    setEditingScholarship(null)
+  }
+
+  const openEditScholarship = (scholarship: Scholarship) => {
+    setEditingScholarship(scholarship)
+    setNewScholarshipForm({
+      name: scholarship.name,
+      type: scholarship.type,
+      budget: String(scholarship.budget || ''),
+      duree: scholarship.duration,
+      maxBeneficiaires: String(scholarship.maxBeneficiaires || ''),
+      eligibility: scholarship.eligibility,
+    })
+    setShowNewScholarship(true)
+  }
+
+  const saveScholarship = async () => {
+    if (!newScholarshipForm.name.trim()) {
+      toast.error('Nom requis')
+      return
+    }
+
+    setIsSavingScholarship(true)
+    try {
+      const payload = {
+        name: newScholarshipForm.name.trim(),
+        type: newScholarshipForm.type || 'merite',
+        budget: Number(newScholarshipForm.budget || 0),
+        duration: newScholarshipForm.duree || null,
+        eligibility: newScholarshipForm.eligibility || null,
+        maxBeneficiaries: newScholarshipForm.maxBeneficiaires ? Number(newScholarshipForm.maxBeneficiaires) : null,
+      }
+      const res = await fetch('/api/scholarships', {
+        method: editingScholarship ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editingScholarship ? { id: editingScholarship.id, ...payload } : payload),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Echec de l enregistrement')
+      toast.success(editingScholarship ? 'Bourse modifiee' : 'Bourse creee')
+      queryClient.invalidateQueries({ queryKey: ['scholarships'] })
+      setShowNewScholarship(false)
+      resetScholarshipForm()
+    } catch (error) {
+      toast.error('Erreur', { description: error instanceof Error ? error.message : 'Echec de l enregistrement' })
+    } finally {
+      setIsSavingScholarship(false)
+    }
+  }
+
+  const deleteScholarship = async (scholarship: Scholarship) => {
+    setDeletingScholarshipId(scholarship.id)
+    try {
+      const res = await fetch(`/api/scholarships?id=${encodeURIComponent(scholarship.id)}`, { method: 'DELETE' })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Echec de la suppression')
+      toast.success('Bourse supprimee')
+      queryClient.invalidateQueries({ queryKey: ['scholarships'] })
+    } catch (error) {
+      toast.error('Suppression impossible', { description: error instanceof Error ? error.message : 'Echec de la suppression' })
+    } finally {
+      setDeletingScholarshipId(null)
+    }
+  }
+
+  const exportScholarships = () => {
+    exportToExcel(filteredScholarships.map((s) => ({
+      Nom: s.name,
+      Type: typeConfig[s.type]?.label || s.type,
+      Budget: s.budget,
+      Beneficiaires: s.beneficiaires,
+      Maximum: s.maxBeneficiaires,
+      Statut: scholarshipStatusConfig[s.status]?.label || s.status,
+      Duree: s.duration,
+      Eligibilite: s.eligibility,
+    })), 'bourses')
+  }
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -309,7 +406,7 @@ export function ScholarshipsPage() {
           <p className="text-sm text-gray-500">Gestion des bourses et de l&apos;aide financiere aux etudiants</p>
         </div>
         <div className="flex gap-2">
-          <Dialog open={showNewScholarship} onOpenChange={setShowNewScholarship}>
+          <Dialog open={showNewScholarship} onOpenChange={(open) => { setShowNewScholarship(open); if (!open) resetScholarshipForm() }}>
             <DialogTrigger asChild>
               <Button size="sm" className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs">
                 <Plus className="size-3.5 mr-1.5" />
@@ -318,7 +415,7 @@ export function ScholarshipsPage() {
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Creer une nouvelle bourse</DialogTitle>
+                <DialogTitle>{editingScholarship ? 'Modifier la bourse' : 'Creer une nouvelle bourse'}</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
@@ -368,6 +465,8 @@ export function ScholarshipsPage() {
                   <textarea
                     className="w-full min-h-[80px] rounded-md border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f] focus:border-transparent resize-none"
                     placeholder="Moyenne minimale, niveau d'etude, etc."
+                    value={newScholarshipForm.eligibility}
+                    onChange={(e) => setNewScholarshipForm(f => ({ ...f, eligibility: e.target.value }))}
                   />
                 </div>
                 <div className="space-y-2">
@@ -375,8 +474,8 @@ export function ScholarshipsPage() {
                   <Input type="number" placeholder="50" value={newScholarshipForm.maxBeneficiaires} onChange={(e) => setNewScholarshipForm(f => ({ ...f, maxBeneficiaires: e.target.value }))} />
                 </div>
                 <div className="flex gap-2 pt-2">
-                  <Button className="flex-1 bg-[#2d7a4f] hover:bg-[#236b40] text-white" onClick={() => { setShowNewScholarship(false); toast.success('Bourse créée', { description: `${newScholarshipForm.name || 'Nouveau programme'} ajouté avec succès` }); setNewScholarshipForm({ name: '', type: '', budget: '', duree: '', maxBeneficiaires: '' }) }}>
-                    Creer la bourse
+                  <Button className="flex-1 bg-[#2d7a4f] hover:bg-[#236b40] text-white" onClick={saveScholarship} disabled={isSavingScholarship}>
+                    {isSavingScholarship ? 'Enregistrement...' : editingScholarship ? 'Enregistrer' : 'Creer la bourse'}
                   </Button>
                   <Button variant="outline" className="flex-1" onClick={() => setShowNewScholarship(false)}>
                     Annuler
@@ -385,7 +484,7 @@ export function ScholarshipsPage() {
               </div>
             </DialogContent>
           </Dialog>
-          <Button size="sm" variant="outline" className="text-xs border-[#1a274430] text-[#1a2744] hover:bg-[#1a274408]" onClick={() => toast.success('Export en cours', { description: 'Fichier des programmes de bourses' })}>
+          <Button size="sm" variant="outline" className="text-xs border-[#1a274430] text-[#1a2744] hover:bg-[#1a274408]" onClick={exportScholarships}>
             <Download className="size-3.5 mr-1.5" />
             Exporter
           </Button>
@@ -559,17 +658,21 @@ export function ScholarshipsPage() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-40">
-                              <DropdownMenuItem className="text-xs" onClick={() => toast.info('Détails de la bourse')}>
+                              <DropdownMenuItem className="text-xs" onClick={() => setSelectedScholarship(scholarship)}>
                                 <Eye className="size-3.5 mr-2" />
                                 Voir details
                               </DropdownMenuItem>
-                              <DropdownMenuItem className="text-xs" onClick={() => toast.info('Mode édition')}>
+                              <DropdownMenuItem className="text-xs" onClick={() => openEditScholarship(scholarship)}>
                                 <Edit3 className="size-3.5 mr-2" />
                                 Modifier
                               </DropdownMenuItem>
-                              <DropdownMenuItem className="text-xs text-red-600" onClick={() => toast.error('Bourse supprimée')}>
+                              <DropdownMenuItem
+                                className="text-xs text-red-600"
+                                disabled={deletingScholarshipId === scholarship.id}
+                                onClick={() => deleteScholarship(scholarship)}
+                              >
                                 <Trash2 className="size-3.5 mr-2" />
-                                Supprimer
+                                {deletingScholarshipId === scholarship.id ? 'Suppression...' : 'Supprimer'}
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -597,6 +700,44 @@ export function ScholarshipsPage() {
           </CardContent>
         </Card>
       </motion.div>
+
+      <Dialog open={Boolean(selectedScholarship)} onOpenChange={(open) => !open && setSelectedScholarship(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Details de la bourse</DialogTitle>
+          </DialogHeader>
+          {selectedScholarship && (
+            <div className="space-y-4 py-2">
+              <div>
+                <p className="text-xs text-gray-500">Nom</p>
+                <p className="text-sm font-semibold text-[#1a2744]">{selectedScholarship.name}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-xs text-gray-500">Type</p>
+                  <p className="text-sm text-[#1a2744]">{typeConfig[selectedScholarship.type]?.label || selectedScholarship.type}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Statut</p>
+                  <p className="text-sm text-[#1a2744]">{scholarshipStatusConfig[selectedScholarship.status]?.label || selectedScholarship.status}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Budget</p>
+                  <p className="text-sm text-[#1a2744]">{formatFCFA(selectedScholarship.budget)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Beneficiaires</p>
+                  <p className="text-sm text-[#1a2744]">{selectedScholarship.beneficiaires}/{selectedScholarship.maxBeneficiaires || 0}</p>
+                </div>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">Criteres d eligibilite</p>
+                <p className="text-sm text-[#1a2744] whitespace-pre-wrap">{selectedScholarship.eligibility || 'Non renseignes'}</p>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* ── Beneficiary Management Section ───────────────────────────────────── */}
       <motion.div variants={itemVariants}>

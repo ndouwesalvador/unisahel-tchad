@@ -74,6 +74,7 @@ export interface AppUser {
   tenantName?: string
   tenantLogo?: string
   tenantSlug?: string
+  tenantAcademicSystem?: string
   mustChangePassword?: boolean
 }
 
@@ -104,6 +105,7 @@ interface AppState {
   setView: (view: AppView) => void
   goBack: () => void
   login: (user: AppUser) => void
+  updateUser: (updates: Partial<AppUser>) => void
   logout: () => void
   setTenant: (tenantId: string) => void
   setAcademicYear: (yearId: string) => void
@@ -156,6 +158,10 @@ export const useAppStore = create<AppState>((set, _get) => ({
     currentView: 'dashboard',
     selectedTenantId: user.tenantId 
   }),
+
+  updateUser: (updates) => set((state) => ({
+    user: state.user ? { ...state.user, ...updates } : state.user,
+  })),
   
   logout: () => set({ 
     user: null, 

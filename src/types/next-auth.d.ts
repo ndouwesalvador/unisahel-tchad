@@ -8,6 +8,7 @@ declare module 'next-auth' {
     tenantId: string | null
     tenantName?: string
     tenantSlug?: string
+    tenantAcademicSystem?: string
     firstName: string
     lastName: string
     mustChangePassword?: boolean
@@ -23,6 +24,7 @@ declare module 'next-auth' {
       tenantId: string | null
       tenantName?: string
       tenantSlug?: string
+      tenantAcademicSystem?: string
       firstName: string
       lastName: string
       mustChangePassword: boolean
@@ -37,6 +39,7 @@ declare module 'next-auth/jwt' {
     tenantId: string | null
     tenantName?: string
     tenantSlug?: string
+    tenantAcademicSystem?: string
     firstName: string
     lastName: string
     mustChangePassword: boolean
