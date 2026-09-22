@@ -57,17 +57,17 @@ import {
   Zap,
 } from 'lucide-react'
 
-// Only types with a real backend template (see /api/documents/generate) are
-// selectable. The rest are listed for reference but marked "bientot disponible"
-// rather than silently generating the wrong document (previous behavior).
+// Only types that can be generated safely from this screen are selectable.
+// Other document templates may exist server-side, but they require a dedicated
+// context that this screen does not provide yet.
 const documentTypeList = [
-  { key: 'releve_notes', apiType: 'RELEVE_NOTES', label: 'Releve de notes', icon: FileText, implemented: true, tooltip: 'Releve officiel des notes par semestre, valide par le secretaire academique' },
-  { key: 'attestation_inscription', apiType: 'ATTESTATION_INSCRIPTION', label: 'Attestation d\'inscription', icon: BookOpen, implemented: true, tooltip: 'Attestation confirmant l\'inscription administrative de l\'etudiant' },
-  { key: 'certificat_scolarite', apiType: 'CERTIFICAT_SCOLARITE', label: 'Certificat de scolarite', icon: ScrollText, implemented: true, tooltip: 'Certificat prouvant la frequentation reguliere des cours' },
-  { key: 'pv_deliberation', apiType: 'PV_DELIBERATION', label: 'PV de deliberation', icon: ClipboardList, implemented: true, tooltip: 'Proces-verbal officiel des deliberations du jury' },
-  { key: 'attestation_reussite', apiType: null, label: 'Attestation de reussite', icon: Award, implemented: false, tooltip: 'Bientot disponible' },
-  { key: 'carte_etudiant', apiType: null, label: 'Carte etudiant', icon: CreditCard, implemented: false, tooltip: 'Bientot disponible' },
-  { key: 'attestation_stage', apiType: null, label: 'Attestation de stage', icon: Briefcase, implemented: false, tooltip: 'Bientot disponible' },
+  { key: 'releve_notes', apiType: 'RELEVE_NOTES', label: 'Releve de notes', icon: FileText, implemented: true, requiresStudent: true, tooltip: 'Releve officiel des notes par semestre, genere pour un etudiant selectionne' },
+  { key: 'attestation_inscription', apiType: 'ATTESTATION_INSCRIPTION', label: 'Attestation d\'inscription', icon: BookOpen, implemented: true, requiresStudent: true, tooltip: 'Attestation confirmant l\'inscription administrative de l\'etudiant selectionne' },
+  { key: 'certificat_scolarite', apiType: 'CERTIFICAT_SCOLARITE', label: 'Certificat de scolarite', icon: ScrollText, implemented: true, requiresStudent: true, tooltip: 'Certificat prouvant la frequentation reguliere de l\'etudiant selectionne' },
+  { key: 'pv_deliberation', apiType: 'PV_DELIBERATION', label: 'PV de deliberation', icon: ClipboardList, implemented: false, requiresStudent: false, tooltip: 'A generer depuis un jury de deliberation selectionne' },
+  { key: 'attestation_reussite', apiType: null, label: 'Attestation de reussite', icon: Award, implemented: false, requiresStudent: true, tooltip: 'Modele non configure dans ce module' },
+  { key: 'carte_etudiant', apiType: null, label: 'Carte etudiant', icon: CreditCard, implemented: false, requiresStudent: true, tooltip: 'Modele non configure dans ce module' },
+  { key: 'attestation_stage', apiType: null, label: 'Attestation de stage', icon: Briefcase, implemented: false, requiresStudent: true, tooltip: 'Modele non configure dans ce module' },
 ]
 
 interface GeneratedDoc {
@@ -159,10 +159,27 @@ export function DocumentsPage() {
 
   const animatedDocsMonth = useCountUp(docsData?.stats?.thisMonth ?? 0, 1400)
   const animatedPending = useCountUp(docsData?.stats?.pending ?? 0, 1200)
+  const selectedDocumentType = documentTypeList.find((dt) => dt.key === selectedType)
+  const canGenerateSelectedDocument = Boolean(
+    selectedDocumentType?.implemented &&
+    selectedDocumentType.apiType &&
+    (!selectedDocumentType.requiresStudent || selectedStudentId)
+  )
 
   const generateDoc = useCallback(async (sign: boolean = false, override?: { type: string; studentId: string | null; academicYearId: string | null }) => {
     const apiType = override?.type ?? documentTypeList.find((dt) => dt.key === selectedType)?.apiType
+    const docType = override
+      ? documentTypeList.find((dt) => dt.apiType === override.type)
+      : documentTypeList.find((dt) => dt.key === selectedType)
     if (!apiType || !user) return
+    if (!docType?.implemented) {
+      toast.error('Document non configuré', { description: 'Ce type ne peut pas être généré depuis cet écran.' })
+      return
+    }
+    if (docType.requiresStudent && !(override?.studentId || selectedStudentId)) {
+      toast.error('Étudiant requis', { description: 'Sélectionnez un étudiant avant de générer ce document.' })
+      return
+    }
     const loading = sign ? setIsGeneratingSigned : setIsGenerating
     loading(true)
 
@@ -443,7 +460,7 @@ export function DocumentsPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-[#d4a853]">{totalQRCodes}</p>
-                <p className="text-[11px] text-gray-500">QR codes actifs</p>
+                <p className="text-[11px] text-gray-500">Codes de verification</p>
               </div>
             </CardContent>
           </Card>
@@ -466,7 +483,7 @@ export function DocumentsPage() {
                 <SelectContent>
                   {documentTypeList.map(dt => (
                     <SelectItem key={dt.key} value={dt.key} disabled={!dt.implemented}>
-                      {dt.label}{!dt.implemented ? ' (bientot disponible)' : ''}
+                      {dt.label}{!dt.implemented ? ' (non configuré)' : ''}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -517,23 +534,33 @@ export function DocumentsPage() {
                   variant="outline"
                   size="sm"
                   className="text-xs flex-1 h-9"
-                  disabled={!selectedType || isGenerating}
+                  disabled={!canGenerateSelectedDocument || isGenerating}
                   onClick={() => generateDoc(false)}
                 >
                   {isGenerating ? <Loader2 className="size-3.5 mr-1.5 animate-spin" /> : <Eye className="size-3.5 mr-1.5" />}
-                  Apercu
+                  Generer PDF
                 </Button>
               </div>
               <Button
                 size="sm"
                 className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs h-9"
-                disabled={!selectedType || isGeneratingSigned}
+                disabled={!canGenerateSelectedDocument || isGeneratingSigned}
                 onClick={() => generateDoc(true)}
               >
                 {isGeneratingSigned ? <Loader2 className="size-3.5 mr-1.5 animate-spin" /> : <CheckCircle2 className="size-3.5 mr-1.5" />}
                 Generer et signer
               </Button>
             </div>
+            {selectedDocumentType?.requiresStudent && !selectedStudentId && (
+              <p className="text-xs text-gray-500 mt-2">
+                Sélectionnez un étudiant pour activer la génération de ce document.
+              </p>
+            )}
+            {selectedDocumentType && !selectedDocumentType.implemented && (
+              <p className="text-xs text-[#d4a853] mt-2">
+                Ce type n’est pas générable depuis cet écran : {selectedDocumentType.tooltip}.
+              </p>
+            )}
           </CardContent>
         </Card>
 
@@ -585,7 +612,7 @@ export function DocumentsPage() {
               </CardTitle>
               <Badge className="text-[10px] bg-[#2d7a4f15] text-[#2d7a4f] border-0">
                 <Shield className="size-3 mr-1" />
-                QR Code anti-fraude
+                Codes de verification
               </Badge>
             </div>
           </CardHeader>
@@ -648,8 +675,12 @@ export function DocumentsPage() {
                                   size="sm"
                                   className="h-7 text-xs text-gray-500 hover:text-gray-700"
                                   onClick={() => {
-                                    const apiType = documentTypeList.find((dt) => dt.key === doc.typeKey)?.apiType
-                                    if (apiType) generateDoc(false, { type: apiType, studentId: doc.studentId, academicYearId: doc.academicYearId })
+                                    const docType = documentTypeList.find((dt) => dt.key === doc.typeKey)
+                                    if (docType?.apiType && docType.implemented) {
+                                      generateDoc(false, { type: docType.apiType, studentId: doc.studentId, academicYearId: doc.academicYearId })
+                                    } else {
+                                      toast.error('Régénération indisponible', { description: 'Ce type de document n’est pas configuré depuis cet écran.' })
+                                    }
                                   }}
                                 >
                                   <Download className="size-3.5 mr-1" />
@@ -711,7 +742,7 @@ export function DocumentsPage() {
                           </div>
                           <div className="text-center">
                             <p className="text-[11px] font-medium text-[#1a2744] leading-tight">{dt.label}</p>
-                            <p className="text-[10px] text-gray-400 mt-0.5">{dt.implemented ? `${count} generes` : 'Bientot disponible'}</p>
+                            <p className="text-[10px] text-gray-400 mt-0.5">{dt.implemented ? `${count} generes` : 'Non configuré'}</p>
                           </div>
                         </div>
                       </TooltipTrigger>
@@ -737,7 +768,7 @@ export function DocumentsPage() {
               <div className="flex items-start gap-3 p-3 rounded-lg bg-[#2d7a4f08] border border-[#2d7a4f15]">
                 <Info className="size-5 text-[#2d7a4f] shrink-0 mt-0.5" />
                 <div className="space-y-1.5">
-                  <p className="text-xs text-[#1a2744] font-medium">Systeme de verification securise</p>
+                  <p className="text-xs text-[#1a2744] font-medium">Verification par code unique</p>
                   <p className="text-[11px] text-gray-500 leading-relaxed">
                     Chaque document officiel est muni d un code QR unique permettant sa verification instantanee. 
                     Scannez le code ou saisissez le code de verification pour confirmer l authenticite.
@@ -751,7 +782,7 @@ export function DocumentsPage() {
                 </div>
                 <div className="flex items-center gap-2 text-xs text-gray-600">
                   <QrCode className="size-3.5 text-[#2d7a4f]" />
-                  <span>QR code crypte anti-fraude</span>
+                  <span>QR code pointant vers la page de verification</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-gray-600">
                   <CheckCircle2 className="size-3.5 text-[#2d7a4f]" />
@@ -759,7 +790,7 @@ export function DocumentsPage() {
                 </div>
                 <div className="flex items-center gap-2 text-xs text-gray-600">
                   <Shield className="size-3.5 text-[#2d7a4f]" />
-                  <span>Signature numerique conforme</span>
+                  <span>Validation institutionnelle enregistrée en base</span>
                 </div>
               </div>
               <Button variant="outline" className="w-full text-xs h-8 text-[#2d7a4f] border-[#2d7a4f30] hover:bg-[#2d7a4f10]" onClick={() => setView('verify')}>
