@@ -98,7 +98,7 @@ async function handlePost(_user: SessionUser, tenantId: string, request: NextReq
   }
 }
 
-const JUSTIFICATION_REVIEW_ACTIONS = ['approve', 'reject'] as const
+const ATTENDANCE_UPDATE_ACTIONS = ['approve', 'reject', 'updateStatus'] as const
 
 // PUT /api/attendance?id=X - review a pending absence-justification request
 // action=approve upgrades the record to status: 'JUSTIFIED'
@@ -120,11 +120,26 @@ async function handlePut(_user: SessionUser, tenantId: string, request: NextRequ
     const body = await request.json()
     const { action } = body
 
-    if (!action || !JUSTIFICATION_REVIEW_ACTIONS.includes(action)) {
+    if (!action || !ATTENDANCE_UPDATE_ACTIONS.includes(action)) {
       return NextResponse.json(
-        { error: `action must be one of: ${JUSTIFICATION_REVIEW_ACTIONS.join(', ')}` },
+        { error: `action must be one of: ${ATTENDANCE_UPDATE_ACTIONS.join(', ')}` },
         { status: 400 }
       )
+    }
+
+    if (action === 'updateStatus') {
+      const validStatuses = ['PRESENT', 'ABSENT', 'JUSTIFIED', 'LATE']
+      if (!body.status || !validStatuses.includes(body.status)) {
+        return NextResponse.json(
+          { error: `status must be one of: ${validStatuses.join(', ')}` },
+          { status: 400 }
+        )
+      }
+      const record = await db.attendance.update({
+        where: { id },
+        data: { status: body.status },
+      })
+      return NextResponse.json({ record })
     }
 
     const record = await db.attendance.update({

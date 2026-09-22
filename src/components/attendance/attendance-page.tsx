@@ -1,7 +1,7 @@
 'use client'
 
 import { exportToExcel } from '@/lib/export'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useAttendance } from '@/lib/api-hooks'
@@ -11,6 +11,14 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import {
   Table,
   TableBody,
@@ -62,11 +70,10 @@ import {
   BarChart3,
   Sun,
   Moon,
-  Shield,
   Bell,
 } from 'lucide-react'
 
-// ─── Demo Data ────────────────────────────────────────────────────────────────
+// ─── Real data mapping ────────────────────────────────────────────────────────
 
 type AttendanceStatus = 'Present' | 'Absent' | 'Justifie' | 'Retard'
 
@@ -81,6 +88,7 @@ interface AttendanceRecord {
   justification: string
   program: string
   level: string
+  date: string
 }
 
 // ─── API Mapping ────────────────────────────────────────────────────────────
@@ -118,6 +126,7 @@ function mapAttendance(record: ApiAttendanceRecord): AttendanceRecord {
     justification: record.justification || '-',
     program: record.program || '',
     level: record.level || '',
+    date: record.date,
   }
 }
 
@@ -161,44 +170,34 @@ interface SanctionEntry {
   totalAbsences: number
   level: 'avertissement' | 'mise_en_demeure' | 'exclusion'
   program: string
+  latestDate: string
 }
 
-const demoSanctions: SanctionEntry[] = [
-  { id: '1', studentName: 'ABDOULAYE Ibrahim', matricule: 'UDN/L2/2024/002', absencesWeek: 4, totalAbsences: 12, level: 'mise_en_demeure', program: 'Droit' },
-  { id: '2', studentName: 'SEID Ibrahim', matricule: 'UDN/L1/2024/012', absencesWeek: 3, totalAbsences: 9, level: 'avertissement', program: 'Medecine' },
-  { id: '3', studentName: 'RAMADAN Halime', matricule: 'UDN/L2/2024/017', absencesWeek: 3, totalAbsences: 7, level: 'avertissement', program: 'Informatique' },
-  { id: '4', studentName: 'BICHARA Abdelkerim', matricule: 'UDN/M2/2024/007', absencesWeek: 5, totalAbsences: 15, level: 'mise_en_demeure', program: 'Economie' },
-  { id: '5', studentName: 'MALLAH Adoum', matricule: 'UDN/L1/2024/020', absencesWeek: 8, totalAbsences: 22, level: 'exclusion', program: 'Medecine' },
-]
+interface AttendanceForm {
+  studentName: string
+  matricule: string
+  course: string
+  timeSlot: string
+  status: 'PRESENT' | 'ABSENT' | 'JUSTIFIED' | 'LATE'
+  duration: string
+  justification: string
+  program: string
+  level: string
+  date: string
+}
 
-const weeklyData = [
-  { day: 'Lun', rate: 95, hours: 24 },
-  { day: 'Mar', rate: 92, hours: 22 },
-  { day: 'Mer', rate: 88, hours: 20 },
-  { day: 'Jeu', rate: 91, hours: 23 },
-  { day: 'Ven', rate: 78, hours: 18 },
-  { day: 'Sam', rate: 65, hours: 8 },
-]
-
-const courseStats = [
-  { course: 'Algorithmique avancee', rate: 96, color: '#2d7a4f', students: 45 },
-  { course: 'Droit constitutionnel', rate: 88, color: '#1a2744', students: 62 },
-  { course: 'Macroeconomie', rate: 82, color: '#d4a853', students: 38 },
-  { course: 'Anatomie P1', rate: 91, color: '#2d7a4f', students: 55 },
-  { course: 'Bases de donnees', rate: 94, color: '#2d7a4f', students: 42 },
-  { course: 'Droit civil', rate: 85, color: '#1a2744', students: 58 },
-  { course: 'Physiologie', rate: 79, color: '#d4a853', students: 50 },
-  { course: 'Reseau et systeme', rate: 93, color: '#2d7a4f', students: 40 },
-]
-
-const monthlyTrend = [
-  { month: 'Oct', rate: 89 },
-  { month: 'Nov', rate: 91 },
-  { month: 'Dec', rate: 85 },
-  { month: 'Jan', rate: 92 },
-  { month: 'Fev', rate: 90 },
-  { month: 'Mar', rate: 93 },
-]
+const initialAttendanceForm: AttendanceForm = {
+  studentName: '',
+  matricule: '',
+  course: '',
+  timeSlot: '08:00-10:00',
+  status: 'PRESENT',
+  duration: '2h',
+  justification: '',
+  program: '',
+  level: '',
+  date: new Date().toISOString().slice(0, 10),
+}
 
 // ─── Config Maps ──────────────────────────────────────────────────────────────
 
@@ -246,25 +245,113 @@ export function AttendancePage() {
   const [filterLevel, setFilterLevel] = useState('tous')
   const queryClient = useQueryClient()
   const { data: attendanceQuery, isLoading } = useAttendance()
-  const attendanceRecords: AttendanceRecord[] = (attendanceQuery?.records || []).map(mapAttendance)
-  const justificationEntries: JustificationEntry[] = (attendanceQuery?.pendingJustifications || []).map(mapJustification)
+  const attendanceRecords: AttendanceRecord[] = useMemo(
+    () => (attendanceQuery?.records || []).map(mapAttendance),
+    [attendanceQuery]
+  )
+  const justificationEntries: JustificationEntry[] = useMemo(
+    () => (attendanceQuery?.pendingJustifications || []).map(mapJustification),
+    [attendanceQuery]
+  )
   const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>([])
   const [offlineMode, setOfflineMode] = useState(false)
+  const [showSignalementDialog, setShowSignalementDialog] = useState(false)
+  const [showJustificationDialog, setShowJustificationDialog] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [attendanceForm, setAttendanceForm] = useState<AttendanceForm>(initialAttendanceForm)
 
   useEffect(() => {
     setAttendanceData(attendanceRecords)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [attendanceQuery])
+  }, [attendanceRecords])
+
+  const updateAttendanceForm = (updates: Partial<AttendanceForm>) => {
+    setAttendanceForm((form) => ({ ...form, ...updates }))
+  }
+
+  const fillFormFromRecord = (record: AttendanceRecord) => {
+    setAttendanceForm({
+      studentName: record.studentName,
+      matricule: record.matricule,
+      course: record.course,
+      timeSlot: record.timeSlot,
+      status: record.status === 'Present' ? 'PRESENT' : record.status === 'Absent' ? 'ABSENT' : record.status === 'Justifie' ? 'JUSTIFIED' : 'LATE',
+      duration: record.duration === '-' ? '' : record.duration,
+      justification: record.justification === '-' ? '' : record.justification,
+      program: record.program,
+      level: record.level,
+      date: new Date(record.date).toISOString().slice(0, 10),
+    })
+  }
+
+  const createAttendanceRecord = async (forceAbsenceWithJustification = false) => {
+    const payload = {
+      ...attendanceForm,
+      status: forceAbsenceWithJustification ? 'ABSENT' : attendanceForm.status,
+      justification: attendanceForm.justification || null,
+      program: attendanceForm.program || null,
+      level: attendanceForm.level || null,
+      duration: attendanceForm.duration || null,
+    }
+
+    if (!payload.studentName.trim() || !payload.matricule.trim() || !payload.course.trim() || !payload.timeSlot.trim()) {
+      toast.error('Champs requis', { description: 'Etudiant, matricule, cours et plage horaire sont obligatoires.' })
+      return
+    }
+    if (forceAbsenceWithJustification && !attendanceForm.justification.trim()) {
+      toast.error('Justification requise', { description: 'Ajoutez le motif de justification.' })
+      return
+    }
+
+    setIsSubmitting(true)
+    try {
+      const res = await fetch('/api/attendance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Création impossible')
+      toast.success(forceAbsenceWithJustification ? 'Justification enregistrée' : 'Signalement enregistré')
+      queryClient.invalidateQueries({ queryKey: ['attendance'] })
+      setShowSignalementDialog(false)
+      setShowJustificationDialog(false)
+      setAttendanceForm(initialAttendanceForm)
+    } catch (e) {
+      toast.error('Erreur', { description: e instanceof Error ? e.message : 'Création impossible' })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   // Toggle attendance status
-  const toggleStatus = (id: string) => {
-    setAttendanceData(prev => prev.map(record => {
-      if (record.id !== id) return record
-      const statusOrder: AttendanceStatus[] = ['Present', 'Absent', 'Justifie', 'Retard']
-      const currentIdx = statusOrder.indexOf(record.status)
-      const nextStatus = statusOrder[(currentIdx + 1) % statusOrder.length]
-      return { ...record, status: nextStatus, duration: nextStatus === 'Present' ? '2h' : nextStatus === 'Retard' ? '1h' : '-', justification: nextStatus === 'Justifie' ? 'A justifier' : '-' }
-    }))
+  const toggleStatus = async (id: string) => {
+    const record = attendanceData.find((item) => item.id === id)
+    if (!record) return
+    const statusOrder: AttendanceStatus[] = ['Present', 'Absent', 'Justifie', 'Retard']
+    const apiStatus: Record<AttendanceStatus, 'PRESENT' | 'ABSENT' | 'JUSTIFIED' | 'LATE'> = {
+      Present: 'PRESENT',
+      Absent: 'ABSENT',
+      Justifie: 'JUSTIFIED',
+      Retard: 'LATE',
+    }
+    const currentIdx = statusOrder.indexOf(record.status)
+    const nextStatus = statusOrder[(currentIdx + 1) % statusOrder.length]
+
+    setAttendanceData(prev => prev.map(item => item.id === id ? { ...item, status: nextStatus } : item))
+    try {
+      const res = await fetch(`/api/attendance?id=${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'updateStatus', status: apiStatus[nextStatus] }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Mise à jour impossible')
+      toast.success('Statut mis à jour')
+      queryClient.invalidateQueries({ queryKey: ['attendance'] })
+    } catch (e) {
+      setAttendanceData(attendanceRecords)
+      toast.error('Erreur', { description: e instanceof Error ? e.message : 'Mise à jour impossible' })
+    }
   }
 
   // Approve a pending justification request (Attendance.status -> JUSTIFIED)
@@ -327,9 +414,120 @@ export function AttendancePage() {
   const presencesCount = useCountUp(presentCount, 1400)
   const tauxPresence = useCountUp(presenceRate, 1300)
 
-  // Weekly totals
+  const parseHours = (duration: string) => {
+    const value = Number.parseFloat(duration.replace(',', '.'))
+    return Number.isFinite(value) ? value : 0
+  }
+
+  const weekStart = useMemo(() => {
+    const now = new Date()
+    const day = now.getDay() || 7
+    const start = new Date(now)
+    start.setHours(0, 0, 0, 0)
+    start.setDate(now.getDate() - day + 1)
+    return start
+  }, [])
+  const weekLabel = useMemo(() => {
+    const end = new Date(weekStart)
+    end.setDate(weekStart.getDate() + 5)
+    return `${weekStart.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })} - ${end.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}`
+  }, [weekStart])
+
+  const weeklyData = useMemo(() => {
+    const days = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
+    return days.map((day, index) => {
+      const dayRecords = attendanceData.filter((record) => {
+        const date = new Date(record.date)
+        return date >= weekStart && date.getDay() === index + 1
+      })
+      const presentLike = dayRecords.filter((record) => record.status === 'Present' || record.status === 'Retard').length
+      const rate = dayRecords.length > 0 ? Math.round((presentLike / dayRecords.length) * 100) : 0
+      const hours = Math.round(dayRecords.reduce((sum, record) => sum + parseHours(record.duration), 0))
+      return { day, rate, hours, hasData: dayRecords.length > 0 }
+    })
+  }, [attendanceData, weekStart])
+
+  const courseStats = useMemo(() => {
+    const grouped = new Map<string, { total: number; presentLike: number; students: Set<string> }>()
+    for (const record of attendanceData) {
+      if (!record.course) continue
+      const current = grouped.get(record.course) || { total: 0, presentLike: 0, students: new Set<string>() }
+      current.total += 1
+      if (record.status === 'Present' || record.status === 'Retard') current.presentLike += 1
+      current.students.add(record.matricule)
+      grouped.set(record.course, current)
+    }
+    return Array.from(grouped.entries()).map(([course, data]) => {
+      const rate = data.total > 0 ? Math.round((data.presentLike / data.total) * 100) : 0
+      return {
+        course,
+        rate,
+        color: rate >= 90 ? '#2d7a4f' : rate >= 80 ? '#d4a853' : '#c62828',
+        students: data.students.size,
+      }
+    }).sort((a, b) => b.students - a.students).slice(0, 8)
+  }, [attendanceData])
+
+  const monthlyTrend = useMemo(() => {
+    const now = new Date()
+    return Array.from({ length: 6 }).map((_, offset) => {
+      const monthDate = new Date(now.getFullYear(), now.getMonth() - (5 - offset), 1)
+      const month = monthDate.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '')
+      const records = attendanceData.filter((record) => {
+        const date = new Date(record.date)
+        return date.getFullYear() === monthDate.getFullYear() && date.getMonth() === monthDate.getMonth()
+      })
+      const presentLike = records.filter((record) => record.status === 'Present' || record.status === 'Retard').length
+      const rate = records.length > 0 ? Math.round((presentLike / records.length) * 100) : 0
+      return { month, rate, hasData: records.length > 0 }
+    })
+  }, [attendanceData])
+
+  const sanctions = useMemo<SanctionEntry[]>(() => {
+    const grouped = new Map<string, { studentName: string; matricule: string; program: string; total: number; week: number; latestDate: string }>()
+    const weekEnd = new Date(weekStart)
+    weekEnd.setDate(weekStart.getDate() + 7)
+    for (const record of attendanceData) {
+      if (record.status !== 'Absent') continue
+      const current = grouped.get(record.matricule) || {
+        studentName: record.studentName,
+        matricule: record.matricule,
+        program: record.program || '-',
+        total: 0,
+        week: 0,
+        latestDate: record.date,
+      }
+      current.total += 1
+      const date = new Date(record.date)
+      if (date >= weekStart && date < weekEnd) current.week += 1
+      if (new Date(record.date) > new Date(current.latestDate)) current.latestDate = record.date
+      grouped.set(record.matricule, current)
+    }
+    return Array.from(grouped.values())
+      .filter((item) => item.week >= 3 || item.total >= 7)
+      .map((item) => {
+        const level: SanctionEntry['level'] = item.week >= 7 || item.total >= 20
+          ? 'exclusion'
+          : item.week >= 5 || item.total >= 12
+            ? 'mise_en_demeure'
+            : 'avertissement'
+        return {
+          id: item.matricule,
+          studentName: item.studentName,
+          matricule: item.matricule,
+          absencesWeek: item.week,
+          totalAbsences: item.total,
+          latestDate: item.latestDate,
+          program: item.program,
+          level,
+        }
+      })
+      .sort((a, b) => b.totalAbsences - a.totalAbsences)
+  }, [attendanceData, weekStart])
+
   const totalWeeklyHours = weeklyData.reduce((sum, d) => sum + d.hours, 0)
-  const avgWeeklyRate = Math.round(weeklyData.reduce((sum, d) => sum + d.rate, 0) / weeklyData.length)
+  const ratedWeeklyDays = weeklyData.filter((d) => d.hasData)
+  const avgWeeklyRate = ratedWeeklyDays.length > 0 ? Math.round(ratedWeeklyDays.reduce((sum, d) => sum + d.rate, 0) / ratedWeeklyDays.length) : 0
 
   // Justification stats (validees = total records already marked JUSTIFIED;
   // there is no "rejetees" concept since a rejected note just clears the
@@ -337,9 +535,17 @@ export function AttendancePage() {
   const justEnAttente = justificationEntries.length
   const justValidees = attendanceQuery?.stats?.justified ?? 0
 
-  // Time slot analysis
-  const morningRate = 91
-  const afternoonRate = 86
+  const computeSlotRate = (period: 'morning' | 'afternoon') => {
+    const periodRecords = attendanceData.filter((record) => {
+      const match = record.timeSlot.match(/\d{1,2}/)
+      const hour = match ? Number(match[0]) : 0
+      return period === 'morning' ? hour < 12 : hour >= 12
+    })
+    const presentLike = periodRecords.filter((record) => record.status === 'Present' || record.status === 'Retard').length
+    return periodRecords.length > 0 ? Math.round((presentLike / periodRecords.length) * 100) : 0
+  }
+  const morningRate = computeSlotRate('morning')
+  const afternoonRate = computeSlotRate('afternoon')
 
   // Animation variants
   const containerVariants = {
@@ -360,6 +566,102 @@ export function AttendancePage() {
 
   return (
     <TooltipProvider>
+      <Dialog open={showSignalementDialog} onOpenChange={setShowSignalementDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Nouveau signalement de présence</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="attendance-student-name">Étudiant</Label>
+              <Input id="attendance-student-name" value={attendanceForm.studentName} onChange={(e) => updateAttendanceForm({ studentName: e.target.value })} placeholder="Nom complet" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="attendance-matricule">Matricule</Label>
+              <Input id="attendance-matricule" value={attendanceForm.matricule} onChange={(e) => updateAttendanceForm({ matricule: e.target.value })} placeholder="Matricule" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="attendance-course">Cours</Label>
+              <Input id="attendance-course" value={attendanceForm.course} onChange={(e) => updateAttendanceForm({ course: e.target.value })} placeholder="Cours / UE" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="attendance-time-slot">Plage horaire</Label>
+              <Input id="attendance-time-slot" value={attendanceForm.timeSlot} onChange={(e) => updateAttendanceForm({ timeSlot: e.target.value })} placeholder="08:00-10:00" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="attendance-date">Date</Label>
+              <Input id="attendance-date" type="date" value={attendanceForm.date} onChange={(e) => updateAttendanceForm({ date: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Statut</Label>
+              <Select value={attendanceForm.status} onValueChange={(value) => updateAttendanceForm({ status: value as AttendanceForm['status'] })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="PRESENT">Présent</SelectItem>
+                  <SelectItem value="ABSENT">Absent</SelectItem>
+                  <SelectItem value="JUSTIFIED">Justifié</SelectItem>
+                  <SelectItem value="LATE">Retard</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="attendance-program">Programme</Label>
+              <Input id="attendance-program" value={attendanceForm.program} onChange={(e) => updateAttendanceForm({ program: e.target.value })} placeholder="Programme" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="attendance-level">Niveau</Label>
+              <Input id="attendance-level" value={attendanceForm.level} onChange={(e) => updateAttendanceForm({ level: e.target.value })} placeholder="Niveau" />
+            </div>
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="attendance-justification">Justification / note</Label>
+              <Textarea id="attendance-justification" value={attendanceForm.justification} onChange={(e) => updateAttendanceForm({ justification: e.target.value })} placeholder="Optionnel" />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setShowSignalementDialog(false)}>Annuler</Button>
+            <Button disabled={isSubmitting} onClick={() => createAttendanceRecord(false)} className="bg-[#2d7a4f] hover:bg-[#236b40] text-white">
+              {isSubmitting ? 'Enregistrement...' : 'Enregistrer'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showJustificationDialog} onOpenChange={setShowJustificationDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Justifier une absence</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="justification-student-name">Étudiant</Label>
+              <Input id="justification-student-name" value={attendanceForm.studentName} onChange={(e) => updateAttendanceForm({ studentName: e.target.value })} placeholder="Nom complet" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="justification-matricule">Matricule</Label>
+              <Input id="justification-matricule" value={attendanceForm.matricule} onChange={(e) => updateAttendanceForm({ matricule: e.target.value })} placeholder="Matricule" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="justification-course">Cours</Label>
+              <Input id="justification-course" value={attendanceForm.course} onChange={(e) => updateAttendanceForm({ course: e.target.value })} placeholder="Cours / UE" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="justification-date">Date d&apos;absence</Label>
+              <Input id="justification-date" type="date" value={attendanceForm.date} onChange={(e) => updateAttendanceForm({ date: e.target.value })} />
+            </div>
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="justification-reason">Motif</Label>
+              <Textarea id="justification-reason" value={attendanceForm.justification} onChange={(e) => updateAttendanceForm({ justification: e.target.value })} placeholder="Motif de l'absence..." />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setShowJustificationDialog(false)}>Annuler</Button>
+            <Button disabled={isSubmitting} onClick={() => createAttendanceRecord(true)} className="bg-[#2d7a4f] hover:bg-[#236b40] text-white">
+              {isSubmitting ? 'Enregistrement...' : 'Soumettre la justification'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <motion.div
         className="space-y-6"
         variants={containerVariants}
@@ -378,11 +680,11 @@ export function AttendancePage() {
                   <p className="text-sm text-white/70 mt-1">Gestion quotidienne des absences et justifications</p>
                 </div>
                 <div className="flex gap-2 flex-wrap">
-                  <Button size="sm" className="bg-white/10 backdrop-blur border border-white/20 hover:bg-white/20 text-white text-xs">
+                  <Button size="sm" className="bg-white/10 backdrop-blur border border-white/20 hover:bg-white/20 text-white text-xs" onClick={() => setShowSignalementDialog(true)}>
                     <Plus className="size-3.5 mr-1.5" />
                     Nouveau signalement
                   </Button>
-                  <Button size="sm" variant="outline" className="text-xs bg-white/10 backdrop-blur border-white/20 text-white hover:bg-white/20 hover:text-white">
+                  <Button size="sm" variant="outline" className="text-xs bg-white/10 backdrop-blur border-white/20 text-white hover:bg-white/20 hover:text-white" onClick={() => setShowJustificationDialog(true)}>
                     <FileCheck className="size-3.5 mr-1.5" />
                     Justifier une absence
                   </Button>
@@ -691,17 +993,31 @@ export function AttendancePage() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="w-44">
-                                <DropdownMenuItem className="text-xs">
+                                <DropdownMenuItem
+                                  className="text-xs"
+                                  onClick={() => toast.info('Détail présence', {
+                                    description: `${record.studentName} — ${record.course} — ${statusConfig[record.status]?.label || record.status}`,
+                                  })}
+                                >
                                   <Eye className="size-3.5 mr-2" />
                                   Voir details
                                 </DropdownMenuItem>
-                                <DropdownMenuItem className="text-xs">
+                                <DropdownMenuItem
+                                  className="text-xs"
+                                  onClick={() => {
+                                    fillFormFromRecord(record)
+                                    setShowJustificationDialog(true)
+                                  }}
+                                >
                                   <FileCheck className="size-3.5 mr-2" />
                                   Justifier absence
                                 </DropdownMenuItem>
-                                <DropdownMenuItem className="text-xs">
-                                  <Mail className="size-3.5 mr-2" />
-                                  Contacter etudiant
+                                <DropdownMenuItem
+                                  className="text-xs"
+                                  onClick={() => exportToExcel([record], `presence_${record.matricule}`)}
+                                >
+                                  <Download className="size-3.5 mr-2" />
+                                  Exporter ligne
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
@@ -740,7 +1056,7 @@ export function AttendancePage() {
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-semibold text-[#1a2744]">Vue hebdomadaire</CardTitle>
                   <Badge className="text-[10px] bg-[#2d7a4f15] text-[#2d7a4f] border-0">
-                    Semaine 11
+                    {weekLabel}
                   </Badge>
                 </div>
               </CardHeader>
@@ -900,7 +1216,7 @@ export function AttendancePage() {
                   <CardTitle className="text-sm font-semibold text-[#1a2744]">Alertes & Sanctions</CardTitle>
                   <Badge className="text-[10px] bg-[#ef444415] text-[#ef4444] border-0">
                     <Bell className="size-3 mr-1" />
-                    {demoSanctions.length} alertes actives
+                    {sanctions.length} alertes actives
                   </Badge>
                 </div>
               </div>
@@ -951,7 +1267,7 @@ export function AttendancePage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {demoSanctions.map((sanction) => {
+                    {sanctions.map((sanction) => {
                       const scConf = sanctionConfig[sanction.level]
                       return (
                         <TableRow key={sanction.id} className="hover:bg-[#ef444405] transition-colors">
@@ -989,17 +1305,37 @@ export function AttendancePage() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="w-44">
-                                <DropdownMenuItem className="text-xs">
+                                <DropdownMenuItem
+                                  className="text-xs"
+                                  onClick={() => toast.info('Alerte absence', {
+                                    description: `${sanction.studentName}: ${sanction.totalAbsences} absence(s), niveau ${sanctionConfig[sanction.level]?.label || sanction.level}`,
+                                  })}
+                                >
                                   <Eye className="size-3.5 mr-2" />
-                                  Voir fiche
+                                  Voir alerte
                                 </DropdownMenuItem>
-                                <DropdownMenuItem className="text-xs">
-                                  <Shield className="size-3.5 mr-2" />
-                                  Appliquer sanction
+                                <DropdownMenuItem
+                                  className="text-xs"
+                                  onClick={() => exportToExcel([sanction], `alerte_absence_${sanction.matricule}`)}
+                                >
+                                  <Download className="size-3.5 mr-2" />
+                                  Exporter alerte
                                 </DropdownMenuItem>
-                                <DropdownMenuItem className="text-xs">
+                                <DropdownMenuItem
+                                  className="text-xs"
+                                  onClick={() => {
+                                    updateAttendanceForm({
+                                      studentName: sanction.studentName,
+                                      matricule: sanction.matricule,
+                                      program: sanction.program,
+                                      status: 'ABSENT',
+                                      justification: `Suivi alerte: ${sanction.totalAbsences} absence(s) cumulées`,
+                                    })
+                                    setShowJustificationDialog(true)
+                                  }}
+                                >
                                   <Mail className="size-3.5 mr-2" />
-                                  Avertir parent
+                                  Préparer justification
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
@@ -1007,6 +1343,13 @@ export function AttendancePage() {
                         </TableRow>
                       )
                     })}
+                    {sanctions.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-8 text-sm text-gray-400">
+                          Aucune alerte calculée sur les présences réelles
+                        </TableCell>
+                      </TableRow>
+                    )}
                   </TableBody>
                 </Table>
               </div>
@@ -1016,12 +1359,8 @@ export function AttendancePage() {
                 <p className="text-xs font-semibold text-[#1a2744] mb-3">Historique des sanctions recentes</p>
                 <div className="relative pl-6 space-y-3">
                   <div className="absolute left-2 top-1 bottom-1 w-0.5 bg-gray-200" />
-                  {[
-                    { date: '10/03/2025', text: 'Exclusion notifiee - MALLAH Adoum (Medecine)', type: 'exclusion' },
-                    { date: '08/03/2025', text: 'Mise en demeure envoyee - BICHARA Abdelkerim (Economie)', type: 'mise_en_demeure' },
-                    { date: '05/03/2025', text: 'Avertissement emis - ABDOULAYE Ibrahim (Droit)', type: 'avertissement' },
-                  ].map((entry, idx) => {
-                    const scConf = sanctionConfig[entry.type]
+                  {sanctions.slice(0, 3).map((entry, idx) => {
+                    const scConf = sanctionConfig[entry.level]
                     return (
                       <div key={idx} className="relative">
                         <div
@@ -1029,12 +1368,15 @@ export function AttendancePage() {
                           style={{ backgroundColor: scConf ? scConf.pulseColor : '#999' }}
                         />
                         <div>
-                          <p className="text-[10px] text-gray-400">{entry.date}</p>
-                          <p className="text-xs text-gray-600">{entry.text}</p>
+                          <p className="text-[10px] text-gray-400">{new Date(entry.latestDate).toLocaleDateString('fr-FR')}</p>
+                          <p className="text-xs text-gray-600">{scConf?.label || 'Alerte'} calculée - {entry.studentName} ({entry.program})</p>
                         </div>
                       </div>
                     )
                   })}
+                  {sanctions.length === 0 && (
+                    <p className="text-xs text-gray-400">Aucun historique de sanction calculé.</p>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -1048,12 +1390,18 @@ export function AttendancePage() {
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm font-semibold text-[#1a2744]">Statistiques de presence par cours</CardTitle>
                 <div className="flex items-center gap-2">
-                  <Badge className="text-[10px] bg-[#2d7a4f15] text-[#2d7a4f] border-0">
-                    Meilleur: Algorithmique (96%)
-                  </Badge>
-                  <Badge className="text-[10px] bg-[#c6282815] text-[#c62828] border-0">
-                    Plus bas: Physiologie (79%)
-                  </Badge>
+                  {courseStats.length > 0 ? (
+                    <>
+                      <Badge className="text-[10px] bg-[#2d7a4f15] text-[#2d7a4f] border-0">
+                        Meilleur: {courseStats.reduce((best, item) => item.rate > best.rate ? item : best, courseStats[0]).course}
+                      </Badge>
+                      <Badge className="text-[10px] bg-[#c6282815] text-[#c62828] border-0">
+                        Plus bas: {courseStats.reduce((low, item) => item.rate < low.rate ? item : low, courseStats[0]).course}
+                      </Badge>
+                    </>
+                  ) : (
+                    <Badge className="text-[10px] bg-gray-100 text-gray-500 border-0">Aucune donnée réelle</Badge>
+                  )}
                 </div>
               </div>
             </CardHeader>
@@ -1079,6 +1427,11 @@ export function AttendancePage() {
                     </div>
                   </div>
                 ))}
+                {courseStats.length === 0 && (
+                  <p className="text-sm text-gray-400 md:col-span-2 text-center py-6">
+                    Aucun cours avec présence enregistrée.
+                  </p>
+                )}
               </div>
 
               {/* Monthly trend & Time slot analysis */}
@@ -1188,7 +1541,7 @@ export function AttendancePage() {
                     </div>
                   </div>
                   <p className="text-[10px] text-gray-500 mb-2">
-                    Marquer les presences sans connexion internet, synchronisation automatique quand le reseau revient
+                    Basculer l&apos;écran en mode terrain lorsque la connexion est faible. Les enregistrements restent saisis via l&apos;API dès que la connexion est disponible.
                   </p>
                   <Badge className={`text-[10px] border-0 ${offlineMode ? 'bg-[#2d7a4f15] text-[#2d7a4f]' : 'bg-gray-100 text-gray-400'}`}>
                     {offlineMode ? 'Active' : 'Desactive'}
@@ -1212,7 +1565,7 @@ export function AttendancePage() {
                   <p className="text-[10px] text-gray-500 mb-2">
                     Imprimer les feuilles de presence pour saisie manuelle, puis numerisation
                   </p>
-                  <Button size="sm" variant="outline" className="h-7 text-[10px] w-full border-[#d4a85330] text-[#d4a853] hover:bg-[#d4a85308]">
+                  <Button size="sm" variant="outline" className="h-7 text-[10px] w-full border-[#d4a85330] text-[#d4a853] hover:bg-[#d4a85308]" onClick={() => window.print()}>
                     <Printer className="size-3 mr-1" />
                     Imprimer
                   </Button>
@@ -1236,7 +1589,7 @@ export function AttendancePage() {
                     Envoi automatique de SMS aux parents en cas d&apos;absence repetee (Airtel, Moov, Orange)
                   </p>
                   <Badge className="text-[10px] bg-[#2d7a4f15] text-[#2d7a4f] border-0">
-                    89 SMS envoyes ce mois
+                    {sanctions.length} alerte(s) à notifier
                   </Badge>
                 </motion.div>
 
@@ -1257,7 +1610,7 @@ export function AttendancePage() {
                   <p className="text-[10px] text-gray-500 mb-2">
                     Generation automatique du rapport de presence hebdomadaire pour chaque departement
                   </p>
-                  <Button size="sm" variant="outline" className="h-7 text-[10px] w-full border-[#2d7a4f30] text-[#2d7a4f] hover:bg-[#2d7a4f08]">
+                  <Button size="sm" variant="outline" className="h-7 text-[10px] w-full border-[#2d7a4f30] text-[#2d7a4f] hover:bg-[#2d7a4f08]" onClick={() => exportToExcel(filteredRecords, 'rapport_presences_hebdomadaire')}>
                     <Download className="size-3 mr-1" />
                     Generer rapport
                   </Button>
