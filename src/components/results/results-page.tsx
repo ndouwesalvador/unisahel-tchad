@@ -1024,7 +1024,7 @@ export function ResultsPage() {
                       <GraduationCap className="size-8 text-gray-300 mx-auto mb-2" />
                       <p className="text-sm font-medium text-[#1a2744]">Ventilation non disponible dans l’API actuelle.</p>
                       <p className="text-xs text-gray-500 mt-1">
-                        Les résultats renvoyés ne contiennent pas encore la filière ou la faculté. Les anciens taux Sciences/Droit/Médecine codés en dur ont été retirés.
+                        Les résultats renvoyés ne contiennent pas encore la filière ou la faculté. Aucun taux par composante n’est affiché sans donnée fiable.
                       </p>
                     </div>
                   </CardContent>
@@ -1042,7 +1042,7 @@ export function ResultsPage() {
                       <Users className="size-8 text-gray-300 mx-auto mb-2" />
                       <p className="text-sm font-medium text-[#1a2744]">Données de genre non exposées par ce module.</p>
                       <p className="text-xs text-gray-500 mt-1">
-                        Les pourcentages Hommes/Femmes inventés ont été retirés. Cette comparaison sera affichée quand l’API transmettra un champ de genre fiable.
+                        Cette comparaison sera affichée uniquement quand l’API transmettra un champ de genre fiable.
                       </p>
                     </div>
                   </CardContent>
