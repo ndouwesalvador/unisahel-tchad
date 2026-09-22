@@ -4,6 +4,7 @@ import { exportToExcel } from '@/lib/export'
 import { useStructure } from '@/lib/api-hooks'
 import { useAppStore } from '@/lib/store'
 import { useState, useEffect, useRef, Fragment } from 'react'
+import { toast } from 'sonner'
 import { motion } from 'framer-motion'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -36,7 +37,7 @@ import {
   Download,
 } from 'lucide-react'
 
-// ─── Demo Data ────────────────────────────────────────────────────────────────
+// ─── Types and API-backed data mapping ────────────────────────────────────────
 
 type UEType = 'Fondamentale' | 'Complémentaire' | 'Transversale'
 
@@ -139,8 +140,8 @@ interface StructureFaculty {
 }
 
 function teacherName(ref?: StructureTeacherRef | null): string {
-  if (!ref?.user) return ''
-  return `${ref.user.firstName} ${ref.user.lastName}`.trim()
+  if (!ref?.user) return 'Non attribué'
+  return `${ref.user.firstName} ${ref.user.lastName}`.trim() || 'Non attribué'
 }
 
 function mapUEType(type: string): UEType {
@@ -195,11 +196,12 @@ function getSemesterCredits(semester: Semester): number {
   return semester.ues.reduce((acc, ue) => acc + ue.credits, 0)
 }
 
-function getSemesterVolume(semester: Semester): { cm: number; td: number; tp: number; total: number } {
+function getSemesterVolume(semester: Semester): { cm: number; td: number; tp: number; stage: number; total: number } {
   const cm = semester.ues.reduce((acc, ue) => acc + ue.ecues.reduce((a, e) => a + e.cm, 0), 0)
   const td = semester.ues.reduce((acc, ue) => acc + ue.ecues.reduce((a, e) => a + e.td, 0), 0)
   const tp = semester.ues.reduce((acc, ue) => acc + ue.ecues.reduce((a, e) => a + e.tp, 0), 0)
-  return { cm, td, tp, total: cm + td + tp }
+  const stage = semester.ues.reduce((acc, ue) => acc + ue.ecues.reduce((a, e) => a + e.stage, 0), 0)
+  return { cm, td, tp, stage, total: cm + td + tp + stage }
 }
 
 // ─── useCountUp Hook ──────────────────────────────────────────────────────────
@@ -260,6 +262,13 @@ function SemesterView({ semester }: { semester: Semester }) {
           <span className="text-sm text-gray-400 mx-1">|</span>
           <span className="text-sm text-gray-600">TP :</span>
           <span className="text-sm font-bold text-[#d4a853]">{volume.tp}h</span>
+          {volume.stage > 0 && (
+            <>
+              <span className="text-sm text-gray-400 mx-1">|</span>
+              <span className="text-sm text-gray-600">Stage :</span>
+              <span className="text-sm font-bold text-[#7b1fa2]">{volume.stage}h</span>
+            </>
+          )}
           <span className="text-sm text-gray-400 mx-1">|</span>
           <span className="text-sm text-gray-600">Total :</span>
           <span className="text-sm font-bold text-[#1a2744]">{volume.total}h</span>
@@ -363,6 +372,13 @@ function SemesterView({ semester }: { semester: Semester }) {
                     </Fragment>
                   )
                 })}
+                {semester.ues.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={7} className="py-8 text-center text-sm text-gray-500">
+                      Aucune UE n&apos;est encore configurée pour ce semestre.
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </div>
@@ -403,7 +419,11 @@ export function MaquettePage() {
         ),
       ),
     )
-    exportToExcel(rows, `maquette_${program.label.replace(/\s+/g, '_')}`)
+    if (rows.length === 0) {
+      toast.info('Aucune donnée à exporter', { description: 'Configurez au moins une UE dans Structure avant export.' })
+      return
+    }
+    exportToExcel(rows, `maquette_${program.label.replace(/\s+/g, '_').replace(/[^\w-]/g, '')}`)
   }
 
   const totalUEs = programs.reduce(
@@ -412,6 +432,9 @@ export function MaquettePage() {
   )
   const totalUEsCount = useCountUp(totalUEs, 1400)
   const programmesActifsCount = useCountUp(programs.length, 1200)
+  const selectedProgramUEs = program
+    ? program.levels.reduce((a, l) => a + l.semesters.reduce((b, s) => b + s.ues.length, 0), 0)
+    : 0
 
   if (isLoading) {
     return (
@@ -423,8 +446,15 @@ export function MaquettePage() {
 
   if (!program) {
     return (
-      <div className="flex items-center justify-center py-24 text-sm text-gray-500">
-        Aucun programme pédagogique n&apos;a encore été configuré. Rendez-vous dans Structure pour en créer un.
+      <div className="flex flex-col items-center justify-center gap-4 py-24 text-center">
+        <div>
+          <p className="text-sm font-medium text-[#1a2744]">Aucun programme pédagogique configuré</p>
+          <p className="text-sm text-gray-500 mt-1">Créez d&apos;abord la structure académique avant d&apos;afficher une maquette.</p>
+        </div>
+        <Button className="bg-[#2d7a4f] hover:bg-[#236b40] text-white" onClick={() => setView('structure')}>
+          <Plus className="size-4 mr-2" />
+          Gérer la structure
+        </Button>
       </div>
     )
   }
@@ -459,6 +489,7 @@ export function MaquettePage() {
                 size="sm"
                 className="bg-white/10 backdrop-blur border border-white/20 hover:bg-white/20 text-white text-xs"
                 onClick={handleExportMaquette}
+                disabled={selectedProgramUEs === 0}
               >
                 <Download className="size-3.5 mr-1.5" />
                 Exporter
@@ -569,7 +600,7 @@ export function MaquettePage() {
         </div>
       ) : (
       <motion.div whileHover={{ scale: 1.01 }} transition={{ duration: 0.2 }}>
-      <Tabs defaultValue={program.levels[0].id}>
+      <Tabs key={program.id} defaultValue={program.levels[0].id}>
         <TabsList className="bg-gray-100">
           {program.levels.map(level => (
             <TabsTrigger key={level.id} value={level.id} className="text-xs">
@@ -585,7 +616,7 @@ export function MaquettePage() {
                 Ce niveau n&apos;a pas encore de semestres configurés.
               </div>
             ) : (
-            <Tabs defaultValue={level.semesters[0].id}>
+            <Tabs key={level.id} defaultValue={level.semesters[0].id}>
               <TabsList className="bg-gray-50 mb-4">
                 {level.semesters.map(sem => (
                   <TabsTrigger key={sem.id} value={sem.id} className="text-xs">
