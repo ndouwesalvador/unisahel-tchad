@@ -59,7 +59,7 @@ import {
   Activity,
 } from 'lucide-react'
 
-// ─── Demo Data ────────────────────────────────────────────────────────────────
+// ─── Types and API-backed data mapping ────────────────────────────────────────
 
 interface DeliberationSession {
   id: string
@@ -115,14 +115,10 @@ export function DeliberationPage() {
   const [isLaunching, setIsLaunching] = useState(false)
   const [isLocking, setIsLocking] = useState(false)
   const [qrCode, setQrCode] = useState<string | null>(null)
-  // Pas de modele backend pour la composition du jury (Deliberation n'a qu'un
-  // presidentId) - reste un etat local de la session de travail en cours, pas
-  // persiste, comme l'inventaire d'equipement de room-booking-page.tsx.
-  const [juryMembers, setJuryMembers] = useState([
-    { id: '1', name: 'Dr. MAHAMAT Ali', role: 'President' },
-    { id: '2', name: 'Prof. KHAMIS Fatime', role: 'Membre' },
-    { id: '3', name: 'Dr. ADAM Khadija', role: 'Membre' },
-  ])
+  // Pas de modele backend pour la composition complete du jury (Deliberation
+  // ne persiste que presidentId). Cette liste alimente uniquement le PV genere
+  // pendant la session courante et ne doit donc pas afficher de faux membres.
+  const [juryMembers, setJuryMembers] = useState<{ id: string; name: string; role: string }[]>([])
   const [newMemberName, setNewMemberName] = useState('')
   const [newMemberRole, setNewMemberRole] = useState('Membre')
 
@@ -138,8 +134,18 @@ export function DeliberationPage() {
   )
   const deliberationStudents: DeliberationStudent[] = useMemo(() => deliberationData?.students ?? [], [deliberationData])
   const isLocked: boolean = deliberationData?.selected?.isLocked ?? false
+  const currentSession = deliberations.find(d => d.id === selectedSession)
+  const hasStudents = deliberationStudents.length > 0
+  const canExportPV = Boolean(selectedSession && isLocked && hasStudents)
+  const canLock = Boolean(selectedSession && !isLocked && hasStudents)
 
   const handleLaunch = async () => {
+    if (isDeliberationLoading) return
+    if (!hasStudents) {
+      toast.error('Aucune note à délibérer', { description: "Saisissez d'abord les notes de l'année académique en cours." })
+      return
+    }
+    if (!window.confirm('Lancer une nouvelle délibération avec les décisions calculées depuis les notes réelles ?')) return
     setIsLaunching(true)
     try {
       const res = await fetch('/api/deliberation', {
@@ -161,6 +167,11 @@ export function DeliberationPage() {
 
   const handleLock = async () => {
     if (!selectedSession) return
+    if (!hasStudents) {
+      toast.error('Aucun résultat à valider')
+      return
+    }
+    if (!window.confirm('Valider officiellement cette délibération ? Cette action officialise les résultats.')) return
     setIsLocking(true)
     try {
       const res = await fetch(`/api/deliberation?id=${selectedSession}`, { method: 'PUT' })
@@ -177,6 +188,22 @@ export function DeliberationPage() {
   const exportPV = useCallback(async () => {
     if (!tenantId) {
       toast.error('Session invalide', { description: 'Impossible de determiner votre etablissement' })
+      return
+    }
+    if (!selectedSession) {
+      toast.error('Sélection requise', { description: 'Sélectionnez ou lancez une délibération avant de générer un PV.' })
+      return
+    }
+    if (!isLocked) {
+      toast.error('Délibération non validée', { description: 'Validez officiellement la délibération avant de générer le PV.' })
+      return
+    }
+    if (!hasStudents) {
+      toast.error('PV indisponible', { description: 'Aucun étudiant ne figure dans cette délibération.' })
+      return
+    }
+    if (!juryMembers.some((member) => member.role === 'President')) {
+      toast.error('Président du jury requis', { description: 'Ajoutez au moins un président du jury avant de générer le PV.' })
       return
     }
     setIsExportingPV(true)
@@ -242,9 +269,7 @@ export function DeliberationPage() {
     } finally {
       setIsExportingPV(false)
     }
-  }, [selectedSession, selectedSessionType, juryMembers, deliberations, deliberationStudents, tenantId, institutionQuery, currentYearName])
-
-  const currentSession = deliberations.find(d => d.id === selectedSession)
+  }, [selectedSession, selectedSessionType, juryMembers, deliberations, deliberationStudents, tenantId, institutionQuery, currentYearName, isLocked, hasStudents])
 
   // ─── Computed Stats ────────────────────────────────────────────────────
   const stats = useMemo(() => {
@@ -269,9 +294,16 @@ export function DeliberationPage() {
 
   // ─── Jury Members Management ───────────────────────────────────────────
   const addMember = () => {
-    if (!newMemberName.trim()) return
+    if (!newMemberName.trim()) {
+      toast.error('Nom du membre requis')
+      return
+    }
+    if (newMemberRole === 'President' && juryMembers.some((member) => member.role === 'President')) {
+      toast.error('Président déjà défini', { description: 'Un seul président est attendu sur le PV.' })
+      return
+    }
     const newMember = {
-      id: String(juryMembers.length + 1),
+      id: typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `${Date.now()}-${juryMembers.length}`,
       name: newMemberName.trim(),
       role: newMemberRole,
     }
@@ -303,7 +335,7 @@ export function DeliberationPage() {
   }
 
   // Determine jury status based on current session
-  const juryStatus = currentSession?.statut === 'en_cours' ? 'active' : currentSession?.statut === 'planifiee' ? 'pending' : 'completed'
+  const juryStatus = !currentSession ? 'pending' : currentSession.statut === 'en_cours' ? 'active' : currentSession.statut === 'planifiee' ? 'pending' : 'completed'
 
   return (
     <TooltipProvider>
@@ -336,7 +368,7 @@ export function DeliberationPage() {
                       {currentSession?.titre || 'Aucune session selectionnee'}
                     </Badge>
                   </motion.div>
-                  <Button variant="outline" size="sm" className="text-xs bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white" onClick={exportPV} disabled={isExportingPV}>
+                  <Button variant="outline" size="sm" className="text-xs bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white disabled:opacity-50" onClick={exportPV} disabled={isExportingPV || !canExportPV}>
                     {isExportingPV ? <Loader2 className="size-3.5 mr-1.5 animate-spin" /> : <Download className="size-3.5 mr-1.5" />}
                     Exporter PV
                   </Button>
@@ -383,7 +415,8 @@ export function DeliberationPage() {
                       juryStatus === 'pending' ? 'text-[#d4a853]' :
                       'text-gray-400'
                     }`}>
-                      {juryStatus === 'active' ? 'Jury actif - Deliberation en cours' :
+                      {!currentSession ? 'Aucune délibération sélectionnée' :
+                       juryStatus === 'active' ? 'Jury actif - Deliberation en cours' :
                        juryStatus === 'pending' ? 'Jury en attente - Planifie' :
                        'Deliberation terminee'}
                     </span>
@@ -421,7 +454,13 @@ export function DeliberationPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label className="text-xs font-medium text-gray-600">Session</Label>
-                  <Select value={selectedSessionType} onValueChange={setSelectedSessionType}>
+                  <Select
+                    value={selectedSessionType}
+                    onValueChange={(value) => {
+                      setSelectedSessionType(value)
+                      setSelectedSession(null)
+                    }}
+                  >
                     <SelectTrigger className="h-9 text-sm">
                       <SelectValue placeholder="Session" />
                     </SelectTrigger>
@@ -451,6 +490,11 @@ export function DeliberationPage() {
                 </div>
                 <div className="space-y-2">
                   <AnimatePresence>
+                    {juryMembers.length === 0 && (
+                      <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 p-3 text-xs text-gray-500">
+                        Aucun membre ajouté. Ajoutez au moins un président avant de générer un PV officiel.
+                      </div>
+                    )}
                     {juryMembers.map((member, idx) => (
                       <motion.div
                         key={member.id}
@@ -499,6 +543,9 @@ export function DeliberationPage() {
                   </AnimatePresence>
                 </div>
                 {/* Add Member */}
+                <p className="text-[11px] text-gray-400">
+                  La composition du jury est utilisée pour le PV généré dans cette session. Elle n&apos;est pas encore persistée comme entité dédiée.
+                </p>
                 <div className="flex items-center gap-2">
                   <Input
                     placeholder="Nom du membre..."
@@ -535,7 +582,7 @@ export function DeliberationPage() {
                   size="sm"
                   className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs"
                   onClick={handleLaunch}
-                  disabled={isLaunching}
+                  disabled={isLaunching || isDeliberationLoading || !hasStudents}
                 >
                   <Shield className="size-3.5 mr-1.5" />
                   {isLaunching ? 'Lancement...' : 'Lancer la deliberation'}
@@ -733,7 +780,7 @@ export function DeliberationPage() {
                   </Badge>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" className="text-xs" onClick={exportPV} disabled={isExportingPV}>
+                  <Button variant="outline" size="sm" className="text-xs" onClick={exportPV} disabled={isExportingPV || !canExportPV}>
                     {isExportingPV ? <Loader2 className="size-3.5 mr-1.5 animate-spin" /> : <Download className="size-3.5 mr-1.5" />}
                     PV
                   </Button>
@@ -741,7 +788,7 @@ export function DeliberationPage() {
                     size="sm"
                     className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs"
                     onClick={handleLock}
-                    disabled={!selectedSession || isLocked || isLocking}
+                    disabled={!canLock || isLocking}
                   >
                     <CheckSquare className="size-3.5 mr-1.5" />
                     {isLocked ? 'Deliberation validee' : isLocking ? 'Validation...' : 'Valider deliberation'}
