@@ -93,9 +93,36 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
       return NextResponse.json({ error: `type must be one of: ${VALID_TYPES.join(', ')}` }, { status: 400 })
     }
 
+    if (startTime >= endTime) {
+      return NextResponse.json({ error: 'endTime must be after startTime' }, { status: 400 })
+    }
+
     const year = await db.academicYear.findFirst({ where: { id: academicYearId, tenantId } })
     if (!year) {
       return NextResponse.json({ error: 'academicYearId not found for this tenant' }, { status: 404 })
+    }
+
+    if (roomId || teacherId) {
+      const conflicts = await db.timetableSlot.findMany({
+        where: {
+          tenantId,
+          academicYearId,
+          dayOfWeek: Number(dayOfWeek),
+          startTime: { lt: endTime },
+          endTime: { gt: startTime },
+          OR: [
+            ...(roomId ? [{ roomId }] : []),
+            ...(teacherId ? [{ teacherId }] : []),
+          ],
+        },
+        take: 1,
+      })
+      if (conflicts.length > 0) {
+        return NextResponse.json(
+          { error: 'Conflit detecte: cette salle ou cet enseignant est deja occupe sur ce creneau.' },
+          { status: 409 }
+        )
+      }
     }
 
     const slot = await db.timetableSlot.create({
