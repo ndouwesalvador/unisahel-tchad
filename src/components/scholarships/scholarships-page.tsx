@@ -52,19 +52,15 @@ import {
   Eye,
   Edit3,
   Trash2,
-  Smartphone,
-  Globe,
-  Wifi,
   CheckCircle2,
   XCircle,
   Clock,
   TrendingUp,
   AlertCircle,
-  Wallet,
   Landmark,
 } from 'lucide-react'
 
-// ─── Demo Data ────────────────────────────────────────────────────────────────
+// ─── Types and API-backed data mapping ────────────────────────────────────────
 
 interface Scholarship {
   id: string
@@ -298,6 +294,8 @@ export function ScholarshipsPage() {
   }, 0)
 
   const maxBudget = Math.max(0, ...budgetByType.map(b => b.amount))
+  const programOptions = Array.from(new Set(beneficiaries.map((b) => b.program).filter(Boolean))).sort()
+  const levelOptions = Array.from(new Set(beneficiaries.map((b) => b.level).filter(Boolean))).sort()
 
   const resetScholarshipForm = () => {
     setNewScholarshipForm({ name: '', type: '', budget: '', duree: '', maxBeneficiaires: '', eligibility: '' })
@@ -322,16 +320,26 @@ export function ScholarshipsPage() {
       toast.error('Nom requis')
       return
     }
+    const budget = Number(newScholarshipForm.budget || 0)
+    const maxBeneficiaries = newScholarshipForm.maxBeneficiaires ? Number(newScholarshipForm.maxBeneficiaires) : null
+    if (Number.isNaN(budget) || budget < 0) {
+      toast.error('Budget invalide')
+      return
+    }
+    if (maxBeneficiaries !== null && (Number.isNaN(maxBeneficiaries) || maxBeneficiaries < 0)) {
+      toast.error('Nombre de bénéficiaires invalide')
+      return
+    }
 
     setIsSavingScholarship(true)
     try {
       const payload = {
         name: newScholarshipForm.name.trim(),
         type: newScholarshipForm.type || 'merite',
-        budget: Number(newScholarshipForm.budget || 0),
+        budget,
         duration: newScholarshipForm.duree || null,
         eligibility: newScholarshipForm.eligibility || null,
-        maxBeneficiaries: newScholarshipForm.maxBeneficiaires ? Number(newScholarshipForm.maxBeneficiaires) : null,
+        maxBeneficiaries,
       }
       const res = await fetch('/api/scholarships', {
         method: editingScholarship ? 'PUT' : 'POST',
@@ -352,6 +360,7 @@ export function ScholarshipsPage() {
   }
 
   const deleteScholarship = async (scholarship: Scholarship) => {
+    if (!window.confirm(`Supprimer la bourse "${scholarship.name}" ?`)) return
     setDeletingScholarshipId(scholarship.id)
     try {
       const res = await fetch(`/api/scholarships?id=${encodeURIComponent(scholarship.id)}`, { method: 'DELETE' })
@@ -521,7 +530,7 @@ export function ScholarshipsPage() {
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Beneficiaires</p>
                 <p className="text-xl font-bold text-[#1a2744] mt-1">{totalBeneficiaires}</p>
-                <p className="text-xs text-gray-400 mt-1">etudiats soutenus</p>
+                <p className="text-xs text-gray-400 mt-1">etudiants soutenus</p>
               </div>
               <div className="w-10 h-10 rounded-xl bg-[#1a274415] flex items-center justify-center">
                 <Users className="size-5 text-[#1a2744]" />
@@ -764,14 +773,9 @@ export function ScholarshipsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="tous">Tous les programmes</SelectItem>
-                    <SelectItem value="Bourse d'Excellence">Bourse d&apos;Excellence</SelectItem>
-                    <SelectItem value="Bourse du Ministere">Bourse du Ministere</SelectItem>
-                    <SelectItem value="Fonds de Solidarite Africaine">Fonds de Solidarite Africaine</SelectItem>
-                    <SelectItem value="Bourse Master AUF">Bourse Master AUF</SelectItem>
-                    <SelectItem value="Aide d'Urgence Humanitaire">Aide d&apos;Urgence Humanitaire</SelectItem>
-                    <SelectItem value="Bourse de Recherche">Bourse de Recherche</SelectItem>
-                    <SelectItem value="Programme Erasmus+">Programme Erasmus+</SelectItem>
-                    <SelectItem value="Bourse Sportive">Bourse Sportive</SelectItem>
+                    {programOptions.map((program) => (
+                      <SelectItem key={program} value={program}>{program}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <Select value={levelFilter} onValueChange={setLevelFilter}>
@@ -780,11 +784,9 @@ export function ScholarshipsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="tous">Tous niveaux</SelectItem>
-                    <SelectItem value="L1">L1</SelectItem>
-                    <SelectItem value="L2">L2</SelectItem>
-                    <SelectItem value="L3">L3</SelectItem>
-                    <SelectItem value="M1">M1</SelectItem>
-                    <SelectItem value="M2">M2</SelectItem>
+                    {levelOptions.map((level) => (
+                      <SelectItem key={level} value={level}>{level}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -939,8 +941,13 @@ export function ScholarshipsPage() {
               {/* Pie-chart style dots breakdown */}
               <div className="pt-3 border-t border-gray-100">
                 <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-2">Repartition visuelle</p>
-                <div className="flex flex-wrap gap-2">
-                  {budgetByType.map((item) => (
+                {budgetByType.length === 0 ? (
+                  <p className="text-xs text-gray-500">
+                    Aucune bourse financee n&apos;est encore enregistree.
+                  </p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {budgetByType.map((item) => (
                     <div key={item.type} className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-gray-50">
                       <div
                         className="w-2 h-2 rounded-full shrink-0"
@@ -949,113 +956,94 @@ export function ScholarshipsPage() {
                       <span className="text-[10px] text-gray-600">{item.type}</span>
                       <span className="text-[10px] font-semibold text-[#1a2744]">{item.percent}%</span>
                     </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
         </motion.div>
 
-        {/* African Context Card */}
+        {/* Operational limits card */}
         <motion.div variants={itemVariants}>
           <Card className="h-full border-l-4 border-l-[#d4a853]">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-semibold text-[#1a2744]">Contexte africain</CardTitle>
+                <CardTitle className="text-sm font-semibold text-[#1a2744]">Fonctionnalites et limites</CardTitle>
                 <Landmark className="size-4 text-[#d4a853]" />
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Mobile Money Integration */}
               <div className="p-3 rounded-lg bg-[#d4a85308] border border-[#d4a85315]">
                 <div className="flex items-center gap-2 mb-2">
-                  <Smartphone className="size-4 text-[#d4a853]" />
-                  <span className="text-sm font-semibold text-[#1a2744]">Versement Mobile Money</span>
+                  <Banknote className="size-4 text-[#d4a853]" />
+                  <span className="text-sm font-semibold text-[#1a2744]">Budgets enregistres</span>
                 </div>
                 <p className="text-xs text-gray-600 leading-relaxed">
-                  Les fonds sont verses directement sur les comptes Mobile Money des beneficiaires via Airtel Money, Moov Money et Orange Money. Solution adaptee aux zones rurales ou l&apos;acces bancaire est limite.
+                  Les budgets, plafonds et beneficiaires sont suivis dans la base de l&apos;institution. Les montants affiches ici servent au pilotage administratif des aides.
                 </p>
                 <div className="flex items-center gap-2 mt-2">
                   <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-white border border-gray-100">
-                    <div className="w-2 h-2 rounded-full bg-red-500" />
-                    <span className="text-[10px] text-gray-600">Airtel Money</span>
+                    <CheckCircle2 className="size-3 text-[#2d7a4f]" />
+                    <span className="text-[10px] text-gray-600">Donnees sauvegardees</span>
                   </div>
                   <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-white border border-gray-100">
-                    <div className="w-2 h-2 rounded-full bg-blue-500" />
-                    <span className="text-[10px] text-gray-600">Moov Money</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-white border border-gray-100">
-                    <div className="w-2 h-2 rounded-full bg-orange-500" />
-                    <span className="text-[10px] text-gray-600">Orange Money</span>
+                    <CheckCircle2 className="size-3 text-[#2d7a4f]" />
+                    <span className="text-[10px] text-gray-600">Export disponible</span>
                   </div>
                 </div>
               </div>
 
-              {/* Multi-currency support */}
               <div className="p-3 rounded-lg bg-[#1a274408] border border-[#1a274415]">
                 <div className="flex items-center gap-2 mb-2">
-                  <Globe className="size-4 text-[#1a2744]" />
-                  <span className="text-sm font-semibold text-[#1a2744]">Support multi-devises</span>
+                  <AlertCircle className="size-4 text-[#1a2744]" />
+                  <span className="text-sm font-semibold text-[#1a2744]">Versements non connectes</span>
                 </div>
                 <p className="text-xs text-gray-600 leading-relaxed">
-                  Conversion automatique entre FCFA, USD et EUR pour les bourses internationales. Taux de change mis a jour quotidiennement via la BCEAO.
-                </p>
-                <div className="flex items-center gap-3 mt-2">
-                  <div className="text-center">
-                    <p className="text-xs font-bold text-[#1a2744]">FCFA</p>
-                    <p className="text-[10px] text-gray-400">Principale</p>
-                  </div>
-                  <div className="text-gray-200">|</div>
-                  <div className="text-center">
-                    <p className="text-xs font-bold text-[#1a2744]">USD</p>
-                    <p className="text-[10px] text-gray-400">International</p>
-                  </div>
-                  <div className="text-gray-200">|</div>
-                  <div className="text-center">
-                    <p className="text-xs font-bold text-[#1a2744]">EUR</p>
-                    <p className="text-[10px] text-gray-400">Erasmus+</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Low-connectivity design */}
-              <div className="p-3 rounded-lg bg-[#2d7a4f08] border border-[#2d7a4f15]">
-                <div className="flex items-center gap-2 mb-2">
-                  <Wifi className="size-4 text-[#2d7a4f]" />
-                  <span className="text-sm font-semibold text-[#1a2744]">Conception faible connectivite</span>
-                </div>
-                <p className="text-xs text-gray-600 leading-relaxed">
-                  Interface optimisee pour les zones a faible debit. Saisie hors-ligne possible avec synchronisation automatique lors du retour de la connexion. Donnees critiques mises en cache localement.
+                  Cet onglet ne declenche aucun paiement externe. Les virements, paiements mobiles ou validations comptables restent a effectuer dans les outils financiers officiels de l&apos;institution.
                 </p>
                 <div className="flex items-center gap-1.5 mt-2">
-                  <div className="w-2 h-2 rounded-full bg-[#2d7a4f] animate-pulse" />
-                  <span className="text-[10px] text-gray-500">Mode hors-ligne disponible</span>
+                  <div className="w-2 h-2 rounded-full bg-[#d4a853]" />
+                  <span className="text-[10px] text-gray-500">Suivi administratif uniquement</span>
                 </div>
               </div>
 
-              {/* Quick summary */}
+              <div className="p-3 rounded-lg bg-[#2d7a4f08] border border-[#2d7a4f15]">
+                <div className="flex items-center gap-2 mb-2">
+                  <Clock className="size-4 text-[#2d7a4f]" />
+                  <span className="text-sm font-semibold text-[#1a2744]">Connexion requise</span>
+                </div>
+                <p className="text-xs text-gray-600 leading-relaxed">
+                  Les creations, modifications, suppressions et exports utilisent les API du serveur. Si la connexion est interrompue, l&apos;action doit etre relancee apres retour du reseau.
+                </p>
+                <div className="flex items-center gap-1.5 mt-2">
+                  <div className="w-2 h-2 rounded-full bg-[#2d7a4f]" />
+                  <span className="text-[10px] text-gray-500">Validation cote serveur</span>
+                </div>
+              </div>
+
               <div className="pt-2 border-t border-gray-100">
                 <div className="grid grid-cols-3 gap-3 text-center">
                   <div>
                     <div className="w-8 h-8 rounded-full bg-[#d4a85315] flex items-center justify-center mx-auto mb-1">
-                      <Wallet className="size-4 text-[#d4a853]" />
+                      <Banknote className="size-4 text-[#d4a853]" />
                     </div>
-                    <p className="text-[10px] text-gray-400">Versement</p>
-                    <p className="text-[10px] font-semibold text-[#1a2744]">Mobile Money</p>
+                    <p className="text-[10px] text-gray-400">Devise</p>
+                    <p className="text-[10px] font-semibold text-[#1a2744]">FCFA</p>
                   </div>
                   <div>
                     <div className="w-8 h-8 rounded-full bg-[#1a274415] flex items-center justify-center mx-auto mb-1">
-                      <Globe className="size-4 text-[#1a2744]" />
+                      <AlertCircle className="size-4 text-[#1a2744]" />
                     </div>
-                    <p className="text-[10px] text-gray-400">Devises</p>
-                    <p className="text-[10px] font-semibold text-[#1a2744]">3 supportees</p>
+                    <p className="text-[10px] text-gray-400">Paiement</p>
+                    <p className="text-[10px] font-semibold text-[#1a2744]">Externe</p>
                   </div>
                   <div>
                     <div className="w-8 h-8 rounded-full bg-[#2d7a4f15] flex items-center justify-center mx-auto mb-1">
-                      <AlertCircle className="size-4 text-[#2d7a4f]" />
+                      <Clock className="size-4 text-[#2d7a4f]" />
                     </div>
-                    <p className="text-[10px] text-gray-400">Latence</p>
-                    <p className="text-[10px] font-semibold text-[#1a2744]">Optimisee</p>
+                    <p className="text-[10px] text-gray-400">Mode</p>
+                    <p className="text-[10px] font-semibold text-[#1a2744]">En ligne</p>
                   </div>
                 </div>
               </div>
