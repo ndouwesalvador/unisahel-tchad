@@ -184,12 +184,12 @@ export function CommunicationPage() {
                   </DialogHeader>
                   <div className="grid grid-cols-1 gap-4 py-2">
                     <div className="space-y-2">
-                      <Label>Objet</Label>
-                      <Input value={form.subject} onChange={(event) => updateForm({ subject: event.target.value })} placeholder="Objet du message" />
+                      <Label htmlFor="communication-subject">Objet</Label>
+                      <Input id="communication-subject" value={form.subject} onChange={(event) => updateForm({ subject: event.target.value })} placeholder="Objet du message" />
                     </div>
                     <div className="space-y-2">
-                      <Label>Audience</Label>
-                      <Input value={form.audience} onChange={(event) => updateForm({ audience: event.target.value })} placeholder="Ex. Tous les étudiants, L2 Informatique..." />
+                      <Label htmlFor="communication-audience">Audience</Label>
+                      <Input id="communication-audience" value={form.audience} onChange={(event) => updateForm({ audience: event.target.value })} placeholder="Ex. Tous les étudiants, L2 Informatique..." />
                     </div>
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                       <div className="space-y-2">
@@ -229,8 +229,8 @@ export function CommunicationPage() {
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label>Message</Label>
-                      <Textarea rows={5} value={form.content} onChange={(event) => updateForm({ content: event.target.value })} placeholder="Contenu de la diffusion..." />
+                      <Label htmlFor="communication-content">Message</Label>
+                      <Textarea id="communication-content" rows={5} value={form.content} onChange={(event) => updateForm({ content: event.target.value })} placeholder="Contenu de la diffusion..." />
                     </div>
                     <div className="flex justify-end gap-2">
                       <Button variant="outline" onClick={() => setDialogOpen(false)}>Annuler</Button>
