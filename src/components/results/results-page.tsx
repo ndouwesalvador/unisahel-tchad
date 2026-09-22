@@ -2,7 +2,9 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { motion } from 'framer-motion'
+import { toast } from 'sonner'
 import { useResults } from '@/lib/api-hooks'
+import { exportToExcel } from '@/lib/export'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -44,8 +46,6 @@ import {
   AlertTriangle,
   TrendingUp,
   Search,
-  Pencil,
-  Trash2,
   Download,
   Printer,
   Eye,
@@ -55,13 +55,10 @@ import {
   BookOpen,
   Calendar,
   Shield,
-  Zap,
-  ArrowUpRight,
-  ArrowDownRight,
   CircleDot,
-  Target,
   Trophy,
   Star,
+  Target,
 } from 'lucide-react'
 
 // ─── Custom useCountUp Hook ────────────────────────────────────────────────────
@@ -152,45 +149,6 @@ const decisionConfig: Record<Decision, { color: string; className: string; icon:
   'Exclu': { color: '#4a0000', className: 'bg-[#4a000010] text-[#4a0000] border-0', icon: AlertTriangle },
 }
 
-// ─── Statistiques tab reference data ───────────────────────────────────────────
-// distributionRanges/mentionDistribution/yearComparison/facultySuccess and the
-// gender comparison further below are not yet backed by real aggregate queries
-// (per-semester grouping, historical multi-year comparison, and demographic
-// breakdowns are not computed anywhere in the API) -- flagged as a known gap,
-// left untouched for now rather than a partial/invented fix.
-
-const distributionRanges = [
-  { range: '0-8', count: 3, color: '#c62828' },
-  { range: '8-10', count: 4, color: '#d4a853' },
-  { range: '10-12', count: 5, color: '#6b7280' },
-  { range: '12-14', count: 8, color: '#1a2744' },
-  { range: '14-16', count: 6, color: '#2d7a4f' },
-  { range: '16-20', count: 4, color: '#d4a853' },
-]
-
-const mentionDistribution = [
-  { mention: 'Passable', count: 5, percent: 15, color: '#6b7280' },
-  { mention: 'Assez-Bien', count: 6, percent: 18, color: '#1a2744' },
-  { mention: 'Bien', count: 8, percent: 24, color: '#2d7a4f' },
-  { mention: 'Tres-Bien', count: 5, percent: 15, color: '#d4a853' },
-  { mention: 'Excellent', count: 2, percent: 6, color: '#c62828' },
-]
-
-const yearComparison = [
-  { year: '2021-2022', admis: 245, compenses: 42, ajournes: 68, tauxReussite: 68 },
-  { year: '2022-2023', admis: 268, compenses: 38, ajournes: 55, tauxReussite: 73 },
-  { year: '2023-2024', admis: 289, compenses: 35, ajournes: 48, tauxReussite: 77 },
-  { year: '2024-2025', admis: 298, compenses: 32, ajournes: 42, tauxReussite: 80 },
-]
-
-const facultySuccess = [
-  { name: 'Sciences', rate: 82, students: 520, color: '#2d7a4f' },
-  { name: 'Droit', rate: 71, students: 480, color: '#1a2744' },
-  { name: 'Lettres', rate: 75, students: 350, color: '#d4a853' },
-  { name: 'Economie', rate: 78, students: 410, color: '#2d7a4f' },
-  { name: 'Medecine', rate: 88, students: 290, color: '#1a2744' },
-]
-
 // ─── Animated Stat Component ────────────────────────────────────────────────────
 
 function AnimatedStat({ value, label, icon: Icon, suffix = '' }: { value: number; label: string; icon: React.ElementType; suffix?: string }) {
@@ -212,9 +170,7 @@ function AnimatedStat({ value, label, icon: Icon, suffix = '' }: { value: number
 
 export function ResultsPage() {
   const [activeTab, setActiveTab] = useState('session-results')
-  const [selectedSession, setSelectedSession] = useState('S1-2024-2025')
-  const [selectedLevel, setSelectedLevel] = useState('all')
-  const [selectedFiliere, setSelectedFiliere] = useState('all')
+  const [selectedSession, setSelectedSession] = useState('NORMALE')
   const [searchStudent, setSearchStudent] = useState('')
   const [searchTranscript, setSearchTranscript] = useState('')
   const [selectedTranscriptStudentId, setSelectedTranscriptStudentId] = useState('')
@@ -232,7 +188,7 @@ export function ResultsPage() {
   } as const
 
   // ─── Real data: session results, built from the Grade model ────────────────
-  const resultsQuery = useResults()
+  const resultsQuery = useResults({ session: selectedSession })
   const passingGrade: number = resultsQuery.data?.passingGrade ?? 10
   const creditsPerYear: number = resultsQuery.data?.creditsPerYear ?? 60
 
@@ -259,6 +215,37 @@ export function ResultsPage() {
     const totalMoyenne = results.length > 0 ? results.reduce((sum, r) => sum + r.moyenne, 0) / results.length : 0
     return { admis, ajournes, compenses, moyenneGenerale: totalMoyenne.toFixed(1) }
   }, [results])
+
+  const averageDistribution = useMemo(() => {
+    const ranges = [
+      { range: '0-8', min: 0, max: 8, color: '#c62828' },
+      { range: '8-10', min: 8, max: 10, color: '#d4a853' },
+      { range: '10-12', min: 10, max: 12, color: '#6b7280' },
+      { range: '12-14', min: 12, max: 14, color: '#1a2744' },
+      { range: '14-16', min: 14, max: 16, color: '#2d7a4f' },
+      { range: '16-20', min: 16, max: 20.01, color: '#d4a853' },
+    ]
+    return ranges.map((range) => ({
+      range: range.range,
+      color: range.color,
+      count: results.filter((result) => result.moyenne >= range.min && result.moyenne < range.max).length,
+    }))
+  }, [results])
+
+  const mentionDistribution = useMemo(() => {
+    const mentions: Mention[] = ['Passable', 'Assez-Bien', 'Bien', 'Tres-Bien', 'Excellent']
+    return mentions.map((mention) => {
+      const count = results.filter((result) => result.mention === mention).length
+      return {
+        mention,
+        count,
+        percent: results.length > 0 ? Math.round((count / results.length) * 100) : 0,
+        color: mentionConfig[mention].color,
+      }
+    })
+  }, [results])
+
+  const sessionLabel = selectedSession === 'RATTRAPAGE' ? 'Session de rattrapage' : 'Session normale'
 
   // ─── Real data: progression tab (searched student + at-risk list) ──────────
   const progressionStudent: StudentResult | null = useMemo(() => {
@@ -297,7 +284,7 @@ export function ResultsPage() {
     return transcriptCandidates[0]?.id ?? ''
   }, [transcriptCandidates, selectedTranscriptStudentId])
 
-  const transcriptQuery = useResults(effectiveTranscriptStudentId ? { studentId: effectiveTranscriptStudentId } : undefined)
+  const transcriptQuery = useResults(effectiveTranscriptStudentId ? { studentId: effectiveTranscriptStudentId, session: selectedSession } : undefined)
 
   const transcript: TranscriptStudent | null = useMemo(() => {
     const raw = transcriptQuery.data?.transcript as TranscriptStudent | null | undefined
@@ -308,6 +295,52 @@ export function ResultsPage() {
   const resultatsPublies = useCountUp(results.length, 1400)
   const tauxReussiteGlobal = useCountUp(results.length > 0 ? Math.round((sessionStats.admis / results.length) * 100) : 0, 1300)
   const mentionsTresBien = useCountUp(results.filter(r => r.mention === 'Tres-Bien' || r.mention === 'Excellent').length, 1100)
+
+  const viewTranscript = (student: StudentResult) => {
+    setSelectedTranscriptStudentId(student.id)
+    setSearchTranscript(student.name)
+    setActiveTab('transcripts')
+  }
+
+  const exportResults = () => {
+    if (filteredResults.length === 0) {
+      toast.info('Aucun résultat à exporter')
+      return
+    }
+    exportToExcel(filteredResults, `resultats_${selectedSession.toLowerCase()}`)
+  }
+
+  const printTranscript = () => {
+    if (!transcript) {
+      toast.info('Aucun relevé sélectionné')
+      return
+    }
+    window.print()
+  }
+
+  const downloadTranscript = () => {
+    if (!transcript) {
+      toast.info('Aucun relevé à télécharger')
+      return
+    }
+    exportToExcel(
+      transcript.ueGrades.map((ue) => ({
+        étudiant: transcript.name,
+        matricule: transcript.matricule,
+        filière: transcript.filiere,
+        niveau: transcript.niveau,
+        session: sessionLabel,
+        code: ue.code,
+        unité: ue.name,
+        crédits: ue.credit,
+        note: ue.note,
+        moyenne: transcript.moyenne,
+        mention: transcript.mention,
+        crédits_obtenus: transcript.totalCredits,
+      })),
+      `releve_${transcript.matricule.replace(/[^a-z0-9_-]/gi, '_')}`
+    )
+  }
 
   return (
     <TooltipProvider>
@@ -415,38 +448,14 @@ export function ResultsPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="S1-2024-2025">S1 2024-2025</SelectItem>
-                        <SelectItem value="S2-2024-2025">S2 2024-2025</SelectItem>
-                        <SelectItem value="S1-2023-2024">S1 2023-2024</SelectItem>
-                        <SelectItem value="S2-2023-2024">S2 2023-2024</SelectItem>
+                        <SelectItem value="NORMALE">Session normale</SelectItem>
+                        <SelectItem value="RATTRAPAGE">Session de rattrapage</SelectItem>
                       </SelectContent>
                     </Select>
-                    <Select value={selectedLevel} onValueChange={setSelectedLevel}>
-                      <SelectTrigger className="w-[140px] h-9 text-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Tous niveaux</SelectItem>
-                        <SelectItem value="L1">Licence 1</SelectItem>
-                        <SelectItem value="L2">Licence 2</SelectItem>
-                        <SelectItem value="L3">Licence 3</SelectItem>
-                        <SelectItem value="M1">Master 1</SelectItem>
-                        <SelectItem value="M2">Master 2</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Select value={selectedFiliere} onValueChange={setSelectedFiliere}>
-                      <SelectTrigger className="w-[160px] h-9 text-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Toutes filieres</SelectItem>
-                        <SelectItem value="info">Informatique</SelectItem>
-                        <SelectItem value="droit">Droit</SelectItem>
-                        <SelectItem value="eco">Economie</SelectItem>
-                        <SelectItem value="lettres">Lettres</SelectItem>
-                        <SelectItem value="medecine">Medecine</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Button size="sm" variant="outline" className="h-9 text-xs" onClick={exportResults}>
+                      <Download className="size-3.5 mr-1.5" />
+                      Exporter
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -523,7 +532,7 @@ export function ResultsPage() {
                                     </div>
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p>{student.decision === 'Admis' ? 'Etudiant admis a la session' : student.decision === 'Compense' ? 'Admis avec compensation entre UEs' : student.decision === 'Ajourne' ? 'Etudiant ajourne, rattrapage necessaire' : 'Exclu du programme'}</p>
+                                    <p>{student.decision === 'Admis' ? 'Etudiant admis a la session' : student.decision === 'Ajourne' ? 'Etudiant ajourne, rattrapage necessaire' : 'Decision calculee depuis les notes publiees'}</p>
                                   </TooltipContent>
                                 </Tooltip>
                               </TableCell>
@@ -531,27 +540,11 @@ export function ResultsPage() {
                                 <div className="flex items-center justify-end gap-1">
                                   <Tooltip>
                                     <TooltipTrigger asChild>
-                                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0 hover:bg-[#2d7a4f10]">
+                                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0 hover:bg-[#2d7a4f10]" onClick={() => viewTranscript(student)}>
                                         <Eye className="size-3.5 text-gray-600" />
                                       </Button>
                                     </TooltipTrigger>
-                                    <TooltipContent>Voir les details</TooltipContent>
-                                  </Tooltip>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0 hover:bg-[#1a274410]">
-                                        <Pencil className="size-3.5 text-gray-600" />
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>Modifier</TooltipContent>
-                                  </Tooltip>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0 hover:bg-[#c6282810]">
-                                        <Trash2 className="size-3.5 text-gray-600" />
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>Supprimer</TooltipContent>
+                                    <TooltipContent>Ouvrir le relevé</TooltipContent>
                                   </Tooltip>
                                 </div>
                               </TableCell>
@@ -659,13 +652,13 @@ export function ResultsPage() {
                       <CardTitle className="text-sm font-semibold text-[#1a2744]">Releve de Notes</CardTitle>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button size="sm" variant="outline" className="text-xs h-8" disabled={!transcript}>
+                      <Button size="sm" variant="outline" className="text-xs h-8" disabled={!transcript} onClick={printTranscript}>
                         <Printer className="size-3.5 mr-1.5" />
                         Imprimer
                       </Button>
-                      <Button size="sm" className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs h-8" disabled={!transcript}>
+                      <Button size="sm" className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs h-8" disabled={!transcript} onClick={downloadTranscript}>
                         <Download className="size-3.5 mr-1.5" />
-                        Generer PDF
+                        Exporter
                       </Button>
                     </div>
                   </div>
@@ -683,8 +676,8 @@ export function ResultsPage() {
                   <div className="border-2 border-gray-200 rounded-lg p-5">
                     {/* University Header */}
                     <div className="text-center mb-4">
-                      <h3 className="text-sm font-bold text-[#1a2744] uppercase tracking-wide">Universite de N&apos;Djamena</h3>
-                      <p className="text-[10px] text-gray-500">BP 1117 N&apos;Djamena, Tchad - www.univ-ndjamena.td</p>
+                      <h3 className="text-sm font-bold text-[#1a2744] uppercase tracking-wide">Relevé institutionnel</h3>
+                      <p className="text-[10px] text-gray-500">Établissement connecté au compte administrateur</p>
                       <Separator className="my-2 bg-[#1a2744] h-0.5" />
                       <p className="text-xs font-semibold text-[#1a2744]">RELEVE DE NOTES ET DE CREDITS</p>
                     </div>
@@ -769,7 +762,7 @@ export function ResultsPage() {
                       </TableBody>
                     </Table>
 
-                    {/* Mention and QR badge */}
+                    {/* Mention and document status */}
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mt-4 gap-3">
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-semibold text-gray-500">Mention :</span>
@@ -778,11 +771,11 @@ export function ResultsPage() {
                           {transcript.mention}
                         </Badge>
                       </div>
-                      <div className="flex items-center gap-2 bg-[#2d7a4f08] border border-[#2d7a4f20] rounded-lg px-3 py-1.5">
-                        <Shield className="size-4 text-[#2d7a4f]" />
+                      <div className="flex items-center gap-2 bg-[#d4a85308] border border-[#d4a85320] rounded-lg px-3 py-1.5">
+                        <Shield className="size-4 text-[#d4a853]" />
                         <div>
-                          <p className="text-[9px] font-semibold text-[#2d7a4f] uppercase">Document verifiable</p>
-                          <p className="text-[9px] text-gray-500">QR Code: VRF-{transcript.matricule}</p>
+                          <p className="text-[9px] font-semibold text-[#1a2744] uppercase">Vérification non activée</p>
+                          <p className="text-[9px] text-gray-500">Aucun QR code officiel n’est généré ici</p>
                         </div>
                       </div>
                     </div>
@@ -927,8 +920,8 @@ export function ResultsPage() {
                   </CardHeader>
                   <CardContent className="p-4 pt-0">
                     <div className="space-y-2.5">
-                      {distributionRanges.map((item, i) => {
-                        const maxCount = Math.max(...distributionRanges.map(d => d.count))
+                      {averageDistribution.map((item, i) => {
+                        const maxCount = Math.max(1, ...averageDistribution.map(d => d.count))
                         return (
                           <div key={item.range} className="flex items-center gap-3">
                             <span className="text-xs font-medium text-gray-600 w-10 text-right">{item.range}</span>
@@ -981,85 +974,62 @@ export function ResultsPage() {
                 </Card>
               </div>
 
-              {/* Year-over-Year Comparison Table */}
+              {/* Current Session Summary Table */}
               <Card className="border-l-4 border-l-[#2d7a4f]">
                 <CardHeader className="pb-3">
                   <div className="flex items-center gap-2">
                     <Calendar className="size-4 text-[#2d7a4f]" />
-                    <CardTitle className="text-sm font-semibold text-[#1a2744]">Comparaison annuelle</CardTitle>
+                    <CardTitle className="text-sm font-semibold text-[#1a2744]">Synthèse de la session courante</CardTitle>
                   </div>
                 </CardHeader>
                 <CardContent className="p-0">
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-gray-50 hover:bg-gray-50">
-                        <TableHead className="text-[10px] font-semibold uppercase">Annee</TableHead>
+                        <TableHead className="text-[10px] font-semibold uppercase">Session</TableHead>
                         <TableHead className="text-[10px] font-semibold uppercase text-center">Admis</TableHead>
                         <TableHead className="text-[10px] font-semibold uppercase text-center">Compenses</TableHead>
                         <TableHead className="text-[10px] font-semibold uppercase text-center">Ajournes</TableHead>
                         <TableHead className="text-[10px] font-semibold uppercase text-center">Taux reussite</TableHead>
-                        <TableHead className="text-[10px] font-semibold uppercase text-center">Tendance</TableHead>
+                        <TableHead className="text-[10px] font-semibold uppercase text-center">Moyenne</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {yearComparison.map((year) => (
-                        <TableRow key={year.year} className="hover:bg-gray-50">
-                          <TableCell className="py-2.5 text-xs font-semibold text-[#1a2744]">{year.year}</TableCell>
-                          <TableCell className="py-2.5 text-center text-xs text-[#2d7a4f] font-semibold">{year.admis}</TableCell>
-                          <TableCell className="py-2.5 text-center text-xs text-[#d4a853] font-semibold">{year.compenses}</TableCell>
-                          <TableCell className="py-2.5 text-center text-xs text-[#c62828] font-semibold">{year.ajournes}</TableCell>
-                          <TableCell className="py-2.5 text-center">
-                            <span className="text-xs font-bold text-[#2d7a4f]">{year.tauxReussite}%</span>
-                          </TableCell>
-                          <TableCell className="py-2.5 text-center">
-                            {year.tauxReussite >= 75 ? (
-                              <ArrowUpRight className="size-4 text-[#2d7a4f] inline" />
-                            ) : (
-                              <ArrowDownRight className="size-4 text-[#c62828] inline" />
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      <TableRow className="hover:bg-gray-50">
+                        <TableCell className="py-2.5 text-xs font-semibold text-[#1a2744]">{sessionLabel}</TableCell>
+                        <TableCell className="py-2.5 text-center text-xs text-[#2d7a4f] font-semibold">{sessionStats.admis}</TableCell>
+                        <TableCell className="py-2.5 text-center text-xs text-[#d4a853] font-semibold">{sessionStats.compenses}</TableCell>
+                        <TableCell className="py-2.5 text-center text-xs text-[#c62828] font-semibold">{sessionStats.ajournes}</TableCell>
+                        <TableCell className="py-2.5 text-center">
+                          <span className="text-xs font-bold text-[#2d7a4f]">{results.length > 0 ? Math.round((sessionStats.admis / results.length) * 100) : 0}%</span>
+                        </TableCell>
+                        <TableCell className="py-2.5 text-center text-xs font-semibold text-[#1a2744]">{sessionStats.moyenneGenerale}/20</TableCell>
+                      </TableRow>
                     </TableBody>
                   </Table>
                 </CardContent>
               </Card>
 
-              {/* Faculty Success + Gender Comparison */}
+              {/* Advanced breakdowns */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {/* Faculty Success Rate */}
                 <Card className="border-l-4 border-l-[#1a2744]">
                   <CardHeader className="pb-3">
                     <div className="flex items-center gap-2">
                       <GraduationCap className="size-4 text-[#1a2744]" />
-                      <CardTitle className="text-sm font-semibold text-[#1a2744]">Taux de reussite par faculte</CardTitle>
+                      <CardTitle className="text-sm font-semibold text-[#1a2744]">Taux par filière/faculté</CardTitle>
                     </div>
                   </CardHeader>
-                  <CardContent className="p-4 pt-0 space-y-3">
-                    {facultySuccess.map((fac, i) => (
-                      <div key={fac.name}>
-                        <div className="flex items-center justify-between mb-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-medium text-gray-600">{fac.name}</span>
-                            <span className="text-[10px] text-gray-400">({fac.students} etud.)</span>
-                          </div>
-                          <span className="text-xs font-bold" style={{ color: fac.color }}>{fac.rate}%</span>
-                        </div>
-                        <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
-                          <motion.div
-                            className="h-full rounded-full"
-                            style={{ backgroundColor: fac.color }}
-                            initial={{ width: 0 }}
-                            animate={{ width: `${fac.rate}%` }}
-                            transition={{ duration: 0.9, ease: 'easeOut', delay: 0.12 * i }}
-                          />
-                        </div>
-                      </div>
-                    ))}
+                  <CardContent className="p-4 pt-0">
+                    <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 p-5 text-center">
+                      <GraduationCap className="size-8 text-gray-300 mx-auto mb-2" />
+                      <p className="text-sm font-medium text-[#1a2744]">Ventilation non disponible dans l’API actuelle.</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Les résultats renvoyés ne contiennent pas encore la filière ou la faculté. Les anciens taux Sciences/Droit/Médecine codés en dur ont été retirés.
+                      </p>
+                    </div>
                   </CardContent>
                 </Card>
 
-                {/* Gender Comparison */}
                 <Card className="border-l-4 border-l-[#d4a853]">
                   <CardHeader className="pb-3">
                     <div className="flex items-center gap-2">
@@ -1068,46 +1038,11 @@ export function ResultsPage() {
                     </div>
                   </CardHeader>
                   <CardContent className="p-4 pt-0">
-                    <div className="grid grid-cols-2 gap-4">
-                      {/* Homme */}
-                      <div className="text-center p-4 bg-[#1a274408] rounded-xl">
-                        <div className="w-12 h-12 rounded-full bg-[#1a274410] flex items-center justify-center mx-auto mb-2">
-                          <Users className="size-5 text-[#1a2744]" />
-                        </div>
-                        <p className="text-xs font-semibold text-gray-600 mb-1">Hommes</p>
-                        <p className="text-2xl font-bold text-[#1a2744]">78%</p>
-                        <p className="text-[10px] text-gray-500 mt-1">Taux de reussite</p>
-                        <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden mt-2">
-                          <motion.div
-                            className="h-full rounded-full bg-[#1a2744]"
-                            initial={{ width: 0 }}
-                            animate={{ width: '78%' }}
-                            transition={{ duration: 1, ease: 'easeOut' }}
-                          />
-                        </div>
-                      </div>
-                      {/* Femme */}
-                      <div className="text-center p-4 bg-[#2d7a4f08] rounded-xl">
-                        <div className="w-12 h-12 rounded-full bg-[#2d7a4f10] flex items-center justify-center mx-auto mb-2">
-                          <Users className="size-5 text-[#2d7a4f]" />
-                        </div>
-                        <p className="text-xs font-semibold text-gray-600 mb-1">Femmes</p>
-                        <p className="text-2xl font-bold text-[#2d7a4f]">83%</p>
-                        <p className="text-[10px] text-gray-500 mt-1">Taux de reussite</p>
-                        <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden mt-2">
-                          <motion.div
-                            className="h-full rounded-full bg-[#2d7a4f]"
-                            initial={{ width: 0 }}
-                            animate={{ width: '83%' }}
-                            transition={{ duration: 1, ease: 'easeOut', delay: 0.2 }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                    <Separator className="my-3" />
-                    <div className="text-center">
-                      <p className="text-[10px] text-gray-500">
-                        Les femmes presentent un taux de reussite superieur de <span className="font-bold text-[#2d7a4f]">+5 points</span> par rapport aux hommes
+                    <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 p-5 text-center">
+                      <Users className="size-8 text-gray-300 mx-auto mb-2" />
+                      <p className="text-sm font-medium text-[#1a2744]">Données de genre non exposées par ce module.</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Les pourcentages Hommes/Femmes inventés ont été retirés. Cette comparaison sera affichée quand l’API transmettra un champ de genre fiable.
                       </p>
                     </div>
                   </CardContent>
@@ -1118,145 +1053,139 @@ export function ResultsPage() {
         </motion.div>
 
 
-        {/* ─── African Context Card ──────────────────────────────────────────────── */}
+        {/* ─── Configuration Card ───────────────────────────────────────────────── */}
         <motion.div variants={itemVariants}>
           <Card className="border-l-4 border-l-[#2d7a4f]">
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
                 <Shield className="size-4 text-[#2d7a4f]" />
-                <CardTitle className="text-sm font-semibold text-[#1a2744]">Contexte africain et specifications LMD</CardTitle>
+                <CardTitle className="text-sm font-semibold text-[#1a2744]">Configuration réelle du module résultats</CardTitle>
               </div>
             </CardHeader>
             <CardContent className="p-4 pt-0">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {/* LMD Compliance */}
                 <div className="p-3 bg-[#1a274405] rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
                     <GraduationCap className="size-4 text-[#1a2744]" />
-                    <p className="text-xs font-semibold text-[#1a2744]">Systeme LMD</p>
+                    <p className="text-xs font-semibold text-[#1a2744]">Paramètres utilisés</p>
                   </div>
                   <ul className="space-y-1">
                     <li className="text-[11px] text-gray-600 flex items-center gap-1.5">
                       <CheckCircle2 className="size-3 text-[#2d7a4f] shrink-0" />
-                      Licence : 180 credits (6 semestres)
+                      Seuil de validation : {passingGrade}/20
                     </li>
                     <li className="text-[11px] text-gray-600 flex items-center gap-1.5">
                       <CheckCircle2 className="size-3 text-[#2d7a4f] shrink-0" />
-                      Master : 120 credits (4 semestres)
+                      Crédits annuels attendus : {creditsPerYear}
                     </li>
                     <li className="text-[11px] text-gray-600 flex items-center gap-1.5">
                       <CheckCircle2 className="size-3 text-[#2d7a4f] shrink-0" />
-                      Doctorat : 360 credits total
+                      Moyennes calculées depuis les notes publiées
                     </li>
                   </ul>
                 </div>
 
-                {/* Compensation Rules */}
                 <div className="p-3 bg-[#2d7a4f05] rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
                     <CircleDot className="size-4 text-[#2d7a4f]" />
-                    <p className="text-xs font-semibold text-[#1a2744]">Regles de compensation</p>
+                    <p className="text-xs font-semibold text-[#1a2744]">Décisions</p>
                   </div>
                   <ul className="space-y-1">
                     <li className="text-[11px] text-gray-600 flex items-center gap-1.5">
                       <CheckCircle2 className="size-3 text-[#2d7a4f] shrink-0" />
-                      Compensation entre UEs du meme semestre
+                      Admis si moyenne ≥ {passingGrade}/20
                     </li>
                     <li className="text-[11px] text-gray-600 flex items-center gap-1.5">
-                      <CheckCircle2 className="size-3 text-[#2d7a4f] shrink-0" />
-                      Note eliminatoire : 6/20 par UE
+                      <AlertTriangle className="size-3 text-[#d4a853] shrink-0" />
+                      Compensation fine non exposée par l’API actuelle
                     </li>
                     <li className="text-[11px] text-gray-600 flex items-center gap-1.5">
-                      <CheckCircle2 className="size-3 text-[#2d7a4f] shrink-0" />
-                      Dette max 12 credits pour compensation
+                      <AlertTriangle className="size-3 text-[#d4a853] shrink-0" />
+                      Exclusion non calculée dans ce module
                     </li>
                   </ul>
                 </div>
 
-                {/* Multi-session Support */}
                 <div className="p-3 bg-[#d4a85305] rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
                     <Calendar className="size-4 text-[#d4a853]" />
-                    <p className="text-xs font-semibold text-[#1a2744]">Sessions multiples</p>
+                    <p className="text-xs font-semibold text-[#1a2744]">Sessions connectées</p>
                   </div>
                   <ul className="space-y-1">
                     <li className="text-[11px] text-gray-600 flex items-center gap-1.5">
                       <CheckCircle2 className="size-3 text-[#2d7a4f] shrink-0" />
-                      Session normale (janvier-fevrier)
+                      Session normale
                     </li>
                     <li className="text-[11px] text-gray-600 flex items-center gap-1.5">
                       <CheckCircle2 className="size-3 text-[#2d7a4f] shrink-0" />
-                      Session de rattrapage (mars-avril)
+                      Session de rattrapage
                     </li>
                     <li className="text-[11px] text-gray-600 flex items-center gap-1.5">
-                      <CheckCircle2 className="size-3 text-[#2d7a4f] shrink-0" />
-                      Conservation de la meilleure note
+                      <AlertTriangle className="size-3 text-[#d4a853] shrink-0" />
+                      Calendrier de session à connecter séparément
                     </li>
                   </ul>
                 </div>
 
-                {/* Low Connectivity */}
                 <div className="p-3 bg-[#1a274405] rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
-                    <Zap className="size-4 text-[#1a2744]" />
-                    <p className="text-xs font-semibold text-[#1a2744]">Faible connectivite</p>
+                    <Download className="size-4 text-[#1a2744]" />
+                    <p className="text-xs font-semibold text-[#1a2744]">Exports</p>
                   </div>
                   <ul className="space-y-1">
                     <li className="text-[11px] text-gray-600 flex items-center gap-1.5">
                       <CheckCircle2 className="size-3 text-[#2d7a4f] shrink-0" />
-                      Publication par lot des resultats
+                      Export des résultats affichés
                     </li>
                     <li className="text-[11px] text-gray-600 flex items-center gap-1.5">
                       <CheckCircle2 className="size-3 text-[#2d7a4f] shrink-0" />
-                      Validation hors ligne possible
+                      Export du relevé sélectionné
                     </li>
                     <li className="text-[11px] text-gray-600 flex items-center gap-1.5">
-                      <CheckCircle2 className="size-3 text-[#2d7a4f] shrink-0" />
-                      Synchronisation automatique
+                      <AlertTriangle className="size-3 text-[#d4a853] shrink-0" />
+                      PDF officiel à signer non généré
                     </li>
                   </ul>
                 </div>
 
-                {/* Print Format */}
                 <div className="p-3 bg-[#2d7a4f05] rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
                     <Printer className="size-4 text-[#2d7a4f]" />
-                    <p className="text-xs font-semibold text-[#1a2744]">Format imprimable</p>
+                    <p className="text-xs font-semibold text-[#1a2744]">Impression</p>
                   </div>
                   <ul className="space-y-1">
                     <li className="text-[11px] text-gray-600 flex items-center gap-1.5">
                       <CheckCircle2 className="size-3 text-[#2d7a4f] shrink-0" />
-                      Releves officiels conformes
+                      Impression du relevé sélectionné
                     </li>
                     <li className="text-[11px] text-gray-600 flex items-center gap-1.5">
-                      <CheckCircle2 className="size-3 text-[#2d7a4f] shrink-0" />
-                      Cachet et signature numerique
+                      <AlertTriangle className="size-3 text-[#d4a853] shrink-0" />
+                      Cachet numérique non configuré
                     </li>
                     <li className="text-[11px] text-gray-600 flex items-center gap-1.5">
-                      <CheckCircle2 className="size-3 text-[#2d7a4f] shrink-0" />
-                      QR Code de verification
+                      <AlertTriangle className="size-3 text-[#d4a853] shrink-0" />
+                      QR code de vérification non activé ici
                     </li>
                   </ul>
                 </div>
 
-                {/* Multi-language */}
                 <div className="p-3 bg-[#d4a85305] rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
                     <BookOpen className="size-4 text-[#d4a853]" />
-                    <p className="text-xs font-semibold text-[#1a2744]">Multilinguisme</p>
+                    <p className="text-xs font-semibold text-[#1a2744]">Langue</p>
                   </div>
                   <ul className="space-y-1">
                     <li className="text-[11px] text-gray-600 flex items-center gap-1.5">
                       <CheckCircle2 className="size-3 text-[#2d7a4f] shrink-0" />
-                      Francais (langue principale)
+                      Interface et relevé en français
                     </li>
                     <li className="text-[11px] text-gray-600 flex items-center gap-1.5">
-                      <CheckCircle2 className="size-3 text-[#2d7a4f] shrink-0" />
-                      Anglais (releves bilingues)
+                      <AlertTriangle className="size-3 text-[#d4a853] shrink-0" />
+                      Relevés bilingues non connectés
                     </li>
                     <li className="text-[11px] text-gray-600 flex items-center gap-1.5">
-                      <CheckCircle2 className="size-3 text-[#2d7a4f] shrink-0" />
-                      Arabe (pays francophones arabes)
+                      <AlertTriangle className="size-3 text-[#d4a853] shrink-0" />
+                      Traductions avancées non activées
                     </li>
                   </ul>
                 </div>
