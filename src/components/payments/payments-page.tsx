@@ -4,7 +4,6 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { toast } from 'sonner'
 import { motion } from 'framer-motion'
 import { useQueryClient } from '@tanstack/react-query'
-import { useAppStore } from '@/lib/store'
 import { usePayments, useStudents, useDashboardStats } from '@/lib/api-hooks'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -47,7 +46,6 @@ import {
   ArrowDownRight,
   Printer,
   RefreshCw,
-  Settings2,
   Wallet,
   Zap,
   CalendarDays,
@@ -143,7 +141,7 @@ export function PaymentsPage() {
   const [remindingId, setRemindingId] = useState<string | null>(null)
 
   const queryClient = useQueryClient()
-  const { data: paymentsData, isLoading } = usePayments({ limit: 1000 })
+  const { data: paymentsData } = usePayments({ limit: 1000 })
   const { data: studentMatches } = useStudents({ search: studentSearch, limit: 6 })
   const showStudentDropdown = showNewPayment && studentSearch.length >= 2 && !newPayment.studentId
   const { data: dashboardData } = useDashboardStats() as { data: { currentAcademicYear?: { id: string } } | undefined }
@@ -231,6 +229,11 @@ export function PaymentsPage() {
   const maxRevenue = Math.max(...revenueData.map(r => r.value), 1)
 
   const methodApiMap: Record<string, string> = { cash: 'CASH', mobile_money: 'MOBILE_MONEY', bank: 'BANK_TRANSFER' }
+
+  const openMobileMoneyPaymentForm = () => {
+    setNewPayment((payment) => ({ ...payment, methode: 'mobile_money' }))
+    setShowNewPayment(true)
+  }
 
   const handleCreatePayment = async () => {
     if (!newPayment.studentId || !newPayment.montant || !newPayment.methode) {
@@ -725,9 +728,9 @@ export function PaymentsPage() {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm font-semibold text-[#1a2744]">Integration Mobile Money</CardTitle>
-                <Button size="sm" variant="outline" className="h-7 text-xs border-[#d4a853] text-[#d4a853] hover:bg-[#d4a85310]" onClick={() => toast.info('Bientot disponible', { description: "L'integration directe avec les operateurs Mobile Money est en cours de mise en place. Enregistrez ces paiements manuellement pour le moment." })}>
-                  <Settings2 className="size-3 mr-1" />
-                  Configurer
+                <Button size="sm" variant="outline" className="h-7 text-xs border-[#d4a853] text-[#d4a853] hover:bg-[#d4a85310]" onClick={openMobileMoneyPaymentForm}>
+                  <Plus className="size-3 mr-1" />
+                  Enregistrer
                 </Button>
               </div>
             </CardHeader>

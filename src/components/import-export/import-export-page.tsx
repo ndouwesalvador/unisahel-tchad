@@ -75,6 +75,11 @@ const importTypeMap: Record<ImportType, ImportTypeLabel> = {
   Structure: 'Structure',
 }
 
+const supportedImportTypes = [
+  ['Etudiants', 'Étudiants'],
+  ['Enseignants', 'Enseignants'],
+] as [ImportType, ImportTypeLabel][]
+
 const exportTypeMap: Record<ExportType, ExportTypeLabel> = {
   ListeEtudiants: 'Liste des étudiants',
   RelevesNotes: 'Relevés de notes',
@@ -649,7 +654,7 @@ export function ImportExportPage() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {(Object.entries(importTypeMap) as [ImportType, ImportTypeLabel][]).map(([key, label]) => (
+                          {supportedImportTypes.map(([key, label]) => (
                             <SelectItem key={key} value={key}>{label}</SelectItem>
                           ))}
                         </SelectContent>

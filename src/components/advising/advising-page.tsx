@@ -405,8 +405,14 @@ export function AdvisingPage() {
 
   // ── Mutations ─────────────────────────────────────────────────────────────
 
-  const openNewAppointment = (prefill?: { studentId?: string; advisorId?: string }) => {
-    setNewAppt((f) => ({ ...f, studentId: prefill?.studentId ?? f.studentId, advisorId: prefill?.advisorId ?? f.advisorId }))
+  const openNewAppointment = (prefill?: { studentId?: string; advisorId?: string; type?: string; notes?: string }) => {
+    setNewAppt((f) => ({
+      ...f,
+      studentId: prefill?.studentId ?? f.studentId,
+      advisorId: prefill?.advisorId ?? f.advisorId,
+      type: prefill?.type ?? f.type,
+      notes: prefill?.notes ?? f.notes,
+    }))
     setShowNewAppointment(true)
   }
 
@@ -1469,9 +1475,12 @@ export function AdvisingPage() {
                         variant={isFull ? 'outline' : 'default'}
                         className={`w-full text-xs ${isFull ? 'border-[#ea580c30] text-[#ea580c] hover:bg-[#ea580c08]' : 'bg-[#2d7a4f] hover:bg-[#236b40] text-white'}`}
                         disabled={isFull}
-                        onClick={() => toast.info('Inscription en ligne bientot disponible', { description: 'Contactez le conseiller responsable pour inscrire un etudiant a cet atelier.' })}
+                        onClick={() => openNewAppointment({
+                          type: 'Orientation',
+                          notes: `Rendez-vous lie a l'atelier : ${workshop.title}`,
+                        })}
                       >
-                        {isFull ? 'Complet' : "S'inscrire"}
+                        {isFull ? 'Complet' : 'Planifier un RDV'}
                         {!isFull && <ArrowRight className="size-3 ml-1.5" />}
                       </Button>
                     </motion.div>
