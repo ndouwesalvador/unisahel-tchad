@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { motion } from 'framer-motion'
@@ -30,7 +30,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog'
 import {
   DropdownMenu,
@@ -46,7 +45,6 @@ import {
   MoreHorizontal,
   Eye,
   Edit3,
-  Trash2,
   CheckCircle2,
   XCircle,
   Clock,
@@ -57,19 +55,17 @@ import {
   Shield,
   Smartphone,
   Globe,
-  Wifi,
   WifiOff,
-  Landmark,
   Banknote,
   Plus,
   ChevronRight,
   Building2,
   GraduationCap,
-  DollarSign,
   Mail,
   Award,
 } from 'lucide-react'
 import { useHrStaff } from '@/lib/api-hooks'
+import { exportToExcel } from '@/lib/export'
 
 // ─── useCountUp Hook ─────────────────────────────────────────────────────────
 
@@ -108,7 +104,7 @@ function useCountUp(target: number, duration = 1400) {
   return value
 }
 
-// ─── Demo Data ────────────────────────────────────────────────────────────────
+// ─── API-backed data mapping ─────────────────────────────────────────────────
 
 interface StaffMember {
   id: string
@@ -195,55 +191,29 @@ function mapLeaveRequest(r: ApiLeaveRequest): LeaveRequest {
   }
 }
 
-interface Vacancy {
-  id: string
-  title: string
+interface StaffForm {
+  firstName: string
+  lastName: string
+  email: string
+  phone: string
   department: string
-  contract: string
-  postedDate: string
-  applications: number
-}
-
-const demoVacancies: Vacancy[] = [
-  { id: '1', title: 'Maitre de conferences - Informatique', department: 'Informatique', contract: 'CDI', postedDate: '01/02/2025', applications: 23 },
-  { id: '2', title: 'Assistant pedagogique - Droit', department: 'Droit', contract: 'CDD', postedDate: '15/02/2025', applications: 18 },
-  { id: '3', title: 'Chef de departement - Economie', department: 'Economie', contract: 'CDI', postedDate: '20/01/2025', applications: 12 },
-  { id: '4', title: 'Vacataire - Mathematiques', department: 'Sciences', contract: 'Vacataire', postedDate: '10/03/2025', applications: 8 },
-  { id: '5', title: 'Agent administratif', department: 'Administration', contract: 'CDD', postedDate: '01/03/2025', applications: 45 },
-]
-
-interface Evaluation {
-  id: string
-  name: string
   position: string
-  rating: number
-  period: string
-  evaluator: string
-  status: 'terminee' | 'en_cours' | 'planifiee'
+  contractType: 'CDI' | 'CDD' | 'Vacataire' | 'Stagiaire'
+  status: 'actif' | 'en_conge' | 'suspendu' | 'depart'
+  joinDate: string
 }
 
-const demoEvaluations: Evaluation[] = [
-  { id: '1', name: 'MAHAMAT Abakar', position: 'Chef de departement', rating: 4.5, period: 'S1 2024-2025', evaluator: 'Djimadoumber Deubong', status: 'terminee' },
-  { id: '2', name: 'HISSEIN Fatime', position: 'Maitre de conferences', rating: 4.0, period: 'S1 2024-2025', evaluator: 'Mahamat Abakar', status: 'terminee' },
-  { id: '3', name: 'BICHARA Hawa', position: 'Chef de scolarite', rating: 4.2, period: 'S1 2024-2025', evaluator: 'Djimadoumber Deubong', status: 'terminee' },
-  { id: '4', name: 'KHAMIS Youssouf', position: 'Charge de cours', rating: 3.5, period: 'S2 2024-2025', evaluator: 'Yaya Djerabe', status: 'en_cours' },
-  { id: '5', name: 'HAROUN Djibrine', position: 'Ingenieur systeme', rating: 4.8, period: 'S2 2024-2025', evaluator: 'Mahamat Abakar', status: 'planifiee' },
-]
-
-const monthlyPayroll = [
-  { month: 'Jan', amount: 28500000 },
-  { month: 'Fev', amount: 28500000 },
-  { month: 'Mar', amount: 29200000 },
-  { month: 'Avr', amount: 28500000 },
-  { month: 'Mai', amount: 29800000 },
-  { month: 'Jun', amount: 28500000 },
-  { month: 'Jul', amount: 28500000 },
-  { month: 'Aou', amount: 27100000 },
-  { month: 'Sep', amount: 28500000 },
-  { month: 'Oct', amount: 29300000 },
-  { month: 'Nov', amount: 28500000 },
-  { month: 'Dec', amount: 31200000 },
-]
+const initialStaffForm: StaffForm = {
+  firstName: '',
+  lastName: '',
+  email: '',
+  phone: '',
+  department: '',
+  position: '',
+  contractType: 'CDI',
+  status: 'actif',
+  joinDate: new Date().toISOString().slice(0, 10),
+}
 
 const statusConfig: Record<string, { label: string; className: string }> = {
   actif: { label: 'Actif', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0' },
@@ -265,63 +235,6 @@ const leaveStatusConfig: Record<string, { label: string; className: string }> = 
   refuse: { label: 'Refuse', className: 'bg-[#c6282815] text-[#c62828] border-0' },
 }
 
-function formatFCFA(amount: number) {
-  return amount.toLocaleString('fr-FR') + ' FCFA'
-}
-
-// ─── Star Rating Component ───────────────────────────────────────────────────
-
-function StarRating({ rating }: { rating: number }) {
-  return (
-    <div className="flex items-center gap-0.5">
-      {[1, 2, 3, 4, 5].map((star) => (
-        <Star
-          key={star}
-          className={`size-3.5 ${
-            star <= Math.floor(rating)
-              ? 'fill-[#d4a853] text-[#d4a853]'
-              : star - 0.5 <= rating
-              ? 'fill-[#d4a853]/50 text-[#d4a853]'
-              : 'text-gray-300'
-          }`}
-        />
-      ))}
-      <span className="text-xs font-semibold text-[#1a2744] ml-1">{rating.toFixed(1)}</span>
-    </div>
-  )
-}
-
-// ─── Animated Progress Circle ─────────────────────────────────────────────────
-
-function ProgressCircle({ value, size = 80, strokeWidth = 6 }: { value: number; size?: number; strokeWidth?: number }) {
-  const radius = (size - strokeWidth) / 2
-  const circumference = 2 * Math.PI * radius
-  const offset = circumference - (value / 100) * circumference
-
-  return (
-    <div className="relative" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={radius} stroke="#e5e7eb" strokeWidth={strokeWidth} fill="none" />
-        <motion.circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          stroke="#2d7a4f"
-          strokeWidth={strokeWidth}
-          fill="none"
-          strokeLinecap="round"
-          initial={{ strokeDasharray: circumference, strokeDashoffset: circumference }}
-          animate={{ strokeDashoffset: offset }}
-          transition={{ duration: 1.2, ease: 'easeOut' }}
-        />
-      </svg>
-      <div className="absolute inset-0 flex items-center justify-center">
-        <span className="text-sm font-bold text-[#1a2744]">{value.toFixed(1)}</span>
-      </div>
-    </div>
-  )
-}
-
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function HrPage() {
@@ -329,15 +242,17 @@ export function HrPage() {
   const [departmentFilter, setDepartmentFilter] = useState('tous')
   const [contractFilter, setContractFilter] = useState('tous')
   const [statusFilter, setStatusFilter] = useState('tous')
-  const [showNewOffer, setShowNewOffer] = useState(false)
+  const [showAddStaff, setShowAddStaff] = useState(false)
+  const [isSubmittingStaff, setIsSubmittingStaff] = useState(false)
+  const [staffForm, setStaffForm] = useState<StaffForm>(initialStaffForm)
   const queryClient = useQueryClient()
 
   const { data: staffQuery, isLoading } = useHrStaff() as {
     data: { data?: ApiStaff[]; leaveRequests?: ApiLeaveRequest[] } | undefined
     isLoading: boolean
   }
-  const staff: StaffMember[] = (staffQuery?.data || []).map(mapStaff)
-  const leaveRequests: LeaveRequest[] = (staffQuery?.leaveRequests || []).map(mapLeaveRequest)
+  const staff: StaffMember[] = useMemo(() => (staffQuery?.data || []).map(mapStaff), [staffQuery])
+  const leaveRequests: LeaveRequest[] = useMemo(() => (staffQuery?.leaveRequests || []).map(mapLeaveRequest), [staffQuery])
 
   // Count-up stats
   const totalPersonnel = useCountUp(staff.length, 1400)
@@ -361,15 +276,29 @@ export function HrPage() {
     return matchSearch && matchDept && matchContract && matchStatus
   })
 
-  // Payroll stats
-  const totalPayroll = monthlyPayroll.reduce((acc, m) => acc + m.amount, 0)
-  const maxPayroll = Math.max(...monthlyPayroll.map(m => m.amount))
-  const avgPayroll = totalPayroll / monthlyPayroll.length
-  const chargesPatronales = Math.round(avgPayroll * 0.22)
-  const netAPayer = avgPayroll - chargesPatronales
+  const monthlyStaffTrend = useMemo(() => {
+    const now = new Date()
+    return Array.from({ length: 12 }).map((_, offset) => {
+      const monthDate = new Date(now.getFullYear(), now.getMonth() - (11 - offset), 1)
+      const monthEnd = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0)
+      const count = staff.filter((member) => {
+        const joinDate = new Date(member.joinDate.split('/').reverse().join('-'))
+        return joinDate <= monthEnd
+      }).length
+      return {
+        month: monthDate.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', ''),
+        count,
+      }
+    })
+  }, [staff])
+  const maxStaffTrend = Math.max(1, ...monthlyStaffTrend.map((m) => m.count))
 
-  // Average evaluation rating
-  const avgRating = demoEvaluations.reduce((acc, e) => acc + e.rating, 0) / demoEvaluations.length
+  const contractBreakdown = {
+    cdi: staff.filter((member) => member.contract === 'cdi').length,
+    cdd: staff.filter((member) => member.contract === 'cdd').length,
+    vacataire: staff.filter((member) => member.contract === 'vacataire').length,
+    stagiaire: staff.filter((member) => member.contract === 'stagiaire').length,
+  }
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -384,20 +313,63 @@ export function HrPage() {
     visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: 'easeOut' } },
   } as const
 
-  // Leave balance data
-  const leaveBalance = [
-    { type: 'Conges annuels', used: 45, total: 90, color: '#2d7a4f' },
-    { type: 'Conges maladie', used: 12, total: 30, color: '#d4a853' },
-    { type: 'Conges maternite', used: 1, total: 3, color: '#1a2744' },
-  ]
+  const leaveBalance = Object.entries(
+    leaveRequests.reduce<Record<string, number>>((acc, request) => {
+      acc[request.type] = (acc[request.type] || 0) + Number.parseInt(request.duration, 10)
+      return acc
+    }, {})
+  ).map(([type, used], index) => ({
+    type,
+    used,
+    total: Math.max(used, 1),
+    color: ['#2d7a4f', '#d4a853', '#1a2744'][index % 3],
+  }))
 
-  // Upcoming leaves for calendar strip
-  const upcomingLeaves = [
-    { name: 'Halime N.', start: 1, end: 15, month: 'Mars', color: '#2d7a4f' },
-    { name: 'Ibrahim S.', start: 10, end: 17, month: 'Fev', color: '#d4a853' },
-    { name: 'Fatime H.', start: 20, end: 30, month: 'Avr', color: '#2d7a4f' },
-    { name: 'Hawa B.', start: 1, end: 30, month: 'Jun', color: '#1a2744' },
-  ]
+  const upcomingLeaves = leaveRequests
+    .filter((request) => request.status !== 'refuse')
+    .slice(0, 4)
+    .map((request, index) => {
+      const [startDay, , startYear] = request.startDate.split('/')
+      const [endDay] = request.endDate.split('/')
+      const startDate = new Date(request.startDate.split('/').reverse().join('-'))
+      return {
+        name: request.name,
+        start: Number(startDay),
+        end: Number(endDay),
+        month: startDate.toLocaleDateString('fr-FR', { month: 'short', year: startYear ? 'numeric' : undefined }).replace('.', ''),
+        color: ['#2d7a4f', '#d4a853', '#1a2744'][index % 3],
+      }
+    })
+
+  const updateStaffForm = (updates: Partial<StaffForm>) => {
+    setStaffForm((form) => ({ ...form, ...updates }))
+  }
+
+  const createStaff = async () => {
+    if (!staffForm.firstName.trim() || !staffForm.lastName.trim() || !staffForm.email.trim() || !staffForm.department.trim() || !staffForm.position.trim()) {
+      toast.error('Champs requis', { description: 'Nom, prénom, email, département et poste sont obligatoires.' })
+      return
+    }
+
+    setIsSubmittingStaff(true)
+    try {
+      const res = await fetch('/api/hr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(staffForm),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Création impossible')
+      toast.success('Membre du personnel ajouté')
+      queryClient.invalidateQueries({ queryKey: ['hrStaff'] })
+      setShowAddStaff(false)
+      setStaffForm(initialStaffForm)
+    } catch (e) {
+      toast.error('Erreur', { description: e instanceof Error ? e.message : 'Création impossible' })
+    } finally {
+      setIsSubmittingStaff(false)
+    }
+  }
 
   const handleLeaveAction = async (id: string, status: 'approuve' | 'refuse') => {
     try {
@@ -416,12 +388,69 @@ export function HrPage() {
   }
 
   return (
-    <motion.div
-      className="space-y-6"
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-    >
+    <>
+      <Dialog open={showAddStaff} onOpenChange={setShowAddStaff}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Ajouter un membre du personnel</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="staff-first-name">Prénom</Label>
+              <Input id="staff-first-name" value={staffForm.firstName} onChange={(e) => updateStaffForm({ firstName: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="staff-last-name">Nom</Label>
+              <Input id="staff-last-name" value={staffForm.lastName} onChange={(e) => updateStaffForm({ lastName: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="staff-email">Email</Label>
+              <Input id="staff-email" type="email" value={staffForm.email} onChange={(e) => updateStaffForm({ email: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="staff-phone">Téléphone</Label>
+              <Input id="staff-phone" value={staffForm.phone} onChange={(e) => updateStaffForm({ phone: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="staff-department">Département</Label>
+              <Input id="staff-department" value={staffForm.department} onChange={(e) => updateStaffForm({ department: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="staff-position">Poste</Label>
+              <Input id="staff-position" value={staffForm.position} onChange={(e) => updateStaffForm({ position: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Contrat</Label>
+              <Select value={staffForm.contractType} onValueChange={(value) => updateStaffForm({ contractType: value as StaffForm['contractType'] })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="CDI">CDI</SelectItem>
+                  <SelectItem value="CDD">CDD</SelectItem>
+                  <SelectItem value="Vacataire">Vacataire</SelectItem>
+                  <SelectItem value="Stagiaire">Stagiaire</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="staff-join-date">Date d&apos;entrée</Label>
+              <Input id="staff-join-date" type="date" value={staffForm.joinDate} onChange={(e) => updateStaffForm({ joinDate: e.target.value })} />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setShowAddStaff(false)}>Annuler</Button>
+            <Button disabled={isSubmittingStaff} onClick={createStaff} className="bg-[#2d7a4f] hover:bg-[#236b40] text-white">
+              {isSubmittingStaff ? 'Ajout...' : 'Ajouter'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <motion.div
+        className="space-y-6"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
       {/* ── Gradient Header Banner ──────────────────────────────────────────── */}
       <motion.div variants={itemVariants} className="relative overflow-hidden rounded-xl">
         <div className="absolute inset-0 bg-gradient-to-r from-[#1a2744] via-[#1f3050] to-[#2d7a4f]" />
@@ -556,11 +585,11 @@ export function HrPage() {
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <CardTitle className="text-sm font-semibold text-[#1a2744]">Repertoire du personnel</CardTitle>
               <div className="flex items-center gap-2">
-                <Button size="sm" className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs">
+                <Button size="sm" className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs" onClick={() => setShowAddStaff(true)}>
                   <Plus className="size-3.5 mr-1.5" />
                   Ajouter
                 </Button>
-                <Button size="sm" variant="outline" className="text-xs border-[#1a274430] text-[#1a2744] hover:bg-[#1a274408]">
+                <Button size="sm" variant="outline" className="text-xs border-[#1a274430] text-[#1a2744] hover:bg-[#1a274408]" onClick={() => exportToExcel(filteredStaff, 'personnel')}>
                   Exporter
                 </Button>
               </div>
@@ -674,21 +703,17 @@ export function HrPage() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="w-40">
-                                <DropdownMenuItem className="text-xs">
+                                <DropdownMenuItem className="text-xs" onClick={() => toast.info('Profil personnel', { description: `${staff.name} — ${staff.position}` })}>
                                   <Eye className="size-3.5 mr-2" />
                                   Voir profil
                                 </DropdownMenuItem>
-                                <DropdownMenuItem className="text-xs">
+                                <DropdownMenuItem className="text-xs" onClick={() => toast.info('Modification', { description: 'La modification détaillée sera reliée à la fiche personnel complète.' })}>
                                   <Edit3 className="size-3.5 mr-2" />
                                   Modifier
                                 </DropdownMenuItem>
-                                <DropdownMenuItem className="text-xs">
+                                <DropdownMenuItem className="text-xs" onClick={() => toast.info('Contact', { description: staff.email })}>
                                   <Mail className="size-3.5 mr-2" />
                                   Envoyer message
-                                </DropdownMenuItem>
-                                <DropdownMenuItem className="text-xs text-red-600">
-                                  <Trash2 className="size-3.5 mr-2" />
-                                  Supprimer
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
@@ -872,177 +897,66 @@ export function HrPage() {
                 <Briefcase className="size-4 text-[#1a2744]" />
                 <CardTitle className="text-sm font-semibold text-[#1a2744]">Recrutement & Postes vacants</CardTitle>
               </div>
-              <Dialog open={showNewOffer} onOpenChange={setShowNewOffer}>
-                <DialogTrigger asChild>
-                  <Button size="sm" className="bg-[#1a2744] hover:bg-[#2d4a6f] text-white text-xs">
-                    <Plus className="size-3.5 mr-1.5" />
-                    Nouvelle offre
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Creer une offre d&apos;emploi</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <Label className="text-sm">Titre du poste</Label>
-                      <Input placeholder="Ex: Maitre de conferences - Physique" />
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-2">
-                        <Label className="text-sm">Departement</Label>
-                        <Select>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Choisir" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="informatique">Informatique</SelectItem>
-                            <SelectItem value="droit">Droit</SelectItem>
-                            <SelectItem value="sciences">Sciences</SelectItem>
-                            <SelectItem value="economie">Economie</SelectItem>
-                            <SelectItem value="lettres">Lettres</SelectItem>
-                            <SelectItem value="medecine">Medecine</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-sm">Type de contrat</Label>
-                        <Select>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Contrat" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="cdi">CDI</SelectItem>
-                            <SelectItem value="cdd">CDD</SelectItem>
-                            <SelectItem value="vacataire">Vacataire</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-sm">Description du poste</Label>
-                      <textarea
-                        className="w-full min-h-[80px] rounded-md border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a2744] focus:border-transparent resize-none"
-                        placeholder="Missions, qualifications requises, competences..."
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-sm">Date limite</Label>
-                      <Input type="date" />
-                    </div>
-                    <div className="flex gap-2 pt-2">
-                      <Button className="flex-1 bg-[#1a2744] hover:bg-[#2d4a6f] text-white" onClick={() => setShowNewOffer(false)}>
-                        Publier l&apos;offre
-                      </Button>
-                      <Button variant="outline" className="flex-1" onClick={() => setShowNewOffer(false)}>
-                        Annuler
-                      </Button>
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
+              <Button size="sm" className="bg-[#1a2744] hover:bg-[#2d4a6f] text-white text-xs" onClick={() => setShowAddStaff(true)}>
+                <Plus className="size-3.5 mr-1.5" />
+                Ajouter au personnel
+              </Button>
             </div>
           </CardHeader>
-          <CardContent className="space-y-5">
-            {/* Vacancies table */}
-            <div className="overflow-x-auto rounded-lg border border-gray-100">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-gray-50">
-                    <TableHead className="text-xs font-semibold">Poste</TableHead>
-                    <TableHead className="text-xs font-semibold">Departement</TableHead>
-                    <TableHead className="text-xs font-semibold">Contrat</TableHead>
-                    <TableHead className="text-xs font-semibold">Date publication</TableHead>
-                    <TableHead className="text-xs font-semibold text-center">Candidatures</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {demoVacancies.map((vac) => (
-                    <TableRow key={vac.id} className="hover:bg-[#1a274405] transition-colors">
-                      <TableCell className="text-sm font-medium text-[#1a2744] py-2.5">{vac.title}</TableCell>
-                      <TableCell className="text-xs text-gray-600 py-2.5">{vac.department}</TableCell>
-                      <TableCell className="py-2.5">
-                        <Badge variant="outline" className="text-[10px] border-gray-200 text-gray-600">{vac.contract}</Badge>
-                      </TableCell>
-                      <TableCell className="text-xs text-gray-500 py-2.5">{vac.postedDate}</TableCell>
-                      <TableCell className="text-center py-2.5">
-                        <span className="text-sm font-semibold text-[#1a2744]">{vac.applications}</span>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-
-            {/* Application pipeline */}
-            <div className="space-y-3">
-              <p className="text-xs font-semibold text-[#1a2744] uppercase tracking-wide">Pipeline de recrutement</p>
-              <div className="flex items-center gap-0">
-                {[
-                  { label: 'Candidatures', count: 106, color: '#1a2744', percent: 100 },
-                  { label: 'Presel.', count: 42, color: '#2d7a4f', percent: 40 },
-                  { label: 'Entretien', count: 18, color: '#d4a853', percent: 17 },
-                  { label: 'Selectionne', count: 5, color: '#2d7a4f', percent: 5 },
-                ].map((step, idx) => (
-                  <div key={step.label} className="flex-1">
-                    <div className="h-3 bg-gray-100 overflow-hidden relative">
-                      <motion.div
-                        className="h-full"
-                        style={{ backgroundColor: step.color }}
-                        initial={{ width: 0 }}
-                        animate={{ width: `${step.percent}%` }}
-                        transition={{ duration: 0.8, delay: 0.2 * idx, ease: 'easeOut' }}
-                      />
-                    </div>
-                    <div className="mt-1 text-center">
-                      <p className="text-[10px] font-medium text-[#1a2744]">{step.label}</p>
-                      <p className="text-xs font-bold" style={{ color: step.color }}>{step.count}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
+          <CardContent>
+            <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 p-6 text-center">
+              <Briefcase className="size-8 text-gray-300 mx-auto mb-2" />
+              <p className="text-sm font-medium text-[#1a2744]">Aucune offre de recrutement réelle n&apos;est enregistrée.</p>
+              <p className="text-xs text-gray-500 mt-1">
+                Le schéma actuel expose le personnel et les congés, mais pas encore une table d&apos;offres/candidatures RH. Les anciennes offres fictives ont été retirées.
+              </p>
+              <Button variant="outline" size="sm" className="mt-4 text-xs" onClick={() => exportToExcel(filteredStaff, 'vivier_personnel')}>
+                Exporter le personnel existant
+              </Button>
             </div>
           </CardContent>
         </Card>
       </motion.div>
 
-      {/* ── Payroll Overview Card ───────────────────────────────────────────── */}
+      {/* ── Workforce Structure Card ────────────────────────────────────────── */}
       <motion.div variants={itemVariants}>
         <Card className="border-l-4 border-l-[#2d7a4f]">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Banknote className="size-4 text-[#2d7a4f]" />
-                <CardTitle className="text-sm font-semibold text-[#1a2744]">Masse salariale</CardTitle>
+                <CardTitle className="text-sm font-semibold text-[#1a2744]">Structure du personnel</CardTitle>
               </div>
               <Badge className="text-[10px] bg-[#2d7a4f15] text-[#2d7a4f] border-0">
-                Exercice 2024-2025
+                Données réelles
               </Badge>
             </div>
           </CardHeader>
           <CardContent className="space-y-5">
-            {/* Key metrics */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
               <div className="p-3 rounded-lg bg-[#2d7a4f08] border border-[#2d7a4f15]">
-                <p className="text-[10px] text-gray-500 uppercase tracking-wide">Masse salariale mensuelle</p>
-                <p className="text-lg font-bold text-[#2d7a4f]">{formatFCFA(Math.round(avgPayroll))}</p>
+                <p className="text-[10px] text-gray-500 uppercase tracking-wide">CDI</p>
+                <p className="text-lg font-bold text-[#2d7a4f]">{contractBreakdown.cdi}</p>
               </div>
               <div className="p-3 rounded-lg bg-[#d4a85308] border border-[#d4a85315]">
-                <p className="text-[10px] text-gray-500 uppercase tracking-wide">Charges patronales</p>
-                <p className="text-lg font-bold text-[#d4a853]">{formatFCFA(chargesPatronales)}</p>
+                <p className="text-[10px] text-gray-500 uppercase tracking-wide">CDD</p>
+                <p className="text-lg font-bold text-[#d4a853]">{contractBreakdown.cdd}</p>
               </div>
               <div className="p-3 rounded-lg bg-[#1a274408] border border-[#1a274415]">
-                <p className="text-[10px] text-gray-500 uppercase tracking-wide">Net a payer</p>
-                <p className="text-lg font-bold text-[#1a2744]">{formatFCFA(netAPayer)}</p>
+                <p className="text-[10px] text-gray-500 uppercase tracking-wide">Vacataires</p>
+                <p className="text-lg font-bold text-[#1a2744]">{contractBreakdown.vacataire}</p>
+              </div>
+              <div className="p-3 rounded-lg bg-[#6366f108] border border-[#6366f115]">
+                <p className="text-[10px] text-gray-500 uppercase tracking-wide">Stagiaires</p>
+                <p className="text-lg font-bold text-[#6366f1]">{contractBreakdown.stagiaire}</p>
               </div>
             </div>
 
-            {/* Monthly bar chart */}
             <div className="space-y-3">
-              <p className="text-xs font-semibold text-[#1a2744] uppercase tracking-wide">Evolution mensuelle</p>
+              <p className="text-xs font-semibold text-[#1a2744] uppercase tracking-wide">Evolution des effectifs</p>
               <div className="flex items-end gap-1.5 h-32">
-                {monthlyPayroll.map((m, idx) => {
-                  const heightPercent = (m.amount / maxPayroll) * 100
+                {monthlyStaffTrend.map((m, idx) => {
+                  const heightPercent = (m.count / maxStaffTrend) * 100
                   return (
                     <div key={m.month} className="flex-1 flex flex-col items-center gap-1">
                       <motion.div
@@ -1052,6 +966,7 @@ export function HrPage() {
                         transition={{ duration: 0.6, delay: 0.05 * idx, ease: 'easeOut' }}
                         style={{ maxHeight: '100%' }}
                       />
+                      <span className="text-[9px] text-gray-600 font-semibold">{m.count}</span>
                       <span className="text-[9px] text-gray-400 font-medium">{m.month}</span>
                     </div>
                   )
@@ -1059,41 +974,11 @@ export function HrPage() {
               </div>
             </div>
 
-            {/* Payment method breakdown */}
-            <div className="space-y-3">
-              <p className="text-xs font-semibold text-[#1a2744] uppercase tracking-wide">Modes de paiement</p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="flex items-center gap-3 p-3 rounded-lg bg-white border border-gray-100">
-                  <div className="w-9 h-9 rounded-lg bg-[#1a274415] flex items-center justify-center shrink-0">
-                    <Landmark className="size-4 text-[#1a2744]" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-[#1a2744]">Virement bancaire</p>
-                    <p className="text-lg font-bold text-[#1a2744]">65%</p>
-                    <p className="text-[10px] text-gray-400">BECAC, BCC, Ecobank</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 p-3 rounded-lg bg-white border border-gray-100">
-                  <div className="w-9 h-9 rounded-lg bg-[#2d7a4f15] flex items-center justify-center shrink-0">
-                    <Smartphone className="size-4 text-[#2d7a4f]" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-[#2d7a4f]">Mobile Money</p>
-                    <p className="text-lg font-bold text-[#2d7a4f]">28%</p>
-                    <p className="text-[10px] text-gray-400">Airtel, Moov, Orange</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 p-3 rounded-lg bg-white border border-gray-100">
-                  <div className="w-9 h-9 rounded-lg bg-[#d4a85315] flex items-center justify-center shrink-0">
-                    <DollarSign className="size-4 text-[#d4a853]" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-[#d4a853]">Especes</p>
-                    <p className="text-lg font-bold text-[#d4a853]">7%</p>
-                    <p className="text-[10px] text-gray-400">Caisse principale</p>
-                  </div>
-                </div>
-              </div>
+            <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 p-4">
+              <p className="text-xs font-semibold text-[#1a2744]">Paie non affichée</p>
+              <p className="text-xs text-gray-500 mt-1">
+                Le modèle de données actuel ne contient pas de salaire ni de mode de paiement personnel. Les montants FCFA et pourcentages inventés ont été retirés.
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -1108,154 +993,100 @@ export function HrPage() {
                 <Award className="size-4 text-[#d4a853]" />
                 <CardTitle className="text-sm font-semibold text-[#1a2744]">Evaluation des performances</CardTitle>
               </div>
-              <Button size="sm" className="bg-[#d4a853] hover:bg-[#c49a48] text-white text-xs">
+              <Button size="sm" className="bg-[#d4a853] hover:bg-[#c49a48] text-white text-xs" onClick={() => toast.info('Évaluations non configurées', { description: 'Aucune table/API d’évaluation RH n’est encore disponible.' })}>
                 <Star className="size-3.5 mr-1.5" />
                 Lancer evaluation
               </Button>
             </div>
           </CardHeader>
           <CardContent className="space-y-5">
-            {/* Evaluation table + Average indicator */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <div className="lg:col-span-2">
-                <div className="overflow-x-auto rounded-lg border border-gray-100">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-gray-50">
-                        <TableHead className="text-xs font-semibold">Employe</TableHead>
-                        <TableHead className="text-xs font-semibold">Poste</TableHead>
-                        <TableHead className="text-xs font-semibold">Periode</TableHead>
-                        <TableHead className="text-xs font-semibold">Evaluateur</TableHead>
-                        <TableHead className="text-xs font-semibold">Note</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {demoEvaluations.map((ev) => (
-                        <TableRow key={ev.id} className="hover:bg-[#d4a85305] transition-colors">
-                          <TableCell className="text-sm font-medium text-[#1a2744] py-2.5">{ev.name}</TableCell>
-                          <TableCell className="text-xs text-gray-600 py-2.5">{ev.position}</TableCell>
-                          <TableCell className="text-xs text-gray-500 py-2.5">{ev.period}</TableCell>
-                          <TableCell className="text-xs text-gray-600 py-2.5">{ev.evaluator}</TableCell>
-                          <TableCell className="py-2.5">
-                            <StarRating rating={ev.rating} />
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </div>
-
-              {/* Average rating indicator */}
-              <div className="flex flex-col items-center justify-center p-4 rounded-lg bg-gray-50">
-                <p className="text-xs font-semibold text-[#1a2744] uppercase tracking-wide mb-3">Note moyenne</p>
-                <ProgressCircle value={avgRating * 20} size={100} strokeWidth={8} />
-                <p className="text-sm font-bold text-[#1a2744] mt-2">{avgRating.toFixed(1)}/5.0</p>
-                <div className="flex items-center gap-1 mt-1">
-                  <TrendingUp className="size-3 text-[#2d7a4f]" />
-                  <span className="text-[10px] text-[#2d7a4f] font-medium">+0.3 vs S1</span>
-                </div>
-              </div>
+            <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 p-6 text-center">
+              <Award className="size-8 text-gray-300 mx-auto mb-2" />
+              <p className="text-sm font-medium text-[#1a2744]">Aucune évaluation RH réelle enregistrée.</p>
+              <p className="text-xs text-gray-500 mt-1">
+                Les anciennes notes nominatives codées en dur ont été retirées. Cette section attend une vraie API d’évaluations avant d’afficher des scores.
+              </p>
+              <Button variant="outline" size="sm" className="mt-4 text-xs" onClick={() => exportToExcel(staff, 'personnel_a_evaluer')}>
+                Exporter le personnel à évaluer
+              </Button>
             </div>
           </CardContent>
         </Card>
       </motion.div>
 
-      {/* ── African Context Card ────────────────────────────────────────────── */}
+      {/* ── Compliance Readiness Card ───────────────────────────────────────── */}
       <motion.div variants={itemVariants}>
         <Card className="border-l-4 border-l-[#2d7a4f]">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Shield className="size-4 text-[#2d7a4f]" />
-                <CardTitle className="text-sm font-semibold text-[#1a2744]">Contexte africain</CardTitle>
+                <CardTitle className="text-sm font-semibold text-[#1a2744]">Conformité RH à configurer</CardTitle>
               </div>
             </div>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* CNPS / Social Security */}
               <div className="p-3 rounded-lg bg-[#2d7a4f08] border border-[#2d7a4f15]">
                 <div className="flex items-center gap-2 mb-2">
                   <Shield className="size-4 text-[#2d7a4f]" />
-                  <span className="text-sm font-semibold text-[#1a2744]">CNPS & Securite sociale</span>
+                  <span className="text-sm font-semibold text-[#1a2744]">Sécurité sociale</span>
                 </div>
                 <p className="text-xs text-gray-600 leading-relaxed">
-                  Integration automatique des cotisations CNPS (Caisse Nationale de Prevoyance Sociale). Calcul des cotisations patronales et salariales selon les taux en vigueur. Generation des bordereaux de declaration mensuelle.
+                  Aucun calcul de cotisations n’est exécuté sans barème officiel configuré. Les intégrations sociales seront activées quand l’institution aura renseigné ses règles et justificatifs.
                 </p>
                 <div className="flex items-center gap-2 mt-2">
-                  <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-white border border-gray-100">
-                    <CheckCircle2 className="size-3 text-[#2d7a4f]" />
-                    <span className="text-[10px] text-gray-600">CNPS Tchad</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-white border border-gray-100">
-                    <CheckCircle2 className="size-3 text-[#2d7a4f]" />
-                    <span className="text-[10px] text-gray-600">CNPS Cameroun</span>
+                  <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-white border border-gray-100 text-[10px] text-gray-600">
+                    <Clock className="size-3 text-[#d4a853]" />
+                    Barèmes non configurés
                   </div>
                 </div>
               </div>
 
-              {/* Multi-country labor law */}
               <div className="p-3 rounded-lg bg-[#1a274408] border border-[#1a274415]">
                 <div className="flex items-center gap-2 mb-2">
                   <Globe className="size-4 text-[#1a2744]" />
-                  <span className="text-sm font-semibold text-[#1a2744]">Droit du travail multi-pays</span>
+                  <span className="text-sm font-semibold text-[#1a2744]">Règles de travail</span>
                 </div>
                 <p className="text-xs text-gray-600 leading-relaxed">
-                  Conformite avec les legislations du travail de chaque pays d&apos;implantation. Gestion automatique des specificites locales (duree du travail, conges, preavis, indemnites).
+                  Les contrats, dates d’entrée et statuts du personnel sont réels. Les durées légales, préavis et indemnités restent à paramétrer avant toute automatisation réglementaire.
                 </p>
                 <div className="flex items-center gap-2 mt-2 flex-wrap">
-                  {['Tchad', 'Cameroun', 'Senegal', 'Niger'].map((country) => (
-                    <div key={country} className="flex items-center gap-1.5 px-2 py-1 rounded bg-white border border-gray-100">
-                      <div className="w-2 h-2 rounded-full bg-[#2d7a4f]" />
-                      <span className="text-[10px] text-gray-600">{country}</span>
-                    </div>
-                  ))}
+                  <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-white border border-gray-100 text-[10px] text-gray-600">
+                    <CheckCircle2 className="size-3 text-[#2d7a4f]" />
+                    {staff.length} dossier{staff.length > 1 ? 's' : ''} personnel réel{staff.length > 1 ? 's' : ''}
+                  </div>
                 </div>
               </div>
 
-              {/* Mobile Money salary */}
               <div className="p-3 rounded-lg bg-[#d4a85308] border border-[#d4a85315]">
                 <div className="flex items-center gap-2 mb-2">
                   <Smartphone className="size-4 text-[#d4a853]" />
-                  <span className="text-sm font-semibold text-[#1a2744]">Paiement Mobile Money</span>
+                  <span className="text-sm font-semibold text-[#1a2744]">Paiement des salaires</span>
                 </div>
                 <p className="text-xs text-gray-600 leading-relaxed">
-                  Versement des salaires via Mobile Money pour le personnel sans compte bancaire. Compatible Airtel Money, Moov Money et Orange Money. Confirmation SMS automatique du virement.
+                  Aucun virement ni envoi Mobile Money n’est déclenché depuis cet onglet. Les données bancaires et opérateurs pourront être ajoutés dans un module paie sécurisé.
                 </p>
                 <div className="flex items-center gap-2 mt-2">
-                  <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-white border border-gray-100">
-                    <div className="w-2 h-2 rounded-full bg-red-500" />
-                    <span className="text-[10px] text-gray-600">Airtel Money</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-white border border-gray-100">
-                    <div className="w-2 h-2 rounded-full bg-blue-500" />
-                    <span className="text-[10px] text-gray-600">Moov Money</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-white border border-gray-100">
-                    <div className="w-2 h-2 rounded-full bg-orange-500" />
-                    <span className="text-[10px] text-gray-600">Orange Money</span>
+                  <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-white border border-gray-100 text-[10px] text-gray-600">
+                    <Clock className="size-3 text-[#d4a853]" />
+                    Module paie non connecté
                   </div>
                 </div>
               </div>
 
-              {/* Low-connectivity offline mode */}
               <div className="p-3 rounded-lg bg-[#6366f108] border border-[#6366f115]">
                 <div className="flex items-center gap-2 mb-2">
                   <WifiOff className="size-4 text-[#6366f1]" />
-                  <span className="text-sm font-semibold text-[#1a2744]">Mode hors connexion</span>
+                  <span className="text-sm font-semibold text-[#1a2744]">Connectivité</span>
                 </div>
                 <p className="text-xs text-gray-600 leading-relaxed">
-                  Fonctionnement hors ligne pour les sites a faible connectivite. Synchronisation automatique des donnees lorsque la connexion est retablie. Stockage local securise des informations du personnel.
+                  L’onglet fonctionne avec les données enregistrées en base. Le mode hors connexion n’est pas activé afin d’éviter une fausse promesse de synchronisation locale.
                 </p>
                 <div className="flex items-center gap-2 mt-2">
-                  <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-white border border-gray-100">
-                    <Wifi className="size-3 text-[#2d7a4f]" />
-                    <span className="text-[10px] text-gray-600">Sync auto</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-white border border-gray-100">
+                  <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-white border border-gray-100 text-[10px] text-gray-600">
                     <WifiOff className="size-3 text-[#d4a853]" />
-                    <span className="text-[10px] text-gray-600">Mode offline</span>
+                    Synchronisation locale désactivée
                   </div>
                 </div>
               </div>
@@ -1263,6 +1094,7 @@ export function HrPage() {
           </CardContent>
         </Card>
       </motion.div>
-    </motion.div>
+      </motion.div>
+    </>
   )
 }
