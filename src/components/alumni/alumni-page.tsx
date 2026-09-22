@@ -183,32 +183,32 @@ export function AlumniPage() {
                   </DialogHeader>
                   <div className="grid grid-cols-1 gap-4 py-2 sm:grid-cols-2">
                     <div className="space-y-2">
-                      <Label>Prénom</Label>
-                      <Input value={form.firstName} onChange={(event) => updateForm({ firstName: event.target.value })} />
+                      <Label htmlFor="alumni-first-name">Prénom</Label>
+                      <Input id="alumni-first-name" value={form.firstName} onChange={(event) => updateForm({ firstName: event.target.value })} />
                     </div>
                     <div className="space-y-2">
-                      <Label>Nom</Label>
-                      <Input value={form.lastName} onChange={(event) => updateForm({ lastName: event.target.value })} />
+                      <Label htmlFor="alumni-last-name">Nom</Label>
+                      <Input id="alumni-last-name" value={form.lastName} onChange={(event) => updateForm({ lastName: event.target.value })} />
                     </div>
                     <div className="space-y-2">
-                      <Label>Email</Label>
-                      <Input type="email" value={form.email} onChange={(event) => updateForm({ email: event.target.value })} />
+                      <Label htmlFor="alumni-email">Email</Label>
+                      <Input id="alumni-email" type="email" value={form.email} onChange={(event) => updateForm({ email: event.target.value })} />
                     </div>
                     <div className="space-y-2">
-                      <Label>Téléphone</Label>
-                      <Input value={form.phone} onChange={(event) => updateForm({ phone: event.target.value })} />
+                      <Label htmlFor="alumni-phone">Téléphone</Label>
+                      <Input id="alumni-phone" value={form.phone} onChange={(event) => updateForm({ phone: event.target.value })} />
                     </div>
                     <div className="space-y-2">
-                      <Label>Diplôme</Label>
-                      <Input value={form.diploma} onChange={(event) => updateForm({ diploma: event.target.value })} />
+                      <Label htmlFor="alumni-diploma">Diplôme</Label>
+                      <Input id="alumni-diploma" value={form.diploma} onChange={(event) => updateForm({ diploma: event.target.value })} />
                     </div>
                     <div className="space-y-2">
-                      <Label>Année de diplôme</Label>
-                      <Input type="number" value={form.graduationYear} onChange={(event) => updateForm({ graduationYear: event.target.value })} />
+                      <Label htmlFor="alumni-graduation-year">Année de diplôme</Label>
+                      <Input id="alumni-graduation-year" type="number" value={form.graduationYear} onChange={(event) => updateForm({ graduationYear: event.target.value })} />
                     </div>
                     <div className="space-y-2">
-                      <Label>Programme</Label>
-                      <Input value={form.program} onChange={(event) => updateForm({ program: event.target.value })} />
+                      <Label htmlFor="alumni-program">Programme</Label>
+                      <Input id="alumni-program" value={form.program} onChange={(event) => updateForm({ program: event.target.value })} />
                     </div>
                     <div className="space-y-2">
                       <Label>Statut</Label>
@@ -222,22 +222,22 @@ export function AlumniPage() {
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label>Poste actuel</Label>
-                      <Input value={form.currentPosition} onChange={(event) => updateForm({ currentPosition: event.target.value })} />
+                      <Label htmlFor="alumni-current-position">Poste actuel</Label>
+                      <Input id="alumni-current-position" value={form.currentPosition} onChange={(event) => updateForm({ currentPosition: event.target.value })} />
                     </div>
                     <div className="space-y-2">
-                      <Label>Entreprise</Label>
-                      <Input value={form.company} onChange={(event) => updateForm({ company: event.target.value })} />
+                      <Label htmlFor="alumni-company">Entreprise</Label>
+                      <Input id="alumni-company" value={form.company} onChange={(event) => updateForm({ company: event.target.value })} />
                     </div>
                     <div className="space-y-2">
-                      <Label>Secteur</Label>
-                      <Input value={form.sector} onChange={(event) => updateForm({ sector: event.target.value })} />
+                      <Label htmlFor="alumni-sector">Secteur</Label>
+                      <Input id="alumni-sector" value={form.sector} onChange={(event) => updateForm({ sector: event.target.value })} />
                     </div>
                     <div className="space-y-2">
                       <Label>Pays / ville</Label>
                       <div className="grid grid-cols-2 gap-2">
-                        <Input placeholder="Pays" value={form.country} onChange={(event) => updateForm({ country: event.target.value })} />
-                        <Input placeholder="Ville" value={form.city} onChange={(event) => updateForm({ city: event.target.value })} />
+                        <Input aria-label="Pays" placeholder="Pays" value={form.country} onChange={(event) => updateForm({ country: event.target.value })} />
+                        <Input aria-label="Ville" placeholder="Ville" value={form.city} onChange={(event) => updateForm({ city: event.target.value })} />
                       </div>
                     </div>
                   </div>
