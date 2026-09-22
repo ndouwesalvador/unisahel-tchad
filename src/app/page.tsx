@@ -20,8 +20,7 @@ export default function Home() {
         {!isAuthenticated && currentView === 'signup' && <SignupPage />}
         {!isAuthenticated && currentView === 'student-login' && <StudentLoginPage />}
         {!isAuthenticated && currentView === 'institution' && <InstitutionPage />}
-        {isAuthenticated && currentView === 'institution' && <InstitutionPage />}
-        {isAuthenticated && currentView !== 'institution' && <DashboardShell />}
+        {isAuthenticated && <DashboardShell />}
       </div>
     </Providers>
   )
