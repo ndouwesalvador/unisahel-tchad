@@ -1,10 +1,20 @@
 'use client'
 
 import { useState, useMemo, useEffect, useRef } from 'react'
+import { toast } from 'sonner'
+import { useQueryClient } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 
 import {
   Select,
@@ -13,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { useTimetable, useRooms } from '@/lib/api-hooks'
+import { useAcademicYears, useStructure, useTeachers, useTimetable, useRooms } from '@/lib/api-hooks'
 import {
   Calendar,
   Plus,
@@ -34,7 +44,7 @@ import {
 
 // ─── Types & Config ───────────────────────────────────────────────────────────
 
-type CourseType = 'CM' | 'TD' | 'TP' | 'Stage' | 'EXAM'
+type CourseType = 'CM' | 'TD' | 'TP' | 'EXAM'
 type SubjectArea = 'droit' | 'informatique' | 'lettres' | 'mathematiques'
 
 interface TimeSlot {
@@ -85,7 +95,6 @@ const typeConfig: Record<CourseType, { label: string; className: string; bgClass
   CM: { label: 'CM', className: 'text-white', bgClass: 'bg-[#1a2744]' },
   TD: { label: 'TD', className: 'text-white', bgClass: 'bg-[#2d7a4f]' },
   TP: { label: 'TP', className: 'text-white', bgClass: 'bg-[#e65100]' },
-  Stage: { label: 'Stage', className: 'text-white', bgClass: 'bg-[#7b1fa2]' },
   EXAM: { label: 'Examen', className: 'text-white', bgClass: 'bg-[#c0392b]' },
 }
 
@@ -153,6 +162,7 @@ function mapSlot(record: TimetableSlotRecord): TimeSlot {
 }
 
 interface RoomInfo {
+  id: string
   name: string
   capacity: string
 }
@@ -166,9 +176,79 @@ interface RoomApiRecord {
 
 function mapRoom(r: RoomApiRecord): RoomInfo {
   return {
+    id: r.id,
     name: r.name,
     capacity: `${r.capacity} places`,
   }
+}
+
+interface AcademicOption {
+  id: string
+  label: string
+}
+
+interface CourseElementOption extends AcademicOption {
+  programId: string
+  levelId: string
+  teacherId?: string | null
+}
+
+interface TimetableForm {
+  academicYearId: string
+  dayOfWeek: string
+  startTime: string
+  endTime: string
+  type: 'CM' | 'TD' | 'TP' | 'EXAM'
+  courseElementId: string
+  teacherId: string
+  roomId: string
+  programId: string
+  levelId: string
+}
+
+const emptyTimetableForm: TimetableForm = {
+  academicYearId: '',
+  dayOfWeek: '0',
+  startTime: '08:00',
+  endTime: '10:00',
+  type: 'CM',
+  courseElementId: '',
+  teacherId: '',
+  roomId: '',
+  programId: '',
+  levelId: '',
+}
+
+function flattenStructureOptions(faculties: any[] = []) {
+  const programs: AcademicOption[] = []
+  const levels: (AcademicOption & { programId: string })[] = []
+  const courseElements: CourseElementOption[] = []
+
+  for (const faculty of faculties) {
+    for (const department of faculty.departments ?? []) {
+      for (const program of department.programs ?? []) {
+        programs.push({ id: program.id, label: program.name })
+        for (const level of program.levels ?? []) {
+          levels.push({ id: level.id, programId: program.id, label: `${program.name} — ${level.name}` })
+          for (const semester of level.semesters ?? []) {
+            for (const unit of semester.teachingUnits ?? []) {
+              for (const element of unit.courseElements ?? []) {
+                courseElements.push({
+                  id: element.id,
+                  programId: program.id,
+                  levelId: level.id,
+                  teacherId: element.teacher?.id ?? element.teacherId ?? null,
+                  label: `${element.code ? `${element.code} — ` : ''}${element.name}`,
+                })
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return { programs, levels, courseElements }
 }
 
 // ─── Animated Count-Up Hook ──────────────────────────────────────────────────
@@ -278,26 +358,118 @@ function DaySlotCard({ slot }: { slot: TimeSlot }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function TimetablePage() {
-  const [filterProgram, setFilterProgram] = useState('droit-l2')
-  const [filterSemestre, setFilterSemestre] = useState('s1')
-  const [filterGroup, setFilterGroup] = useState('all')
+  const queryClient = useQueryClient()
+  const [filterProgram, setFilterProgram] = useState('all')
+  const [filterLevel, setFilterLevel] = useState('all')
   const [viewMode, setViewMode] = useState<'week' | 'day'>('week')
   const [selectedDay, setSelectedDay] = useState('Lundi')
   const [currentTime, setCurrentTime] = useState(new Date())
+  const [showCreateSlot, setShowCreateSlot] = useState(false)
+  const [isCreatingSlot, setIsCreatingSlot] = useState(false)
+  const [slotForm, setSlotForm] = useState<TimetableForm>(emptyTimetableForm)
 
-  const { data: timetableQuery, isLoading } = useTimetable()
+  const { data: timetableQuery, isLoading } = useTimetable({
+    programId: filterProgram === 'all' ? undefined : filterProgram,
+    levelId: filterLevel === 'all' ? undefined : filterLevel,
+  })
   const { data: roomsQuery, isLoading: isRoomsLoading } = useRooms()
+  const { data: structureData } = useStructure()
+  const { data: academicYearsData } = useAcademicYears()
+  const { data: teachersData } = useTeachers({ limit: 1000 })
   const timeSlots: TimeSlot[] = (timetableQuery?.slots || []).map(mapSlot)
   const rooms: RoomInfo[] = (roomsQuery?.data || []).map(mapRoom)
+  const academicYears: { id: string; name: string; isCurrent?: boolean }[] = useMemo(
+    () => academicYearsData?.data ?? [],
+    [academicYearsData]
+  )
+  const { programs, levels, courseElements } = useMemo(
+    () => flattenStructureOptions(structureData?.faculties ?? []),
+    [structureData]
+  )
+  const teacherOptions: AcademicOption[] = useMemo(
+    () => (teachersData?.data ?? []).map((teacher: any) => ({
+      id: teacher.id,
+      label: `${teacher.user?.lastName || teacher.lastName || ''} ${teacher.user?.firstName || teacher.firstName || ''}`.trim() || teacher.employeeId || teacher.id,
+    })),
+    [teachersData]
+  )
 
   // Animated stats for header
   const animatedCours = useCountUp(timeSlots.length, 1400)
   const animatedSalles = useCountUp(rooms.length, 1200)
 
   useEffect(() => {
+    const currentYearId = academicYears.find((year) => year.isCurrent)?.id || academicYears[0]?.id || ''
+    if (currentYearId && !slotForm.academicYearId) {
+      setSlotForm((form) => ({ ...form, academicYearId: currentYearId }))
+    }
+  }, [academicYears, slotForm.academicYearId])
+
+  useEffect(() => {
     const interval = setInterval(() => setCurrentTime(new Date()), 60000)
     return () => clearInterval(interval)
   }, [])
+
+  const updateSlotForm = (updates: Partial<TimetableForm>) => {
+    setSlotForm((form) => ({ ...form, ...updates }))
+  }
+
+  const handleCourseElementChange = (courseElementId: string) => {
+    const selected = courseElements.find((element) => element.id === courseElementId)
+    updateSlotForm({
+      courseElementId,
+      programId: selected?.programId ?? slotForm.programId,
+      levelId: selected?.levelId ?? slotForm.levelId,
+      teacherId: selected?.teacherId || slotForm.teacherId,
+    })
+  }
+
+  const handleCreateSlot = async () => {
+    if (!slotForm.academicYearId || !slotForm.dayOfWeek || !slotForm.startTime || !slotForm.endTime) {
+      toast.error('Champs requis', { description: "Année académique, jour, début et fin sont obligatoires." })
+      return
+    }
+    if (slotForm.startTime >= slotForm.endTime) {
+      toast.error('Horaire invalide', { description: "L'heure de fin doit être après l'heure de début." })
+      return
+    }
+
+    setIsCreatingSlot(true)
+    try {
+      const res = await fetch('/api/timetable', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          academicYearId: slotForm.academicYearId,
+          dayOfWeek: Number(slotForm.dayOfWeek),
+          startTime: slotForm.startTime,
+          endTime: slotForm.endTime,
+          type: slotForm.type,
+          courseElementId: slotForm.courseElementId || null,
+          teacherId: slotForm.teacherId || null,
+          roomId: slotForm.roomId || null,
+          programId: slotForm.programId || null,
+          levelId: slotForm.levelId || null,
+        }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json.error || 'Création impossible')
+
+      toast.success('Créneau ajouté')
+      queryClient.invalidateQueries({ queryKey: ['timetable'] })
+      setShowCreateSlot(false)
+      setSlotForm((form) => ({
+        ...emptyTimetableForm,
+        academicYearId: form.academicYearId,
+        programId: form.programId,
+        levelId: form.levelId,
+      }))
+    } catch (error) {
+      toast.error('Erreur', { description: error instanceof Error ? error.message : 'Création impossible' })
+    } finally {
+      setIsCreatingSlot(false)
+    }
+  }
 
   const currentHour = currentTime.getHours()
   const currentMinute = currentTime.getMinutes()
@@ -306,9 +478,7 @@ export function TimetablePage() {
   const todayEnglish = currentTime.toLocaleDateString('en-US', { weekday: 'long' })
   const todayFrench = daysFrench[todayEnglish] || ''
 
-  const filteredSlots = useMemo(() => {
-    return timeSlots
-  }, [timeSlots])
+  const filteredSlots = useMemo(() => timeSlots, [timeSlots])
 
   const getSlotAtHour = (day: string, hour: number) =>
     filteredSlots.find(s => s.day === day && s.startHour === hour)
@@ -346,6 +516,142 @@ export function TimetablePage() {
 
   return (
     <div className="space-y-6">
+      <Dialog open={showCreateSlot} onOpenChange={setShowCreateSlot}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Ajouter un créneau</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-2">
+            <div className="space-y-2">
+              <Label>Année académique</Label>
+              <Select value={slotForm.academicYearId} onValueChange={(value) => updateSlotForm({ academicYearId: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionner" />
+                </SelectTrigger>
+                <SelectContent>
+                  {academicYears.map((year) => (
+                    <SelectItem key={year.id} value={year.id}>{year.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Jour</Label>
+              <Select value={slotForm.dayOfWeek} onValueChange={(value) => updateSlotForm({ dayOfWeek: value })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {dayOfWeekNames.slice(0, 6).map((day, index) => (
+                    <SelectItem key={day} value={String(index)}>{day}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Début</Label>
+              <Input type="time" value={slotForm.startTime} onChange={(event) => updateSlotForm({ startTime: event.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Fin</Label>
+              <Input type="time" value={slotForm.endTime} onChange={(event) => updateSlotForm({ endTime: event.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Type</Label>
+              <Select value={slotForm.type} onValueChange={(value) => updateSlotForm({ type: value as TimetableForm['type'] })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="CM">CM</SelectItem>
+                  <SelectItem value="TD">TD</SelectItem>
+                  <SelectItem value="TP">TP</SelectItem>
+                  <SelectItem value="EXAM">Examen</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Salle</Label>
+              <Select value={slotForm.roomId || 'none'} onValueChange={(value) => updateSlotForm({ roomId: value === 'none' ? '' : value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Optionnel" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Non renseignée</SelectItem>
+                  {rooms.map((room) => (
+                    <SelectItem key={room.id} value={room.id}>{room.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2 sm:col-span-2">
+              <Label>EC / Matière</Label>
+              <Select value={slotForm.courseElementId || 'none'} onValueChange={(value) => handleCourseElementChange(value === 'none' ? '' : value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Optionnel" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Non renseignée</SelectItem>
+                  {courseElements.map((element) => (
+                    <SelectItem key={element.id} value={element.id}>{element.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Programme</Label>
+              <Select value={slotForm.programId || 'none'} onValueChange={(value) => updateSlotForm({ programId: value === 'none' ? '' : value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Optionnel" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Non renseigné</SelectItem>
+                  {programs.map((program) => (
+                    <SelectItem key={program.id} value={program.id}>{program.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Niveau</Label>
+              <Select value={slotForm.levelId || 'none'} onValueChange={(value) => updateSlotForm({ levelId: value === 'none' ? '' : value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Optionnel" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Non renseigné</SelectItem>
+                  {levels
+                    .filter((level) => !slotForm.programId || level.programId === slotForm.programId)
+                    .map((level) => (
+                      <SelectItem key={level.id} value={level.id}>{level.label}</SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2 sm:col-span-2">
+              <Label>Enseignant</Label>
+              <Select value={slotForm.teacherId || 'none'} onValueChange={(value) => updateSlotForm({ teacherId: value === 'none' ? '' : value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Optionnel" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Non renseigné</SelectItem>
+                  {teacherOptions.map((teacher) => (
+                    <SelectItem key={teacher.id} value={teacher.id}>{teacher.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setShowCreateSlot(false)}>Annuler</Button>
+            <Button className="bg-[#2d7a4f] hover:bg-[#236b40] text-white" disabled={isCreatingSlot} onClick={handleCreateSlot}>
+              {isCreatingSlot ? 'Création...' : 'Créer le créneau'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Gradient Header Section */}
       <Card className="overflow-hidden">
         <div className="bg-gradient-to-r from-[#1a2744] via-[#1f3050] to-[#2d7a4f] p-6 text-white relative">
@@ -371,11 +677,11 @@ export function TimetablePage() {
                 </motion.p>
               </div>
               <div className="flex items-center gap-3">
-                <Button variant="outline" size="sm" className="text-xs bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white">
+                <Button variant="outline" size="sm" className="text-xs bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white" onClick={() => window.print()}>
                   <Download className="size-3.5 mr-1.5" />
                   Export PDF
                 </Button>
-                <Button size="sm" className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs border border-white/20">
+                <Button size="sm" className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs border border-white/20" onClick={() => setShowCreateSlot(true)}>
                   <Plus className="size-3.5 mr-1.5" />
                   Ajouter creneau
                 </Button>
@@ -523,37 +829,31 @@ export function TimetablePage() {
                 <Filter className="size-3.5 text-[#1a2744]" />
                 <span className="text-xs font-medium text-[#1a2744]">Filtres :</span>
               </div>
-              <Select value={filterProgram} onValueChange={setFilterProgram}>
+              <Select value={filterProgram} onValueChange={(value) => {
+                setFilterProgram(value)
+                setFilterLevel('all')
+              }}>
                 <SelectTrigger className="w-[160px] h-9 text-xs">
-                  <SelectValue />
+                  <SelectValue placeholder="Programme" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="droit-l2">Droit L2</SelectItem>
-                  <SelectItem value="droit-l3">Droit L3</SelectItem>
-                  <SelectItem value="info-l2">Informatique L2</SelectItem>
-                  <SelectItem value="info-l3">Informatique L3</SelectItem>
-                  <SelectItem value="lettres-l1">Lettres L1</SelectItem>
-                  <SelectItem value="maths-l2">Mathematiques L2</SelectItem>
+                  <SelectItem value="all">Tous les programmes</SelectItem>
+                  {programs.map((program) => (
+                    <SelectItem key={program.id} value={program.id}>{program.label}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
-              <Select value={filterSemestre} onValueChange={setFilterSemestre}>
-                <SelectTrigger className="w-[110px] h-9 text-xs">
-                  <SelectValue />
+              <Select value={filterLevel} onValueChange={setFilterLevel}>
+                <SelectTrigger className="w-[180px] h-9 text-xs">
+                  <SelectValue placeholder="Niveau" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="s1">Semestre 1</SelectItem>
-                  <SelectItem value="s2">Semestre 2</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={filterGroup} onValueChange={setFilterGroup}>
-                <SelectTrigger className="w-[140px] h-9 text-xs">
-                  <SelectValue placeholder="Groupe" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tous les groupes</SelectItem>
-                  <SelectItem value="groupe-a">Groupe A</SelectItem>
-                  <SelectItem value="groupe-b">Groupe B</SelectItem>
-                  <SelectItem value="groupe-c">Groupe C</SelectItem>
+                  <SelectItem value="all">Tous les niveaux</SelectItem>
+                  {levels
+                    .filter((level) => filterProgram === 'all' || level.programId === filterProgram)
+                    .map((level) => (
+                      <SelectItem key={level.id} value={level.id}>{level.label}</SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
               <div className="flex items-center gap-2 ml-auto">
