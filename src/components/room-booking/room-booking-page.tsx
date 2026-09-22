@@ -1,13 +1,14 @@
 'use client'
 
 import { useState, useEffect, useRef, useMemo } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { motion } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Progress } from '@/components/ui/progress'
 import { Separator } from '@/components/ui/separator'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Textarea } from '@/components/ui/textarea'
@@ -62,17 +63,11 @@ import {
   Search,
   AlertTriangle,
   CheckCircle2,
-  XCircle,
   MoreHorizontal,
-  Pencil,
-  Trash2,
   Zap,
-  TrendingUp,
-  TrendingDown,
   Building2,
   BarChart3,
   Shield,
-  CloudOff,
   Signal,
   MapPin,
 } from 'lucide-react'
@@ -132,15 +127,6 @@ interface Reservation {
   status: ReservationStatus
 }
 
-interface EquipmentItem {
-  id: string
-  name: string
-  total: number
-  available: number
-  condition: 'neuf' | 'bon' | 'usure' | 'hors_service'
-  nextMaintenance: string
-}
-
 // ─── API Mapping ────────────────────────────────────────────────────────────────
 
 interface RoomRecord {
@@ -194,28 +180,6 @@ function mapReservation(r: ReservationRecord): Reservation {
   }
 }
 
-// ─── Demo Data ──────────────────────────────────────────────────────────────────
-// demoReservations was removed: reservations now come from the real
-// RoomReservation rows returned by GET /api/rooms (see `reservations` below).
-
-// demoEquipment stays hardcoded on purpose: it models a shared equipment pool
-// (total/available counts, condition, next maintenance date) that has no
-// backing Prisma model. `Room.equipment` is only a plain comma-separated
-// string field per room (parsed into badges in mapRoom above) — it carries no
-// quantities, availability, condition, or maintenance data, so there is
-// nothing honest to derive this table from. Left as-is rather than
-// fabricating tracking data that doesn't exist.
-const demoEquipment: EquipmentItem[] = [
-  { id: '1', name: 'Video-projecteurs', total: 18, available: 12, condition: 'bon', nextMaintenance: '15/04/2025' },
-  { id: '2', name: 'Ordinateurs portables', total: 45, available: 30, condition: 'bon', nextMaintenance: '20/04/2025' },
-  { id: '3', name: 'Microphones', total: 24, available: 18, condition: 'usure', nextMaintenance: '10/03/2025' },
-  { id: '4', name: 'Tableaux interactifs', total: 6, available: 5, condition: 'neuf', nextMaintenance: '01/06/2025' },
-  { id: '5', name: 'Haut-parleurs', total: 12, available: 8, condition: 'bon', nextMaintenance: '25/04/2025' },
-  { id: '6', name: 'Climatiseurs mobiles', total: 8, available: 3, condition: 'usure', nextMaintenance: '05/03/2025' },
-  { id: '7', name: 'Retroprojecteurs', total: 4, available: 0, condition: 'hors_service', nextMaintenance: 'En attente' },
-  { id: '8', name: 'Extendons WiFi', total: 15, available: 10, condition: 'neuf', nextMaintenance: '30/06/2025' },
-]
-
 // ─── Config Maps ────────────────────────────────────────────────────────────────
 
 const statusConfig: Record<RoomStatus, { label: string; color: string; pulseColor: string }> = {
@@ -236,13 +200,6 @@ const reservationStatusConfig: Record<ReservationStatus, { label: string; classN
   confirmee: { label: 'Confirmee', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0 hover:bg-[#2d7a4f15]' },
   en_attente: { label: 'En attente', className: 'bg-[#d4a85315] text-[#d4a853] border-0 hover:bg-[#d4a85315]' },
   annulee: { label: 'Annulee', className: 'bg-[#c6282815] text-[#c62828] border-0 hover:bg-[#c6282815]' },
-}
-
-const conditionConfig: Record<string, { label: string; className: string }> = {
-  neuf: { label: 'Neuf', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0' },
-  bon: { label: 'Bon', className: 'bg-[#1a274415] text-[#1a2744] border-0' },
-  usure: { label: 'Usure', className: 'bg-[#d4a85315] text-[#d4a853] border-0' },
-  hors_service: { label: 'Hors service', className: 'bg-[#c6282815] text-[#c62828] border-0' },
 }
 
 const equipmentIconMap: Record<string, React.ElementType> = {
@@ -306,6 +263,8 @@ export function RoomBookingPage() {
   const [filterRoom, setFilterRoom] = useState('all')
   const [filterStatus, setFilterStatus] = useState('all')
   const [currentWeekOffset, setCurrentWeekOffset] = useState(0)
+  const [isSubmittingReservation, setIsSubmittingReservation] = useState(false)
+  const queryClient = useQueryClient()
 
   const { data: roomsQuery, isLoading } = useRooms()
   const rooms: Room[] = (roomsQuery?.data || []).map(mapRoom)
@@ -368,7 +327,14 @@ export function RoomBookingPage() {
   // Stats
   const availableCount = roomsQuery?.stats?.available ?? rooms.filter(r => r.status === 'libre').length
   const todayReservCount = roomsQuery?.stats?.todayReservations ?? 0
-  const occupancyRate = 72
+  const occupiedCount = roomsQuery?.stats?.occupied ?? rooms.filter(r => r.status === 'occupee').length
+  const maintenanceCount = roomsQuery?.stats?.maintenance ?? rooms.filter(r => r.status === 'maintenance').length
+  const occupancyRate = rooms.length > 0 ? Math.round((occupiedCount / rooms.length) * 100) : 0
+  const currentMonthReservations = reservations.filter((r) => {
+    const d = new Date(r.date)
+    const now = new Date()
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
+  }).length
 
   // Reservation stats
   const reservByRoom = useMemo(() => {
@@ -399,6 +365,85 @@ export function RoomBookingPage() {
       percent: total > 0 ? Math.round((count / total) * 100) : 0,
     }))
   }, [reservations])
+
+  const peakSlot = useMemo(() => {
+    const counts = new Map<string, number>()
+    reservations
+      .filter((r) => r.status !== 'annulee')
+      .forEach((r) => counts.set(r.startTime, (counts.get(r.startTime) || 0) + 1))
+    return Array.from(counts.entries()).sort((a, b) => b[1] - a[1])[0]?.[0] || '—'
+  }, [reservations])
+
+  const averageDuration = useMemo(() => {
+    const active = reservations.filter((r) => r.status !== 'annulee')
+    if (active.length === 0) return '0h'
+    const totalMinutes = active.reduce((sum, r) => sum + Math.max(0, timeToMinutes(r.endTime) - timeToMinutes(r.startTime)), 0)
+    return `${Math.round((totalMinutes / active.length / 60) * 10) / 10}h`
+  }, [reservations])
+
+  const roomEquipmentSummary = useMemo(() => {
+    const map = new Map<string, number>()
+    rooms.forEach((room) => {
+      room.equipment.forEach((equipment) => map.set(equipment, (map.get(equipment) || 0) + 1))
+    })
+    return Array.from(map.entries()).sort((a, b) => b[1] - a[1])
+  }, [rooms])
+
+  const resetReservationForm = () => {
+    setSelectedRoom('')
+    setReservDate('')
+    setReservStart('')
+    setReservEnd('')
+    setReservPurpose('')
+    setReservOrganizer('')
+    setReservParticipants('')
+    setReservNotes('')
+    setEquipmentNeeds([])
+  }
+
+  const createReservation = async () => {
+    const room = rooms.find((r) => r.name === selectedRoom)
+    if (!room) {
+      toast.error('Salle requise')
+      return
+    }
+    if (!reservDate || !reservStart || !reservEnd || !reservPurpose || !reservOrganizer.trim()) {
+      toast.error('Champs requis', { description: 'Salle, date, horaires, objet et organisateur sont obligatoires.' })
+      return
+    }
+    if (hasConflict) {
+      toast.error('Conflit détecté', { description: 'Cette salle est déjà réservée sur ce créneau.' })
+      return
+    }
+
+    setIsSubmittingReservation(true)
+    try {
+      const res = await fetch('/api/rooms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          roomId: room.id,
+          date: reservDate,
+          startTime: reservStart,
+          endTime: reservEnd,
+          purpose: reservPurpose,
+          organizer: reservOrganizer.trim(),
+          participants: Number.parseInt(reservParticipants, 10) || 0,
+          notes: [reservNotes, equipmentNeeds.length ? `Équipements demandés: ${equipmentNeeds.join(', ')}` : ''].filter(Boolean).join('\n'),
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Création impossible')
+      toast.success('Réservation créée', { description: 'Elle apparaît en attente de confirmation.' })
+      await queryClient.invalidateQueries({ queryKey: ['rooms'] })
+      resetReservationForm()
+      setDialogOpen(false)
+    } catch (error) {
+      toast.error('Réservation impossible', { description: error instanceof Error ? error.message : 'Erreur inconnue' })
+    } finally {
+      setIsSubmittingReservation(false)
+    }
+  }
 
   // Animation variants
   const containerVariants = {
@@ -454,10 +499,10 @@ export function RoomBookingPage() {
         {/* ─── 4 Stats Cards ────────────────────────────────────────────────────── */}
         <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { label: 'Salles totales', value: rooms.length, color: '#1a2744', icon: Building2, trend: '+2', trendUp: true },
-            { label: 'Disponibles', value: availableCount, color: '#2d7a4f', icon: DoorOpen, trend: '', trendUp: true },
-            { label: 'Reservations ce mois', value: 47, color: '#d4a853', icon: Calendar, trend: '+12%', trendUp: true },
-            { label: 'Conflits', value: 2, color: '#c62828', icon: AlertTriangle, trend: '-1', trendUp: false },
+            { label: 'Salles totales', value: rooms.length, color: '#1a2744', icon: Building2 },
+            { label: 'Disponibles', value: availableCount, color: '#2d7a4f', icon: DoorOpen },
+            { label: 'Reservations ce mois', value: currentMonthReservations, color: '#d4a853', icon: Calendar },
+            { label: 'En maintenance', value: maintenanceCount, color: '#c62828', icon: AlertTriangle },
           ].map((stat) => (
             <motion.div
               key={stat.label}
@@ -471,16 +516,6 @@ export function RoomBookingPage() {
                     <div>
                       <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{stat.label}</p>
                       <p className="text-2xl font-bold mt-1" style={{ color: stat.color }}>{stat.value}</p>
-                      {stat.trend && (
-                        <div className="flex items-center gap-1 mt-1">
-                          {stat.trendUp ? (
-                            <TrendingUp className="size-3 text-[#2d7a4f]" />
-                          ) : (
-                            <TrendingDown className="size-3 text-[#2d7a4f]" />
-                          )}
-                          <span className="text-xs text-[#2d7a4f] font-medium">{stat.trend}</span>
-                        </div>
-                      )}
                     </div>
                     <div className="p-2.5 rounded-xl" style={{ backgroundColor: `${stat.color}15` }}>
                       <stat.icon className="size-5" style={{ color: stat.color }} />
@@ -839,9 +874,14 @@ export function RoomBookingPage() {
                 <Button variant="outline" size="sm" className="text-xs" onClick={() => setDialogOpen(false)}>
                   Annuler
                 </Button>
-                <Button size="sm" className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs" disabled={!selectedRoom || !reservDate || !reservStart || !reservEnd || !reservPurpose}>
+                <Button
+                  size="sm"
+                  className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs"
+                  disabled={isSubmittingReservation || !selectedRoom || !reservDate || !reservStart || !reservEnd || !reservPurpose || !reservOrganizer.trim() || hasConflict}
+                  onClick={createReservation}
+                >
                   <CheckCircle2 className="size-3.5 mr-1.5" />
-                  Confirmer la reservation
+                  {isSubmittingReservation ? 'Création...' : 'Confirmer la reservation'}
                 </Button>
               </div>
             </div>
@@ -957,21 +997,12 @@ export function RoomBookingPage() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="w-44">
-                                <DropdownMenuItem className="text-xs">
-                                  <Pencil className="size-3.5 mr-2" />
-                                  Modifier
-                                </DropdownMenuItem>
-                                <DropdownMenuItem className="text-xs text-[#2d7a4f]">
-                                  <CheckCircle2 className="size-3.5 mr-2" />
-                                  Confirmer
-                                </DropdownMenuItem>
-                                <DropdownMenuItem className="text-xs text-[#d4a853]">
-                                  <XCircle className="size-3.5 mr-2" />
-                                  Annuler
-                                </DropdownMenuItem>
-                                <DropdownMenuItem className="text-xs text-[#c62828]">
-                                  <Trash2 className="size-3.5 mr-2" />
-                                  Supprimer
+                                <DropdownMenuItem
+                                  className="text-xs"
+                                  onClick={() => toast.info('Détail de la réservation', { description: `${reserv.room} — ${reserv.date} de ${reserv.startTime} à ${reserv.endTime}` })}
+                                >
+                                  <Calendar className="size-3.5 mr-2" />
+                                  Voir détail
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
@@ -1011,49 +1042,34 @@ export function RoomBookingPage() {
                   <CardTitle className="text-sm font-semibold text-[#1a2744]">Equipements &amp; Ressources</CardTitle>
                 </div>
               </CardHeader>
-              <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-gray-50">
-                        <TableHead className="text-xs font-semibold text-gray-500">Equipement</TableHead>
-                        <TableHead className="text-xs font-semibold text-gray-500 text-center">Dispo / Total</TableHead>
-                        <TableHead className="text-xs font-semibold text-gray-500">Etat</TableHead>
-                        <TableHead className="text-xs font-semibold text-gray-500">Maintenance</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {demoEquipment.map((eq) => {
-                        const cConfig = conditionConfig[eq.condition]
-                        const availPercent = Math.round((eq.available / eq.total) * 100)
-                        return (
-                          <TableRow key={eq.id} className="hover:bg-gray-50/50 transition-colors">
-                            <TableCell className="text-xs font-medium text-[#1a2744] py-2">{eq.name}</TableCell>
-                            <TableCell className="py-2">
-                              <div className="flex items-center gap-2 justify-center">
-                                <Progress value={availPercent} className="h-2 w-16" />
-                                <span className="text-[10px] text-gray-500 whitespace-nowrap">{eq.available}/{eq.total}</span>
-                              </div>
-                            </TableCell>
-                            <TableCell className="py-2">
-                              {cConfig ? (
-                                <Badge className={`text-[9px] ${cConfig.className}`}>
-                                  {cConfig.label}
-                                </Badge>
-                              ) : null}
-                            </TableCell>
-                            <TableCell className="text-[10px] text-gray-500 py-2">
-                              <div className="flex items-center gap-1">
-                                <Clock className="size-3 text-gray-400" />
-                                {eq.nextMaintenance}
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        )
-                      })}
-                    </TableBody>
-                  </Table>
-                </div>
+              <CardContent className="p-4">
+                {roomEquipmentSummary.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 p-6 text-center">
+                    <Monitor className="size-8 text-gray-300 mx-auto mb-2" />
+                    <p className="text-sm font-medium text-[#1a2744]">Aucun équipement renseigné sur les salles.</p>
+                    <p className="text-xs text-gray-500 mt-1">Ajoutez les équipements dans les fiches salles pour les voir ici.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {roomEquipmentSummary.map(([equipment, count]) => {
+                      const EqIcon = equipmentIconMap[equipment] || Monitor
+                      return (
+                        <div key={equipment} className="flex items-center justify-between rounded-lg border border-gray-100 bg-gray-50/50 px-3 py-2">
+                          <div className="flex items-center gap-2">
+                            <EqIcon className="size-4 text-[#d4a853]" />
+                            <span className="text-xs font-medium text-[#1a2744]">{equipment}</span>
+                          </div>
+                          <Badge className="text-[10px] bg-[#1a274410] text-[#1a2744] border-0">
+                            {count} salle{count > 1 ? 's' : ''}
+                          </Badge>
+                        </div>
+                      )
+                    })}
+                    <p className="text-[11px] text-gray-500">
+                      Les quantités, disponibilités et maintenances ne sont pas affichées car aucun modèle d’inventaire matériel n’existe encore en base.
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </motion.div>
@@ -1128,7 +1144,7 @@ export function RoomBookingPage() {
                       <Clock className="size-3.5 text-[#1a2744]" />
                       <span className="text-[10px] font-semibold text-[#1a2744]">Heures de pointe</span>
                     </div>
-                    <p className="text-lg font-bold text-[#1a2744]">08h-10h</p>
+                    <p className="text-lg font-bold text-[#1a2744]">{peakSlot}</p>
                     <p className="text-[10px] text-gray-500">Creneau le plus demande</p>
                   </div>
                   <div className="p-3 bg-[#2d7a4f08] rounded-lg border border-[#2d7a4f15]">
@@ -1136,7 +1152,7 @@ export function RoomBookingPage() {
                       <Zap className="size-3.5 text-[#2d7a4f]" />
                       <span className="text-[10px] font-semibold text-[#2d7a4f]">Duree moyenne</span>
                     </div>
-                    <p className="text-lg font-bold text-[#2d7a4f]">2.3h</p>
+                    <p className="text-lg font-bold text-[#2d7a4f]">{averageDuration}</p>
                     <p className="text-[10px] text-gray-500">Par reservation</p>
                   </div>
                 </div>
@@ -1145,13 +1161,13 @@ export function RoomBookingPage() {
           </motion.div>
         </div>
 
-        {/* ─── African Context Card ──────────────────────────────────────────────── */}
+        {/* ─── Operational Readiness Card ───────────────────────────────────────── */}
         <motion.div variants={itemVariants}>
           <Card className="border-l-4 border-l-[#2d7a4f]">
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
                 <Shield className="size-4 text-[#2d7a4f]" />
-                <CardTitle className="text-sm font-semibold text-[#1a2744]">Contexte africain &amp; Resilience</CardTitle>
+                <CardTitle className="text-sm font-semibold text-[#1a2744]">Fonctionnalités connectées et limites</CardTitle>
               </div>
             </CardHeader>
             <CardContent>
@@ -1161,10 +1177,10 @@ export function RoomBookingPage() {
                     <div className="p-2 rounded-lg bg-[#d4a85315]">
                       <AlertTriangle className="size-4 text-[#d4a853]" />
                     </div>
-                    <p className="text-xs font-semibold text-[#1a2744]">Coupures d&apos;electricite</p>
+                    <p className="text-xs font-semibold text-[#1a2744]">Réservations en base</p>
                   </div>
                   <p className="text-[11px] text-gray-500 leading-relaxed">
-                    Plan de contingence integre: reservations automatiquement reportees en cas de coupure, notifications SMS aux organisateurs.
+                    Les créations de réservation passent par l’API et sont enregistrées avec détection de conflit sur la salle, la date et le créneau.
                   </p>
                 </motion.div>
 
@@ -1173,22 +1189,22 @@ export function RoomBookingPage() {
                     <div className="p-2 rounded-lg bg-[#1a274415]">
                       <Building2 className="size-4 text-[#1a2744]" />
                     </div>
-                    <p className="text-xs font-semibold text-[#1a2744]">Campus multi-sites</p>
+                    <p className="text-xs font-semibold text-[#1a2744]">Salles configurées</p>
                   </div>
                   <p className="text-[11px] text-gray-500 leading-relaxed">
-                    Gestion simultanee de plusieurs campus. Synchronisation des calendriers entre sites distants (N&apos;Djamena, Moundou, Sarh).
+                    Le module utilise les salles rattachées à l’institution connectée. Aucun campus externe n’est affiché sans données enregistrées.
                   </p>
                 </motion.div>
 
                 <motion.div whileHover={{ scale: 1.02 }} className="p-4 rounded-lg border border-gray-100 bg-gray-50/50 hover:shadow-sm transition-all">
                   <div className="flex items-center gap-2 mb-2">
                     <div className="p-2 rounded-lg bg-[#2d7a4f15]">
-                      <CloudOff className="size-4 text-[#2d7a4f]" />
+                      <AlertTriangle className="size-4 text-[#2d7a4f]" />
                     </div>
-                    <p className="text-xs font-semibold text-[#1a2744]">Mode hors ligne</p>
+                    <p className="text-xs font-semibold text-[#1a2744]">Hors connexion</p>
                   </div>
                   <p className="text-[11px] text-gray-500 leading-relaxed">
-                    Possibilite de creer des reservations hors connexion. Synchronisation automatique lors du retour de la connexion internet.
+                    Le mode hors connexion n’est pas activé. Une réservation nécessite une connexion afin d’éviter les doublons et conflits.
                   </p>
                 </motion.div>
 
@@ -1200,7 +1216,7 @@ export function RoomBookingPage() {
                     <p className="text-xs font-semibold text-[#1a2744]">Bande passante faible</p>
                   </div>
                   <p className="text-[11px] text-gray-500 leading-relaxed">
-                    Calendrier optimise pour les connexions a faible debit. Mode leger disponible avec chargement progressif des donnees.
+                    Les données sont chargées depuis l’API standard. Aucun mode léger distinct n’est annoncé tant qu’il n’est pas implémenté.
                   </p>
                 </motion.div>
               </div>
