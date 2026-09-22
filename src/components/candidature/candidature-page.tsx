@@ -65,7 +65,7 @@ import {
   Download,
 } from 'lucide-react'
 
-// ─── Demo Data ────────────────────────────────────────────────────────────────
+// ─── Types and API-backed data mapping ────────────────────────────────────────
 
 type CandidatureStatut = 'en_attente' | 'en_examen' | 'admis' | 'refuse' | 'en_attente_pieces'
 
@@ -140,11 +140,11 @@ interface RequiredDoc {
 }
 
 const defaultDocs: RequiredDoc[] = [
-  { id: 'diplome', label: 'Diplôme / Baccalauréat', status: 'recu' },
-  { id: 'releve', label: 'Relevé de notes', status: 'en_verification' },
-  { id: 'photo', label: "Photo d'identité", status: 'recu' },
+  { id: 'diplome', label: 'Diplôme / Baccalauréat', status: 'manquant' },
+  { id: 'releve', label: 'Relevé de notes', status: 'manquant' },
+  { id: 'photo', label: "Photo d'identité", status: 'manquant' },
   { id: 'naissance', label: "Extrait d'acte de naissance", status: 'manquant' },
-  { id: 'lettre', label: 'Lettre de motivation', status: 'recu' },
+  { id: 'lettre', label: 'Lettre de motivation', status: 'manquant' },
   { id: 'cv', label: 'Curriculum vitae', status: 'manquant' },
 ]
 
@@ -286,6 +286,7 @@ export function CandidaturePage() {
   const admissionRate = totalRecues > 0 ? Math.round((admis / totalRecues) * 100) : 0
   const refusalRate = totalRecues > 0 ? Math.round((refuses / totalRecues) * 100) : 0
   const pendingRate = totalRecues > 0 ? 100 - admissionRate - refusalRate : 0
+  const hasPrograms = realPrograms.length > 0
 
   // Real timeline, derived from the current academic year and actual submission dates
   const timelineEvents = useMemo(() => {
@@ -309,12 +310,21 @@ export function CandidaturePage() {
       toast.error('Aucune année académique en cours', { description: "Configurez l'année académique en cours depuis la page Institution" })
       return
     }
-    if (!formNom.trim() || !formEmail.trim()) {
-      toast.error('Champs requis', { description: 'Nom complet et email sont obligatoires' })
+    if (!formType || !formProgramId || !formNiveau || !formNom.trim() || !formEmail.trim()) {
+      toast.error('Champs requis', { description: 'Type, filière, niveau, nom complet et email sont obligatoires' })
+      return
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formEmail.trim())) {
+      toast.error('Email invalide')
+      return
+    }
+    const nameParts = formNom.trim().split(/\s+/).filter(Boolean)
+    if (nameParts.length < 2) {
+      toast.error('Nom complet requis', { description: 'Saisissez au minimum un prénom et un nom.' })
       return
     }
     const [prenom, ...rest] = formNom.trim().split(' ')
-    const nom = rest.join(' ') || prenom
+    const nom = rest.join(' ')
     setIsSubmitting(true)
     try {
       const res = await fetch('/api/candidature', {
@@ -356,6 +366,10 @@ export function CandidaturePage() {
   }
 
   const handleStatusChange = async (id: string, status: CandidatureStatut) => {
+    if (status === 'admis' || status === 'refuse') {
+      const label = status === 'admis' ? 'valider' : 'refuser'
+      if (!window.confirm(`Confirmer la décision : ${label} cette candidature ?`)) return
+    }
     try {
       const res = await fetch(`/api/candidature?id=${id}`, {
         method: 'PUT',
@@ -395,6 +409,7 @@ export function CandidaturePage() {
                 size="sm"
                 className="bg-white/10 backdrop-blur border border-white/20 hover:bg-white/20 text-white text-xs"
                 onClick={() => setShowForm(true)}
+                disabled={!currentYear || !hasPrograms}
               >
                 <Plus className="size-3.5 mr-1.5" />
                 Nouvelle candidature
@@ -546,99 +561,50 @@ export function CandidaturePage() {
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-semibold text-[#1a2744] flex items-center gap-2">
                 <FileText className="size-4 text-[#2d7a4f]" />
-                Formulaire de candidature
+                Nouveau dossier
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-gray-600">Type de candidature</Label>
-                <Select value={formType} onValueChange={setFormType}>
-                  <SelectTrigger className="h-9 text-sm">
-                    <SelectValue placeholder="Sélectionner le type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="premiere_inscription">Première inscription</SelectItem>
-                    <SelectItem value="reinscription">Réinscription</SelectItem>
-                    <SelectItem value="transfert">Transfert</SelectItem>
-                    <SelectItem value="equivalence">Équivalence</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-gray-600">Filière souhaitée</Label>
-                <Select value={formProgramId} onValueChange={setFormProgramId}>
-                  <SelectTrigger className="h-9 text-sm">
-                    <SelectValue placeholder="Sélectionner la filière" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {realPrograms.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-gray-600">Niveau</Label>
-                <Select value={formNiveau} onValueChange={setFormNiveau}>
-                  <SelectTrigger className="h-9 text-sm">
-                    <SelectValue placeholder="Sélectionner le niveau" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="l1">L1</SelectItem>
-                    <SelectItem value="l2">L2</SelectItem>
-                    <SelectItem value="l3">L3</SelectItem>
-                    <SelectItem value="m1">M1</SelectItem>
-                    <SelectItem value="m2">M2</SelectItem>
-                    <SelectItem value="doctorat">Doctorat</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-gray-600">Nom complet</Label>
-                <Input
-                  placeholder="Ex: Abakar Youssouf"
-                  className="h-9 text-sm"
-                  value={formNom}
-                  onChange={(e) => setFormNom(e.target.value)}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-gray-600">Email</Label>
-                <Input
-                  type="email"
-                  placeholder="candidat@email.com"
-                  className="h-9 text-sm"
-                  value={formEmail}
-                  onChange={(e) => setFormEmail(e.target.value)}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-gray-600">Téléphone</Label>
-                <Input
-                  type="tel"
-                  placeholder="+235 66 XX XX XX"
-                  className="h-9 text-sm"
-                  value={formTelephone}
-                  onChange={(e) => setFormTelephone(e.target.value)}
-                />
+              <p className="text-sm text-gray-600 leading-relaxed">
+                Créez une candidature réelle liée à l&apos;année académique en cours et à une filière configurée dans la structure.
+              </p>
+              <div className="space-y-2 rounded-lg bg-gray-50 p-3 text-xs text-gray-600">
+                <div className="flex items-center justify-between">
+                  <span>Année académique active</span>
+                  <Badge className={currentYear ? 'bg-[#2d7a4f18] text-[#2d7a4f] border-0' : 'bg-[#c6282818] text-[#c62828] border-0'}>
+                    {currentYear ? currentYear.name : 'Non configurée'}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Filières disponibles</span>
+                  <Badge className={hasPrograms ? 'bg-[#2d7a4f18] text-[#2d7a4f] border-0' : 'bg-[#c6282818] text-[#c62828] border-0'}>
+                    {realPrograms.length}
+                  </Badge>
+                </div>
               </div>
               <div className="flex gap-2 pt-1">
                 <Button
                   className="flex-1 bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs h-9"
-                  onClick={handleSubmit}
-                  disabled={isSubmitting}
+                  onClick={() => setShowForm(true)}
+                  disabled={!currentYear || !hasPrograms}
                 >
-                  {isSubmitting ? 'Envoi...' : 'Soumettre la candidature'}
+                  <Plus className="size-3.5 mr-1" />
+                  Ouvrir le formulaire
                 </Button>
                 <Button
                   variant="outline"
                   className="text-xs h-9 border-[#d4a853] text-[#d4a853] hover:bg-[#d4a85312]"
                   onClick={() => setShowDocsDialog(true)}
                 >
-                  <Upload className="size-3.5 mr-1" />
+                  <FileCheck className="size-3.5 mr-1" />
                   Pièces
                 </Button>
               </div>
+              {(!currentYear || !hasPrograms) && (
+                <p className="text-xs text-[#c62828]">
+                  Configurez l&apos;année académique active et au moins une filière avant de créer une candidature.
+                </p>
+              )}
             </CardContent>
           </Card>
 
@@ -1023,9 +989,13 @@ export function CandidaturePage() {
                     <SelectValue placeholder="Filière" />
                   </SelectTrigger>
                   <SelectContent>
-                    {realPrograms.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                    ))}
+                    {hasPrograms ? (
+                      realPrograms.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                      ))
+                    ) : (
+                      <div className="px-2 py-2 text-xs text-gray-500">Aucune filière configurée</div>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -1077,7 +1047,7 @@ export function CandidaturePage() {
             <Button
               className="w-full bg-[#2d7a4f] hover:bg-[#236b40] text-white"
               onClick={handleSubmit}
-              disabled={isSubmitting}
+              disabled={isSubmitting || !currentYear || !hasPrograms}
             >
               {isSubmitting ? 'Envoi...' : 'Soumettre la candidature'}
             </Button>
