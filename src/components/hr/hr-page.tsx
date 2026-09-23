@@ -44,7 +44,6 @@ import {
   Search,
   MoreHorizontal,
   Eye,
-  Edit3,
   CheckCircle2,
   XCircle,
   Clock,
@@ -244,6 +243,8 @@ export function HrPage() {
   const [statusFilter, setStatusFilter] = useState('tous')
   const [showAddStaff, setShowAddStaff] = useState(false)
   const [isSubmittingStaff, setIsSubmittingStaff] = useState(false)
+  const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null)
+  const [busyStaffId, setBusyStaffId] = useState<string | null>(null)
   const [staffForm, setStaffForm] = useState<StaffForm>(initialStaffForm)
   const queryClient = useQueryClient()
 
@@ -387,8 +388,89 @@ export function HrPage() {
     }
   }
 
+  const updateStaffStatus = async (id: string, status: StaffMember['status']) => {
+    setBusyStaffId(id)
+    try {
+      const res = await fetch('/api/hr', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Mise à jour impossible')
+
+      toast.success('Statut personnel mis à jour')
+      queryClient.invalidateQueries({ queryKey: ['hrStaff'] })
+    } catch (e) {
+      toast.error('Erreur', { description: e instanceof Error ? e.message : 'Mise à jour impossible' })
+    } finally {
+      setBusyStaffId(null)
+    }
+  }
+
+  const copyStaffEmail = (email: string) => {
+    navigator.clipboard?.writeText(email).then(
+      () => toast.success('Email copié'),
+      () => toast.error('Copie impossible')
+    )
+  }
+
   return (
     <>
+      <Dialog open={Boolean(selectedStaff)} onOpenChange={(open) => !open && setSelectedStaff(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Profil personnel</DialogTitle>
+          </DialogHeader>
+          {selectedStaff && (
+            <div className="space-y-4">
+              <div className="rounded-xl border border-gray-100 bg-[#1a274408] p-4">
+                <p className="text-lg font-bold text-[#1a2744]">{selectedStaff.name}</p>
+                <p className="text-sm text-gray-600">{selectedStaff.position}</p>
+              </div>
+              <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+                <div>
+                  <p className="text-xs uppercase text-gray-400">Département</p>
+                  <p className="font-medium text-[#1a2744]">{selectedStaff.department}</p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase text-gray-400">Contrat</p>
+                  <p className="font-medium text-[#1a2744]">{contractConfig[selectedStaff.contract]?.label || selectedStaff.contract}</p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase text-gray-400">Statut</p>
+                  <Badge className={statusConfig[selectedStaff.status]?.className}>{statusConfig[selectedStaff.status]?.label || selectedStaff.status}</Badge>
+                </div>
+                <div>
+                  <p className="text-xs uppercase text-gray-400">Date d&apos;entrée</p>
+                  <p className="font-medium text-[#1a2744]">{selectedStaff.joinDate}</p>
+                </div>
+                <div className="sm:col-span-2">
+                  <p className="text-xs uppercase text-gray-400">Contact</p>
+                  <p className="font-medium text-[#1a2744]">{selectedStaff.email}</p>
+                  {selectedStaff.phone && <p className="text-gray-600">{selectedStaff.phone}</p>}
+                </div>
+              </div>
+              <div className="flex flex-wrap justify-end gap-2">
+                <Button variant="outline" size="sm" onClick={() => copyStaffEmail(selectedStaff.email)}>
+                  <Mail className="mr-2 size-4" />
+                  Copier email
+                </Button>
+                <Button variant="outline" size="sm" disabled={busyStaffId === selectedStaff.id} onClick={() => updateStaffStatus(selectedStaff.id, 'actif')}>
+                  Actif
+                </Button>
+                <Button variant="outline" size="sm" disabled={busyStaffId === selectedStaff.id} onClick={() => updateStaffStatus(selectedStaff.id, 'en_conge')}>
+                  En congé
+                </Button>
+                <Button variant="outline" size="sm" disabled={busyStaffId === selectedStaff.id} onClick={() => updateStaffStatus(selectedStaff.id, 'suspendu')}>
+                  Suspendre
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={showAddStaff} onOpenChange={setShowAddStaff}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
@@ -702,18 +784,30 @@ export function HrPage() {
                                   <MoreHorizontal className="size-4 text-gray-400" />
                                 </Button>
                               </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="w-40">
-                                <DropdownMenuItem className="text-xs" onClick={() => toast.info('Profil personnel', { description: `${staff.name} — ${staff.position}` })}>
+                              <DropdownMenuContent align="end" className="w-44">
+                                <DropdownMenuItem className="text-xs" onClick={() => setSelectedStaff(staff)}>
                                   <Eye className="size-3.5 mr-2" />
                                   Voir profil
                                 </DropdownMenuItem>
-                                <DropdownMenuItem className="text-xs" onClick={() => toast.info('Modification', { description: 'La modification détaillée sera reliée à la fiche personnel complète.' })}>
-                                  <Edit3 className="size-3.5 mr-2" />
-                                  Modifier
+                                <DropdownMenuItem className="text-xs" disabled={busyStaffId === staff.id || staff.status === 'actif'} onClick={() => updateStaffStatus(staff.id, 'actif')}>
+                                  <UserCheck className="size-3.5 mr-2" />
+                                  Marquer actif
                                 </DropdownMenuItem>
-                                <DropdownMenuItem className="text-xs" onClick={() => toast.info('Contact', { description: staff.email })}>
+                                <DropdownMenuItem className="text-xs" disabled={busyStaffId === staff.id || staff.status === 'en_conge'} onClick={() => updateStaffStatus(staff.id, 'en_conge')}>
+                                  <Clock className="size-3.5 mr-2" />
+                                  Marquer en congé
+                                </DropdownMenuItem>
+                                <DropdownMenuItem className="text-xs" disabled={busyStaffId === staff.id || staff.status === 'suspendu'} onClick={() => updateStaffStatus(staff.id, 'suspendu')}>
+                                  <UserX className="size-3.5 mr-2" />
+                                  Suspendre
+                                </DropdownMenuItem>
+                                <DropdownMenuItem className="text-xs" disabled={busyStaffId === staff.id || staff.status === 'depart'} onClick={() => updateStaffStatus(staff.id, 'depart')}>
+                                  <TrendingDown className="size-3.5 mr-2" />
+                                  Marquer départ
+                                </DropdownMenuItem>
+                                <DropdownMenuItem className="text-xs" onClick={() => copyStaffEmail(staff.email)}>
                                   <Mail className="size-3.5 mr-2" />
-                                  Envoyer message
+                                  Copier email
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
@@ -993,9 +1087,9 @@ export function HrPage() {
                 <Award className="size-4 text-[#d4a853]" />
                 <CardTitle className="text-sm font-semibold text-[#1a2744]">Evaluation des performances</CardTitle>
               </div>
-              <Button size="sm" className="bg-[#d4a853] hover:bg-[#c49a48] text-white text-xs" onClick={() => toast.info('Évaluations non configurées', { description: 'Aucune table/API d’évaluation RH n’est encore disponible.' })}>
+              <Button size="sm" className="bg-[#d4a853] hover:bg-[#c49a48] text-white text-xs" onClick={() => exportToExcel(staff, 'personnel_a_evaluer')}>
                 <Star className="size-3.5 mr-1.5" />
-                Lancer evaluation
+                Exporter liste
               </Button>
             </div>
           </CardHeader>
