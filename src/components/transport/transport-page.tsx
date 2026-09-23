@@ -6,15 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
 import {
   Table,
   TableBody,
@@ -43,20 +35,12 @@ import {
   Users,
   Route,
   Calendar,
-  Fuel,
   AlertTriangle,
-  CheckCircle2,
-  Plus,
   Search,
-  MoreHorizontal,
-  Pencil,
-  Trash2,
   Zap,
   TrendingUp,
   TrendingDown,
   Phone,
-  Shield,
-  CloudOff,
   Globe,
   Navigation,
   Timer,
@@ -336,13 +320,6 @@ function AnimatedStat({ value, label, icon: Icon }: { value: number; label: stri
 // ─── Component ──────────────────────────────────────────────────────────────────
 
 export function TransportPage() {
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [reservBus, setReservBus] = useState('')
-  const [reservDate, setReservDate] = useState('')
-  const [reservTime, setReservTime] = useState('')
-  const [reservRoute, setReservRoute] = useState('')
-  const [reservPassengers, setReservPassengers] = useState('')
-  const [reservNotes, setReservNotes] = useState('')
   const [searchSchedule, setSearchSchedule] = useState('')
   const [filterRoute, setFilterRoute] = useState('all')
   const [filterBus, setFilterBus] = useState('all')
@@ -756,14 +733,9 @@ export function TransportPage() {
                   <CardTitle className="text-sm font-semibold text-[#1a2744]">Programmation du jour</CardTitle>
                   <Badge className="text-[10px] bg-[#2d7a4f15] text-[#2d7a4f] border-0">{filteredSchedule.length} trajets</Badge>
                 </div>
-                <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button size="sm" className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs">
-                      <Plus className="size-3.5 mr-1.5" />
-                      Nouvelle reservation
-                    </Button>
-                  </DialogTrigger>
-                </Dialog>
+                <Badge className="text-[10px] bg-[#1a274410] text-[#1a2744] border-0">
+                  Reservations non configurees
+                </Badge>
               </div>
             </CardHeader>
             <CardContent>
@@ -824,13 +796,12 @@ export function TransportPage() {
                       <TableHead className="text-[10px]">Chauffeur</TableHead>
                       <TableHead className="text-[10px]">Places disp.</TableHead>
                       <TableHead className="text-[10px]">Statut</TableHead>
-                      <TableHead className="text-[10px] w-10">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {isLoading && (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center py-8 text-sm text-gray-400">
+                        <TableCell colSpan={6} className="text-center py-8 text-sm text-gray-400">
                           Chargement de la programmation...
                         </TableCell>
                       </TableRow>
@@ -853,38 +824,19 @@ export function TransportPage() {
                               {sConfig.label}
                             </Badge>
                           </TableCell>
-                          <TableCell>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
-                                  <MoreHorizontal className="size-3.5 text-gray-400" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent side="left" className="text-xs">
-                                <div className="flex flex-col gap-1 py-1">
-                                  <button className="flex items-center gap-2 px-2 py-1 hover:bg-gray-100 rounded text-left">
-                                    <Pencil className="size-3" /> Modifier
-                                  </button>
-                                  <button className="flex items-center gap-2 px-2 py-1 hover:bg-gray-100 rounded text-left">
-                                    <Trash2 className="size-3" /> Supprimer
-                                  </button>
-                                </div>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TableCell>
                         </TableRow>
                       )
                     })}
                     {!isLoading && schedule.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center py-8 text-sm text-gray-400">
+                        <TableCell colSpan={6} className="text-center py-8 text-sm text-gray-400">
                           Aucun trajet programme pour le moment.
                         </TableCell>
                       </TableRow>
                     )}
                     {!isLoading && schedule.length > 0 && filteredSchedule.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center py-8 text-sm text-gray-400">
+                        <TableCell colSpan={6} className="text-center py-8 text-sm text-gray-400">
                           Aucun trajet ne correspond a votre recherche.
                         </TableCell>
                       </TableRow>
@@ -1120,208 +1072,81 @@ export function TransportPage() {
           </Card>
         </motion.div>
 
-        {/* ─── 8. New Reservation Dialog ─────────────────────────────────────────── */}
-        {/* NOTE: this dialog models an ad-hoc single-passenger booking on a
-            specific trip. There is no backing Prisma model for that (only a
-            recurring TransportDeparture time slot and route-level
-            TransportSubscription, and student-facing route subscription is
-            explicitly out of scope for this admin/ops page). The dropdowns
-            below now source real buses/routes, but - as in the original
-            demo build - the confirm button is decorative: there is no
-            endpoint to wire it to without inventing a reservation model that
-            doesn't exist in the schema. */}
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogContent className="sm:max-w-[520px] max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="text-[#1a2744] flex items-center gap-2">
-                <Bus className="size-5" />
-                Nouvelle reservation
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 mt-2">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-gray-600">Bus</Label>
-                  <Select value={reservBus} onValueChange={setReservBus}>
-                    <SelectTrigger className="h-9 text-sm">
-                      <SelectValue placeholder="Choisir un bus" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {buses.filter(b => b.status === 'en_service').map(bus => (
-                        <SelectItem key={bus.id} value={bus.name}>{bus.name} ({bus.capacity} pl.)</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-gray-600">Date</Label>
-                  <Input type="date" className="h-9 text-sm" value={reservDate} onChange={(e) => setReservDate(e.target.value)} />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-gray-600">Heure</Label>
-                  <Select value={reservTime} onValueChange={setReservTime}>
-                    <SelectTrigger className="h-9 text-sm">
-                      <SelectValue placeholder="Choisir" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {['06:00', '06:30', '07:00', '07:30', '08:00', '09:00', '10:00', '11:00', '11:30', '12:00', '12:30', '13:00', '14:00', '15:00', '16:00', '16:30', '17:00', '17:30', '18:00'].map(t => (
-                        <SelectItem key={t} value={t}>{t}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-gray-600">Trajet</Label>
-                  <Select value={reservRoute} onValueChange={setReservRoute}>
-                    <SelectTrigger className="h-9 text-sm">
-                      <SelectValue placeholder="Choisir un trajet" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {routes.map(r => (
-                        <SelectItem key={r.id} value={r.name}>{r.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-gray-600">Nombre de passagers</Label>
-                <Input type="number" placeholder="0" className="h-9 text-sm" value={reservPassengers} onChange={(e) => setReservPassengers(e.target.value)} />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-gray-600">Notes</Label>
-                <Input placeholder="Informations supplementaires..." className="h-9 text-sm" value={reservNotes} onChange={(e) => setReservNotes(e.target.value)} />
-              </div>
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <Button variant="outline" size="sm" className="text-xs" onClick={() => setDialogOpen(false)}>
-                  Annuler
-                </Button>
-                <Button size="sm" className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs" disabled={!reservBus || !reservDate || !reservTime || !reservRoute}>
-                  <CheckCircle2 className="size-3.5 mr-1.5" />
-                  Confirmer la reservation
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        {/* ─── 9. African Context Card ─────────────────────────────────────────────── */}
+        {/* ─── 8. Operational Limits Card ─────────────────────────────────────────── */}
         <motion.div variants={itemVariants}>
           <Card className="border-l-4 border-l-[#2d7a4f]">
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
                 <Globe className="size-4 text-[#2d7a4f]" />
-                <CardTitle className="text-sm font-semibold text-[#1a2744]">Contexte africain</CardTitle>
+                <CardTitle className="text-sm font-semibold text-[#1a2744]">Capacites et limites du module transport</CardTitle>
               </div>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {/* Multi-campus distances */}
                 <div className="border border-gray-100 rounded-lg p-3">
                   <div className="flex items-center gap-2 mb-2">
-                    <MapPin className="size-3.5 text-[#1a2744]" />
-                    <p className="text-xs font-semibold text-[#1a2744]">Distances multi-campus</p>
+                    <Bus className="size-3.5 text-[#1a2744]" />
+                    <p className="text-xs font-semibold text-[#1a2744]">Donnees gerees</p>
                   </div>
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-gray-500">N&apos;Djamena Campus-Centre</span>
-                      <span className="text-[10px] font-bold text-[#1a2744]">12 km</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-gray-500">Douala Campus 1-2</span>
-                      <span className="text-[10px] font-bold text-[#1a2744]">18 km</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-gray-500">Dakar UCAD-ESTI</span>
-                      <span className="text-[10px] font-bold text-[#1a2744]">8 km</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-gray-500">Ouagadougou Campus-Ville</span>
-                      <span className="text-[10px] font-bold text-[#1a2744]">15 km</span>
-                    </div>
-                  </div>
+                  <p className="text-[10px] text-gray-600 leading-relaxed">
+                    Le module affiche les vehicules, trajets, departs, maintenances et alertes enregistres pour l&apos;institution.
+                    Les taux d&apos;occupation viennent des abonnements transport existants.
+                  </p>
                 </div>
 
-                {/* Fuel price variability */}
-                <div className="border border-gray-100 rounded-lg p-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Fuel className="size-3.5 text-[#d4a853]" />
-                    <p className="text-xs font-semibold text-[#1a2744]">Variabilite prix carburant</p>
-                  </div>
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-gray-500">Tchad (Super)</span>
-                      <span className="text-[10px] font-bold text-[#d4a853]">620 FCFA/L</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-gray-500">Cameroun (Super)</span>
-                      <span className="text-[10px] font-bold text-[#d4a853]">730 FCFA/L</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-gray-500">Senegal (Super)</span>
-                      <span className="text-[10px] font-bold text-[#d4a853]">655 FCFA/L</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-gray-500">Variation mensuelle</span>
-                      <span className="text-[10px] font-bold text-[#c62828]">+5 a 15%</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Vehicle aging context */}
-                <div className="border border-gray-100 rounded-lg p-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Bus className="size-3.5 text-[#c62828]" />
-                    <p className="text-xs font-semibold text-[#1a2744]">Vieillissement du parc</p>
-                  </div>
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-gray-500">Age moyen du parc</span>
-                      <span className="text-[10px] font-bold text-[#c62828]">12 ans</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-gray-500">Pannes/mois</span>
-                      <span className="text-[10px] font-bold text-[#c62828]">4.2</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-gray-500">Budget renouvellement</span>
-                      <span className="text-[10px] font-bold text-[#2d7a4f]">15M FCFA</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Shared taxi integration */}
                 <div className="border border-gray-100 rounded-lg p-3">
                   <div className="flex items-center gap-2 mb-2">
                     <Users className="size-3.5 text-[#2d7a4f]" />
-                    <p className="text-xs font-semibold text-[#1a2744]">Integration taxis partages</p>
+                    <p className="text-xs font-semibold text-[#1a2744]">Reservations individuelles</p>
                   </div>
                   <p className="text-[10px] text-gray-600 leading-relaxed">
-                    Complementaire aux navettes universitaires, les taxis partages (clandos) assurent les trajets secondaires. Partenariats en cours avec 12 conducteurs pour desservir les zones non couvertes par le parc officiel.
+                    Aucune reservation ad-hoc n&apos;est exposee ici, car le modele actuel gere les departs et abonnements par trajet.
+                    Le panneau n&apos;affiche donc pas de confirmation non connectee.
                   </p>
                 </div>
 
-                {/* Low-connectivity offline mode */}
                 <div className="border border-gray-100 rounded-lg p-3">
                   <div className="flex items-center gap-2 mb-2">
-                    <CloudOff className="size-3.5 text-[#1a2744]" />
-                    <p className="text-xs font-semibold text-[#1a2744]">Mode hors ligne</p>
+                    <AlertTriangle className="size-3.5 text-[#d4a853]" />
+                    <p className="text-xs font-semibold text-[#1a2744]">Connectivite</p>
                   </div>
                   <p className="text-[10px] text-gray-600 leading-relaxed">
-                    Le systeme fonctionne en mode degrade quand la connexion est faible. Les horaires et reservations sont synchronises automatiquement des que la connexion revient. SMS de confirmation disponibles pour les zones a faible couverture internet.
+                    Les horaires sont lus depuis le serveur. Aucun mode de synchronisation hors connexion n&apos;est annonce tant
+                    qu&apos;un stockage local et une file de synchronisation ne sont pas implementes.
                   </p>
                 </div>
 
-                {/* Security context */}
                 <div className="border border-gray-100 rounded-lg p-3">
                   <div className="flex items-center gap-2 mb-2">
-                    <Shield className="size-3.5 text-[#1a2744]" />
-                    <p className="text-xs font-semibold text-[#1a2744]">Securite des trajets</p>
+                    <Navigation className="size-3.5 text-[#1a2744]" />
+                    <p className="text-xs font-semibold text-[#1a2744]">Suivi vehicule</p>
                   </div>
                   <p className="text-[10px] text-gray-600 leading-relaxed">
-                    Controles techniques obligatoires, suivi GPS en temps reel, numeros d&apos;urgence affiches dans chaque vehicule. Signalisation des zones a risque sur les trajets inter-quartiers.
+                    Les positions en direct ne sont pas collectees par ce module. Les informations affichees sont les affectations
+                    de trajets, horaires et statuts saisis dans le systeme.
+                  </p>
+                </div>
+
+                <div className="border border-gray-100 rounded-lg p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Route className="size-3.5 text-[#d4a853]" />
+                    <p className="text-xs font-semibold text-[#1a2744]">Couverture</p>
+                  </div>
+                  <p className="text-[10px] text-gray-600 leading-relaxed">
+                    {routes.length > 0
+                      ? `${routesWithVehicle} trajet(s) sur ${routes.length} ont actuellement un vehicule assigne.`
+                      : 'Aucun trajet configure pour le moment.'}
+                  </p>
+                </div>
+
+                <div className="border border-gray-100 rounded-lg p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Timer className="size-3.5 text-[#2d7a4f]" />
+                    <p className="text-xs font-semibold text-[#1a2744]">Maintenance</p>
+                  </div>
+                  <p className="text-[10px] text-gray-600 leading-relaxed">
+                    Les couts et historiques affiches proviennent des maintenances enregistrees. Le module ne predit pas encore
+                    les prochaines interventions.
                   </p>
                 </div>
               </div>
