@@ -118,12 +118,14 @@ interface ApiLevel {
 interface ApiProgram {
   id: string
   name: string
+  studentCount?: number
   levels: ApiLevel[]
 }
 
 interface ApiDepartment {
   id: string
   name: string
+  studentCount?: number
   programs: ApiProgram[]
 }
 
@@ -132,7 +134,27 @@ export interface ApiFaculty {
   name: string
   deanName?: string | null
   deanTitle?: string | null
+  studentCount?: number
   departments: ApiDepartment[]
+}
+
+interface StructureResponse {
+  tenant?: {
+    name?: string | null
+    shortName?: string | null
+    academicSystem?: string | null
+  }
+  faculties?: ApiFaculty[]
+  stats?: {
+    faculties: number
+    departments: number
+    programs: number
+    levels: number
+    semesters: number
+    teachingUnits: number
+    courseElements: number
+    students?: number
+  }
 }
 
 // ─── Mapping: API shape → Local UI shape ───────────────────────────────────
@@ -183,7 +205,7 @@ function mapDepartment(dept: ApiDepartment, index: number): Department {
       levels: program.levels.map(level => level.name),
     })),
     teachers: collectTeacherIdsFromPrograms(dept.programs).size,
-    students: 0, // no student/enrollment data available from /api/structure
+    students: dept.studentCount ?? 0,
   }
 }
 
@@ -200,7 +222,7 @@ function mapFaculty(faculty: ApiFaculty, index: number): Faculty {
     gradientFrom,
     gradientTo,
     departments: faculty.departments.map((dept, i) => mapDepartment(dept, i)),
-    students: 0, // no student/enrollment data available from /api/structure
+    students: faculty.studentCount ?? 0,
     teachers: collectTeacherIdsFromPrograms(allPrograms).size,
   }
 }
@@ -220,10 +242,10 @@ interface OrgNode {
   children?: OrgNode[]
 }
 
-function buildOrgTree(faculties: Faculty[]): OrgNode {
+function buildOrgTree(faculties: Faculty[], institutionName: string): OrgNode {
   return {
     id: 'root',
-    name: 'Université de N\'Djamena',
+    name: institutionName,
     type: 'institution',
     icon: Building2,
     color: '#1a2744',
@@ -730,14 +752,19 @@ function AddEntityDialog({
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 export function StructurePage() {
-  const { data: structureQuery, isLoading } = useStructure()
+  const { data: structureQuery, isLoading } = useStructure() as {
+    data: StructureResponse | undefined
+    isLoading: boolean
+  }
   const [viewMode, setViewMode] = useState<'cards' | 'tree'>('cards')
   const [searchQuery, setSearchQuery] = useState('')
 
   const faculties: Faculty[] = ((structureQuery?.faculties || []) as ApiFaculty[]).map(
     (faculty, index) => mapFaculty(faculty, index)
   )
-  const orgTree = buildOrgTree(faculties)
+  const institutionName = structureQuery?.tenant?.name || 'Institution'
+  const academicSystem = structureQuery?.tenant?.academicSystem || 'Non défini'
+  const orgTree = buildOrgTree(faculties, institutionName)
 
   const totalDepartments = faculties.reduce((acc, f) => acc + f.departments.length, 0)
   const totalPrograms = faculties.reduce(
@@ -1085,7 +1112,7 @@ export function StructurePage() {
                     <div className="flex items-center gap-4">
                       <div className="text-center">
                         <p className="text-lg font-bold text-[#1a2744]">
-                          {faculties.reduce((acc, f) => acc + f.students, 0)}
+                          {structureQuery?.stats?.students ?? faculties.reduce((acc, f) => acc + f.students, 0)}
                         </p>
                         <p className="text-[10px] text-gray-400">Étudiants</p>
                       </div>
@@ -1098,7 +1125,7 @@ export function StructurePage() {
                       </div>
                       <div className="w-px h-8 bg-gray-200" />
                       <div className="text-center">
-                        <p className="text-lg font-bold text-[#d4a853]">LMD</p>
+                        <p className="text-lg font-bold text-[#d4a853]">{academicSystem}</p>
                         <p className="text-[10px] text-gray-400">Système</p>
                       </div>
                     </div>
@@ -1128,7 +1155,7 @@ export function StructurePage() {
                     </CardTitle>
                   </div>
                   <Badge className="text-[10px] bg-[#2d7a4f15] text-[#2d7a4f] border-0">
-                    Système LMD
+                    Système {academicSystem}
                   </Badge>
                 </div>
               </CardHeader>
