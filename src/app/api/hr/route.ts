@@ -178,6 +178,42 @@ async function handlePutLeaveRequest(user: SessionUser, tenantId: string, reques
   }
 }
 
+// PATCH /api/hr - update a staff member status inside the current tenant
+async function handlePatchStaff(_user: SessionUser, tenantId: string, request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { id, status } = body
+    const validStatuses = ['actif', 'en_conge', 'suspendu', 'depart']
+
+    if (!id || !status || !validStatuses.includes(status)) {
+      return NextResponse.json(
+        { error: `id and status are required. status must be one of: ${validStatuses.join(', ')}` },
+        { status: 400 }
+      )
+    }
+
+    const existing = await db.staff.findFirst({ where: { id, tenantId } })
+    if (!existing) {
+      return NextResponse.json({ error: 'Staff member not found' }, { status: 404 })
+    }
+
+    const staff = await db.staff.update({
+      where: { id },
+      data: { status },
+    })
+
+    return NextResponse.json({ data: staff })
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('Update staff error:', error)
+    return NextResponse.json(
+      { error: 'Failed to update staff member' },
+      { status: 500 }
+    )
+  }
+}
+
 export const GET = withTenantAuth(handleGet)
 export const POST = withTenantAuth(handlePost)
 export const PUT = withTenantAuth(handlePutLeaveRequest, ['SUPER_ADMIN', 'ADMIN_INSTITUTION'])
+export const PATCH = withTenantAuth(handlePatchStaff, ['ADMIN_INSTITUTION', 'RECTORAT'])
