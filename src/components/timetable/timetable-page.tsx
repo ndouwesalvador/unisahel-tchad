@@ -45,7 +45,7 @@ import {
 // ─── Types & Config ───────────────────────────────────────────────────────────
 
 type CourseType = 'CM' | 'TD' | 'TP' | 'EXAM'
-type SubjectArea = 'droit' | 'informatique' | 'lettres' | 'mathematiques'
+type SubjectArea = 'course'
 
 interface TimeSlot {
   id: string
@@ -61,33 +61,12 @@ interface TimeSlot {
 }
 
 const subjectConfig: Record<SubjectArea, { label: string; cardBg: string; cardBorder: string; cardText: string; dotColor: string }> = {
-  droit: {
-    label: 'Droit',
+  course: {
+    label: 'Créneau académique',
     cardBg: 'bg-blue-50',
     cardBorder: 'border-l-4 border-l-blue-500',
     cardText: 'text-blue-900',
     dotColor: 'bg-blue-500',
-  },
-  informatique: {
-    label: 'Informatique',
-    cardBg: 'bg-green-50',
-    cardBorder: 'border-l-4 border-l-green-500',
-    cardText: 'text-green-900',
-    dotColor: 'bg-green-500',
-  },
-  lettres: {
-    label: 'Lettres',
-    cardBg: 'bg-amber-50',
-    cardBorder: 'border-l-4 border-l-amber-500',
-    cardText: 'text-amber-900',
-    dotColor: 'bg-amber-500',
-  },
-  mathematiques: {
-    label: 'Mathematiques',
-    cardBg: 'bg-purple-50',
-    cardBorder: 'border-l-4 border-l-purple-500',
-    cardText: 'text-purple-900',
-    dotColor: 'bg-purple-500',
   },
 }
 
@@ -131,6 +110,30 @@ interface TimetableSlotRecord {
   levelId: string | null
 }
 
+interface StructureFaculty {
+  departments?: {
+    programs?: {
+      id: string
+      name: string
+      levels?: {
+        id: string
+        name: string
+        semesters?: {
+          teachingUnits?: {
+            courseElements?: {
+              id: string
+              code?: string | null
+              name: string
+              teacherId?: string | null
+              teacher?: { id?: string | null } | null
+            }[]
+          }[]
+        }[]
+      }[]
+    }[]
+  }[]
+}
+
 // API convention: dayOfWeek 0 = Monday ... 6 = Sunday, which lines up with
 // this page's own Monday-first week (see `days` above).
 const dayOfWeekNames = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
@@ -142,10 +145,8 @@ function parseHour(time: string): number {
   return Number.isNaN(hour) ? 0 : hour
 }
 
-// TimetableSlot has no subject-area/department or group concept, so every
-// mapped slot gets a single constant value for each - this only affects the
-// card color coding / group label and degrades gracefully with one value
-// rather than fabricating variety the data doesn't have.
+// TimetableSlot has no subject-area/department concept, so the UI uses one
+// honest academic-slot styling instead of fabricating discipline labels.
 function mapSlot(record: TimetableSlotRecord): TimeSlot {
   return {
     id: record.id,
@@ -156,7 +157,7 @@ function mapSlot(record: TimetableSlotRecord): TimeSlot {
     teacher: record.teacher || '',
     room: record.room || '',
     type: record.type,
-    subjectArea: 'droit',
+    subjectArea: 'course',
     group: '',
   }
 }
@@ -219,7 +220,7 @@ const emptyTimetableForm: TimetableForm = {
   levelId: '',
 }
 
-function flattenStructureOptions(faculties: any[] = []) {
+function flattenStructureOptions(faculties: StructureFaculty[] = []) {
   const programs: AcademicOption[] = []
   const levels: (AcademicOption & { programId: string })[] = []
   const courseElements: CourseElementOption[] = []
@@ -311,10 +312,12 @@ function TimeSlotBlock({ slot }: { slot: TimeSlot }) {
         <User className="size-2.5 opacity-60 shrink-0" />
         <span className="text-[9px] opacity-70 truncate">{slot.teacher}</span>
       </div>
-      <div className="flex items-center gap-1 mt-0.5">
-        <BookOpen className="size-2.5 opacity-60 shrink-0" />
-        <span className="text-[9px] opacity-70 truncate">{slot.group}</span>
-      </div>
+      {slot.group && (
+        <div className="flex items-center gap-1 mt-0.5">
+          <BookOpen className="size-2.5 opacity-60 shrink-0" />
+          <span className="text-[9px] opacity-70 truncate">{slot.group}</span>
+        </div>
+      )}
     </motion.div>
   )
 }
@@ -346,10 +349,12 @@ function DaySlotCard({ slot }: { slot: TimeSlot }) {
           <User className="size-3.5 opacity-60 shrink-0" />
           <span className="text-xs opacity-70">{slot.teacher}</span>
         </div>
-        <div className="flex items-center gap-2">
-          <BookOpen className="size-3.5 opacity-60 shrink-0" />
-          <span className="text-xs opacity-70">{slot.group}</span>
-        </div>
+          {slot.group && (
+            <div className="flex items-center gap-2">
+              <BookOpen className="size-3.5 opacity-60 shrink-0" />
+              <span className="text-xs opacity-70">{slot.group}</span>
+            </div>
+          )}
       </div>
     </motion.div>
   )
@@ -387,12 +392,33 @@ export function TimetablePage() {
     [structureData]
   )
   const teacherOptions: AcademicOption[] = useMemo(
-    () => (teachersData?.data ?? []).map((teacher: any) => ({
+    () => (teachersData?.data ?? []).map((teacher: { id: string; employeeId?: string | null; user?: { firstName?: string | null; lastName?: string | null }; firstName?: string | null; lastName?: string | null }) => ({
       id: teacher.id,
       label: `${teacher.user?.lastName || teacher.lastName || ''} ${teacher.user?.firstName || teacher.firstName || ''}`.trim() || teacher.employeeId || teacher.id,
     })),
     [teachersData]
   )
+  const filteredLevels = useMemo(
+    () => levels.filter((level) => !slotForm.programId || level.programId === slotForm.programId),
+    [levels, slotForm.programId]
+  )
+  const filteredCourseElements = useMemo(
+    () => courseElements.filter((element) => {
+      if (slotForm.programId && element.programId !== slotForm.programId) return false
+      if (slotForm.levelId && element.levelId !== slotForm.levelId) return false
+      return true
+    }),
+    [courseElements, slotForm.programId, slotForm.levelId]
+  )
+  const timetablePrerequisites = [
+    academicYears.length === 0 ? 'une année académique active' : null,
+    programs.length === 0 ? 'au moins un programme' : null,
+    levels.length === 0 ? 'au moins un niveau' : null,
+    courseElements.length === 0 ? 'au moins une matière/EC dans la maquette' : null,
+    rooms.length === 0 ? 'au moins une salle' : null,
+    teacherOptions.length === 0 ? 'au moins un enseignant' : null,
+  ].filter((item): item is string => Boolean(item))
+  const canCreateTimetableSlot = timetablePrerequisites.length === 0
 
   // Animated stats for header
   const animatedCours = useCountUp(timeSlots.length, 1400)
@@ -414,6 +440,25 @@ export function TimetablePage() {
     setSlotForm((form) => ({ ...form, ...updates }))
   }
 
+  const handleProgramChange = (programId: string) => {
+    const nextProgramId = programId === 'none' ? '' : programId
+    setSlotForm((form) => ({
+      ...form,
+      programId: nextProgramId,
+      levelId: form.levelId && levels.some((level) => level.id === form.levelId && level.programId === nextProgramId) ? form.levelId : '',
+      courseElementId: '',
+    }))
+  }
+
+  const handleLevelChange = (levelId: string) => {
+    const nextLevelId = levelId === 'none' ? '' : levelId
+    setSlotForm((form) => ({
+      ...form,
+      levelId: nextLevelId,
+      courseElementId: '',
+    }))
+  }
+
   const handleCourseElementChange = (courseElementId: string) => {
     const selected = courseElements.find((element) => element.id === courseElementId)
     updateSlotForm({
@@ -425,8 +470,18 @@ export function TimetablePage() {
   }
 
   const handleCreateSlot = async () => {
+    if (!canCreateTimetableSlot) {
+      toast.error('Creation impossible', {
+        description: `Il manque ${timetablePrerequisites.join(', ')}.`,
+      })
+      return
+    }
     if (!slotForm.academicYearId || !slotForm.dayOfWeek || !slotForm.startTime || !slotForm.endTime) {
       toast.error('Champs requis', { description: "Année académique, jour, début et fin sont obligatoires." })
+      return
+    }
+    if (!slotForm.programId || !slotForm.levelId || !slotForm.courseElementId || !slotForm.teacherId || !slotForm.roomId) {
+      toast.error('Champs requis', { description: 'Programme, niveau, matière, enseignant et salle sont obligatoires pour créer un créneau exploitable.' })
       return
     }
     if (slotForm.startTime >= slotForm.endTime) {
@@ -457,6 +512,7 @@ export function TimetablePage() {
 
       toast.success('Créneau ajouté')
       queryClient.invalidateQueries({ queryKey: ['timetable'] })
+      queryClient.invalidateQueries({ queryKey: ['timetable', { programId: filterProgram === 'all' ? undefined : filterProgram, levelId: filterLevel === 'all' ? undefined : filterLevel }] })
       setShowCreateSlot(false)
       setSlotForm((form) => ({
         ...emptyTimetableForm,
@@ -517,14 +573,22 @@ export function TimetablePage() {
   return (
     <div className="space-y-6">
       <Dialog open={showCreateSlot} onOpenChange={setShowCreateSlot}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Ajouter un créneau</DialogTitle>
           </DialogHeader>
+          {!canCreateTimetableSlot && (
+            <div className="rounded-lg border border-[#d4a85330] bg-[#d4a85308] p-3 text-xs text-[#1a2744]">
+              <p className="font-semibold">Pré-requis manquants</p>
+              <p className="mt-1 text-gray-600">
+                Créez d&apos;abord {timetablePrerequisites.join(', ')} pour pouvoir planifier un créneau fiable.
+              </p>
+            </div>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-2">
             <div className="space-y-2">
               <Label>Année académique</Label>
-              <Select value={slotForm.academicYearId} onValueChange={(value) => updateSlotForm({ academicYearId: value })}>
+              <Select value={slotForm.academicYearId} onValueChange={(value) => updateSlotForm({ academicYearId: value })} disabled={academicYears.length === 0}>
                 <SelectTrigger>
                   <SelectValue placeholder="Sélectionner" />
                 </SelectTrigger>
@@ -571,41 +635,13 @@ export function TimetablePage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Salle</Label>
-              <Select value={slotForm.roomId || 'none'} onValueChange={(value) => updateSlotForm({ roomId: value === 'none' ? '' : value })}>
+              <Label>Programme *</Label>
+              <Select value={slotForm.programId || 'none'} onValueChange={handleProgramChange} disabled={programs.length === 0}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Optionnel" />
+                  <SelectValue placeholder="Sélectionner" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Non renseignée</SelectItem>
-                  {rooms.map((room) => (
-                    <SelectItem key={room.id} value={room.id}>{room.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2 sm:col-span-2">
-              <Label>EC / Matière</Label>
-              <Select value={slotForm.courseElementId || 'none'} onValueChange={(value) => handleCourseElementChange(value === 'none' ? '' : value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Optionnel" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Non renseignée</SelectItem>
-                  {courseElements.map((element) => (
-                    <SelectItem key={element.id} value={element.id}>{element.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Programme</Label>
-              <Select value={slotForm.programId || 'none'} onValueChange={(value) => updateSlotForm({ programId: value === 'none' ? '' : value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Optionnel" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Non renseigné</SelectItem>
+                  <SelectItem value="none">Sélectionner un programme</SelectItem>
                   {programs.map((program) => (
                     <SelectItem key={program.id} value={program.id}>{program.label}</SelectItem>
                   ))}
@@ -613,29 +649,55 @@ export function TimetablePage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Niveau</Label>
-              <Select value={slotForm.levelId || 'none'} onValueChange={(value) => updateSlotForm({ levelId: value === 'none' ? '' : value })}>
+              <Label>Niveau *</Label>
+              <Select value={slotForm.levelId || 'none'} onValueChange={handleLevelChange} disabled={levels.length === 0 || !slotForm.programId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Optionnel" />
+                  <SelectValue placeholder="Sélectionner" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Non renseigné</SelectItem>
-                  {levels
-                    .filter((level) => !slotForm.programId || level.programId === slotForm.programId)
-                    .map((level) => (
-                      <SelectItem key={level.id} value={level.id}>{level.label}</SelectItem>
-                    ))}
+                  <SelectItem value="none">Sélectionner un niveau</SelectItem>
+                  {filteredLevels.map((level) => (
+                    <SelectItem key={level.id} value={level.id}>{level.label}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2 sm:col-span-2">
-              <Label>Enseignant</Label>
-              <Select value={slotForm.teacherId || 'none'} onValueChange={(value) => updateSlotForm({ teacherId: value === 'none' ? '' : value })}>
+              <Label>EC / Matière *</Label>
+              <Select value={slotForm.courseElementId || 'none'} onValueChange={(value) => handleCourseElementChange(value === 'none' ? '' : value)} disabled={courseElements.length === 0 || !slotForm.programId || !slotForm.levelId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Optionnel" />
+                  <SelectValue placeholder="Sélectionner" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Non renseigné</SelectItem>
+                  <SelectItem value="none">Sélectionner une matière</SelectItem>
+                  {filteredCourseElements.map((element) => (
+                    <SelectItem key={element.id} value={element.id}>{element.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Salle *</Label>
+              <Select value={slotForm.roomId || 'none'} onValueChange={(value) => updateSlotForm({ roomId: value === 'none' ? '' : value })} disabled={rooms.length === 0}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionner" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sélectionner une salle</SelectItem>
+                  {rooms.map((room) => (
+                    <SelectItem key={room.id} value={room.id}>{room.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Enseignant *</Label>
+              <Select value={slotForm.teacherId || 'none'} onValueChange={(value) => updateSlotForm({ teacherId: value === 'none' ? '' : value })} disabled={teacherOptions.length === 0}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionner" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sélectionner un enseignant</SelectItem>
                   {teacherOptions.map((teacher) => (
                     <SelectItem key={teacher.id} value={teacher.id}>{teacher.label}</SelectItem>
                   ))}
@@ -645,7 +707,7 @@ export function TimetablePage() {
           </div>
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => setShowCreateSlot(false)}>Annuler</Button>
-            <Button className="bg-[#2d7a4f] hover:bg-[#236b40] text-white" disabled={isCreatingSlot} onClick={handleCreateSlot}>
+            <Button className="bg-[#2d7a4f] hover:bg-[#236b40] text-white" disabled={isCreatingSlot || !canCreateTimetableSlot} onClick={handleCreateSlot}>
               {isCreatingSlot ? 'Création...' : 'Créer le créneau'}
             </Button>
           </div>
@@ -681,7 +743,19 @@ export function TimetablePage() {
                   <Download className="size-3.5 mr-1.5" />
                   Export PDF
                 </Button>
-                <Button size="sm" className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs border border-white/20" onClick={() => setShowCreateSlot(true)}>
+                <Button
+                  size="sm"
+                  className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs border border-white/20"
+                  onClick={() => {
+                    setSlotForm((form) => ({
+                      ...form,
+                      programId: filterProgram === 'all' ? form.programId : filterProgram,
+                      levelId: filterLevel === 'all' ? form.levelId : filterLevel,
+                      courseElementId: filterProgram === 'all' && filterLevel === 'all' ? form.courseElementId : '',
+                    }))
+                    setShowCreateSlot(true)
+                  }}
+                >
                   <Plus className="size-3.5 mr-1.5" />
                   Ajouter creneau
                 </Button>
@@ -705,10 +779,10 @@ export function TimetablePage() {
               </div>
               <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/15">
                 <div className="flex items-center gap-2">
-                  <p className="text-2xl font-bold text-white">0</p>
+                  <p className="text-sm font-bold text-white">Active</p>
                   <CheckCircle2 className="size-5 text-green-400" />
                 </div>
-                <p className="text-[11px] text-white/70 mt-0.5">Conflits</p>
+                <p className="text-[11px] text-white/70 mt-0.5">Détection conflits</p>
               </div>
             </motion.div>
           </div>
@@ -809,7 +883,7 @@ export function TimetablePage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-[10px] text-gray-500 uppercase font-medium">Conflits</p>
-                  <p className="text-2xl font-bold text-green-600">0</p>
+                  <p className="text-sm font-bold text-green-600">Prévention active</p>
                 </div>
                 <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center">
                   <CheckCircle2 className="size-5 text-green-600" />
@@ -888,7 +962,7 @@ export function TimetablePage() {
         </Card>
       </motion.div>
 
-      {/* Subject Legend */}
+      {/* Legend */}
       <div className="flex flex-wrap gap-4">
         {Object.entries(subjectConfig).map(([key, conf]) => (
           <div key={key} className="flex items-center gap-1.5">
