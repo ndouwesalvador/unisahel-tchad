@@ -62,9 +62,27 @@ async function handlePost(_user: SessionUser, tenantId: string, request: NextReq
       isContributing, contributionAmt, linkedIn,
     } = body
 
-    if (!firstName || !lastName || !graduationYear) {
+    const graduationYearNumber = Number(graduationYear)
+    const currentYear = new Date().getFullYear() + 1
+    const validStatuses = ['ACTIF', 'INACTIF', 'INJOIGNABLE']
+
+    if (!firstName?.trim() || !lastName?.trim() || !graduationYear) {
       return NextResponse.json(
         { error: 'firstName, lastName, and graduationYear are required fields' },
+        { status: 400 }
+      )
+    }
+
+    if (!Number.isInteger(graduationYearNumber) || graduationYearNumber < 1950 || graduationYearNumber > currentYear) {
+      return NextResponse.json(
+        { error: `graduationYear must be an integer between 1950 and ${currentYear}` },
+        { status: 400 }
+      )
+    }
+
+    if (status && !validStatuses.includes(status)) {
+      return NextResponse.json(
+        { error: `status must be one of: ${validStatuses.join(', ')}` },
         { status: 400 }
       )
     }
@@ -73,22 +91,22 @@ async function handlePost(_user: SessionUser, tenantId: string, request: NextReq
       data: {
         tenantId,
         studentId: studentId ?? null,
-        firstName,
-        lastName,
-        email: email ?? null,
-        phone: phone ?? null,
-        diploma: diploma ?? null,
-        graduationYear,
-        program: program ?? null,
-        currentPosition: currentPosition ?? null,
-        company: company ?? null,
-        sector: sector ?? null,
-        country: country ?? null,
-        city: city ?? null,
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        email: email?.trim() || null,
+        phone: phone?.trim() || null,
+        diploma: diploma?.trim() || null,
+        graduationYear: graduationYearNumber,
+        program: program?.trim() || null,
+        currentPosition: currentPosition?.trim() || null,
+        company: company?.trim() || null,
+        sector: sector?.trim() || null,
+        country: country?.trim() || null,
+        city: city?.trim() || null,
         status: status ?? undefined,
         isContributing: typeof isContributing === 'boolean' ? isContributing : undefined,
         contributionAmt: typeof contributionAmt === 'number' ? contributionAmt : undefined,
-        linkedIn: linkedIn ?? null,
+        linkedIn: linkedIn?.trim() || null,
       },
     })
     return NextResponse.json({ alumni }, { status: 201 })
@@ -100,5 +118,67 @@ async function handlePost(_user: SessionUser, tenantId: string, request: NextReq
   }
 }
 
+async function handlePatch(_user: SessionUser, tenantId: string, request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { id, status, markContacted } = body
+    const validStatuses = ['ACTIF', 'INACTIF', 'INJOIGNABLE']
+
+    if (!id) {
+      return NextResponse.json({ error: 'id is required' }, { status: 400 })
+    }
+    if (status && !validStatuses.includes(status)) {
+      return NextResponse.json(
+        { error: `status must be one of: ${validStatuses.join(', ')}` },
+        { status: 400 }
+      )
+    }
+
+    const existing = await db.alumni.findFirst({ where: { id, tenantId } })
+    if (!existing) {
+      return NextResponse.json({ error: 'Alumni record not found' }, { status: 404 })
+    }
+
+    const alumni = await db.alumni.update({
+      where: { id },
+      data: {
+        ...(status ? { status } : {}),
+        ...(markContacted ? { lastContactDate: new Date() } : {}),
+      },
+    })
+
+    return NextResponse.json({ alumni })
+  } catch {
+    return NextResponse.json(
+      { error: 'Failed to update alumni record' },
+      { status: 500 }
+    )
+  }
+}
+
+async function handleDelete(_user: SessionUser, tenantId: string, request: NextRequest) {
+  try {
+    const id = request.nextUrl.searchParams.get('id')
+    if (!id) {
+      return NextResponse.json({ error: 'id is required' }, { status: 400 })
+    }
+
+    const existing = await db.alumni.findFirst({ where: { id, tenantId } })
+    if (!existing) {
+      return NextResponse.json({ error: 'Alumni record not found' }, { status: 404 })
+    }
+
+    await db.alumni.delete({ where: { id } })
+    return NextResponse.json({ ok: true })
+  } catch {
+    return NextResponse.json(
+      { error: 'Failed to delete alumni record' },
+      { status: 500 }
+    )
+  }
+}
+
 export const GET = withTenantAuth(handleGet)
 export const POST = withTenantAuth(handlePost)
+export const PATCH = withTenantAuth(handlePatch)
+export const DELETE = withTenantAuth(handleDelete)
