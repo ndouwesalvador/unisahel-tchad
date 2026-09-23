@@ -57,13 +57,13 @@ import {
   ChevronDown,
 } from 'lucide-react'
 
-// ─── Demo Data ────────────────────────────────────────────────────────────────
+// ─── Types and API-backed data mapping ────────────────────────────────────────
 
 type ImportType = 'Etudiants' | 'Enseignants' | 'Notes' | 'Paiements' | 'Structure'
 type ImportTypeLabel = 'Étudiants' | 'Enseignants' | 'Notes' | 'Paiements' | 'Structure'
 type ExportType = 'ListeEtudiants' | 'RelevesNotes' | 'EtatsFinanciers' | 'Statistiques' | 'AnnuaireEnseignants' | 'StructureAcademique'
 type ExportTypeLabel = 'Liste des étudiants' | 'Relevés de notes' | 'États financiers' | 'Statistiques' | 'Annuaire enseignants' | 'Structure académique'
-type ExportFormat = 'PDF' | 'Excel' | 'CSV'
+type ExportFormat = 'Excel' | 'CSV'
 type ImportStatus = 'Succes' | 'Partiel' | 'Echoue' | 'EnCours' | 'EnAttente'
 type ImportStatusLabel = 'Succès' | 'Partiel' | 'Échoué' | 'En cours' | 'En attente'
 
@@ -181,6 +181,18 @@ function computeTeacherRowIssues(rows: Record<string, unknown>[]): RowIssue[] {
 
 function computeRowIssues(rows: Record<string, unknown>[], type: string): RowIssue[] {
   return type === 'Enseignants' ? computeTeacherRowIssues(rows) : computeStudentRowIssues(rows)
+}
+
+function parseImportErrors(errors: unknown): string[] {
+  if (!errors) return []
+  if (Array.isArray(errors)) return errors.map(String)
+  if (typeof errors !== 'string') return []
+  try {
+    const parsed = JSON.parse(errors)
+    return Array.isArray(parsed) ? parsed.map(String) : []
+  } catch {
+    return [errors]
+  }
 }
 
 // ─── Custom useCountUp Hook ────────────────────────────────────────────────────
@@ -360,14 +372,11 @@ export function ImportExportPage() {
 
     if (exportFormat === 'Excel') {
       exportToExcel(dataToExport, fileName, exportTypeMap[exportType])
-    } else if (exportFormat === 'CSV') {
-      exportToCSV(dataToExport, fileName)
     } else {
-      toast.info('Export PDF en développement. Format Excel généré en remplacement.')
-      exportToExcel(dataToExport, fileName, exportTypeMap[exportType])
+      exportToCSV(dataToExport, fileName)
     }
 
-    void logExport(exportTypeMap[exportType], exportFormat === 'PDF' ? 'Excel' : exportFormat, dataToExport.length)
+    void logExport(exportTypeMap[exportType], exportFormat, dataToExport.length)
   }
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement> | React.DragEvent<HTMLDivElement>) => {
@@ -410,6 +419,27 @@ export function ImportExportPage() {
     }
   }
 
+  const handlePreview = () => {
+    if (fullParsedRows.length === 0) {
+      toast.error('Aucun fichier charge.', {
+        description: 'Choisissez un fichier Excel ou CSV avant de previsualiser les donnees.',
+      })
+      return
+    }
+    setShowPreview(true)
+    setShowValidation(true)
+  }
+
+  const resetImportPreview = () => {
+    setShowPreview(false)
+    setShowValidation(false)
+    setFullParsedRows([])
+    setDynamicPreviewRows([])
+    setUploadedFileName('')
+    setValidationSummary({ validLines: 0, errorLines: 0, duplicates: 0 })
+    setImportProgress(0)
+  }
+
   const handleImport = useCallback(async () => {
     if (importType !== 'Etudiants' && importType !== 'Enseignants') {
       toast.error(`L'import de type "${importTypeMap[importType]}" n'est pas encore disponible.`, {
@@ -437,8 +467,9 @@ export function ImportExportPage() {
         return
       }
       if (result.errorRows > 0 && result.successRows > 0) {
+        const noun = importType === 'Enseignants' ? 'enseignant(s)' : 'etudiant(s)'
         toast.warning('Import partiel', {
-          description: `${result.successRows} etudiant(s) importe(s), ${result.errorRows} ligne(s) en erreur.`,
+          description: `${result.successRows} ${noun} importe(s), ${result.errorRows} ligne(s) en erreur.`,
         })
       } else if (result.errorRows > 0) {
         toast.error('Import echoue', { description: `${result.errorRows} ligne(s) en erreur.` })
@@ -462,10 +493,15 @@ export function ImportExportPage() {
   }, [importType, fullParsedRows, uploadedFileName, queryClient])
 
   const stats = importExportData?.stats
+  const importsThisMonth = stats?.importsThisMonth ?? 0
+  const exportsThisMonth = stats?.exportsThisMonth ?? 0
+  const conformityRate = importsThisMonth > 0
+    ? Math.max(0, Math.round(((importsThisMonth - (stats?.errors ?? 0)) / importsThisMonth) * 100))
+    : 0
   const statsCards = [
-    { label: 'Imports ce mois', value: stats?.importsThisMonth ?? 0, icon: ArrowRightLeft, color: '#1a2744' },
+    { label: 'Imports ce mois', value: importsThisMonth, icon: ArrowRightLeft, color: '#1a2744' },
     { label: 'En attente', value: stats?.pending ?? 0, icon: Clock, color: '#d4a853' },
-    { label: 'Exports ce mois', value: stats?.exportsThisMonth ?? 0, icon: Download, color: '#2d7a4f' },
+    { label: 'Exports ce mois', value: exportsThisMonth, icon: Download, color: '#2d7a4f' },
     { label: 'Erreurs', value: stats?.errors ?? 0, icon: XCircle, color: '#c62828' },
   ]
 
@@ -530,9 +566,9 @@ export function ImportExportPage() {
               <p className="text-sm text-white/70 mt-1">Import, export et validation des donnees institutionnelles</p>
             </div>
             <div className="flex flex-wrap gap-3">
-              <AnimatedStat value={5} label="Imports du mois" icon={ArrowRightLeft} />
-              <AnimatedStat value={12} label="Exports du mois" icon={Download} />
-              <AnimatedStat value={96} label="Taux de conformite %" icon={CheckCircle2} />
+              <AnimatedStat value={importsThisMonth} label="Imports du mois" icon={ArrowRightLeft} />
+              <AnimatedStat value={exportsThisMonth} label="Exports du mois" icon={Download} />
+              <AnimatedStat value={conformityRate} label="Taux de conformite %" icon={CheckCircle2} />
             </div>
           </div>
         </div>
@@ -725,16 +761,12 @@ export function ImportExportPage() {
                             <FileText className="size-3 mr-1 text-[#d4a853]" />
                             .csv
                           </Badge>
-                          <Badge variant="outline" className="text-[10px] bg-white">
-                            <Database className="size-3 mr-1 text-[#1a2744]" />
-                            .json
-                          </Badge>
                         </div>
                         <Input 
                           type="file" 
                           id="file-upload"
                           className="hidden" 
-                          accept=".xlsx,.xls,.csv,.json" 
+                          accept=".xlsx,.xls,.csv" 
                           onChange={handleFileUpload} 
                         />
                         <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => document.getElementById('file-upload')?.click()}>
@@ -746,7 +778,7 @@ export function ImportExportPage() {
                     {/* Preview Button */}
                     <Button
                       className="w-full bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs h-10"
-                      onClick={() => setShowPreview(true)}
+                      onClick={handlePreview}
                     >
                       <Eye className="size-3.5 mr-1.5" />
                       Prévisualiser les données
@@ -963,7 +995,7 @@ export function ImportExportPage() {
                     <Button
                       variant="outline"
                       className="text-xs h-9"
-                      onClick={() => { setShowPreview(false); setShowValidation(false) }}
+                      onClick={resetImportPreview}
                     >
                       <X className="size-3.5 mr-1.5" />
                       Annuler
@@ -1052,7 +1084,7 @@ export function ImportExportPage() {
                                   size="sm"
                                   className="h-7 text-[10px] text-[#2d7a4f]"
                                   onClick={() => {
-                                    const rowErrors: string[] = record.errors ? JSON.parse(record.errors) : []
+                                    const rowErrors = parseImportErrors(record.errors)
                                     if (rowErrors.length === 0) {
                                       toast.success(`${record.successRows} ligne(s) importee(s) sans erreur.`)
                                     } else {
@@ -1167,7 +1199,7 @@ export function ImportExportPage() {
                     <div className="space-y-2">
                       <Label className="text-sm font-medium">Format de sortie</Label>
                       <div className="grid grid-cols-3 gap-2">
-                        {(['Excel', 'CSV', 'PDF'] as ExportFormat[]).map(fmt => (
+                        {(['Excel', 'CSV'] as ExportFormat[]).map(fmt => (
                           <motion.button
                             key={fmt}
                             whileHover={{ scale: 1.03 }}
@@ -1179,9 +1211,7 @@ export function ImportExportPage() {
                                 : 'border-gray-100 hover:border-gray-200 bg-white'
                             }`}
                           >
-                            {fmt === 'PDF' ? (
-                              <FileText className={`size-5 ${exportFormat === fmt ? 'text-[#c62828]' : 'text-gray-400'}`} />
-                            ) : fmt === 'Excel' ? (
+                            {fmt === 'Excel' ? (
                               <FileSpreadsheet className={`size-5 ${exportFormat === fmt ? 'text-[#2d7a4f]' : 'text-gray-400'}`} />
                             ) : (
                               <Database className={`size-5 ${exportFormat === fmt ? 'text-[#d4a853]' : 'text-gray-400'}`} />
@@ -1191,21 +1221,6 @@ export function ImportExportPage() {
                             </span>
                           </motion.button>
                         ))}
-                      </div>
-                    </div>
-
-                    {/* Date Range */}
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">Période</Label>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="space-y-1">
-                          <Label className="text-[10px] text-gray-400">Date début</Label>
-                          <Input type="date" className="h-9 text-xs" />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-[10px] text-gray-400">Date fin</Label>
-                          <Input type="date" className="h-9 text-xs" />
-                        </div>
                       </div>
                     </div>
 
