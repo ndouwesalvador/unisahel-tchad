@@ -105,15 +105,48 @@ async function handler(_user: SessionUser, tenantId: string, _request: NextReque
       orderBy: { name: 'asc' },
     })
 
+    const studentCounts = await db.student.groupBy({
+      by: ['currentProgramId'],
+      where: {
+        tenantId,
+        currentProgramId: { not: null },
+      },
+      _count: { _all: true },
+    })
+    const studentCountByProgram = new Map(
+      studentCounts
+        .filter((row) => row.currentProgramId)
+        .map((row) => [row.currentProgramId as string, row._count._all])
+    )
+
+    const facultiesWithCounts = faculties.map((faculty) => {
+      const departments = faculty.departments.map((department) => {
+        const programs = department.programs.map((program) => ({
+          ...program,
+          studentCount: studentCountByProgram.get(program.id) ?? 0,
+        }))
+        return {
+          ...department,
+          programs,
+          studentCount: programs.reduce((sum, program) => sum + program.studentCount, 0),
+        }
+      })
+      return {
+        ...faculty,
+        departments,
+        studentCount: departments.reduce((sum, department) => sum + department.studentCount, 0),
+      }
+    })
+
     // Compute summary stats
     const stats = {
-      faculties: faculties.length,
-      departments: faculties.reduce((acc, f) => acc + f.departments.length, 0),
-      programs: faculties.reduce(
+      faculties: facultiesWithCounts.length,
+      departments: facultiesWithCounts.reduce((acc, f) => acc + f.departments.length, 0),
+      programs: facultiesWithCounts.reduce(
         (acc, f) => acc + f.departments.reduce((a, d) => a + d.programs.length, 0),
         0
       ),
-      levels: faculties.reduce(
+      levels: facultiesWithCounts.reduce(
         (acc, f) =>
           acc +
           f.departments.reduce(
@@ -122,7 +155,7 @@ async function handler(_user: SessionUser, tenantId: string, _request: NextReque
           ),
         0
       ),
-      semesters: faculties.reduce(
+      semesters: facultiesWithCounts.reduce(
         (acc, f) =>
           acc +
           f.departments.reduce(
@@ -137,7 +170,7 @@ async function handler(_user: SessionUser, tenantId: string, _request: NextReque
           ),
         0
       ),
-      teachingUnits: faculties.reduce(
+      teachingUnits: facultiesWithCounts.reduce(
         (acc, f) =>
           acc +
           f.departments.reduce(
@@ -161,7 +194,7 @@ async function handler(_user: SessionUser, tenantId: string, _request: NextReque
           ),
         0
       ),
-      courseElements: faculties.reduce(
+      courseElements: facultiesWithCounts.reduce(
         (acc, f) =>
           acc +
           f.departments.reduce(
@@ -190,11 +223,12 @@ async function handler(_user: SessionUser, tenantId: string, _request: NextReque
           ),
         0
       ),
+      students: facultiesWithCounts.reduce((acc, f) => acc + f.studentCount, 0),
     }
 
     return NextResponse.json({
       tenant,
-      faculties,
+      faculties: facultiesWithCounts,
       stats,
     })
   } catch (error) {
