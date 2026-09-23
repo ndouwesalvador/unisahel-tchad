@@ -47,17 +47,22 @@ import {
   UserCheck,
   Calendar,
   Copy,
+  Pencil,
+  Trash2,
+  RotateCcw,
 } from 'lucide-react'
 
-// ─── Demo Data ────────────────────────────────────────────────────────────────
+// ─── Data Types ───────────────────────────────────────────────────────────────
 
-type StudentStatus = 'INSCRIT' | 'PRE_INSCRIT' | 'SUSPENDU' | 'EXCLU' | 'DIPLOME'
+type StudentStatus = 'INSCRIT' | 'PRE_INSCRIT' | 'SUSPENDU' | 'EXCLU' | 'DIPLOME' | 'ABANDON' | 'TRANSFERE'
 
-interface DemoStudent {
+interface StudentRow {
   id: string
   matricule: string
   nom: string
   prenom: string
+  firstName: string
+  lastName: string
   filiere: string
   niveau: string
   statut: StudentStatus
@@ -66,6 +71,13 @@ interface DemoStudent {
   telephone: string
   sexe: 'M' | 'F'
   age: number
+  dateOfBirth: string
+  placeOfBirth: string
+  nationality: string
+  currentProgramId: string
+  currentLevelId: string
+  bacSeries: string
+  bacYear: string
 }
 
 const statusConfig: Record<StudentStatus, { label: string; className: string }> = {
@@ -74,6 +86,8 @@ const statusConfig: Record<StudentStatus, { label: string; className: string }> 
   SUSPENDU: { label: 'Suspendu', className: 'bg-[#ef6c0015] text-[#ef6c00] border-0 hover:bg-[#ef6c0015]' },
   EXCLU: { label: 'Exclu', className: 'bg-[#c6282815] text-[#c62828] border-0 hover:bg-[#c6282815]' },
   DIPLOME: { label: 'Diplômé', className: 'bg-[#1a274415] text-[#1a2744] border-0 hover:bg-[#1a274415]' },
+  ABANDON: { label: 'Abandon', className: 'bg-[#6b728015] text-gray-600 border-0 hover:bg-[#6b728015]' },
+  TRANSFERE: { label: 'Transféré', className: 'bg-[#1a274415] text-[#1a2744] border-0 hover:bg-[#1a274415]' },
 }
 
 const ITEMS_PER_PAGE = 10
@@ -141,7 +155,7 @@ interface ApiFaculty { departments: ApiDepartment[] }
 const emptyStudentForm = {
   firstName: '', lastName: '', gender: '', dateOfBirth: '', placeOfBirth: '',
   nationality: 'Tchadienne', currentProgramId: '', currentLevelId: '',
-  email: '', phone: '', bacSeries: '', bacYear: '',
+  email: '', phone: '', bacSeries: '', bacYear: '', status: 'PRE_INSCRIT',
 }
 
 export function StudentsList() {
@@ -155,6 +169,9 @@ export function StudentsList() {
 
   const [showCreate, setShowCreate] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
+  const [editingStudent, setEditingStudent] = useState<StudentRow | null>(null)
+  const [isUpdating, setIsUpdating] = useState(false)
+  const [isChangingStatus, setIsChangingStatus] = useState(false)
   const [form, setForm] = useState(emptyStudentForm)
   const [createdCredentials, setCreatedCredentials] = useState<{ matricule: string; login: string; pin: string; name: string } | null>(null)
 
@@ -213,19 +230,125 @@ export function StudentsList() {
     }
   }
 
+  const openEditStudent = (student: StudentRow) => {
+    setEditingStudent(student)
+    setForm({
+      firstName: student.firstName,
+      lastName: student.lastName,
+      gender: student.sexe,
+      dateOfBirth: student.dateOfBirth,
+      placeOfBirth: student.placeOfBirth,
+      nationality: student.nationality || 'Tchadienne',
+      currentProgramId: student.currentProgramId,
+      currentLevelId: student.currentLevelId,
+      email: student.email,
+      phone: student.telephone,
+      bacSeries: student.bacSeries,
+      bacYear: student.bacYear,
+      status: student.statut === 'INSCRIT' ? 'INSCRIT' : 'PRE_INSCRIT',
+    })
+  }
+
+  const closeEditDialog = () => {
+    setEditingStudent(null)
+    setForm(emptyStudentForm)
+  }
+
+  const handleUpdateStudent = async () => {
+    if (!editingStudent) return
+    if (!form.firstName || !form.lastName || !form.gender || !form.dateOfBirth || !form.placeOfBirth || !form.currentProgramId || !form.currentLevelId) {
+      toast.error('Champs requis', { description: 'Nom, prenom, sexe, date/lieu de naissance, filiere et niveau sont obligatoires' })
+      return
+    }
+    setIsUpdating(true)
+    try {
+      const updatePayload: Record<string, unknown> = {
+        id: editingStudent.id,
+        firstName: form.firstName,
+        lastName: form.lastName,
+        gender: form.gender,
+        nationality: form.nationality || 'Tchadienne',
+        dateOfBirth: new Date(form.dateOfBirth).toISOString(),
+        placeOfBirth: form.placeOfBirth,
+        currentProgramId: form.currentProgramId,
+        currentLevelId: form.currentLevelId,
+        email: form.email || undefined,
+        phone: form.phone || undefined,
+        bacSeries: form.bacSeries || undefined,
+        bacYear: form.bacYear ? Number(form.bacYear) : undefined,
+      }
+      if (editingStudent.statut === 'INSCRIT' || editingStudent.statut === 'PRE_INSCRIT') {
+        updatePayload.status = form.status === 'INSCRIT' ? 'INSCRIT' : 'PRE_INSCRIT'
+      }
+
+      const res = await fetch('/api/students', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatePayload),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.error || 'Echec de la mise a jour')
+      toast.success('Dossier etudiant mis a jour')
+      queryClient.invalidateQueries({ queryKey: ['students'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      closeEditDialog()
+    } catch (e) {
+      toast.error('Erreur', { description: e instanceof Error ? e.message : 'Echec de la mise a jour' })
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
+  const handleSuspendStudent = async (student: StudentRow) => {
+    if (!window.confirm(`Suspendre le dossier de ${student.prenom} ${student.nom} ?`)) return
+    setIsChangingStatus(true)
+    try {
+      const res = await fetch(`/api/students?id=${encodeURIComponent(student.id)}`, { method: 'DELETE' })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.error || 'Echec de la suspension')
+      toast.success('Dossier etudiant suspendu')
+      queryClient.invalidateQueries({ queryKey: ['students'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+    } catch (e) {
+      toast.error('Erreur', { description: e instanceof Error ? e.message : 'Echec de la suspension' })
+    } finally {
+      setIsChangingStatus(false)
+    }
+  }
+
+  const handleReactivateStudent = async (student: StudentRow) => {
+    setIsChangingStatus(true)
+    try {
+      const res = await fetch('/api/students', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: student.id, status: 'INSCRIT' }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.error || 'Echec de la reactivation')
+      toast.success('Dossier etudiant reactive')
+      queryClient.invalidateQueries({ queryKey: ['students'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+    } catch (e) {
+      toast.error('Erreur', { description: e instanceof Error ? e.message : 'Echec de la reactivation' })
+    } finally {
+      setIsChangingStatus(false)
+    }
+  }
+
   const handleExportPDF = () => {
     exportListToPDF(
       'liste_etudiants',
       'Liste des etudiants',
       `${filteredStudents.length} etudiant(s)`,
       [
-        { header: 'Matricule', width: 0.18, value: (s: DemoStudent) => s.matricule },
-        { header: 'Nom', width: 0.16, value: (s: DemoStudent) => s.nom },
-        { header: 'Prenom', width: 0.16, value: (s: DemoStudent) => s.prenom },
-        { header: 'Filiere', width: 0.2, value: (s: DemoStudent) => s.filiere },
-        { header: 'Niveau', width: 0.08, value: (s: DemoStudent) => s.niveau },
-        { header: 'Statut', width: 0.12, value: (s: DemoStudent) => statusConfig[s.statut]?.label || s.statut },
-        { header: 'Sexe', width: 0.1, value: (s: DemoStudent) => s.sexe },
+        { header: 'Matricule', width: 0.18, value: (s: StudentRow) => s.matricule },
+        { header: 'Nom', width: 0.16, value: (s: StudentRow) => s.nom },
+        { header: 'Prenom', width: 0.16, value: (s: StudentRow) => s.prenom },
+        { header: 'Filiere', width: 0.2, value: (s: StudentRow) => s.filiere },
+        { header: 'Niveau', width: 0.08, value: (s: StudentRow) => s.niveau },
+        { header: 'Statut', width: 0.12, value: (s: StudentRow) => statusConfig[s.statut]?.label || s.statut },
+        { header: 'Sexe', width: 0.1, value: (s: StudentRow) => s.sexe },
       ],
       filteredStudents,
     )
@@ -255,22 +378,31 @@ export function StudentsList() {
         matricule: s.matricule || 'N/A',
         nom: s.lastName,
         prenom: s.firstName,
+        firstName: s.firstName,
+        lastName: s.lastName,
         filiere: s.currentProgram?.name || 'Non défini',
         niveau: s.currentLevel?.code || 'N/A',
-        statut: s.status as StudentStatus,
+        statut: (s.status || 'PRE_INSCRIT') as StudentStatus,
         credits: s.totalCreditsAcquired || 0,
         email: s.email || '',
         telephone: s.phone || '',
         sexe: (s.gender as 'M' | 'F') || 'M',
         age: age || 0,
-      } as DemoStudent
+        dateOfBirth: s.dateOfBirth ? new Date(s.dateOfBirth).toISOString().slice(0, 10) : '',
+        placeOfBirth: s.placeOfBirth || '',
+        nationality: s.nationality || 'Tchadienne',
+        currentProgramId: s.currentProgram?.id || '',
+        currentLevelId: s.currentLevel?.id || '',
+        bacSeries: s.bacSeries || '',
+        bacYear: s.bacYear ? String(s.bacYear) : '',
+      } as StudentRow
     })
   }, [studentsData])
 
-  const filieres = Array.from(new Set<string>(realStudents.map((s: DemoStudent) => s.filiere))).sort()
-  const niveaux = Array.from(new Set<string>(realStudents.map((s: DemoStudent) => s.niveau))).sort()
+  const filieres = Array.from(new Set<string>(realStudents.map((s: StudentRow) => s.filiere))).sort()
+  const niveaux = Array.from(new Set<string>(realStudents.map((s: StudentRow) => s.niveau))).sort()
 
-  const filteredStudents = realStudents.filter((s: DemoStudent) => {
+  const filteredStudents = realStudents.filter((s: StudentRow) => {
     const matchSearch =
       search === '' ||
       s.nom.toLowerCase().includes(search.toLowerCase()) ||
@@ -283,6 +415,7 @@ export function StudentsList() {
   })
 
   const totalPages = Math.ceil(filteredStudents.length / ITEMS_PER_PAGE)
+  const safeTotalPages = Math.max(1, totalPages)
   const paginatedStudents = filteredStudents.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
@@ -295,10 +428,10 @@ export function StudentsList() {
 
   // ─── Computed Stats ─────────────────────────────────────────────────────
   const totalStudents = filteredStudents.length
-  const maleCount = filteredStudents.filter((s: DemoStudent) => s.sexe === 'M').length
-  const femaleCount = filteredStudents.filter((s: DemoStudent) => s.sexe === 'F').length
+  const maleCount = filteredStudents.filter((s: StudentRow) => s.sexe === 'M').length
+  const femaleCount = filteredStudents.filter((s: StudentRow) => s.sexe === 'F').length
   const averageAge = filteredStudents.length > 0
-    ? Math.round(filteredStudents.reduce((acc: number, s: DemoStudent) => acc + s.age, 0) / filteredStudents.length)
+    ? Math.round(filteredStudents.reduce((acc: number, s: StudentRow) => acc + s.age, 0) / filteredStudents.length)
     : 0
 
   // Stagger animation variants for table rows
@@ -454,7 +587,9 @@ export function StudentsList() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedStudents.map((student: DemoStudent, i: number) => (
+                {paginatedStudents.map((student: StudentRow, i: number) => {
+                  const status = statusConfig[student.statut] || statusConfig.PRE_INSCRIT
+                  return (
                   <motion.tr
                     key={student.id}
                     custom={i}
@@ -472,23 +607,56 @@ export function StudentsList() {
                     <TableCell className="text-sm text-gray-600 py-3">{student.filiere}</TableCell>
                     <TableCell className="text-sm text-gray-600 py-3">{student.niveau}</TableCell>
                     <TableCell className="py-3">
-                      <Badge className={`text-[10px] px-2 py-0.5 font-medium ${statusConfig[student.statut].className}`}>
-                        {statusConfig[student.statut].label}
+                      <Badge className={`text-[10px] px-2 py-0.5 font-medium ${status.className}`}>
+                        {status.label}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-sm text-center font-medium text-[#1a2744] py-3">{student.credits}</TableCell>
-                    <TableCell className="text-right py-3">
+                    <TableCell className="text-right py-3 whitespace-nowrap">
                       <Button
                         variant="ghost"
                         size="sm"
                         className="h-7 w-7 p-0 opacity-50 group-hover:opacity-100 transition-opacity"
                         onClick={(e) => { e.stopPropagation(); handleRowClick(student.id) }}
+                        title="Voir le dossier"
                       >
                         <Eye className="size-3.5 text-gray-400" />
                       </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 opacity-50 group-hover:opacity-100 transition-opacity"
+                        onClick={(e) => { e.stopPropagation(); openEditStudent(student) }}
+                        title="Modifier le dossier"
+                      >
+                        <Pencil className="size-3.5 text-gray-400" />
+                      </Button>
+                      {student.statut === 'SUSPENDU' ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 opacity-50 group-hover:opacity-100 transition-opacity"
+                          disabled={isChangingStatus}
+                          onClick={(e) => { e.stopPropagation(); handleReactivateStudent(student) }}
+                          title="Réactiver"
+                        >
+                          <RotateCcw className="size-3.5 text-[#2d7a4f]" />
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 opacity-50 group-hover:opacity-100 transition-opacity"
+                          disabled={isChangingStatus}
+                          onClick={(e) => { e.stopPropagation(); handleSuspendStudent(student) }}
+                          title="Suspendre"
+                        >
+                          <Trash2 className="size-3.5 text-[#c62828]" />
+                        </Button>
+                      )}
                     </TableCell>
                   </motion.tr>
-                ))}
+                )})}
                 {isLoading && (
                   <TableRow>
                     <TableCell colSpan={8} className="text-center py-10 text-sm text-gray-400">Chargement...</TableCell>
@@ -533,7 +701,7 @@ export function StudentsList() {
                 variant="outline"
                 size="sm"
                 className="h-8 w-8 p-0"
-                disabled={currentPage === totalPages}
+                disabled={currentPage === safeTotalPages}
                 onClick={() => setCurrentPage(currentPage + 1)}
               >
                 <ChevronRight className="size-3.5" />
@@ -623,6 +791,113 @@ export function StudentsList() {
             <p className="text-[11px] text-gray-400">Le matricule est genere automatiquement, et un compte Espace Etudiant (matricule + code PIN) sera cree.</p>
             <Button className="w-full bg-[#2d7a4f] hover:bg-[#236b40] text-white" disabled={isCreating} onClick={handleCreateStudent}>
               {isCreating ? 'Enregistrement...' : "Enregistrer l'etudiant"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit student dialog */}
+      <Dialog open={Boolean(editingStudent)} onOpenChange={(o) => { if (!o) closeEditDialog() }}>
+        <DialogContent className="sm:max-w-[560px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-[#1a2744]">Modifier le dossier etudiant</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-sm">Nom</Label>
+                <Input value={form.lastName} onChange={(e) => setForm((f) => ({ ...f, lastName: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm">Prenom</Label>
+                <Input value={form.firstName} onChange={(e) => setForm((f) => ({ ...f, firstName: e.target.value }))} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-sm">Sexe</Label>
+                <Select value={form.gender} onValueChange={(v) => setForm((f) => ({ ...f, gender: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Selectionner" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="M">Masculin</SelectItem>
+                    <SelectItem value="F">Feminin</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm">Statut administratif</Label>
+                <Select
+                  value={form.status}
+                  onValueChange={(v) => setForm((f) => ({ ...f, status: v }))}
+                  disabled={editingStudent ? !['INSCRIT', 'PRE_INSCRIT'].includes(editingStudent.statut) : false}
+                >
+                  <SelectTrigger><SelectValue placeholder="Statut" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="PRE_INSCRIT">Pré-inscrit</SelectItem>
+                    <SelectItem value="INSCRIT">Inscrit</SelectItem>
+                  </SelectContent>
+                </Select>
+                {editingStudent && !['INSCRIT', 'PRE_INSCRIT'].includes(editingStudent.statut) && (
+                  <p className="text-[11px] text-gray-400">Utilisez l&apos;action Réactiver pour changer ce statut.</p>
+                )}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-sm">Date de naissance</Label>
+                <Input type="date" value={form.dateOfBirth} onChange={(e) => setForm((f) => ({ ...f, dateOfBirth: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm">Lieu de naissance</Label>
+                <Input value={form.placeOfBirth} onChange={(e) => setForm((f) => ({ ...f, placeOfBirth: e.target.value }))} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-sm">Filiere</Label>
+                <Select value={form.currentProgramId} onValueChange={(v) => setForm((f) => ({ ...f, currentProgramId: v, currentLevelId: '' }))}>
+                  <SelectTrigger><SelectValue placeholder="Selectionner" /></SelectTrigger>
+                  <SelectContent>
+                    {realPrograms.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm">Niveau</Label>
+                <Select value={form.currentLevelId} onValueChange={(v) => setForm((f) => ({ ...f, currentLevelId: v }))} disabled={!form.currentProgramId}>
+                  <SelectTrigger><SelectValue placeholder={form.currentProgramId ? 'Selectionner' : "Choisir d'abord une filiere"} /></SelectTrigger>
+                  <SelectContent>
+                    {selectedProgramLevels.map((l) => (
+                      <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-sm">Email</Label>
+                <Input type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm">Telephone</Label>
+                <Input value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-sm">Nationalite</Label>
+                <Input value={form.nationality} onChange={(e) => setForm((f) => ({ ...f, nationality: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm">Annee du bac</Label>
+                <Input type="number" min="1990" max="2030" value={form.bacYear} onChange={(e) => setForm((f) => ({ ...f, bacYear: e.target.value }))} />
+              </div>
+            </div>
+            <Button className="w-full bg-[#2d7a4f] hover:bg-[#236b40] text-white" disabled={isUpdating} onClick={handleUpdateStudent}>
+              {isUpdating ? 'Mise a jour...' : 'Enregistrer les modifications'}
             </Button>
           </div>
         </DialogContent>
