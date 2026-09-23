@@ -747,9 +747,9 @@ export function PaymentsPage() {
                   {mobileMoneyOperators.map((op) => (
                     <motion.div
                       key={op.name}
-                      whileHover={{ scale: 1.03 }}
+                      whileHover={{ scale: 1.01 }}
                       transition={{ duration: 0.15 }}
-                      className="flex items-center gap-2.5 p-2 rounded-lg bg-gray-50 border border-gray-100 cursor-pointer hover:border-gray-200 hover:shadow-sm"
+                      className="flex items-center gap-2.5 p-2 rounded-lg bg-gray-50 border border-gray-100"
                     >
                       <div
                         className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
@@ -768,10 +768,10 @@ export function PaymentsPage() {
 
               <div className="pt-2 border-t border-gray-100 flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
-                  <div className="w-2 h-2 rounded-full bg-[#d4a853]" />
-                  <span className="text-[10px] text-gray-500">Bientot disponible</span>
+                  <div className="w-2 h-2 rounded-full bg-[#2d7a4f]" />
+                  <span className="text-[10px] text-gray-500">Saisie manuelle active</span>
                 </div>
-                <span className="text-[10px] text-gray-400">Paiements a enregistrer manuellement</span>
+                <span className="text-[10px] text-gray-400">Aucun prélèvement automatique n&apos;est déclenché</span>
               </div>
             </CardContent>
           </Card>
