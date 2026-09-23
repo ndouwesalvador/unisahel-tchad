@@ -14,7 +14,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
-import { Download, Inbox, Mail, Megaphone, MessageSquare, Plus, Send, Smartphone } from 'lucide-react'
+import { CheckCircle2, Download, Inbox, Mail, Megaphone, MessageSquare, Plus, Send, Smartphone, Trash2, XCircle } from 'lucide-react'
 
 type CommunicationType = 'INFO' | 'URGENT' | 'ACADEMIC' | 'ADMINISTRATIVE'
 type CommunicationPriority = 'NORMAL' | 'HIGH' | 'CRITICAL'
@@ -91,6 +91,7 @@ export function CommunicationPage() {
   const { data, isLoading } = useCommunications()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [busyId, setBusyId] = useState<string | null>(null)
   const [form, setForm] = useState(initialForm)
 
   const communications: CommunicationRecord[] = useMemo(
@@ -139,6 +140,44 @@ export function CommunicationPage() {
     }
   }
 
+  const updateCommunicationStatus = async (id: string, status: CommunicationStatus) => {
+    setBusyId(id)
+    try {
+      const res = await fetch('/api/communications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json.error || 'Mise à jour impossible')
+
+      toast.success(status === 'SENT' ? 'Diffusion marquée envoyée' : status === 'FAILED' ? 'Diffusion marquée échouée' : 'Diffusion remise en attente')
+      queryClient.invalidateQueries({ queryKey: ['communications'] })
+    } catch (error) {
+      toast.error('Erreur', { description: error instanceof Error ? error.message : 'Mise à jour impossible' })
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  const deleteCommunication = async (id: string) => {
+    if (!window.confirm('Supprimer définitivement cette diffusion ?')) return
+
+    setBusyId(id)
+    try {
+      const res = await fetch(`/api/communications?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json.error || 'Suppression impossible')
+
+      toast.success('Diffusion supprimée')
+      queryClient.invalidateQueries({ queryKey: ['communications'] })
+    } catch (error) {
+      toast.error('Erreur', { description: error instanceof Error ? error.message : 'Suppression impossible' })
+    } finally {
+      setBusyId(null)
+    }
+  }
+
   const exportCommunications = () => {
     if (sortedCommunications.length === 0) {
       toast.info('Aucune communication à exporter')
@@ -168,7 +207,7 @@ export function CommunicationPage() {
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
               <h1 className="text-2xl font-bold">Messages & diffusions</h1>
-              <p className="mt-1 text-sm text-white/70">Communications réelles de l’institution. Aucun fil de discussion de démonstration n’est affiché.</p>
+              <p className="mt-1 text-sm text-white/70">Registre réel des diffusions de l’institution. Aucun fil de discussion de démonstration n’est affiché.</p>
             </div>
             <div className="flex flex-wrap gap-2">
               <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -232,6 +271,9 @@ export function CommunicationPage() {
                       <Label htmlFor="communication-content">Message</Label>
                       <Textarea id="communication-content" rows={5} value={form.content} onChange={(event) => updateForm({ content: event.target.value })} placeholder="Contenu de la diffusion..." />
                     </div>
+                    <p className="rounded-lg bg-[#1a274408] px-3 py-2 text-xs text-gray-600">
+                      Le canal choisi est enregistré comme mode prévu. L&apos;envoi externe email/SMS/push n&apos;est pas simulé depuis cet écran.
+                    </p>
                     <div className="flex justify-end gap-2">
                       <Button variant="outline" onClick={() => setDialogOpen(false)}>Annuler</Button>
                       <Button className="bg-[#2d7a4f] hover:bg-[#236b40] text-white" disabled={isSubmitting} onClick={createCommunication}>
@@ -284,6 +326,7 @@ export function CommunicationPage() {
                   <TableHead>Type</TableHead>
                   <TableHead>Statut</TableHead>
                   <TableHead>Date</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -311,6 +354,44 @@ export function CommunicationPage() {
                         <Badge className={statusConfig[item.status]?.className}>{statusConfig[item.status]?.label || item.status}</Badge>
                       </TableCell>
                       <TableCell>{formatDate(item.sentDate || item.createdAt)}</TableCell>
+                      <TableCell>
+                        <div className="flex justify-end gap-1">
+                          {item.status !== 'SENT' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 px-2 text-xs text-[#2d7a4f]"
+                              disabled={busyId === item.id}
+                              onClick={() => updateCommunicationStatus(item.id, 'SENT')}
+                            >
+                              <CheckCircle2 className="mr-1 size-3.5" />
+                              Envoyée
+                            </Button>
+                          )}
+                          {item.status !== 'FAILED' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 px-2 text-xs text-red-600"
+                              disabled={busyId === item.id}
+                              onClick={() => updateCommunicationStatus(item.id, 'FAILED')}
+                            >
+                              <XCircle className="mr-1 size-3.5" />
+                              Échec
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 px-2 text-xs text-gray-500 hover:text-red-600"
+                            disabled={busyId === item.id}
+                            onClick={() => deleteCommunication(item.id)}
+                          >
+                            <Trash2 className="mr-1 size-3.5" />
+                            Supprimer
+                          </Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   )
                 })}

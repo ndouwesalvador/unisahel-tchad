@@ -7,19 +7,20 @@ async function handleGet(_user: SessionUser, tenantId: string, _request: NextReq
   try {
     const where = { tenantId }
 
-    const [communications, sent, pending, failed] = await Promise.all([
+    const [communications, total, sent, pending, failed] = await Promise.all([
       db.communication.findMany({
         where,
         orderBy: { createdAt: 'desc' },
         take: 50,
       }),
+      db.communication.count({ where }),
       db.communication.count({ where: { ...where, status: 'SENT' } }),
       db.communication.count({ where: { ...where, status: 'PENDING' } }),
       db.communication.count({ where: { ...where, status: 'FAILED' } }),
     ])
 
     const stats = {
-      total: sent + pending + failed,
+      total,
       sent,
       pending,
       failed,
@@ -42,9 +43,9 @@ async function handlePost(_user: SessionUser, tenantId: string, request: NextReq
     const body = await request.json()
     const { subject, audience, type, priority, channel, content } = body
 
-    if (!subject || !audience || !type || !channel) {
+    if (!subject?.trim() || !audience?.trim() || !type || !channel || !content?.trim()) {
       return NextResponse.json(
-        { error: 'subject, audience, type, and channel are required fields' },
+        { error: 'subject, audience, type, channel, and content are required fields' },
         { status: 400 }
       )
     }
@@ -65,15 +66,23 @@ async function handlePost(_user: SessionUser, tenantId: string, request: NextReq
       )
     }
 
+    const validPriorities = ['NORMAL', 'HIGH', 'CRITICAL']
+    if (priority && !validPriorities.includes(priority)) {
+      return NextResponse.json(
+        { error: `priority must be one of: ${validPriorities.join(', ')}` },
+        { status: 400 }
+      )
+    }
+
     const communication = await db.communication.create({
       data: {
         tenantId,
-        subject,
-        audience,
+        subject: subject.trim(),
+        audience: audience.trim(),
         type,
         priority: priority ?? 'NORMAL',
         channel,
-        content: content ?? null,
+        content: content.trim(),
       },
     })
 
@@ -88,5 +97,70 @@ async function handlePost(_user: SessionUser, tenantId: string, request: NextReq
   }
 }
 
+// PATCH /api/communications - Update delivery status for a broadcast record
+async function handlePatch(_user: SessionUser, tenantId: string, request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { id, status } = body
+    const validStatuses = ['PENDING', 'SENT', 'FAILED']
+
+    if (!id || !validStatuses.includes(status)) {
+      return NextResponse.json(
+        { error: `id and status are required. status must be one of: ${validStatuses.join(', ')}` },
+        { status: 400 }
+      )
+    }
+
+    const existing = await db.communication.findFirst({ where: { id, tenantId } })
+    if (!existing) {
+      return NextResponse.json({ error: 'Communication not found' }, { status: 404 })
+    }
+
+    const communication = await db.communication.update({
+      where: { id },
+      data: {
+        status,
+        sentDate: status === 'SENT' ? new Date() : status === 'PENDING' ? null : existing.sentDate,
+      },
+    })
+
+    return NextResponse.json({ communication })
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('Update communication error:', error)
+    return NextResponse.json(
+      { error: 'Failed to update communication' },
+      { status: 500 }
+    )
+  }
+}
+
+// DELETE /api/communications?id=... - Remove a broadcast record
+async function handleDelete(_user: SessionUser, tenantId: string, request: NextRequest) {
+  try {
+    const id = request.nextUrl.searchParams.get('id')
+    if (!id) {
+      return NextResponse.json({ error: 'id is required' }, { status: 400 })
+    }
+
+    const existing = await db.communication.findFirst({ where: { id, tenantId } })
+    if (!existing) {
+      return NextResponse.json({ error: 'Communication not found' }, { status: 404 })
+    }
+
+    await db.communication.delete({ where: { id } })
+    return NextResponse.json({ ok: true })
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('Delete communication error:', error)
+    return NextResponse.json(
+      { error: 'Failed to delete communication' },
+      { status: 500 }
+    )
+  }
+}
+
 export const GET = withTenantAuth(handleGet)
 export const POST = withTenantAuth(handlePost)
+export const PATCH = withTenantAuth(handlePatch)
+export const DELETE = withTenantAuth(handleDelete)
