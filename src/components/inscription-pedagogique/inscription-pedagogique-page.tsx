@@ -45,9 +45,7 @@ import {
   TrendingUp,
   Calendar,
   Search,
-  Eye,
   CheckCircle2,
-  Send,
   MoreHorizontal,
   AlertTriangle,
   CheckSquare,
@@ -62,6 +60,7 @@ import {
   Award,
   XCircle,
   FileCheck,
+  Pencil,
 } from 'lucide-react'
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
@@ -72,7 +71,6 @@ interface StudentRegistration {
   matricule: string
   filiere: string
   niveau: string
-  semestre: string
   ueInscrites: number
   totalUe: number
   statut: 'complete' | 'en-cours' | 'non-commencee' | 'en-attente'
@@ -192,6 +190,15 @@ export function InscriptionPedagogiquePage() {
     })
   }, [students, searchQuery, statusFilter, levelFilter, programFilter])
 
+  const levelOptions = useMemo(
+    () => Array.from(new Set(students.map((s) => s.niveau).filter(Boolean))).sort(),
+    [students],
+  )
+  const programOptions = useMemo(
+    () => Array.from(new Set(students.map((s) => s.filiere).filter(Boolean))).sort(),
+    [students],
+  )
+
   // Computed: UE credit totals
   const selectedCredits = useMemo(() => {
     return availableUEs
@@ -242,6 +249,14 @@ export function InscriptionPedagogiquePage() {
     } finally {
       setIsSubmittingRegistration(false)
     }
+  }
+
+  const prepareRegistration = (studentId: string) => {
+    setSelectedStudent(studentId)
+    setUeSectionExpanded(true)
+    window.setTimeout(() => {
+      document.getElementById('ue-registration-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 50)
   }
 
   const handleTogglePeriod = async (open: boolean) => {
@@ -444,11 +459,9 @@ export function InscriptionPedagogiquePage() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">Tous niveaux</SelectItem>
-                        <SelectItem value="L1">L1</SelectItem>
-                        <SelectItem value="L2">L2</SelectItem>
-                        <SelectItem value="L3">L3</SelectItem>
-                        <SelectItem value="M1">M1</SelectItem>
-                        <SelectItem value="M2">M2</SelectItem>
+                        {levelOptions.map((level) => (
+                          <SelectItem key={level} value={level}>{level}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <Select value={programFilter} onValueChange={setProgramFilter}>
@@ -457,10 +470,9 @@ export function InscriptionPedagogiquePage() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">Toutes filieres</SelectItem>
-                        <SelectItem value="Informatique">Informatique</SelectItem>
-                        <SelectItem value="Droit">Droit</SelectItem>
-                        <SelectItem value="Gestion">Gestion</SelectItem>
-                        <SelectItem value="Lettres">Lettres</SelectItem>
+                        {programOptions.map((program) => (
+                          <SelectItem key={program} value={program}>{program}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -476,7 +488,6 @@ export function InscriptionPedagogiquePage() {
                       <TableHead className="text-xs font-semibold text-[#1a2744]">Matricule</TableHead>
                       <TableHead className="text-xs font-semibold text-[#1a2744] hidden md:table-cell">Filiere</TableHead>
                       <TableHead className="text-xs font-semibold text-[#1a2744] hidden sm:table-cell">Niveau</TableHead>
-                      <TableHead className="text-xs font-semibold text-[#1a2744]">Semestre</TableHead>
                       <TableHead className="text-xs font-semibold text-[#1a2744]">UE inscrites</TableHead>
                       <TableHead className="text-xs font-semibold text-[#1a2744]">Statut</TableHead>
                       <TableHead className="text-xs font-semibold text-[#1a2744] text-right">Actions</TableHead>
@@ -485,7 +496,7 @@ export function InscriptionPedagogiquePage() {
                   <TableBody>
                     {isListLoading && (
                       <TableRow>
-                        <TableCell colSpan={8} className="text-center py-6 text-xs text-gray-400">Chargement...</TableCell>
+                        <TableCell colSpan={7} className="text-center py-6 text-xs text-gray-400">Chargement...</TableCell>
                       </TableRow>
                     )}
                     {filteredStudents.map((student, index) => (
@@ -517,7 +528,6 @@ export function InscriptionPedagogiquePage() {
                         <TableCell className="hidden sm:table-cell">
                           <Badge variant="outline" className="text-[10px] font-medium">{student.niveau}</Badge>
                         </TableCell>
-                        <TableCell className="text-xs text-gray-600">{student.semestre}</TableCell>
                         <TableCell className="text-xs">
                           <div className="flex items-center gap-1.5">
                             <div className="w-12 h-1.5 bg-gray-100 rounded-full overflow-hidden">
@@ -540,17 +550,9 @@ export function InscriptionPedagogiquePage() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-44">
-                              <DropdownMenuItem className="text-xs cursor-pointer">
-                                <Eye className="size-3.5 mr-2 text-gray-400" />
-                                Voir detail
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="text-xs cursor-pointer">
-                                <CheckCircle2 className="size-3.5 mr-2 text-[#2d7a4f]" />
-                                Valider
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="text-xs cursor-pointer">
-                                <Send className="size-3.5 mr-2 text-[#d4a853]" />
-                                Relancer
+                              <DropdownMenuItem className="text-xs cursor-pointer" onClick={() => prepareRegistration(student.id)}>
+                                <Pencil className="size-3.5 mr-2 text-[#2d7a4f]" />
+                                Inscrire / modifier les UE
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -559,7 +561,7 @@ export function InscriptionPedagogiquePage() {
                     ))}
                     {filteredStudents.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={8} className="text-center py-8 text-gray-400 text-sm">
+                        <TableCell colSpan={7} className="text-center py-8 text-gray-400 text-sm">
                           Aucun etudiant trouve
                         </TableCell>
                       </TableRow>
@@ -575,7 +577,7 @@ export function InscriptionPedagogiquePage() {
         <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* UE Selection Card (2 cols) */}
           <div className="lg:col-span-2 space-y-4">
-            <Card className="shadow-sm">
+            <Card className="shadow-sm" id="ue-registration-card">
               <CardHeader className="pb-3">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <CardTitle className="text-base text-[#1a2744] flex items-center gap-2">
@@ -642,8 +644,6 @@ export function InscriptionPedagogiquePage() {
                       <span>{students.find((s) => s.id === selectedStudent)?.filiere}</span>
                       <span className="text-gray-300">|</span>
                       <span>{students.find((s) => s.id === selectedStudent)?.niveau}</span>
-                      <span className="text-gray-300">|</span>
-                      <span>{students.find((s) => s.id === selectedStudent)?.semestre}</span>
                     </div>
                   </motion.div>
                 )}
