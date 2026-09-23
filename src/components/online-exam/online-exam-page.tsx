@@ -2,7 +2,7 @@
 
 import { exportToExcel } from '@/lib/export'
 import { useState, useEffect, useRef } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useOnlineExams } from '@/lib/api-hooks'
@@ -27,10 +27,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import {
-  Tooltip,
-  TooltipContent,
   TooltipProvider,
-  TooltipTrigger,
 } from '@/components/ui/tooltip'
 import {
   Monitor,
@@ -42,13 +39,8 @@ import {
   Search,
   Plus,
   Download,
-  ChevronLeft,
-  ChevronRight,
-  Flag,
-  Send,
   Eye,
   Wifi,
-  WifiOff,
   Smartphone,
   Save,
   Timer,
@@ -57,7 +49,6 @@ import {
   BookOpen,
   Calendar,
   Zap,
-  Lock,
   Globe,
   FileText,
 } from 'lucide-react'
@@ -82,7 +73,7 @@ function useCountUp(target: number, duration: number = 1400) {
   return value
 }
 
-// ─── Demo Data ────────────────────────────────────────────────────────────────
+// ─── Types and API-backed data mapping ────────────────────────────────────────
 
 interface UpcomingExam {
   id: string
@@ -138,36 +129,6 @@ function mapExam(r: OnlineExamRecord): UpcomingExam {
     progress: r.progress,
   }
 }
-
-interface ExamQuestion {
-  id: number
-  text: string
-  options: string[]
-  correctAnswer: number
-}
-
-const demoQuestions: ExamQuestion[] = [
-  { id: 1, text: 'Quelle est la complexite temporelle de l\'algorithme de tri rapide dans le pire des cas ?', options: ['O(n log n)', 'O(n^2)', 'O(n)', 'O(log n)'], correctAnswer: 1 },
-  { id: 2, text: 'Parmi les structures de donnees suivantes, laquelle permet un acces en temps constant O(1) ?', options: ['Liste chainee', 'Arbre binaire de recherche', 'Table de hachage', 'Pile'], correctAnswer: 2 },
-  { id: 3, text: 'Le paradigme "diviser pour regner" est utilise dans lequel de ces algorithmes ?', options: ['Tri a bulles', 'Tri fusion', 'Tri par selection', 'Tri par insertion'], correctAnswer: 1 },
-  { id: 4, text: 'Quelle est la difference principale entre une pile et une file ?', options: ['L\'ordre de traitement des elements', 'La taille maximale', 'Le type d\'elements stockes', 'La complexite d\'acces'], correctAnswer: 0 },
-  { id: 5, text: 'Dans un graphe non oriente, un cycle eulerien existe si et seulement si :', options: ['Tous les sommets ont un degre pair', 'Le graphe est complet', 'Le graphe est connexe', 'Tous les sommets ont un degre impair'], correctAnswer: 0 },
-  { id: 6, text: 'L\'algorithme de Dijkstra est applicable sur un graphe :', options: ['Avec des poids negatifs', 'Avec des poids positifs uniquement', 'Sans poids', 'Oriente uniquement'], correctAnswer: 1 },
-  { id: 7, text: 'Quelle technique est utilisee pour resoudre les problemes de programmation dynamique ?', options: ['Backtracking', 'Memoization ou tabulation', 'Branch and bound', 'Glouton'], correctAnswer: 1 },
-  { id: 8, text: 'Un arbre AVL est un arbre de recherche binaire :', options: ['Completement equilibre', 'Equilibre en hauteur', 'De degre 2', 'De profondeur minimale'], correctAnswer: 1 },
-  { id: 9, text: 'La recherche dichotomique s\'applique sur une structure :', options: ['Non triee', 'Triee', 'Arbitraire', 'Circulaire'], correctAnswer: 1 },
-  { id: 10, text: 'Quel algorithme permet de trouver le plus court chemin entre tous les couples de sommets ?', options: ['Dijkstra', 'Bellman-Ford', 'Floyd-Warshall', 'Kruskal'], correctAnswer: 2 },
-  { id: 11, text: 'La complexite spatiale du tri fusion est :', options: ['O(1)', 'O(n)', 'O(log n)', 'O(n log n)'], correctAnswer: 1 },
-  { id: 12, text: 'Un tas (heap) est une structure de donnees qui respecte la propriete :', options: ['FIFO', 'LIFO', 'Tas-min ou Tas-max', 'Priorite absolue'], correctAnswer: 2 },
-  { id: 13, text: 'Lequel de ces algorithmes n\'est pas un algorithme de tri ?', options: ['Heap sort', 'Quick sort', 'Kruskal', 'Merge sort'], correctAnswer: 2 },
-  { id: 14, text: 'La programmation gloutonne garantit toujours :', options: ['Une solution optimale', 'Une solution approximative', 'Aucune garantie', 'Un temps lineaire'], correctAnswer: 2 },
-  { id: 15, text: 'Dans un arbre rouge-noir, la racine est toujours :', options: ['Rouge', 'Noire', 'Doublement noire', 'De couleur quelconque'], correctAnswer: 1 },
-  { id: 16, text: 'L\'algorithme de Kruskal utilise quelle structure pour detecter les cycles ?', options: ['File de priorite', 'Union-Find', 'Table de hachage', 'Arbre AVL'], correctAnswer: 1 },
-  { id: 17, text: 'Laquelle de ces propositions est vraie pour un arbre B ?', options: ['Toutes les feuilles sont au meme niveau', 'Il est toujours de degre 2', 'Il ne contient que des valeurs entieres', 'Il est toujours equilibre'], correctAnswer: 0 },
-  { id: 18, text: 'Le probleme du voyageur de commerce est un probleme :', options: ['P', 'NP-complet', 'NP-difficile', 'Indecidable'], correctAnswer: 2 },
-  { id: 19, text: 'Quelle est la complexite de la recherche dans un arbre binaire de recherche equilibre ?', options: ['O(n)', 'O(log n)', 'O(1)', 'O(n log n)'], correctAnswer: 1 },
-  { id: 20, text: 'Le paradigme glouton pour le probleme du sac a dos :', options: ['Donne toujours la solution optimale', 'Donne une solution approchee', 'Ne s\'applique pas', 'Necessite la programmation dynamique'], correctAnswer: 1 },
-]
 
 interface StudentResult {
   id: string
@@ -367,18 +328,14 @@ export function OnlineExamPage() {
   }
 
   const examensPrevus = useCountUp(upcomingExams.length, 1400)
+  const inProgressCount = examsQuery?.stats?.inProgress ?? upcomingExams.filter(e => e.status === 'En cours').length
+  const completedCount = examsQuery?.stats?.completed ?? upcomingExams.filter(e => e.status === 'Termine').length
   const tauxCompletion = useCountUp(
     studentResults.length > 0
       ? Math.round((studentResults.filter((r) => r.status !== 'En correction').length / studentResults.length) * 100)
       : 0,
     1300,
   )
-
-  // Active exam state
-  const [currentQuestion, setCurrentQuestion] = useState(11) // 0-indexed, showing question 12
-  const [answers, setAnswers] = useState<Record<number, number>>({ 0: 1, 1: 2, 2: 0, 4: 3, 5: 1, 6: 2, 7: 0, 9: 1, 10: 2, 11: 1 })
-  const [flagged, setFlagged] = useState<Set<number>>(new Set([3, 8]))
-  const [showConfirmSubmit, setShowConfirmSubmit] = useState(false)
 
   // Question bank state
   const [showAddQuestionForm, setShowAddQuestionForm] = useState(false)
@@ -390,27 +347,14 @@ export function OnlineExamPage() {
   // Results filter
   const [resultSearch, setResultSearch] = useState('')
 
-  // Timer state
-  const [timerSeconds, setTimerSeconds] = useState(9930) // 2h 45m 30s
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setTimerSeconds(prev => (prev > 0 ? prev - 1 : 0))
-    }, 1000)
-    return () => clearInterval(interval)
-  }, [])
-
-  const hours = Math.floor(timerSeconds / 3600)
-  const minutes = Math.floor((timerSeconds % 3600) / 60)
-  const seconds = timerSeconds % 60
-  const timerDisplay = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
-
-  const totalQuestions = 20
-  const answeredCount = Object.keys(answers).length
-  const flaggedCount = flagged.size
-
   // Results statistics
   const validResults = studentResults.filter(r => r.status !== 'En correction')
+  const averageScore = validResults.length > 0
+    ? validResults.reduce((sum, result) => sum + result.score, 0) / validResults.length
+    : 0
+  const successRate = validResults.length > 0
+    ? Math.round((validResults.filter((result) => result.status === 'Reussi').length / validResults.length) * 100)
+    : 0
   const scores = validResults.map(r => r.score)
   const moyenne = scores.length > 0 ? (scores.reduce((a, b) => a + b, 0) / scores.length) : 0
   const sortedScores = [...scores].sort((a, b) => a - b)
@@ -436,6 +380,8 @@ export function OnlineExamPage() {
     count: scores.filter(s => s >= b.min && s < b.max).length,
   }))
   const maxDistCount = Math.max(1, ...gradeDistribution.map(d => d.count))
+
+  const bankCourseOptions = Array.from(new Set(bankQuestions.map((q) => q.course).filter((course) => course && course !== '—'))).sort()
 
   // Filter bank questions
   const filteredBankQuestions = bankQuestions.filter(q => {
@@ -467,29 +413,6 @@ export function OnlineExamPage() {
     visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: 'easeOut' } },
   } as const
 
-  const handleAnswerSelect = (questionIndex: number, optionIndex: number) => {
-    setAnswers(prev => ({ ...prev, [questionIndex]: optionIndex }))
-  }
-
-  const handleFlag = (questionIndex: number) => {
-    setFlagged(prev => {
-      const next = new Set(prev)
-      if (next.has(questionIndex)) {
-        next.delete(questionIndex)
-      } else {
-        next.add(questionIndex)
-      }
-      return next
-    })
-  }
-
-  const getQuestionStatus = (index: number): 'answered' | 'current' | 'flagged' | 'unanswered' => {
-    if (index === currentQuestion) return 'current'
-    if (flagged.has(index)) return 'flagged'
-    if (answers[index] !== undefined) return 'answered'
-    return 'unanswered'
-  }
-
   return (
     <TooltipProvider>
       <motion.div
@@ -517,11 +440,7 @@ export function OnlineExamPage() {
                     <Plus className="size-3.5 mr-1.5" />
                     Creer un examen
                   </Button>
-                  <Button size="sm" variant="outline" className="text-xs bg-white/10 backdrop-blur border-white/20 text-white hover:bg-white/20 hover:text-white">
-                    <FileCheck className="size-3.5 mr-1.5" />
-                    Mes examens
-                  </Button>
-                  <Button size="sm" variant="outline" className="text-xs bg-white/10 backdrop-blur border-white/20 text-white hover:bg-white/20 hover:text-white" onClick={() => exportToExcel(filteredBankQuestions, 'export_online-exam')}>
+                  <Button size="sm" variant="outline" className="text-xs bg-white/10 backdrop-blur border-white/20 text-white hover:bg-white/20 hover:text-white" onClick={() => exportToExcel(filteredResults, 'export_resultats_examens_en_ligne')}>
                     <Download className="size-3.5 mr-1.5" />
                     Exporter les resultats
                   </Button>
@@ -553,7 +472,7 @@ export function OnlineExamPage() {
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Examens en cours</p>
-                    <p className="text-xl font-bold text-[#2d7a4f] mt-1">3</p>
+                    <p className="text-xl font-bold text-[#2d7a4f] mt-1">{inProgressCount}</p>
                     <p className="text-xs text-[#2d7a4f] mt-1 font-medium flex items-center gap-1">
                       <TrendingUp className="size-3" />
                       Actifs maintenant
@@ -564,7 +483,7 @@ export function OnlineExamPage() {
                   </div>
                 </div>
                 <div className="mt-3">
-                  <Progress value={75} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#2d7a4f]" />
+                  <Progress value={upcomingExams.length > 0 ? Math.round((inProgressCount / upcomingExams.length) * 100) : 0} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#2d7a4f]" />
                 </div>
               </CardContent>
             </Card>
@@ -579,15 +498,15 @@ export function OnlineExamPage() {
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Examens termines</p>
-                    <p className="text-xl font-bold text-[#1a2744] mt-1">28</p>
-                    <p className="text-xs text-gray-400 mt-1">Ce semestre</p>
+                    <p className="text-xl font-bold text-[#1a2744] mt-1">{completedCount}</p>
+                    <p className="text-xs text-gray-400 mt-1">Sessions finalisees</p>
                   </div>
                   <div className="w-10 h-10 rounded-xl bg-[#1a274415] flex items-center justify-center">
                     <CheckCircle2 className="size-5 text-[#1a2744]" />
                   </div>
                 </div>
                 <div className="mt-3">
-                  <Progress value={70} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#1a2744]" />
+                  <Progress value={upcomingExams.length > 0 ? Math.round((completedCount / upcomingExams.length) * 100) : 0} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#1a2744]" />
                 </div>
               </CardContent>
             </Card>
@@ -602,15 +521,15 @@ export function OnlineExamPage() {
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Notes moyennes</p>
-                    <p className="text-xl font-bold text-[#d4a853] mt-1">13.2/20</p>
-                    <p className="text-xs text-gray-400 mt-1">Tous examens confondus</p>
+                    <p className="text-xl font-bold text-[#d4a853] mt-1">{averageScore.toFixed(1)}/20</p>
+                    <p className="text-xs text-gray-400 mt-1">Résultats corrigés</p>
                   </div>
                   <div className="w-10 h-10 rounded-xl bg-[#d4a85315] flex items-center justify-center">
                     <BarChart3 className="size-5 text-[#d4a853]" />
                   </div>
                 </div>
                 <div className="mt-3">
-                  <Progress value={66} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#d4a853]" />
+                  <Progress value={Math.min(100, Math.round((averageScore / 20) * 100))} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#d4a853]" />
                 </div>
               </CardContent>
             </Card>
@@ -625,18 +544,15 @@ export function OnlineExamPage() {
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Taux de reussite</p>
-                    <p className="text-xl font-bold text-[#2d7a4f] mt-1">72%</p>
-                    <p className="text-xs text-[#2d7a4f] mt-1 font-medium flex items-center gap-1">
-                      <TrendingUp className="size-3" />
-                      +4% vs precedent
-                    </p>
+                    <p className="text-xl font-bold text-[#2d7a4f] mt-1">{successRate}%</p>
+                    <p className="text-xs text-gray-400 mt-1">Sur les copies corrigees</p>
                   </div>
                   <div className="w-10 h-10 rounded-xl bg-[#2d7a4f15] flex items-center justify-center">
                     <TrendingUp className="size-5 text-[#2d7a4f]" />
                   </div>
                 </div>
                 <div className="mt-3">
-                  <Progress value={72} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#2d7a4f]" />
+                  <Progress value={successRate} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#2d7a4f]" />
                 </div>
               </CardContent>
             </Card>
@@ -723,16 +639,16 @@ export function OnlineExamPage() {
                           </TableCell>
                           <TableCell className="py-2.5 text-right">
                             {exam.status === 'Planifie' ? (
-                              <Button size="sm" className="h-7 text-[10px] bg-[#2d7a4f] hover:bg-[#236b40] text-white">
-                                Commencer
+                              <Button size="sm" variant="outline" className="h-7 text-[10px] border-[#2d7a4f30] text-[#2d7a4f]" disabled>
+                                Disponible cote etudiant
                               </Button>
                             ) : exam.status === 'En cours' ? (
-                              <Button size="sm" variant="outline" className="h-7 text-[10px] border-[#2d7a4f30] text-[#2d7a4f]">
-                                Reprendre
+                              <Button size="sm" variant="outline" className="h-7 text-[10px] border-[#d4a85330] text-[#d4a853]" disabled>
+                                Session etudiant active
                               </Button>
                             ) : (
-                              <Button size="sm" variant="ghost" className="h-7 text-[10px] text-gray-600">
-                                Voir resultats
+                              <Button size="sm" variant="ghost" className="h-7 text-[10px] text-gray-600" disabled>
+                                Resultats ci-dessous
                               </Button>
                             )}
                           </TableCell>
@@ -760,16 +676,7 @@ export function OnlineExamPage() {
           </Card>
         </motion.div>
 
-        {/* ── Active Exam Interface Card ──────────────────────────────────────────
-            Apercu de l'interface de passation cote etudiant (navigation, minuteur,
-            carte des questions, confirmation de soumission). Delibere hors perimetre
-            pour cette passe : brancher ceci sur de vraies donnees demanderait un vrai
-            systeme de passation en temps reel (session d'examen par etudiant, correction
-            automatique des QCM, persistance des reponses, declenchement reel des
-            incidents de surveillance) — un chantier a part entiere, pas un simple
-            remplacement de tableau demo. `demoQuestions` reste donc en l'etat comme
-            exemple de mise en page. Les 3 autres blocs de cette page (banque de
-            questions, resultats, incidents) sont eux branches sur de vraies donnees. */}
+        {/* ── Student Exam Runtime Status ──────────────────────────────────────── */}
         <motion.div variants={itemVariants}>
           <Card className="border-l-4 border-l-[#2d7a4f]">
             <div className="h-1 bg-gradient-to-r from-[#2d7a4f] to-[#3da66a]" />
@@ -777,252 +684,61 @@ export function OnlineExamPage() {
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <CardTitle className="text-sm font-semibold text-[#1a2744] flex items-center gap-2">
                   <Monitor className="size-4 text-[#2d7a4f]" />
-                  Examen en cours - Interface de passation
+                  Interface etudiant reelle
                 </CardTitle>
-                <div className="flex items-center gap-3">
-                  {/* Timer */}
-                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#1a274410] border border-[#1a274420]">
-                    <motion.div
-                      className="w-2 h-2 rounded-full bg-[#c62828]"
-                      animate={{ scale: [1, 1.3, 1], opacity: [1, 0.6, 1] }}
-                      transition={{ duration: 1.5, repeat: Infinity }}
-                    />
-                    <Timer className="size-4 text-[#1a2744]" />
-                    <span className="text-sm font-bold text-[#1a2744] font-mono">{timerDisplay}</span>
-                  </div>
-                  <Badge className="text-[10px] bg-[#2d7a4f15] text-[#2d7a4f] border-0">
-                    Auto-sauvegarde active
-                  </Badge>
-                </div>
+                <Badge className="text-[10px] bg-[#2d7a4f15] text-[#2d7a4f] border-0">
+                  Donnees connectees
+                </Badge>
               </div>
             </CardHeader>
             <CardContent className="p-4 pt-0">
-              <div className="flex flex-col lg:flex-row gap-4">
-                {/* Main question area */}
-                <div className="flex-1">
-                  {/* Exam title */}
-                  <div className="mb-4 p-3 rounded-lg bg-[#1a274408] border border-[#1a274415]">
-                    <h3 className="text-sm font-bold text-[#1a2744]">Examen Final - Algorithmique Avancee</h3>
-                    <p className="text-xs text-gray-500 mt-0.5">Semestre S2 2024-2025 | 20 questions | 2h00</p>
-                  </div>
-
-                  {/* Progress bar */}
-                  <div className="mb-4">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs text-gray-500">Progression</span>
-                      <span className="text-xs font-semibold text-[#2d7a4f]">{answeredCount}/{totalQuestions} repondues</span>
+              <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-4">
+                <div className="p-4 rounded-lg bg-[#1a274408] border border-[#1a274415]">
+                  <h3 className="text-sm font-bold text-[#1a2744] mb-2">Passation cote etudiant, gestion cote admin</h3>
+                  <p className="text-xs text-gray-600 leading-relaxed">
+                    Ce panneau admin ne simule plus une copie d&apos;examen. Il prepare les examens, gere la banque de questions,
+                    affiche les resultats enregistres et liste les incidents remontes par les sessions etudiantes reelles.
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
+                    <div className="p-3 rounded-lg bg-white border border-gray-100">
+                      <p className="text-[10px] text-gray-500">Examens planifies</p>
+                      <p className="text-xl font-bold text-[#1a2744]">{upcomingExams.filter((exam) => exam.status === 'Planifie').length}</p>
                     </div>
-                    <Progress value={(answeredCount / totalQuestions) * 100} className="h-2 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-gradient-to-r [&>[data-slot=progress-indicator]]:from-[#2d7a4f] [&>[data-slot=progress-indicator]]:to-[#3da66a]" />
-                  </div>
-
-                  {/* Current question */}
-                  <div className="p-4 rounded-lg border border-gray-200 bg-white">
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-xs font-semibold text-[#1a2744] bg-[#1a274410] px-2 py-1 rounded">
-                        Question {currentQuestion + 1} / {totalQuestions}
-                      </span>
-                      <button
-                        onClick={() => handleFlag(currentQuestion)}
-                        className={`flex items-center gap-1 text-xs px-2 py-1 rounded transition-colors ${
-                          flagged.has(currentQuestion)
-                            ? 'bg-[#d4a85315] text-[#d4a853]'
-                            : 'bg-gray-100 text-gray-500 hover:bg-[#d4a85315] hover:text-[#d4a853]'
-                        }`}
-                      >
-                        <Flag className="size-3" />
-                        {flagged.has(currentQuestion) ? 'Signalee' : 'Signaler'}
-                      </button>
+                    <div className="p-3 rounded-lg bg-white border border-gray-100">
+                      <p className="text-[10px] text-gray-500">Sessions en cours</p>
+                      <p className="text-xl font-bold text-[#2d7a4f]">{inProgressCount}</p>
                     </div>
-                    <p className="text-sm text-[#1a2744] font-medium mb-4 leading-relaxed">
-                      {demoQuestions[currentQuestion]?.text}
-                    </p>
-                    <div className="space-y-2">
-                      {demoQuestions[currentQuestion]?.options.map((option, idx) => (
-                        <label
-                          key={idx}
-                          className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
-                            answers[currentQuestion] === idx
-                              ? 'border-[#2d7a4f] bg-[#2d7a4f08]'
-                              : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                          }`}
-                        >
-                          <input
-                            type="radio"
-                            name={`question-${currentQuestion}`}
-                            checked={answers[currentQuestion] === idx}
-                            onChange={() => handleAnswerSelect(currentQuestion, idx)}
-                            className="accent-[#2d7a4f]"
-                          />
-                          <span className="text-sm text-gray-700">{option}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Navigation buttons */}
-                  <div className="flex items-center justify-between mt-4">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="text-xs border-gray-200"
-                      onClick={() => setCurrentQuestion(prev => Math.max(0, prev - 1))}
-                      disabled={currentQuestion === 0}
-                    >
-                      <ChevronLeft className="size-3.5 mr-1" />
-                      Precedente
-                    </Button>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-xs border-[#d4a85330] text-[#d4a853]"
-                        onClick={() => handleFlag(currentQuestion)}
-                      >
-                        <Flag className="size-3.5 mr-1" />
-                        Signaler pour revision
-                      </Button>
-                    </div>
-                    <Button
-                      size="sm"
-                      className="text-xs bg-[#1a2744] hover:bg-[#1a2744]/90 text-white"
-                      onClick={() => setCurrentQuestion(prev => Math.min(totalQuestions - 1, prev + 1))}
-                      disabled={currentQuestion === totalQuestions - 1}
-                    >
-                      Suivante
-                      <ChevronRight className="size-3.5 ml-1" />
-                    </Button>
-                  </div>
-
-                  {/* Submit button */}
-                  <div className="mt-4 flex justify-end">
-                    <div className="relative">
-                      <Button
-                        size="sm"
-                        className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs"
-                        onClick={() => setShowConfirmSubmit(true)}
-                      >
-                        <Send className="size-3.5 mr-1.5" />
-                        Soumettre l&apos;examen
-                      </Button>
+                    <div className="p-3 rounded-lg bg-white border border-gray-100">
+                      <p className="text-[10px] text-gray-500">Resultats enregistres</p>
+                      <p className="text-xl font-bold text-[#d4a853]">{studentResults.length}</p>
                     </div>
                   </div>
                 </div>
 
-                {/* Side panel - Question map */}
-                <div className="lg:w-56 shrink-0">
-                  <div className="p-3 rounded-lg border border-gray-200 bg-gray-50 sticky top-4">
-                    <h4 className="text-xs font-semibold text-[#1a2744] mb-3">Carte des questions</h4>
-                    <div className="grid grid-cols-5 gap-1.5">
-                      {Array.from({ length: totalQuestions }, (_, i) => {
-                        const status = getQuestionStatus(i)
-                        const colorMap: Record<string, string> = {
-                          answered: 'bg-[#2d7a4f] text-white',
-                          current: 'bg-[#1a2744] text-white ring-2 ring-[#1a274430]',
-                          flagged: 'bg-[#d4a853] text-white',
-                          unanswered: 'bg-gray-200 text-gray-500',
-                        }
-                        return (
-                          <Tooltip key={i}>
-                            <TooltipTrigger asChild>
-                              <button
-                                onClick={() => setCurrentQuestion(i)}
-                                className={`w-8 h-8 rounded text-[10px] font-bold flex items-center justify-center transition-all hover:scale-110 ${colorMap[status]}`}
-                              >
-                                {i + 1}
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Question {i + 1} - {
-                                status === 'answered' ? 'Repondu' :
-                                status === 'current' ? 'En cours' :
-                                status === 'flagged' ? 'Signale' :
-                                'Non repondu'
-                              }</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        )
-                      })}
-                    </div>
-                    {/* Legend */}
-                    <div className="mt-3 space-y-1.5 pt-3 border-t border-gray-200">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded bg-[#2d7a4f]" />
-                        <span className="text-[10px] text-gray-600">Repondu ({answeredCount})</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded bg-[#1a2744]" />
-                        <span className="text-[10px] text-gray-600">En cours</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded bg-[#d4a853]" />
-                        <span className="text-[10px] text-gray-600">Signale ({flaggedCount})</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded bg-gray-200" />
-                        <span className="text-[10px] text-gray-600">Non repondu ({totalQuestions - answeredCount - 1})</span>
-                      </div>
-                    </div>
+                <div className="p-4 rounded-lg bg-[#2d7a4f08] border border-[#2d7a4f15]">
+                  <h4 className="text-xs font-semibold text-[#1a2744] mb-3">Actions admin disponibles</h4>
+                  <div className="space-y-2">
+                    <Button size="sm" className="w-full justify-start h-8 text-xs bg-[#2d7a4f] hover:bg-[#236b40] text-white" onClick={() => setShowNewExam(true)}>
+                      <Plus className="size-3.5 mr-2" />
+                      Creer un examen
+                    </Button>
+                    <Button size="sm" variant="outline" className="w-full justify-start h-8 text-xs border-[#1a274430] text-[#1a2744]" onClick={() => setShowAddQuestionForm(true)}>
+                      <BookOpen className="size-3.5 mr-2" />
+                      Ajouter une question
+                    </Button>
+                    <Button size="sm" variant="outline" className="w-full justify-start h-8 text-xs border-[#d4a85330] text-[#d4a853]" onClick={() => exportToExcel(filteredResults, 'export_resultats_examens_en_ligne')}>
+                      <Download className="size-3.5 mr-2" />
+                      Exporter les resultats
+                    </Button>
                   </div>
+                  <p className="text-[10px] text-gray-500 mt-3 leading-relaxed">
+                    Les actions etudiantes demarrent depuis leur espace personnel, pas depuis ce panneau admin.
+                  </p>
                 </div>
               </div>
             </CardContent>
           </Card>
         </motion.div>
-
-        {/* Submit confirmation modal */}
-        <AnimatePresence>
-          {showConfirmSubmit && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
-              onClick={() => setShowConfirmSubmit(false)}
-            >
-              <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.9, opacity: 0 }}
-                className="bg-white rounded-xl p-6 max-w-md w-full shadow-2xl"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="text-center">
-                  <div className="w-14 h-14 rounded-full bg-[#d4a85315] flex items-center justify-center mx-auto mb-3">
-                    <AlertTriangle className="size-7 text-[#d4a853]" />
-                  </div>
-                  <h3 className="text-lg font-bold text-[#1a2744] mb-2">Confirmer la soumission</h3>
-                  <p className="text-sm text-gray-600 mb-4">
-                    Vous avez repondu a {answeredCount} questions sur {totalQuestions}.
-                    {answeredCount < totalQuestions && (
-                      <span className="text-[#c62828] font-medium"> {totalQuestions - answeredCount} questions restent sans reponse.</span>
-                    )}
-                  </p>
-                  {flaggedCount > 0 && (
-                    <p className="text-xs text-[#d4a853] mb-3 flex items-center justify-center gap-1">
-                      <Flag className="size-3" /> {flaggedCount} question(s) signalee(s) pour revision
-                    </p>
-                  )}
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      className="flex-1 text-xs"
-                      onClick={() => setShowConfirmSubmit(false)}
-                    >
-                      Continuer l&apos;examen
-                    </Button>
-                    <Button
-                      className="flex-1 bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs"
-                      onClick={() => setShowConfirmSubmit(false)}
-                    >
-                      <Send className="size-3.5 mr-1.5" />
-                      Confirmer
-                    </Button>
-                  </div>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         {/* ── Results & Grading Card ──────────────────────────────────────────── */}
         <motion.div variants={itemVariants}>
@@ -1044,7 +760,7 @@ export function OnlineExamPage() {
                       onChange={(e) => setResultSearch(e.target.value)}
                     />
                   </div>
-                  <Button size="sm" variant="outline" className="text-xs border-[#1a274430] text-[#1a2744] hover:bg-[#1a274408]" onClick={() => exportToExcel(filteredBankQuestions, 'export_online-exam')}>
+                  <Button size="sm" variant="outline" className="text-xs border-[#1a274430] text-[#1a2744] hover:bg-[#1a274408]" onClick={() => exportToExcel(filteredResults, 'export_resultats_examens_en_ligne')}>
                     <Download className="size-3.5 mr-1.5" />
                     Exporter
                   </Button>
@@ -1171,11 +887,10 @@ export function OnlineExamPage() {
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-semibold text-[#1a2744] flex items-center gap-2">
                     <Shield className="size-4 text-red-500" />
-                    Anti-fraude & Surveillance
+                    Surveillance connectee et limites
                   </CardTitle>
                   <Badge className="text-[10px] bg-red-500/10 text-red-600 border-0">
-                    <Lock className="size-3 mr-1" />
-                    Securise
+                    Incidents reels
                   </Badge>
                 </div>
               </CardHeader>
@@ -1183,10 +898,10 @@ export function OnlineExamPage() {
                 {/* Security features */}
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    { icon: Eye, text: 'Navigation entre onglets detectee', active: true },
-                    { icon: Lock, text: 'Copie interdite', active: true },
-                    { icon: Timer, text: 'Chronometre strict', active: true },
-                    { icon: Globe, text: 'IP tracking', active: true },
+                    { icon: Eye, text: 'Incidents visibles cote admin' },
+                    { icon: AlertTriangle, text: 'Sortie de fenetre signalee' },
+                    { icon: Timer, text: 'Duree issue de l examen' },
+                    { icon: FileCheck, text: 'Soumission finale enregistree' },
                   ].map((feature, idx) => (
                     <div key={idx} className="flex items-center gap-2 p-2 rounded bg-[#2d7a4f08] border border-[#2d7a4f15]">
                       <feature.icon className="size-3.5 text-[#2d7a4f] shrink-0" />
@@ -1196,19 +911,13 @@ export function OnlineExamPage() {
                   ))}
                 </div>
 
-                {/* Auto-submit rules */}
-                <div className="p-3 rounded-lg bg-red-50 border border-red-100">
-                  <p className="text-xs font-semibold text-red-700 mb-1">Regles de soumission automatique</p>
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-gray-600">Changements d&apos;onglet maximum</span>
-                      <span className="text-[10px] font-bold text-red-600">3 = soumission auto</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-gray-600">Tentatives de copie autorisees</span>
-                      <span className="text-[10px] font-bold text-red-600">0</span>
-                    </div>
-                  </div>
+                {/* Operational limits */}
+                <div className="p-3 rounded-lg bg-[#d4a85308] border border-[#d4a85315]">
+                  <p className="text-xs font-semibold text-[#1a2744] mb-1">Limites operationnelles</p>
+                  <p className="text-[10px] text-gray-600 leading-relaxed">
+                    Les incidents sont journalises et consultables ici. Ce panneau n&apos;annonce plus de sanction automatique
+                    tant qu&apos;une regle de blocage ou de soumission forcee n&apos;est pas configuree cote serveur.
+                  </p>
                 </div>
 
                 {/* Flagged incidents */}
@@ -1348,9 +1057,9 @@ export function OnlineExamPage() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="tous">Tous les cours</SelectItem>
-                        <SelectItem value="Algorithmique">Algorithmique</SelectItem>
-                        <SelectItem value="Structures de donnees">Structures de donnees</SelectItem>
-                        <SelectItem value="Graphe">Graphe</SelectItem>
+                        {bankCourseOptions.map((course) => (
+                          <SelectItem key={course} value={course}>{course}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <Select value={bankTypeFilter} onValueChange={setBankTypeFilter}>
@@ -1422,7 +1131,7 @@ export function OnlineExamPage() {
           </motion.div>
         </div>
 
-        {/* ── African Context Card ────────────────────────────────────────────── */}
+        {/* ── Connectivity and Operational Limits Card ────────────────────────── */}
         <motion.div variants={itemVariants}>
           <Card className="border-l-4 border-l-[#2d7a4f]">
             <div className="h-1 bg-gradient-to-r from-[#1a2744] via-[#2d7a4f] to-[#d4a853]" />
@@ -1430,112 +1139,93 @@ export function OnlineExamPage() {
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm font-semibold text-[#1a2744] flex items-center gap-2">
                   <Globe className="size-4 text-[#2d7a4f]" />
-                  Contexte africain - Adaptations
+                  Connectivite et limites operationnelles
                 </CardTitle>
-                <Badge className="text-[10px] bg-[#2d7a4f15] text-[#2d7a4f] border-0">Optimise Afrique</Badge>
+                <Badge className="text-[10px] bg-[#d4a85315] text-[#d4a853] border-0">Transparent</Badge>
               </div>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {/* Low bandwidth mode */}
                 <div className="p-4 rounded-lg bg-[#2d7a4f08] border border-[#2d7a4f15]">
                   <div className="flex items-center gap-2 mb-2">
                     <Wifi className="size-4 text-[#2d7a4f]" />
-                    <span className="text-sm font-semibold text-[#1a2744]">Faible bande passante</span>
+                    <span className="text-sm font-semibold text-[#1a2744]">Connexion requise</span>
                   </div>
                   <p className="text-xs text-gray-600 leading-relaxed">
-                    Chargement question par question (et non tout d&apos;un coup). Reduit la consommation de donnees et accelere le chargement sur les connexions lentes.
+                    La passation utilise les API du serveur pour demarrer une session, enregistrer les reponses et finaliser la copie.
+                    Aucune promesse de fonctionnement hors connexion n&apos;est affichee ici.
                   </p>
                   <div className="mt-2 flex items-center gap-2">
-                    <Badge className="text-[9px] bg-[#2d7a4f15] text-[#2d7a4f] border-0">Actif</Badge>
-                    <span className="text-[10px] text-gray-400">~50 Ko/question</span>
+                    <Badge className="text-[9px] bg-[#2d7a4f15] text-[#2d7a4f] border-0">Serveur requis</Badge>
                   </div>
                 </div>
 
-                {/* Auto-save */}
                 <div className="p-4 rounded-lg bg-[#1a274408] border border-[#1a274415]">
                   <div className="flex items-center gap-2 mb-2">
                     <Save className="size-4 text-[#1a2744]" />
-                    <span className="text-sm font-semibold text-[#1a2744]">Sauvegarde automatique</span>
+                    <span className="text-sm font-semibold text-[#1a2744]">Sauvegarde des reponses</span>
                   </div>
                   <p className="text-xs text-gray-600 leading-relaxed">
-                    Sauvegarde automatique des reponses toutes les 30 secondes. Protection contre les pertes de connexion et les coupures de courant.
+                    Les reponses envoyees par l&apos;interface etudiante sont persistees par l&apos;API. En cas d&apos;echec reseau,
+                    l&apos;etudiant doit voir l&apos;erreur et relancer l&apos;enregistrement.
                   </p>
                   <div className="mt-2 flex items-center gap-2">
-                    <motion.div
-                      className="w-2 h-2 rounded-full bg-[#2d7a4f]"
-                      animate={{ scale: [1, 1.3, 1], opacity: [1, 0.6, 1] }}
-                      transition={{ duration: 2, repeat: Infinity }}
-                    />
-                    <span className="text-[10px] text-[#2d7a4f]">Derniere sauvegarde il y a 12s</span>
+                    <Badge className="text-[9px] bg-[#1a274415] text-[#1a2744] border-0">API connectee</Badge>
                   </div>
                 </div>
 
-                {/* Offline mode */}
                 <div className="p-4 rounded-lg bg-[#d4a85308] border border-[#d4a85315]">
                   <div className="flex items-center gap-2 mb-2">
-                    <WifiOff className="size-4 text-[#d4a853]" />
-                    <span className="text-sm font-semibold text-[#1a2744]">Mode hors ligne</span>
+                    <AlertTriangle className="size-4 text-[#d4a853]" />
+                    <span className="text-sm font-semibold text-[#1a2744]">Pas de mode deconnecte annonce</span>
                   </div>
                   <p className="text-xs text-gray-600 leading-relaxed">
-                    Les questions sont mises en cache localement. En cas de perte de connexion, l&apos;etudiant peut continuer l&apos;examen. Synchronisation automatique au retour de la connexion.
+                    Les questions ne sont pas presentees comme stockees localement. Ce choix evite de promettre une synchronisation
+                    automatique qui n&apos;est pas garantie par le panneau admin.
                   </p>
                   <div className="mt-2 flex items-center gap-2">
-                    <Badge className="text-[9px] bg-[#d4a85315] text-[#d4a853] border-0">Pret</Badge>
-                    <span className="text-[10px] text-gray-400">Cache local active</span>
+                    <Badge className="text-[9px] bg-[#d4a85315] text-[#d4a853] border-0">Limite affichee</Badge>
                   </div>
                 </div>
 
-                {/* SMS notification */}
                 <div className="p-4 rounded-lg bg-[#2d7a4f08] border border-[#2d7a4f15]">
                   <div className="flex items-center gap-2 mb-2">
                     <Smartphone className="size-4 text-[#2d7a4f]" />
-                    <span className="text-sm font-semibold text-[#1a2744]">Notification SMS</span>
+                    <span className="text-sm font-semibold text-[#1a2744]">Notifications externes</span>
                   </div>
                   <p className="text-xs text-gray-600 leading-relaxed">
-                    Envoi de SMS pour le debut et la fin de l&apos;examen, ainsi que les rappels. Compatible avec les reseaux Airtel, Moov et Orange.
+                    Aucun operateur de messages mobiles n&apos;est annonce depuis cet onglet. Les rappels externes devront etre ajoutes via une integration dediee
+                    avant d&apos;etre presentes aux administrateurs.
                   </p>
                   <div className="mt-2 flex items-center gap-2">
-                    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-white border border-gray-100">
-                      <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
-                      <span className="text-[9px] text-gray-600">Airtel</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-white border border-gray-100">
-                      <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                      <span className="text-[9px] text-gray-600">Moov</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-white border border-gray-100">
-                      <div className="w-1.5 h-1.5 rounded-full bg-orange-500" />
-                      <span className="text-[9px] text-gray-600">Orange</span>
-                    </div>
+                    <Badge className="text-[9px] bg-[#2d7a4f15] text-[#2d7a4f] border-0">Non connecte</Badge>
                   </div>
                 </div>
 
-                {/* Paper fallback */}
                 <div className="p-4 rounded-lg bg-[#1a274408] border border-[#1a274415]">
                   <div className="flex items-center gap-2 mb-2">
                     <FileText className="size-4 text-[#1a2744]" />
-                    <span className="text-sm font-semibold text-[#1a2744]">Option papier</span>
+                    <span className="text-sm font-semibold text-[#1a2744]">Support papier</span>
                   </div>
                   <p className="text-xs text-gray-600 leading-relaxed">
-                    Alternative papier disponible pour les etudiants sans appareil compatible ou en cas de panne technique. Generation automatique des copies.
+                    Une copie papier peut etre geree administrativement hors systeme, mais cet onglet ne genere pas automatiquement de sujets
+                    ou de copies papier.
                   </p>
                   <div className="mt-2">
-                    <Badge className="text-[9px] bg-[#1a274415] text-[#1a2744] border-0">Disponible</Badge>
+                    <Badge className="text-[9px] bg-[#1a274415] text-[#1a2744] border-0">Hors systeme</Badge>
                   </div>
                 </div>
 
-                {/* Timer tolerance */}
                 <div className="p-4 rounded-lg bg-[#d4a85308] border border-[#d4a85315]">
                   <div className="flex items-center gap-2 mb-2">
                     <Timer className="size-4 text-[#d4a853]" />
-                    <span className="text-sm font-semibold text-[#1a2744]">Tolerance horloge</span>
+                    <span className="text-sm font-semibold text-[#1a2744]">Temps d&apos;examen</span>
                   </div>
                   <p className="text-xs text-gray-600 leading-relaxed">
-                    +5 minutes supplementaires pour les connexions lentes. Le chronometre s&apos;adapte automatiquement a la qualite de la connexion detectee.
+                    La duree appliquee est celle configuree dans l&apos;examen. Aucun bonus automatique de temps n&apos;est affiche sans regle explicite.
                   </p>
                   <div className="mt-2">
-                    <Badge className="text-[9px] bg-[#d4a85315] text-[#d4a853] border-0">+5 min auto</Badge>
+                    <Badge className="text-[9px] bg-[#d4a85315] text-[#d4a853] border-0">Duree configuree</Badge>
                   </div>
                 </div>
               </div>
