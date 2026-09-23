@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useInscriptionPedagogique } from '@/lib/api-hooks'
@@ -89,6 +89,16 @@ interface UEItem {
   selected: boolean
 }
 
+interface RegistrationRules {
+  creditsPerSemester: number
+  creditsPerYear: number
+  passingGrade: number
+  eliminationGrade: number
+  compensationEnabled: boolean
+  minCredits: number
+  maxCredits: number
+}
+
 // ─── Animation Variants ─────────────────────────────────────────────────────────
 
 const containerVariants = {
@@ -133,8 +143,6 @@ export function InscriptionPedagogiquePage() {
 
   // UE Selection state
   const [selectedStudent, setSelectedStudent] = useState<string>('')
-  const [selectedSemestre, setSelectedSemestre] = useState<string>('s2')
-  const [selectedSession, setSelectedSession] = useState<string>('normale')
   const [ueSelections, setUeSelections] = useState<Record<string, boolean>>({})
   const [ueSectionExpanded, setUeSectionExpanded] = useState(false)
   const [isSubmittingRegistration, setIsSubmittingRegistration] = useState(false)
@@ -144,6 +152,16 @@ export function InscriptionPedagogiquePage() {
   const students: StudentRegistration[] = useMemo(() => listData?.students ?? [], [listData])
   const stats = listData?.stats
   const registrationOpen: boolean = listData?.registrationOpen ?? true
+  const academicYearName = listData?.academicYear?.name ?? 'Année courante non configurée'
+  const rules: RegistrationRules = listData?.rules ?? {
+    creditsPerSemester: 30,
+    creditsPerYear: 60,
+    passingGrade: 10,
+    eliminationGrade: 8,
+    compensationEnabled: true,
+    minCredits: 30,
+    maxCredits: 42,
+  }
 
   const { data: ueData } = useInscriptionPedagogique(selectedStudent || undefined)
   const availableUEs: UEItem[] = useMemo(() => {
@@ -154,10 +172,12 @@ export function InscriptionPedagogiquePage() {
   // Sync local checkbox state whenever the selected student's real UE list loads
   const ueDataKey = selectedStudent + ':' + availableUEs.length
   const [syncedKey, setSyncedKey] = useState('')
-  if (ueDataKey !== syncedKey && availableUEs.length >= 0 && selectedStudent) {
-    setSyncedKey(ueDataKey)
-    setUeSelections(Object.fromEntries(availableUEs.map((ue) => [ue.id, ue.selected])))
-  }
+  useEffect(() => {
+    if (ueDataKey !== syncedKey && selectedStudent) {
+      setSyncedKey(ueDataKey)
+      setUeSelections(Object.fromEntries(availableUEs.map((ue) => [ue.id, ue.selected || ue.type === 'obligatoire'])))
+    }
+  }, [availableUEs, selectedStudent, syncedKey, ueDataKey])
 
   // Computed: filtered students
   const filteredStudents = useMemo(() => {
@@ -191,10 +211,11 @@ export function InscriptionPedagogiquePage() {
       .reduce((sum, ue) => sum + ue.credits, 0)
   }, [availableUEs, ueSelections])
 
-  const minCredits = 30
-  const maxCredits = 42
+  const minCredits = rules.minCredits
+  const maxCredits = rules.maxCredits
   const creditsRemaining = Math.max(0, minCredits - selectedCredits)
   const creditsOver = Math.max(0, selectedCredits - maxCredits)
+  const creditScale = Math.max(maxCredits, rules.creditsPerYear || 60, selectedCredits, 1)
 
   // UE toggle
   const handleUeToggle = (ueId: string, ueType: string) => {
@@ -291,12 +312,12 @@ export function InscriptionPedagogiquePage() {
               Inscription pedagogique
             </h1>
             <p className="text-sm text-gray-500 mt-1">
-              Gestion des inscriptions pedagogiques par semestre - Systeme LMD
+              Gestion des inscriptions pedagogiques selon la structure et les regles de l&apos;institution
             </p>
           </div>
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="text-xs border-[#2d7a4f] text-[#2d7a4f] bg-[#2d7a4f08]">
-              Annee 2024-2025
+              {academicYearName}
             </Badge>
           </div>
         </motion.div>
@@ -342,7 +363,7 @@ export function InscriptionPedagogiquePage() {
                   </div>
                   <div>
                     <CardTitle className="text-base text-[#1a2744]">Periode d&apos;inscription</CardTitle>
-                    <p className="text-sm text-gray-500 mt-0.5">Inscriptions pedagogiques S2 2024-2025</p>
+                    <p className="text-sm text-gray-500 mt-0.5">Année académique : {academicYearName}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -485,7 +506,7 @@ export function InscriptionPedagogiquePage() {
                               {student.hasDebt && (
                                 <div className="flex items-center gap-1">
                                   <AlertTriangle className="size-3 text-[#d4a853]" />
-                                  <span className="text-[10px] text-[#d4a853]">Dette anterieure</span>
+                                  <span className="text-[10px] text-[#d4a853]">Paiement en attente</span>
                                 </div>
                               )}
                             </div>
@@ -550,7 +571,7 @@ export function InscriptionPedagogiquePage() {
           </Card>
         </motion.div>
 
-        {/* ─── UE Selection & LMD Rules Grid ─────────────────────────────────── */}
+        {/* ─── UE Selection & Credit Rules Grid ──────────────────────────────── */}
         <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* UE Selection Card (2 cols) */}
           <div className="lg:col-span-2 space-y-4">
@@ -578,7 +599,7 @@ export function InscriptionPedagogiquePage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* Selection controls */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <label className="text-xs font-medium text-gray-600">Etudiant</label>
                     <Select value={selectedStudent} onValueChange={setSelectedStudent}>
@@ -595,28 +616,10 @@ export function InscriptionPedagogiquePage() {
                     </Select>
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-gray-600">Semestre</label>
-                    <Select value={selectedSemestre} onValueChange={setSelectedSemestre}>
-                      <SelectTrigger className="w-full h-9 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="s1">S1</SelectItem>
-                        <SelectItem value="s2">S2</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-gray-600">Session</label>
-                    <Select value={selectedSession} onValueChange={setSelectedSession}>
-                      <SelectTrigger className="w-full h-9 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="normale">Normale</SelectItem>
-                        <SelectItem value="rattrapage">Rattrapage</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <label className="text-xs font-medium text-gray-600">Périmètre</label>
+                    <div className="h-9 rounded-md border border-gray-200 bg-gray-50 px-3 flex items-center text-xs text-gray-600">
+                      UE du niveau courant — {academicYearName}
+                    </div>
                   </div>
                 </div>
 
@@ -765,7 +768,7 @@ export function InscriptionPedagogiquePage() {
                     {selectedCredits >= minCredits && selectedCredits <= maxCredits && (
                       <div className="flex items-center gap-2 text-xs bg-[#2d7a4f10] border border-[#2d7a4f30] text-[#2d7a4f] rounded-md px-3 py-2">
                         <CheckCircle2 className="size-3.5 shrink-0" />
-                        <span>Nombre de credits conforme aux regles LMD</span>
+                  <span>Nombre de credits conforme aux regles de l&apos;institution</span>
                       </div>
                     )}
                   </div>
@@ -785,13 +788,13 @@ export function InscriptionPedagogiquePage() {
             </Card>
           </div>
 
-          {/* LMD Credit Rules Card (1 col) */}
+          {/* Credit Rules Card (1 col) */}
           <div className="space-y-4">
             <Card className="shadow-sm border-l-4 border-l-[#1a2744]">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base text-[#1a2744] flex items-center gap-2">
                   <Award className="size-5 text-[#d4a853]" />
-                  Regles LMD
+                  Regles de crédits
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -812,21 +815,21 @@ export function InscriptionPedagogiquePage() {
                   <span className="text-xs font-medium text-gray-600">Plage de credits autorisee</span>
                   <div className="relative h-8 bg-gray-100 rounded-lg overflow-hidden">
                     <div className="absolute inset-0 flex">
-                      <div className="w-[7/14] bg-gradient-to-r from-red-100 to-red-50 border-r border-red-200" style={{ width: `${((minCredits) / 60) * 100}%` }} />
-                      <div className="bg-gradient-to-r from-[#2d7a4f20] to-[#2d7a4f30]" style={{ width: `${((maxCredits - minCredits) / 60) * 100}%` }} />
+                      <div className="w-[7/14] bg-gradient-to-r from-red-100 to-red-50 border-r border-red-200" style={{ width: `${(minCredits / creditScale) * 100}%` }} />
+                      <div className="bg-gradient-to-r from-[#2d7a4f20] to-[#2d7a4f30]" style={{ width: `${((maxCredits - minCredits) / creditScale) * 100}%` }} />
                       <div className="flex-1 bg-gradient-to-r from-red-50 to-red-100" />
                     </div>
                     {/* Indicator for current selection */}
                     <motion.div
                       className="absolute top-0 bottom-0 w-1 bg-[#1a2744] rounded-full shadow-md"
-                      animate={{ left: `${(selectedCredits / 60) * 100}%` }}
+                      animate={{ left: `${Math.min(100, (selectedCredits / creditScale) * 100)}%` }}
                       transition={{ type: 'spring', stiffness: 200, damping: 20 }}
                     />
                     <div className="absolute inset-0 flex items-center justify-between px-2 text-[9px] font-medium text-gray-500">
                       <span>0</span>
                       <span className="text-[#2d7a4f]">{minCredits}</span>
                       <span className="text-[#1a2744]">{maxCredits}</span>
-                      <span>60</span>
+                      <span>{creditScale}</span>
                     </div>
                   </div>
                   <div className="flex justify-between text-[9px] text-gray-400">
@@ -845,31 +848,31 @@ export function InscriptionPedagogiquePage() {
                   <ul className="space-y-1.5 text-xs text-gray-500">
                     <li className="flex items-start gap-2">
                       <CheckCircle2 className="size-3.5 text-[#2d7a4f] shrink-0 mt-0.5" />
-                      <span>Compensation possible si moyenne generale &ge; 10/20</span>
+                    <span>Compensation {rules.compensationEnabled ? 'active' : 'desactivee'} dans les parametres de l&apos;institution</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle2 className="size-3.5 text-[#2d7a4f] shrink-0 mt-0.5" />
-                      <span>Aucune UE &lt; 08/20 pour compensation</span>
+                    <span>Seuil de validation : {rules.passingGrade}/20</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle2 className="size-3.5 text-[#2d7a4f] shrink-0 mt-0.5" />
-                      <span>Credits de compensation valides automatiquement</span>
+                    <span>Note eliminatoire : {rules.eliminationGrade}/20</span>
                     </li>
                   </ul>
                 </div>
 
-                {/* Debt warning */}
+                {/* Pending payments warning */}
                 <div className="bg-[#d4a85310] border border-[#d4a85330] rounded-lg p-3 space-y-1.5">
                   <div className="flex items-center gap-2">
                     <AlertTriangle className="size-4 text-[#d4a853]" />
-                    <span className="text-xs font-semibold text-[#b8922e]">Dettes anterieures</span>
+                    <span className="text-xs font-semibold text-[#b8922e]">Paiements en attente</span>
                   </div>
                   <p className="text-[11px] text-[#b8922e] leading-relaxed">
-                    Les etudiants ayant des UE en dette du semestre precedent doivent les re-inscrire en priorite avant de selectionner les nouvelles UE.
+                    Les étudiants avec un paiement en attente restent visibles, mais leur dossier doit être régularisé avant validation administrative finale.
                   </p>
                   <div className="flex items-center gap-2 pt-1">
                     <Badge variant="outline" className="text-[10px] border-[#d4a853] text-[#b8922e] bg-[#d4a85308]">
-                      12 etudiants concernes
+                      {stats?.pendingPayments ?? 0} étudiant(s) concerné(s)
                     </Badge>
                   </div>
                 </div>
@@ -883,14 +886,14 @@ export function InscriptionPedagogiquePage() {
                         <span className="text-gray-500">UE Obligatoires</span>
                         <span className="font-medium text-[#2d7a4f]">{compulsoryCredits} credits</span>
                       </div>
-                      <Progress value={(compulsoryCredits / maxCredits) * 100} className="h-1.5 [&>div]:bg-[#2d7a4f]" />
+                      <Progress value={maxCredits > 0 ? (compulsoryCredits / maxCredits) * 100 : 0} className="h-1.5 [&>div]:bg-[#2d7a4f]" />
                     </div>
                     <div>
                       <div className="flex justify-between text-[11px] mb-1">
                         <span className="text-gray-500">UE Optionnelles</span>
                         <span className="font-medium text-[#d4a853]">{optionalCreditsSelected} credits</span>
                       </div>
-                      <Progress value={(optionalCreditsSelected / (maxCredits - compulsoryCredits)) * 100} className="h-1.5 [&>div]:bg-[#d4a853]" />
+                      <Progress value={Math.max(0, maxCredits - compulsoryCredits) > 0 ? (optionalCreditsSelected / (maxCredits - compulsoryCredits)) * 100 : 0} className="h-1.5 [&>div]:bg-[#d4a853]" />
                     </div>
                   </div>
                 </div>

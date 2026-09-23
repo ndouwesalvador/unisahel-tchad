@@ -21,10 +21,31 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
 
     const settings = await db.tenantSettings.findUnique({
       where: { tenantId },
-      select: { pedagogicalRegistrationOpen: true },
+      select: {
+        pedagogicalRegistrationOpen: true,
+        creditsPerSemester: true,
+        creditsPerYear: true,
+        passingGrade: true,
+        eliminationGrade: true,
+        compensationEnabled: true,
+      },
     })
     const registrationOpen = settings?.pedagogicalRegistrationOpen ?? true
-    const academicYearId = await resolveCurrentAcademicYearId(tenantId)
+    const currentAcademicYear = await db.academicYear.findFirst({
+      where: { tenantId, isCurrent: true },
+      select: { id: true, name: true },
+    })
+    const academicYearId = currentAcademicYear?.id ?? null
+    const creditsPerSemester = settings?.creditsPerSemester ?? 30
+    const rules = {
+      creditsPerSemester,
+      creditsPerYear: settings?.creditsPerYear ?? 60,
+      passingGrade: settings?.passingGrade ?? 10,
+      eliminationGrade: settings?.eliminationGrade ?? 8,
+      compensationEnabled: settings?.compensationEnabled ?? true,
+      minCredits: creditsPerSemester,
+      maxCredits: Math.max(creditsPerSemester, Math.ceil(creditsPerSemester * 1.4)),
+    }
 
     // ─── UE picker for a single student ────────────────────────────────────
     if (studentId) {
@@ -58,10 +79,10 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
         credits: ue.credits,
         type: ue.type === 'FONDAMENTALE' ? 'obligatoire' : 'optionnelle',
         professor: ue.responsible?.user ? `${ue.responsible.user.firstName} ${ue.responsible.user.lastName}` : '—',
-        selected: registeredIds.has(ue.id),
+        selected: registeredIds.has(ue.id) || ue.type === 'FONDAMENTALE',
       }))
 
-      return NextResponse.json({ availableUEs, registrationOpen })
+      return NextResponse.json({ availableUEs, registrationOpen, academicYear: currentAcademicYear, rules })
     }
 
     // ─── Students list with real registration status ───────────────────────
@@ -128,10 +149,11 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
       completes: mapped.filter((s) => s.statut === 'complete').length,
       enCours: mapped.filter((s) => s.statut === 'en-cours').length,
       nonCommencees: mapped.filter((s) => s.statut === 'non-commencee').length,
+      pendingPayments: mapped.filter((s) => s.hasDebt).length,
       completionRate: mapped.length > 0 ? Math.round((mapped.filter((s) => s.statut === 'complete').length / mapped.length) * 100) : 0,
     }
 
-    return NextResponse.json({ students: mapped, stats, registrationOpen })
+    return NextResponse.json({ students: mapped, stats, registrationOpen, academicYear: currentAcademicYear, rules })
   } catch (error) {
     console.error('Inscription pedagogique API error:', error)
     return NextResponse.json({ error: 'Failed to fetch data' }, { status: 500 })
