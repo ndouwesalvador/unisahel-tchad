@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Briefcase, Download, GraduationCap, Mail, MapPin, Plus, Search, Users } from 'lucide-react'
+import { Briefcase, CheckCircle2, Download, GraduationCap, Mail, MapPin, Plus, Search, Trash2, UserCheck, UserX, Users } from 'lucide-react'
 
 type AlumniStatus = 'ACTIF' | 'INACTIF' | 'INJOIGNABLE'
 
@@ -67,6 +67,7 @@ export function AlumniPage() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [busyId, setBusyId] = useState<string | null>(null)
   const [form, setForm] = useState(initialForm)
 
   const alumni: AlumniRecord[] = useMemo(
@@ -136,6 +137,44 @@ export function AlumniPage() {
     }
   }
 
+  const updateAlumnus = async (id: string, updates: { status?: AlumniStatus; markContacted?: boolean }) => {
+    setBusyId(id)
+    try {
+      const res = await fetch('/api/alumni', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, ...updates }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json.error || 'Mise à jour impossible')
+
+      toast.success(updates.markContacted ? 'Dernier contact enregistré' : 'Statut mis à jour')
+      queryClient.invalidateQueries({ queryKey: ['alumni'] })
+    } catch (error) {
+      toast.error('Erreur', { description: error instanceof Error ? error.message : 'Mise à jour impossible' })
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  const deleteAlumnus = async (id: string) => {
+    if (!window.confirm('Supprimer définitivement cette fiche alumni ?')) return
+
+    setBusyId(id)
+    try {
+      const res = await fetch(`/api/alumni?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json.error || 'Suppression impossible')
+
+      toast.success('Fiche alumni supprimée')
+      queryClient.invalidateQueries({ queryKey: ['alumni'] })
+    } catch (error) {
+      toast.error('Erreur', { description: error instanceof Error ? error.message : 'Suppression impossible' })
+    } finally {
+      setBusyId(null)
+    }
+  }
+
   const exportAlumni = () => {
     if (filteredAlumni.length === 0) {
       toast.info('Aucun alumni à exporter')
@@ -154,6 +193,7 @@ export function AlumniPage() {
         Entreprise: item.company || '',
         Pays: item.country || '',
         Statut: statusConfig[item.status]?.label || item.status,
+        'Dernier contact': item.lastContactDate ? new Date(item.lastContactDate).toLocaleDateString('fr-FR') : '',
       })),
       'alumni'
     )
@@ -309,6 +349,7 @@ export function AlumniPage() {
                   <TableHead>Localisation</TableHead>
                   <TableHead>Contact</TableHead>
                   <TableHead>Statut</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -322,11 +363,71 @@ export function AlumniPage() {
                       <div className="space-y-1 text-xs text-gray-500">
                         {item.email && <div className="flex items-center gap-1"><Mail className="size-3" /> {item.email}</div>}
                         {item.phone && <div>{item.phone}</div>}
-                        {!item.email && !item.phone && '—'}
+                        {item.lastContactDate && <div>Dernier contact : {new Date(item.lastContactDate).toLocaleDateString('fr-FR')}</div>}
+                        {!item.email && !item.phone && !item.lastContactDate && '—'}
                       </div>
                     </TableCell>
                     <TableCell>
                       <Badge className={statusConfig[item.status]?.className}>{statusConfig[item.status]?.label || item.status}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 px-2 text-xs text-[#2d7a4f]"
+                          disabled={busyId === item.id}
+                          onClick={() => updateAlumnus(item.id, { markContacted: true })}
+                        >
+                          <CheckCircle2 className="mr-1 size-3.5" />
+                          Contacté
+                        </Button>
+                        {item.status !== 'ACTIF' && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 px-2 text-xs text-[#2d7a4f]"
+                            disabled={busyId === item.id}
+                            onClick={() => updateAlumnus(item.id, { status: 'ACTIF' })}
+                          >
+                            <UserCheck className="mr-1 size-3.5" />
+                            Actif
+                          </Button>
+                        )}
+                        {item.status !== 'INACTIF' && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 px-2 text-xs text-amber-700"
+                            disabled={busyId === item.id}
+                            onClick={() => updateAlumnus(item.id, { status: 'INACTIF' })}
+                          >
+                            Inactif
+                          </Button>
+                        )}
+                        {item.status !== 'INJOIGNABLE' && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 px-2 text-xs text-red-600"
+                            disabled={busyId === item.id}
+                            onClick={() => updateAlumnus(item.id, { status: 'INJOIGNABLE' })}
+                          >
+                            <UserX className="mr-1 size-3.5" />
+                            Injoignable
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 px-2 text-xs text-gray-500 hover:text-red-600"
+                          disabled={busyId === item.id}
+                          onClick={() => deleteAlumnus(item.id)}
+                        >
+                          <Trash2 className="mr-1 size-3.5" />
+                          Supprimer
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
