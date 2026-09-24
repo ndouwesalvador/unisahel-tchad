@@ -35,6 +35,8 @@ import {
   GraduationCap,
   Layers,
   Download,
+  AlertTriangle,
+  CheckCircle2,
 } from 'lucide-react'
 
 // ─── Types and API-backed data mapping ────────────────────────────────────────
@@ -77,6 +79,7 @@ interface Level {
 interface Program {
   id: string
   label: string
+  studentCount: number
   levels: Level[]
 }
 
@@ -128,6 +131,7 @@ interface StructureLevel {
 interface StructureProgram {
   id: string
   name: string
+  studentCount?: number
   levels: StructureLevel[]
 }
 
@@ -159,6 +163,7 @@ function mapStructureToPrograms(faculties: StructureFaculty[]): Program[] {
         programs.push({
           id: p.id,
           label: p.name,
+          studentCount: p.studentCount ?? 0,
           levels: (p.levels || []).map((level) => ({
             id: level.id,
             label: level.name,
@@ -202,6 +207,53 @@ function getSemesterVolume(semester: Semester): { cm: number; td: number; tp: nu
   const tp = semester.ues.reduce((acc, ue) => acc + ue.ecues.reduce((a, e) => a + e.tp, 0), 0)
   const stage = semester.ues.reduce((acc, ue) => acc + ue.ecues.reduce((a, e) => a + e.stage, 0), 0)
   return { cm, td, tp, stage, total: cm + td + tp + stage }
+}
+
+function normalizedLabel(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toUpperCase()
+}
+
+function getProgramIssues(program: Program, creditsPerSemester: number): string[] {
+  const issues: string[] = []
+  const levelCounts = new Map<string, number>()
+
+  for (const level of program.levels) {
+    const key = normalizedLabel(level.label)
+    levelCounts.set(key, (levelCounts.get(key) ?? 0) + 1)
+
+    if (level.semesters.length === 0) {
+      issues.push(`${level.label} n'a aucun semestre configuré.`)
+    }
+
+    for (const semester of level.semesters) {
+      const credits = getSemesterCredits(semester)
+      if (semester.ues.length === 0) {
+        issues.push(`${level.label} / ${semester.label} n'a aucune UE.`)
+      } else if (credits < creditsPerSemester) {
+        issues.push(`${level.label} / ${semester.label} totalise ${credits}/${creditsPerSemester} crédits.`)
+      }
+      if (semester.ues.some((ue) => ue.ecues.length === 0)) {
+        issues.push(`${level.label} / ${semester.label} contient des UE sans EC/matière.`)
+      }
+    }
+  }
+
+  for (const [label, count] of levelCounts.entries()) {
+    if (count > 1) {
+      issues.push(`Niveau en doublon détecté : ${label} (${count} fois).`)
+    }
+  }
+
+  if (program.levels.length === 0) {
+    issues.push('Aucun niveau configuré pour ce programme.')
+  }
+
+  return issues
 }
 
 // ─── useCountUp Hook ──────────────────────────────────────────────────────────
@@ -395,6 +447,7 @@ export function MaquettePage() {
   const setView = useAppStore((s) => s.setView)
   const { data: structureData, isLoading } = useStructure()
   const programs = mapStructureToPrograms(structureData?.faculties || [])
+  const creditsPerSemester = structureData?.tenant?.settings?.creditsPerSemester ?? 30
   const [selectedProgram, setSelectedProgram] = useState<string | undefined>(undefined)
   const program = programs.find(p => p.id === selectedProgram) || programs[0]
 
@@ -435,6 +488,14 @@ export function MaquettePage() {
   const selectedProgramUEs = program
     ? program.levels.reduce((a, l) => a + l.semesters.reduce((b, s) => b + s.ues.length, 0), 0)
     : 0
+  const selectedProgramCredits = program
+    ? program.levels.reduce((a, l) => a + l.semesters.reduce((b, s) => b + getSemesterCredits(s), 0), 0)
+    : 0
+  const selectedIssues = program ? getProgramIssues(program, creditsPerSemester) : []
+  const programsReady = programs.filter((p) => getProgramIssues(p, creditsPerSemester).length === 0).length
+  const affectedStudents = programs
+    .filter((p) => getProgramIssues(p, creditsPerSemester).length > 0)
+    .reduce((sum, p) => sum + p.studentCount, 0)
 
   if (isLoading) {
     return (
@@ -506,9 +567,49 @@ export function MaquettePage() {
               <div className="text-white/60 text-xs">Programmes actifs</div>
               <div className="text-white text-2xl font-bold">{programmesActifsCount}</div>
             </motion.div>
+            <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }} className="bg-white/10 backdrop-blur border border-white/15 rounded-lg px-4 py-3">
+              <div className="text-white/60 text-xs">Prêts inscription</div>
+              <div className="text-white text-2xl font-bold">{programsReady}/{programs.length}</div>
+            </motion.div>
           </div>
         </div>
       </div>
+
+      <Card className={selectedIssues.length > 0 ? 'border-amber-200 bg-amber-50/70' : 'border-emerald-200 bg-emerald-50/70'}>
+        <CardContent className="p-4">
+          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className={`mt-0.5 rounded-full p-2 ${selectedIssues.length > 0 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                {selectedIssues.length > 0 ? <AlertTriangle className="size-5" /> : <CheckCircle2 className="size-5" />}
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-[#1a2744]">
+                  {selectedIssues.length > 0 ? 'Maquette à compléter avant inscription pédagogique' : 'Maquette exploitable pour l’inscription pédagogique'}
+                </p>
+                <p className="text-sm text-gray-600 mt-1">
+                  {program.label} — {selectedProgramUEs} UE, {selectedProgramCredits} crédits, {program.studentCount} étudiant(s) rattaché(s).
+                  {affectedStudents > 0 ? ` ${affectedStudents} étudiant(s) sont rattachés à un programme avec anomalie.` : ''}
+                </p>
+                {selectedIssues.length > 0 && (
+                  <ul className="mt-3 space-y-1 text-sm text-amber-900">
+                    {selectedIssues.slice(0, 5).map((issue) => (
+                      <li key={issue}>• {issue}</li>
+                    ))}
+                    {selectedIssues.length > 5 && <li>• {selectedIssues.length - 5} autre(s) anomalie(s).</li>}
+                  </ul>
+                )}
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              className="shrink-0 bg-white"
+              onClick={() => setView('structure')}
+            >
+              Corriger dans Structure
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Program summary cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -567,7 +668,7 @@ export function MaquettePage() {
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase">Crédits totaux</p>
-                <p className="text-2xl font-bold text-[#1a2744] mt-1">{program.levels.reduce((a, l) => a + l.semesters.reduce((b, s) => b + getSemesterCredits(s), 0), 0)}</p>
+                <p className="text-2xl font-bold text-[#1a2744] mt-1">{selectedProgramCredits}</p>
               </div>
               <div className="w-10 h-10 rounded-xl bg-[#1a274415] flex items-center justify-center">
                 <CreditCard className="size-5 text-[#1a2744]" />
