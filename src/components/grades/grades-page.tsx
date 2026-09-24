@@ -8,7 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Progress } from '@/components/ui/progress'
 import {
@@ -28,8 +27,6 @@ import {
 } from '@/components/ui/select'
 import {
   FileCheck,
-  Lock,
-  Unlock,
   Download,
   Upload,
   Save,
@@ -139,8 +136,6 @@ export function GradesPage() {
   const [selectedSession, setSelectedSession] = useState<'normale' | 'rattrapage'>('normale')
   const apiSession = selectedSession === 'rattrapage' ? 'RATTRAPAGE' : 'NORMALE'
 
-  const [editingLocked, setEditingLocked] = useState(false)
-  const [bulkMode, setBulkMode] = useState(false)
   const [localEdits, setLocalEdits] = useState<Record<string, LocalEdit>>({})
   const [saving, setSaving] = useState(false)
   const [validatingId, setValidatingId] = useState<string | null>(null)
@@ -196,10 +191,6 @@ export function GradesPage() {
 
   const handleGradeChange = (studentId: string, field: 'cc' | 'exam' | 'tp', value: string) => {
     setLocalEdits(prev => ({ ...prev, [studentId]: { ...prev[studentId], [field]: value } }))
-  }
-
-  const handleObservationChange = (studentId: string, value: string) => {
-    setLocalEdits(prev => ({ ...prev, [studentId]: { ...prev[studentId], observation: value } }))
   }
 
   const refetchGrades = () => queryClient.invalidateQueries({ queryKey: ['grades', selectedUE, apiSession, academicYearId] })
@@ -363,6 +354,9 @@ export function GradesPage() {
   const pendingValidation = grades.filter(g => g.moyenne !== null && !g.isLocked).length
   const notesSaisies = validGrades.length
   const notesAttendues = grades.length
+  const hasLocalEdits = Object.keys(localEdits).length > 0
+  const canSave = Boolean(currentUE?.courseElementId && academicYearId && hasLocalEdits && !saving)
+  const canValidateAll = grades.some(g => g.gradeId && g.moyenne !== null && !g.isLocked)
 
   // ─── Distribution ────────────────────────────────────────────────────────
   const distribution = useMemo(() => {
@@ -444,7 +438,7 @@ export function GradesPage() {
             <Download className="size-3.5 mr-1.5" />
             Exporter
           </Button>
-          <Button size="sm" className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs" disabled={saving} onClick={handleSave}>
+          <Button size="sm" className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs" disabled={!canSave} onClick={handleSave}>
             <Save className="size-3.5 mr-1.5" />
             {saving ? 'Enregistrement...' : 'Enregistrer'}
           </Button>
@@ -559,20 +553,8 @@ export function GradesPage() {
               <div className="flex items-center gap-2">
                 <Pencil className="size-4 text-[#1a2744]" />
                 <CardTitle className="text-sm font-semibold text-[#1a2744]">
-                  Saisie des notes
+                  Paramètres de saisie
                 </CardTitle>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <Switch
-                    id="bulk-mode"
-                    checked={bulkMode}
-                    onCheckedChange={setBulkMode}
-                  />
-                  <Label htmlFor="bulk-mode" className="text-xs text-gray-600 cursor-pointer">
-                    Mode saisie en masse
-                  </Label>
-                </div>
               </div>
             </div>
           </CardHeader>
@@ -617,127 +599,11 @@ export function GradesPage() {
               </div>
             )}
 
-            {/* Bulk entry note */}
-            {bulkMode && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="p-3 bg-[#1a274408] border border-[#1a274415] rounded-lg"
-              >
-                <p className="text-xs text-[#1a2744] font-medium flex items-center gap-1.5">
-                  <AlertCircle className="size-3.5" />
-                  Mode saisie en masse active : les notes sont appliquees automatiquement en passant a la ligne suivante.
-                </p>
-              </motion.div>
-            )}
-
-            {/* Grade Entry Table */}
-            <div className="overflow-x-auto rounded-lg border border-gray-200">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-[#1a274405]">
-                    <TableHead className="text-xs font-semibold text-gray-500 w-8">#</TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-500">Etudiant</TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-500 text-center w-24">Note /20</TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-500 w-40">Observation</TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-500 text-center w-24">Statut</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {dataLoading && (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8 text-sm text-gray-400">Chargement...</TableCell>
-                    </TableRow>
-                  )}
-                  {!dataLoading && grades.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8 text-sm text-gray-400">Aucun étudiant inscrit dans ce programme/niveau</TableCell>
-                    </TableRow>
-                  )}
-                  {!dataLoading && grades.map((grade, i) => (
-                    <TableRow key={grade.studentId} className={`hover:bg-gray-50/50 ${getGradeBgColor(grade.moyenne)}`}>
-                      <TableCell className="text-xs text-gray-400 py-2">{i + 1}</TableCell>
-                      <TableCell className="py-2">
-                        <div>
-                          <p className="text-sm font-medium text-[#1a2744]">{grade.nom} {grade.prenom}</p>
-                          <p className="text-[10px] text-gray-400 font-mono">{grade.matricule}</p>
-                        </div>
-                      </TableCell>
-                      <TableCell className="py-2">
-                        <Input
-                          type="number"
-                          min="0"
-                          max="20"
-                          step="0.5"
-                          value={grade.moyenne !== null ? grade.moyenne : ''}
-                          readOnly
-                          disabled={editingLocked}
-                          className={`h-8 text-center text-sm font-bold w-20 mx-auto disabled:bg-gray-50 ${grade.moyenne !== null ? getGradeTextColor(grade.moyenne) : ''}`}
-                        />
-                      </TableCell>
-                      <TableCell className="py-2">
-                        <Input
-                          value={grade.observation}
-                          onChange={(e) => handleObservationChange(grade.studentId, e.target.value)}
-                          disabled={editingLocked}
-                          placeholder="Observation..."
-                          className="h-8 text-xs disabled:bg-gray-50"
-                        />
-                      </TableCell>
-                      <TableCell className="py-2 text-center">
-                        {grade.moyenne !== null ? (
-                          grade.isLocked ? (
-                            <Badge className="text-[10px] bg-[#2d7a4f15] text-[#2d7a4f] border-0">Valide</Badge>
-                          ) : grade.moyenne >= 10 ? (
-                            <Badge className="text-[10px] bg-[#2d7a4f15] text-[#2d7a4f] border-0">A valider</Badge>
-                          ) : grade.moyenne >= 8 ? (
-                            <Badge className="text-[10px] bg-[#f9a82515] text-[#f9a825] border-0">Compense</Badge>
-                          ) : (
-                            <Badge className="text-[10px] bg-[#c6282815] text-[#c62828] border-0">Echec</Badge>
-                          )
-                        ) : (
-                          <Badge className="text-[10px] bg-gray-100 text-gray-400 border-0">-</Badge>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-
-            {/* Actions */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <Button
-                  variant={editingLocked ? 'outline' : 'default'}
-                  size="sm"
-                  className={`text-xs ${editingLocked ? '' : 'bg-[#d4a853] hover:bg-[#c49a48] text-white'}`}
-                  onClick={() => setEditingLocked(!editingLocked)}
-                >
-                  {editingLocked ? (
-                    <Unlock className="size-3.5 mr-1.5" />
-                  ) : (
-                    <Lock className="size-3.5 mr-1.5" />
-                  )}
-                  {editingLocked ? 'Deverrouiller' : 'Verrouiller'}
-                </Button>
-                {editingLocked && (
-                  <Badge className="text-[10px] bg-[#c6282815] text-[#c62828] border-0">
-                    <Lock className="size-3 mr-1" />
-                    Verrouille
-                  </Badge>
-                )}
-              </div>
-              <Button
-                size="sm"
-                className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs"
-                disabled={editingLocked || saving}
-                onClick={handleSave}
-              >
-                <Save className="size-3.5 mr-1.5" />
-                {saving ? 'Enregistrement...' : 'Enregistrer les notes'}
-              </Button>
+            <div className="p-3 bg-[#1a274408] border border-[#1a274415] rounded-lg">
+              <p className="text-xs text-[#1a2744] font-medium flex items-center gap-1.5">
+                <AlertCircle className="size-3.5" />
+                Saisissez les CC, examens et TP dans le tableau ci-dessous. Les notes validées sont verrouillées et ne peuvent plus être modifiées.
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -857,12 +723,6 @@ export function GradesPage() {
                 <CardTitle className="text-sm font-semibold text-[#1a2744]">
                   {currentUE ? `${currentUE.code} - ${currentUE.name}` : 'Aucune UE sélectionnée'}
                 </CardTitle>
-                {editingLocked && (
-                  <Badge className="text-[10px] bg-[#c6282815] text-[#c62828] border-0">
-                    <Lock className="size-3 mr-1" />
-                    Verrouille
-                  </Badge>
-                )}
               </div>
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" className="text-xs" onClick={handleExport}>
@@ -872,11 +732,11 @@ export function GradesPage() {
                 <Button
                   size="sm"
                   className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs"
-                  disabled={validatingId === 'all'}
+                  disabled={!canValidateAll || validatingId === 'all'}
                   onClick={handleValidateAll}
                 >
                   <CheckCircle2 className="size-3.5 mr-1.5" />
-                  {validatingId === 'all' ? 'Validation...' : 'Valider tout'}
+                  {validatingId === 'all' ? 'Validation...' : canValidateAll ? 'Valider tout' : 'Tout validé'}
                 </Button>
               </div>
             </div>
@@ -923,7 +783,7 @@ export function GradesPage() {
                           step="0.5"
                           value={grade.cc}
                           onChange={(e) => handleGradeChange(grade.studentId, 'cc', e.target.value)}
-                          disabled={editingLocked || grade.isLocked}
+                          disabled={grade.isLocked}
                           className="h-8 text-center text-sm w-20 mx-auto disabled:bg-gray-50"
                         />
                       </TableCell>
@@ -935,7 +795,7 @@ export function GradesPage() {
                           step="0.5"
                           value={grade.exam}
                           onChange={(e) => handleGradeChange(grade.studentId, 'exam', e.target.value)}
-                          disabled={editingLocked || grade.isLocked}
+                          disabled={grade.isLocked}
                           className="h-8 text-center text-sm w-20 mx-auto disabled:bg-gray-50"
                         />
                       </TableCell>
@@ -947,7 +807,7 @@ export function GradesPage() {
                           step="0.5"
                           value={grade.tp}
                           onChange={(e) => handleGradeChange(grade.studentId, 'tp', e.target.value)}
-                          disabled={editingLocked || grade.isLocked}
+                          disabled={grade.isLocked}
                           placeholder="-"
                           className="h-8 text-center text-sm w-20 mx-auto disabled:bg-gray-50"
                         />
