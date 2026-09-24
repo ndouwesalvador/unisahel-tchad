@@ -744,6 +744,7 @@ async function bulkGradeEntryHandler(user: SessionUser, tenantId: string, reques
     const results = {
       created: 0,
       updated: 0,
+      lockedSkipped: 0,
       errors: [] as { studentId: string; courseElementId: string; error: string }[],
     }
 
@@ -820,6 +821,10 @@ async function bulkGradeEntryHandler(user: SessionUser, tenantId: string, reques
         }
 
         if (existing) {
+          if (existing.isLocked) {
+            results.lockedSkipped++
+            continue
+          }
           await db.grade.update({
             where: { id: existing.id },
             data: { ...gradeData, finalGrade, academicYearId, session },
@@ -847,7 +852,7 @@ async function bulkGradeEntryHandler(user: SessionUser, tenantId: string, reques
         userId: user.id,
         action: 'BULK_CREATE',
         entity: 'Grade',
-        details: JSON.stringify({ created: results.created, updated: results.updated, errors: results.errors.length }),
+        details: JSON.stringify({ created: results.created, updated: results.updated, lockedSkipped: results.lockedSkipped, errors: results.errors.length }),
       },
     })
 

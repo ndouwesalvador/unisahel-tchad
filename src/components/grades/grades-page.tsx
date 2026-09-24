@@ -177,6 +177,7 @@ export function GradesPage() {
 
   const [localEdits, setLocalEdits] = useState<Record<string, LocalEdit>>({})
   const [saving, setSaving] = useState(false)
+  const [savingAndLocking, setSavingAndLocking] = useState(false)
   const [validatingId, setValidatingId] = useState<string | null>(null)
   const importInputRef = useRef<HTMLInputElement>(null)
 
@@ -250,48 +251,96 @@ export function GradesPage() {
     queryClient.invalidateQueries({ queryKey: ['grades-completion', apiSession, academicYearId] })
   }
 
-  const handleSave = async () => {
+  const parseGradeValue = (value: string, label: string, studentName: string, required: boolean) => {
+    if (value === '') {
+      if (required) throw new Error(`${label} manquant pour ${studentName}`)
+      return undefined
+    }
+    const parsed = Number(value)
+    if (Number.isNaN(parsed) || parsed < 0 || parsed > 20) {
+      throw new Error(`${label} doit être compris entre 0 et 20 pour ${studentName}`)
+    }
+    return parsed
+  }
+
+  const buildGradePayload = (requireComplete: boolean) => {
     if (!currentUE) return
     if (!currentUE.courseElementId) {
-      toast.error("Aucun élément constitutif (ECUE) configuré pour cette UE", { description: "Impossible d'enregistrer des notes sans ECUE." })
-      return
+      throw new Error("Aucun élément constitutif (ECUE) configuré pour cette UE")
     }
     if (!academicYearId) {
-      toast.error("Année académique courante introuvable")
-      return
+      throw new Error("Année académique courante introuvable")
     }
-    const toSave = grades.filter(g => g.moyenne !== null)
-    if (toSave.length === 0) {
-      toast.info('Aucune note à enregistrer')
-      return
-    }
-    setSaving(true)
-    try {
-      const payload = {
+
+    const toSave = grades.filter(g => !g.isLocked && (requireComplete || g.moyenne !== null))
+    const payloadGrades = toSave.map(g => {
+      const studentName = `${g.prenom} ${g.nom}`.trim()
+      const ccGrade = parseGradeValue(g.cc, 'CC', studentName, requireComplete)
+      const examGrade = parseGradeValue(g.exam, 'Examen', studentName, requireComplete)
+      const tpGrade = parseGradeValue(g.tp, 'TP', studentName, false)
+
+      if (requireComplete && (ccGrade === undefined || examGrade === undefined)) {
+        throw new Error(`CC et Examen sont requis pour ${studentName}`)
+      }
+
+      return {
+        studentId: g.studentId,
+        teachingUnitId: currentUE.teachingUnitId,
+        courseElementId: currentUE.courseElementId,
         academicYearId,
         session: apiSession,
-        grades: toSave.map(g => ({
-          studentId: g.studentId,
-          teachingUnitId: currentUE.teachingUnitId,
-          courseElementId: currentUE.courseElementId,
-          academicYearId,
-          session: apiSession,
-          ccGrade: g.cc !== '' ? parseFloat(g.cc) : undefined,
-          examGrade: g.exam !== '' ? parseFloat(g.exam) : undefined,
-          tpGrade: g.tp !== '' ? parseFloat(g.tp) : undefined,
-          comment: g.observation || undefined,
-        })),
+        ccGrade,
+        examGrade,
+        tpGrade,
+        comment: g.observation || undefined,
       }
-      const res = await fetch('/api/grades?action=bulk', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || "Échec de l'enregistrement")
-      const r = data.data
+    })
+
+    return {
+      academicYearId,
+      session: apiSession,
+      grades: payloadGrades,
+    }
+  }
+
+  const saveGrades = async (requireComplete = false) => {
+    const payload = buildGradePayload(requireComplete)
+    if (!payload || payload.grades.length === 0) {
+      if (!requireComplete) {
+        return null
+      }
+      throw new Error('Aucune note non verrouillée à enregistrer pour cette UE')
+    }
+
+    const res = await fetch('/api/grades?action=bulk', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error || "Échec de l'enregistrement")
+    return data.data
+  }
+
+  const fetchCurrentGrades = async () => {
+    const params = new URLSearchParams({ teachingUnitId: selectedUE, session: apiSession, limit: '500' })
+    if (academicYearId) params.set('academicYearId', academicYearId)
+    const res = await fetch(`/api/grades?${params.toString()}`)
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) throw new Error(data.error || 'Impossible de relire les notes enregistrées')
+    return data.data || []
+  }
+
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      const r = await saveGrades(false)
+      if (!r) {
+      toast.info('Aucune note à enregistrer')
+      return
+      }
       toast.success('Notes enregistrées', {
-        description: `${r.created} créées, ${r.updated} mises à jour${r.errors?.length ? `, ${r.errors.length} erreur(s)` : ''}`,
+        description: `${r.created} créées, ${r.updated} mises à jour${r.lockedSkipped ? `, ${r.lockedSkipped} déjà verrouillée(s) ignorée(s)` : ''}${r.errors?.length ? `, ${r.errors.length} erreur(s)` : ''}`,
       })
       setLocalEdits({})
       refetchGrades()
@@ -343,6 +392,30 @@ export function GradesPage() {
       refetchGrades()
     } finally {
       setValidatingId(null)
+    }
+  }
+
+  const handleSaveAndLockCurrentUE = async () => {
+    if (!window.confirm("Enregistrer et verrouiller toutes les notes de cette UE ? Après verrouillage, elles ne seront plus modifiables.")) return
+    setSavingAndLocking(true)
+    try {
+      const saved = await saveGrades(true)
+      setLocalEdits({})
+      const refreshed = await fetchCurrentGrades()
+      const toLock = refreshed.filter((g: any) => g.id && g.finalGrade !== null && !g.isLocked)
+      if (toLock.length !== grades.filter(g => !g.isLocked).length) {
+        throw new Error("Toutes les notes de cette UE doivent être enregistrées avant verrouillage")
+      }
+      const results = await Promise.allSettled(toLock.map((g: any) => lockGrade(g.id)))
+      const failed = results.filter(r => r.status === 'rejected').length
+      toast.success('UE enregistrée et verrouillée', {
+        description: `${saved?.created ?? 0} créée(s), ${saved?.updated ?? 0} mise(s) à jour, ${toLock.length - failed} verrouillée(s)${failed ? `, ${failed} échec(s)` : ''}`,
+      })
+      refetchGrades()
+    } catch (e) {
+      toast.error('Action interrompue', { description: e instanceof Error ? e.message : "Échec de l'enregistrement/verrouillage" })
+    } finally {
+      setSavingAndLocking(false)
     }
   }
 
@@ -410,7 +483,20 @@ export function GradesPage() {
   const notesSaisies = validGrades.length
   const notesAttendues = grades.length
   const hasLocalEdits = Object.keys(localEdits).length > 0
-  const canSave = Boolean(currentUE?.courseElementId && academicYearId && hasLocalEdits && !saving)
+  const nextIncompleteUE = useMemo(() => {
+    const missing = completion?.byTeachingUnit.filter(item => item.missing > 0) ?? []
+    if (missing.length === 0) return null
+    return missing.find(item => item.teachingUnitId !== selectedUE) ?? missing[0]
+  }, [completion, selectedUE])
+  const canSave = Boolean(currentUE?.courseElementId && academicYearId && hasLocalEdits && !saving && !savingAndLocking)
+  const canSaveAndLockCurrentUE = Boolean(
+    currentUE?.courseElementId &&
+    academicYearId &&
+    grades.length > 0 &&
+    grades.some(g => !g.isLocked) &&
+    !saving &&
+    !savingAndLocking
+  )
   const canValidateAll = grades.some(g => g.gradeId && g.moyenne !== null && !g.isLocked)
 
   // ─── Distribution ────────────────────────────────────────────────────────
@@ -485,6 +571,15 @@ export function GradesPage() {
           <p className="text-sm text-gray-500">Saisie, calcul et validation des notes</p>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-xs"
+            disabled={!nextIncompleteUE || nextIncompleteUE.teachingUnitId === selectedUE}
+            onClick={() => nextIncompleteUE && setSelectedUE(nextIncompleteUE.teachingUnitId)}
+          >
+            UE suivante
+          </Button>
           <Button variant="outline" size="sm" className="text-xs" onClick={handleImportClick}>
             <Upload className="size-3.5 mr-1.5" />
             Importer Excel
@@ -496,6 +591,15 @@ export function GradesPage() {
           <Button size="sm" className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs" disabled={!canSave} onClick={handleSave}>
             <Save className="size-3.5 mr-1.5" />
             {saving ? 'Enregistrement...' : 'Enregistrer'}
+          </Button>
+          <Button
+            size="sm"
+            className="bg-[#1a2744] hover:bg-[#253556] text-white text-xs"
+            disabled={!canSaveAndLockCurrentUE}
+            onClick={handleSaveAndLockCurrentUE}
+          >
+            <CheckCircle2 className="size-3.5 mr-1.5" />
+            {savingAndLocking ? 'Verrouillage...' : 'Enregistrer + verrouiller UE'}
           </Button>
         </div>
       </motion.div>
