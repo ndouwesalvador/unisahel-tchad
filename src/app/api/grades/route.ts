@@ -5,6 +5,19 @@ import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
 import { resolveOwnStudentId, isStudentSelfRole } from '@/lib/auth/student-scope'
 import { gradeQuerySchema, createGradeSchema, updateGradeSchema, bulkGradeEntrySchema, calculateGradeSchema, validateQuery, validateBody, formatZodError } from '@/lib/validations/api'
 
+function gradeCompletionKey(studentId: string, teachingUnitId: string, courseElementId?: string | null) {
+  return `${studentId}:${teachingUnitId}:${courseElementId || 'UE'}`
+}
+
+async function resolveAcademicYearId(tenantId: string, requestedAcademicYearId: string | null) {
+  if (requestedAcademicYearId) return requestedAcademicYearId
+  const current = await db.academicYear.findFirst({
+    where: { tenantId, isCurrent: true },
+    select: { id: true },
+  })
+  return current?.id || null
+}
+
 async function getGradesHandler(user: SessionUser, tenantId: string, request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
@@ -234,6 +247,208 @@ async function getGradesHandler(user: SessionUser, tenantId: string, request: Ne
         error: 'Failed to fetch grades',
         details: error instanceof Error ? error.message : 'Unknown error',
       },
+      { status: 500 }
+    )
+  }
+}
+
+async function getGradeCompletionHandler(user: SessionUser, tenantId: string, request: NextRequest) {
+  try {
+    if (isStudentSelfRole(user.role)) {
+      return NextResponse.json({ error: 'FORBIDDEN', message: 'Accès refusé' }, { status: 403 })
+    }
+
+    const { searchParams } = new URL(request.url)
+    const academicYearId = await resolveAcademicYearId(tenantId, searchParams.get('academicYearId'))
+    const session = searchParams.get('session') === 'RATTRAPAGE' ? 'RATTRAPAGE' : 'NORMALE'
+
+    if (!academicYearId) {
+      return NextResponse.json({
+        data: {
+          ready: false,
+          expectedGradeCount: 0,
+          enteredGradeCount: 0,
+          lockedGradeCount: 0,
+          missingGradeCount: 0,
+          studentsTotal: 0,
+          studentsReady: 0,
+          byTeachingUnit: [],
+          incompleteStudents: [],
+        },
+      })
+    }
+
+    const registrations = await db.pedagogicalRegistration.findMany({
+      where: {
+        academicYearId,
+        status: 'ACTIVE',
+        student: { tenantId },
+      },
+      select: {
+        studentId: true,
+        teachingUnitId: true,
+        student: { select: { id: true, firstName: true, lastName: true, matricule: true } },
+        teachingUnit: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+            semester: {
+              select: {
+                id: true,
+                name: true,
+                level: {
+                  select: {
+                    id: true,
+                    name: true,
+                    program: { select: { id: true, name: true } },
+                  },
+                },
+              },
+            },
+            courseElements: {
+              orderBy: { orderIndex: 'asc' },
+              select: { id: true, code: true, name: true },
+            },
+          },
+        },
+      },
+    })
+
+    const grades = await db.grade.findMany({
+      where: {
+        student: { tenantId },
+        academicYearId,
+        session,
+        finalGrade: { not: null },
+      },
+      select: {
+        studentId: true,
+        teachingUnitId: true,
+        courseElementId: true,
+        isLocked: true,
+      },
+    })
+
+    const enteredKeys = new Set(
+      grades
+        .filter((grade) => grade.teachingUnitId)
+        .map((grade) => gradeCompletionKey(grade.studentId, grade.teachingUnitId as string, grade.courseElementId))
+    )
+    const lockedKeys = new Set(
+      grades
+        .filter((grade) => grade.teachingUnitId && grade.isLocked)
+        .map((grade) => gradeCompletionKey(grade.studentId, grade.teachingUnitId as string, grade.courseElementId))
+    )
+
+    const byTeachingUnit = new Map<string, {
+      teachingUnitId: string
+      courseElementId: string | null
+      code: string
+      name: string
+      ecCode: string | null
+      ecName: string | null
+      semesterName: string
+      levelName: string
+      programName: string
+      expected: number
+      entered: number
+      locked: number
+      missing: number
+    }>()
+    const byStudent = new Map<string, {
+      studentId: string
+      name: string
+      matricule: string
+      expected: number
+      entered: number
+      locked: number
+      missing: number
+      missingItems: { teachingUnitId: string; courseElementId: string | null; label: string }[]
+    }>()
+
+    for (const registration of registrations) {
+      const elements = registration.teachingUnit.courseElements.length > 0
+        ? registration.teachingUnit.courseElements
+        : [{ id: null, code: null, name: null }]
+
+      for (const element of elements) {
+        const courseElementId = element.id
+        const key = gradeCompletionKey(registration.studentId, registration.teachingUnitId, courseElementId)
+        const itemKey = `${registration.teachingUnitId}:${courseElementId || 'UE'}`
+        const label = element.code || element.name
+          ? `${registration.teachingUnit.code || registration.teachingUnit.name} / ${element.code || element.name}`
+          : `${registration.teachingUnit.code || registration.teachingUnit.name}`
+        const existingItem = byTeachingUnit.get(itemKey) || {
+          teachingUnitId: registration.teachingUnitId,
+          courseElementId,
+          code: registration.teachingUnit.code || registration.teachingUnit.id,
+          name: registration.teachingUnit.name,
+          ecCode: element.code,
+          ecName: element.name,
+          semesterName: registration.teachingUnit.semester.name,
+          levelName: registration.teachingUnit.semester.level.name,
+          programName: registration.teachingUnit.semester.level.program.name,
+          expected: 0,
+          entered: 0,
+          locked: 0,
+          missing: 0,
+        }
+        existingItem.expected += 1
+        if (enteredKeys.has(key)) existingItem.entered += 1
+        if (lockedKeys.has(key)) existingItem.locked += 1
+        if (!lockedKeys.has(key)) existingItem.missing += 1
+        byTeachingUnit.set(itemKey, existingItem)
+
+        const studentItem = byStudent.get(registration.studentId) || {
+          studentId: registration.studentId,
+          name: `${registration.student.firstName} ${registration.student.lastName}`.trim(),
+          matricule: registration.student.matricule || '—',
+          expected: 0,
+          entered: 0,
+          locked: 0,
+          missing: 0,
+          missingItems: [],
+        }
+        studentItem.expected += 1
+        if (enteredKeys.has(key)) studentItem.entered += 1
+        if (lockedKeys.has(key)) {
+          studentItem.locked += 1
+        } else {
+          studentItem.missing += 1
+          studentItem.missingItems.push({ teachingUnitId: registration.teachingUnitId, courseElementId, label })
+        }
+        byStudent.set(registration.studentId, studentItem)
+      }
+    }
+
+    const teachingUnits = Array.from(byTeachingUnit.values())
+      .sort((a, b) => (b.missing - a.missing) || a.code.localeCompare(b.code))
+    const students = Array.from(byStudent.values()).sort((a, b) => a.name.localeCompare(b.name))
+    const expectedGradeCount = teachingUnits.reduce((sum, item) => sum + item.expected, 0)
+    const enteredGradeCount = teachingUnits.reduce((sum, item) => sum + item.entered, 0)
+    const lockedGradeCount = teachingUnits.reduce((sum, item) => sum + item.locked, 0)
+    const missingGradeCount = Math.max(expectedGradeCount - lockedGradeCount, 0)
+
+    return NextResponse.json({
+      data: {
+        ready: expectedGradeCount > 0 && missingGradeCount === 0,
+        expectedGradeCount,
+        enteredGradeCount,
+        lockedGradeCount,
+        missingGradeCount,
+        studentsTotal: students.length,
+        studentsReady: students.filter((student) => student.expected > 0 && student.missing === 0).length,
+        byTeachingUnit: teachingUnits,
+        incompleteStudents: students
+          .filter((student) => student.missing > 0)
+          .map((student) => ({ ...student, missingItems: student.missingItems.slice(0, 8) })),
+      },
+    })
+  } catch (error) {
+    console.error('Grade completion error:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch grade completion', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     )
   }
@@ -855,6 +1070,9 @@ export const GET = withTenantAuth(async (user: SessionUser, tenantId: string, re
       return NextResponse.json({ error: 'FORBIDDEN', message: 'Accès refusé' }, { status: 403 })
     }
     return getGradeStatsHandler(user, tenantId, request)
+  }
+  if (action === 'completion') {
+    return getGradeCompletionHandler(user, tenantId, request)
   }
   return getGradesHandler(user, tenantId, request)
 })
