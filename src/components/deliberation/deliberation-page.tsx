@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAppStore } from '@/lib/store'
@@ -66,6 +66,7 @@ interface DeliberationSession {
   titre: string
   date: string
   statut: 'planifiee' | 'en_cours' | 'terminee'
+  type?: string
 }
 
 type Decision = 'ADMI' | 'AJOURNE' | 'REDOUBLANT' | 'EXCLU' | 'ADMI_DETTE' | 'COMPENSE'
@@ -127,11 +128,20 @@ export function DeliberationPage() {
     selectedSession ? { id: selectedSession } : { session: apiSessionType }
   )
   const deliberations: DeliberationSession[] = useMemo(
-    () => (deliberationData?.sessions ?? []).map((s: { id: string; titre: string; date: string; statut: string }) => ({
-      id: s.id, titre: s.titre, date: s.date, statut: s.statut as DeliberationSession['statut'],
+    () => (deliberationData?.sessions ?? []).map((s: { id: string; titre: string; date: string; statut: string; type?: string }) => ({
+      id: s.id, titre: s.titre, date: s.date, statut: s.statut as DeliberationSession['statut'], type: s.type,
     })),
     [deliberationData]
   )
+
+  useEffect(() => {
+    const expectedType = apiSessionType === 'RATTRAPAGE' ? 'RATTRAPAGE' : 'ANNUEL'
+    const latestSession = deliberations.find((session) => session.type === expectedType)
+    if (!selectedSession && latestSession) {
+      setSelectedSession(latestSession.id)
+    }
+  }, [apiSessionType, deliberations, selectedSession])
+
   const deliberationStudents: DeliberationStudent[] = useMemo(() => deliberationData?.students ?? [], [deliberationData])
   const isLocked: boolean = deliberationData?.selected?.isLocked ?? false
   const currentSession = deliberations.find(d => d.id === selectedSession)
@@ -582,10 +592,10 @@ export function DeliberationPage() {
                   size="sm"
                   className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs"
                   onClick={handleLaunch}
-                  disabled={isLaunching || isDeliberationLoading || !hasStudents}
+                  disabled={isLaunching || isDeliberationLoading || !hasStudents || Boolean(selectedSession)}
                 >
                   <Shield className="size-3.5 mr-1.5" />
-                  {isLaunching ? 'Lancement...' : 'Lancer la deliberation'}
+                  {selectedSession ? 'Session deja lancee' : isLaunching ? 'Lancement...' : 'Lancer la deliberation'}
                 </Button>
               </div>
             </CardContent>
@@ -601,7 +611,7 @@ export function DeliberationPage() {
           <div className="space-y-4">
             {/* Summary Cards with Gradient Accent Bars */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              {/* Admis */}
+              {/* Reussites */}
               <motion.div
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -625,8 +635,8 @@ export function DeliberationPage() {
                         </TooltipContent>
                       </Tooltip>
                     </div>
-                    <p className="text-2xl font-bold text-[#2d7a4f]">{stats.admis}</p>
-                    <p className="text-xs text-gray-500 mt-1">Admis</p>
+                    <p className="text-2xl font-bold text-[#2d7a4f]">{stats.admis + stats.admisDette}</p>
+                    <p className="text-xs text-gray-500 mt-1">Reussites</p>
                   </CardContent>
                 </Card>
               </motion.div>
@@ -924,7 +934,7 @@ export function DeliberationPage() {
                     <div className="p-3 bg-[#d4a85308] border border-[#d4a85315] rounded-lg">
                       <p className="text-xs font-medium text-[#d4a853]">Seuil de credits</p>
                       <p className="text-[11px] text-gray-600 mt-1">
-                        L&apos;admission est acquise si l&apos;etudiant obtient au moins 60% des credits du semestre (18/30) avec une moyenne generale &ge; 10/20.
+                        La délibération annuelle s&apos;appuie sur les crédits validés sur l&apos;année (60 crédits attendus par défaut) et une moyenne générale &ge; 10/20.
                       </p>
                     </div>
                     <div className="p-3 bg-[#c6282808] border border-[#c6282815] rounded-lg">
@@ -996,18 +1006,18 @@ export function DeliberationPage() {
 
                   {/* Credit Thresholds Quick Reference */}
                   <div className="mt-3 p-3 bg-[#1a274405] rounded-lg border border-[#1a274410]">
-                    <p className="text-[10px] font-semibold text-[#1a2744] uppercase mb-2">Seuils de credits (semestre 30 credits)</p>
+                    <p className="text-[10px] font-semibold text-[#1a2744] uppercase mb-2">Seuils de credits (annee 60 credits)</p>
                     <div className="grid grid-cols-3 gap-2">
                       <div className="text-center p-2 bg-white rounded border border-gray-100">
-                        <p className="text-sm font-bold text-[#2d7a4f]">30/30</p>
+                        <p className="text-sm font-bold text-[#2d7a4f]">60/60</p>
                         <p className="text-[10px] text-gray-500">Admis</p>
                       </div>
                       <div className="text-center p-2 bg-white rounded border border-gray-100">
-                        <p className="text-sm font-bold text-[#d4a853]">18-29</p>
+                        <p className="text-sm font-bold text-[#d4a853]">36-59</p>
                         <p className="text-[10px] text-gray-500">Dette</p>
                       </div>
                       <div className="text-center p-2 bg-white rounded border border-gray-100">
-                        <p className="text-sm font-bold text-[#c62828]">&lt;18</p>
+                        <p className="text-sm font-bold text-[#c62828]">&lt;36</p>
                         <p className="text-[10px] text-gray-500">Ajourne</p>
                       </div>
                     </div>

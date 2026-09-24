@@ -125,6 +125,7 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
       date: d.date.toLocaleDateString('fr-FR'),
       statut: statusMap[d.status] || 'planifiee',
       isLocked: d.isLocked,
+      type: d.type,
     }))
 
     if (deliberationId) {

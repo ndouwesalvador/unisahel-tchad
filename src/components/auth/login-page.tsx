@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { signIn } from 'next-auth/react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { motion } from 'framer-motion'
 import { useAppStore } from '@/lib/store'
@@ -95,13 +95,39 @@ function FloatingShape({
 }
 
 export function LoginPage() {
-  const { setView } = useAppStore()
-  const router = useRouter()
+  const { setView, login } = useAppStore()
   const searchParams = useSearchParams()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const callbackUrl = searchParams.get('callbackUrl') || '/'
+  const rawCallbackUrl = searchParams.get('callbackUrl') || '/'
+  const safeCallbackUrl = rawCallbackUrl.startsWith('/') && !rawCallbackUrl.startsWith('//') ? rawCallbackUrl : '/'
+  const callbackUrl = safeCallbackUrl.startsWith('/dashboard') ? '/' : safeCallbackUrl
+
+  const syncSessionAndRedirect = async () => {
+    const session = await fetch('/api/auth/session', { cache: 'no-store' })
+      .then((res) => res.json())
+      .catch(() => null)
+    const user = session?.user
+    if (user?.id) {
+      login({
+        id: user.id,
+        tenantId: user.tenantId || '',
+        email: user.email,
+        login: user.login,
+        firstName: user.firstName || user.name?.split(' ').slice(1).join(' ') || '',
+        lastName: user.lastName || user.name?.split(' ')[0] || '',
+        role: user.role || 'ETUDIANT',
+        photo: user.photo,
+        tenantName: user.tenantName,
+        tenantLogo: user.tenantLogo,
+        tenantSlug: user.tenantSlug,
+        tenantAcademicSystem: user.tenantAcademicSystem,
+        mustChangePassword: Boolean(user.mustChangePassword),
+      })
+    }
+    window.location.href = callbackUrl
+  }
 
   const handleDemoLogin = async (demo: DemoRole) => {
     setEmail(demo.email)
@@ -120,7 +146,7 @@ export function LoginPage() {
         toast.error('Échec de la connexion', { description: result.error })
       } else {
         toast.success('Connexion réussie')
-        window.location.href = callbackUrl
+        await syncSessionAndRedirect()
       }
     } catch {
       toast.error('Erreur de connexion', { description: 'Veuillez réessayer' })
@@ -145,7 +171,7 @@ export function LoginPage() {
         toast.error('Échec de la connexion', { description: result.error })
       } else {
         toast.success('Connexion réussie')
-        window.location.href = callbackUrl
+        await syncSessionAndRedirect()
       }
     } catch {
       toast.error('Erreur de connexion', { description: 'Veuillez réessayer' })
