@@ -73,6 +73,45 @@ interface FlatUE {
 
 type LocalEdit = { cc?: string; exam?: string; tp?: string; observation?: string }
 
+interface GradeCompletionItem {
+  teachingUnitId: string
+  courseElementId: string | null
+  code: string
+  name: string
+  ecCode: string | null
+  ecName: string | null
+  semesterName: string
+  levelName: string
+  programName: string
+  expected: number
+  entered: number
+  locked: number
+  missing: number
+}
+
+interface IncompleteStudent {
+  studentId: string
+  name: string
+  matricule: string
+  expected: number
+  entered: number
+  locked: number
+  missing: number
+  missingItems: { teachingUnitId: string; courseElementId: string | null; label: string }[]
+}
+
+interface GradeCompletion {
+  ready: boolean
+  expectedGradeCount: number
+  enteredGradeCount: number
+  lockedGradeCount: number
+  missingGradeCount: number
+  studentsTotal: number
+  studentsReady: number
+  byTeachingUnit: GradeCompletionItem[]
+  incompleteStudents: IncompleteStudent[]
+}
+
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 function flattenTeachingUnits(faculties: any[]): FlatUE[] {
@@ -158,6 +197,19 @@ export function GradesPage() {
     },
     enabled: !!selectedUE,
   })
+  const { data: completionQuery, isLoading: completionLoading } = useQuery({
+    queryKey: ['grades-completion', apiSession, academicYearId],
+    queryFn: async () => {
+      const params = new URLSearchParams({ action: 'completion', session: apiSession })
+      if (academicYearId) params.set('academicYearId', academicYearId)
+      const res = await fetch(`/api/grades?${params.toString()}`)
+      if (!res.ok) throw new Error('Failed to fetch grade completion')
+      return res.json()
+    },
+    enabled: Boolean(academicYearId),
+  })
+  const completion: GradeCompletion | null = completionQuery?.data ?? null
+  const selectedCompletionItem = completion?.byTeachingUnit.find((item) => item.teachingUnitId === selectedUE) ?? null
 
   const dataLoading = structureLoading || studentsLoading || gradesLoading
 
@@ -193,7 +245,10 @@ export function GradesPage() {
     setLocalEdits(prev => ({ ...prev, [studentId]: { ...prev[studentId], [field]: value } }))
   }
 
-  const refetchGrades = () => queryClient.invalidateQueries({ queryKey: ['grades', selectedUE, apiSession, academicYearId] })
+  const refetchGrades = () => {
+    queryClient.invalidateQueries({ queryKey: ['grades', selectedUE, apiSession, academicYearId] })
+    queryClient.invalidateQueries({ queryKey: ['grades-completion', apiSession, academicYearId] })
+  }
 
   const handleSave = async () => {
     if (!currentUE) return
@@ -445,6 +500,119 @@ export function GradesPage() {
         </div>
       </motion.div>
 
+      {/* ─── Global Completion Gate ───────────────────────────────────────── */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.03 }}
+      >
+        <Card className={`border-l-4 ${completion?.ready ? 'border-l-[#2d7a4f]' : 'border-l-[#d4a853]'}`}>
+          <CardContent className="p-4">
+            <div className="flex flex-col xl:flex-row xl:items-start justify-between gap-4">
+              <div className="space-y-3 flex-1">
+                <div className="flex items-start gap-3">
+                  <div className={`p-2 rounded-lg ${completion?.ready ? 'bg-[#2d7a4f10]' : 'bg-[#d4a85315]'}`}>
+                    {completion?.ready ? (
+                      <CheckCircle2 className="size-4 text-[#2d7a4f]" />
+                    ) : (
+                      <AlertCircle className="size-4 text-[#d4a853]" />
+                    )}
+                  </div>
+                  <div>
+                    <h2 className="text-sm font-semibold text-[#1a2744]">
+                      {completion?.ready ? 'Dossier de notes prêt pour délibération' : 'Dossier de notes incomplet pour la délibération'}
+                    </h2>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Cette progression couvre toutes les UE/EC inscrites pédagogiquement pour la session {selectedSession === 'normale' ? 'normale' : 'de rattrapage'}.
+                      Les PV restent bloqués tant que toutes les notes ne sont pas verrouillées.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+                  <div className="rounded-lg bg-gray-50 border border-gray-100 p-3">
+                    <p className="text-[10px] uppercase tracking-wide text-gray-400">Verrouillées</p>
+                    <p className="text-lg font-bold text-[#1a2744]">
+                      {completion ? `${completion.lockedGradeCount}/${completion.expectedGradeCount}` : completionLoading ? '...' : '—'}
+                    </p>
+                    <Progress
+                      value={completion?.expectedGradeCount ? (completion.lockedGradeCount / completion.expectedGradeCount) * 100 : 0}
+                      className="h-1.5 mt-2"
+                    />
+                  </div>
+                  <div className="rounded-lg bg-gray-50 border border-gray-100 p-3">
+                    <p className="text-[10px] uppercase tracking-wide text-gray-400">Saisies</p>
+                    <p className="text-lg font-bold text-[#1a2744]">
+                      {completion ? `${completion.enteredGradeCount}/${completion.expectedGradeCount}` : completionLoading ? '...' : '—'}
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-gray-50 border border-gray-100 p-3">
+                    <p className="text-[10px] uppercase tracking-wide text-gray-400">Manquantes</p>
+                    <p className={`text-lg font-bold ${completion?.missingGradeCount ? 'text-[#d4a853]' : 'text-[#2d7a4f]'}`}>
+                      {completion?.missingGradeCount ?? (completionLoading ? '...' : '—')}
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-gray-50 border border-gray-100 p-3">
+                    <p className="text-[10px] uppercase tracking-wide text-gray-400">Étudiants complets</p>
+                    <p className="text-lg font-bold text-[#1a2744]">
+                      {completion ? `${completion.studentsReady}/${completion.studentsTotal}` : completionLoading ? '...' : '—'}
+                    </p>
+                  </div>
+                </div>
+
+                {completion && !completion.ready && completion.byTeachingUnit.length > 0 && (
+                  <div className="rounded-lg border border-[#d4a85330] bg-[#d4a85308] p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-xs font-medium text-[#1a2744]">UE / EC à compléter</p>
+                      <Badge className="text-[10px] bg-[#d4a85315] text-[#d4a853] border-0">
+                        Cliquez pour ouvrir
+                      </Badge>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2">
+                      {completion.byTeachingUnit
+                        .filter((item) => item.missing > 0)
+                        .slice(0, 6)
+                        .map((item) => (
+                          <button
+                            key={`${item.teachingUnitId}:${item.courseElementId || 'UE'}`}
+                            type="button"
+                            onClick={() => setSelectedUE(item.teachingUnitId)}
+                            className={`text-left rounded-lg border p-2.5 transition-all hover:shadow-sm ${
+                              selectedUE === item.teachingUnitId
+                                ? 'border-[#2d7a4f] bg-white'
+                                : 'border-[#d4a85325] bg-white/70 hover:border-[#d4a853]'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-xs font-semibold text-[#1a2744] truncate">
+                                {item.code} {item.ecCode ? `/ ${item.ecCode}` : ''}
+                              </span>
+                              <Badge className="text-[10px] bg-[#c6282810] text-[#c62828] border-0">
+                                {item.missing} manque
+                              </Badge>
+                            </div>
+                            <p className="text-[11px] text-gray-500 mt-1 truncate">{item.name}</p>
+                            <p className="text-[10px] text-gray-400 mt-1">
+                              {item.locked}/{item.expected} verrouillées · {item.programName} {item.levelName}
+                            </p>
+                          </button>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+                {completion && !completion.ready && completion.incompleteStudents.length > 0 && (
+                  <p className="text-[11px] text-gray-500">
+                    Étudiants incomplets : {completion.incompleteStudents.slice(0, 3).map((student) => `${student.name} (${student.missing})`).join(', ')}
+                    {completion.incompleteStudents.length > 3 ? '…' : ''}
+                  </p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
       {/* ─── Enhanced Stats Cards ──────────────────────────────────────────── */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
@@ -464,13 +632,13 @@ export function GradesPage() {
               </Badge>
             </div>
             <p className="text-2xl font-bold text-[#1a2744]">{notesSaisies}</p>
-            <p className="text-xs text-gray-500 mt-1">Notes saisies</p>
+            <p className="text-xs text-gray-500 mt-1">Notes saisies pour l&apos;UE</p>
             <Progress
               value={notesAttendues > 0 ? (notesSaisies / notesAttendues) * 100 : 0}
               className="h-1.5 mt-2"
             />
             <p className="text-[10px] text-gray-400 mt-1">
-              {notesAttendues > 0 ? Math.round((notesSaisies / notesAttendues) * 100) : 0}% complete
+              UE sélectionnée : {notesAttendues > 0 ? Math.round((notesSaisies / notesAttendues) * 100) : 0}% complete
             </p>
           </CardContent>
         </Card>
@@ -487,7 +655,7 @@ export function GradesPage() {
               </Badge>
             </div>
             <p className="text-2xl font-bold text-[#d4a853]">{classAverage.toFixed(1)}</p>
-            <p className="text-xs text-gray-500 mt-1">Moyenne generale</p>
+            <p className="text-xs text-gray-500 mt-1">Moyenne UE sélectionnée</p>
             <div className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
               <div
                 className="h-full bg-[#d4a853] rounded-full transition-all"
@@ -510,7 +678,7 @@ export function GradesPage() {
               </Badge>
             </div>
             <p className="text-2xl font-bold text-[#2d7a4f]">{validationRate}%</p>
-            <p className="text-xs text-gray-500 mt-1">Taux de validation</p>
+            <p className="text-xs text-gray-500 mt-1">Taux de réussite UE</p>
             <Progress
               value={validationRate}
               className="h-1.5 mt-2"
@@ -603,6 +771,11 @@ export function GradesPage() {
               <p className="text-xs text-[#1a2744] font-medium flex items-center gap-1.5">
                 <AlertCircle className="size-3.5" />
                 Saisissez les CC, examens et TP dans le tableau ci-dessous. Les notes validées sont verrouillées et ne peuvent plus être modifiées.
+                {selectedCompletionItem && (
+                  <span className="ml-1 font-semibold">
+                    Cette UE : {selectedCompletionItem.locked}/{selectedCompletionItem.expected} note(s) verrouillée(s), {selectedCompletionItem.missing} manquante(s).
+                  </span>
+                )}
               </p>
             </div>
           </CardContent>
