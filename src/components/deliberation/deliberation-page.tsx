@@ -794,7 +794,9 @@ export function DeliberationPage() {
                       </Tooltip>
                     </div>
                     <p className="text-2xl font-bold text-[#2d7a4f]">{stats.admis + stats.admisDette}</p>
-                    <p className="text-xs text-gray-500 mt-1">Reussites</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {isReadyForJury ? 'Reussites' : 'Reussites provisoires'}
+                    </p>
                   </CardContent>
                 </Card>
               </motion.div>
@@ -896,14 +898,18 @@ export function DeliberationPage() {
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <Award className="size-4 text-[#2d7a4f]" />
-                    <span className="text-sm font-semibold text-[#1a2744]">Taux d&apos;admission</span>
+                    <span className="text-sm font-semibold text-[#1a2744]">
+                      {isReadyForJury ? 'Taux d\u2019admission' : 'Taux provisoire non officialisable'}
+                    </span>
                   </div>
                   <span className="text-2xl font-bold text-[#2d7a4f]">{stats.admissionRate}%</span>
                 </div>
                 <Progress value={stats.admissionRate} className="h-3" />
                 <div className="flex items-center justify-between mt-2">
                   <p className="text-[10px] text-gray-400">
-                    {stats.admis + stats.admisDette + stats.compenses} reussites sur {stats.total} etudiants
+                    {isReadyForJury
+                      ? `${stats.admis + stats.admisDette + stats.compenses} reussites sur ${stats.total} etudiants`
+                      : 'Calcul indicatif uniquement : les notes verrouillées sont incomplètes, aucun PV officiel ne peut être généré.'}
                   </p>
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-1">
@@ -943,6 +949,11 @@ export function DeliberationPage() {
                   <CardTitle className="text-sm font-semibold text-[#1a2744]">
                     Resultats des etudiants
                   </CardTitle>
+                  {!isReadyForJury && (
+                    <Badge className="text-[10px] bg-[#d4a85315] text-[#d4a853] border-0">
+                      Provisoire
+                    </Badge>
+                  )}
                   <Badge className="text-[10px] bg-[#1a274410] text-[#1a2744] border-0">
                     {deliberationStudents.length} etudiants
                   </Badge>
