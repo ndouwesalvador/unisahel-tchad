@@ -83,6 +83,33 @@ interface DeliberationStudent {
   observation: string
 }
 
+interface MissingGradeItem {
+  ueCode: string | null
+  ueName: string
+  ecCode: string | null
+  ecName: string | null
+}
+
+interface IncompleteStudent {
+  studentId: string
+  name: string
+  matricule: string
+  expected: number
+  locked: number
+  missing: number
+  missingItems: MissingGradeItem[]
+}
+
+interface DeliberationReadiness {
+  ready: boolean
+  expectedGradeCount: number
+  lockedGradeCount: number
+  missingGradeCount: number
+  studentsTotal: number
+  studentsReady: number
+  incompleteStudents: IncompleteStudent[]
+}
+
 const decisionConfig: Record<Decision, { label: string; className: string; icon: React.ElementType; tooltip: string }> = {
   ADMI: { label: 'Admis', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0 hover:bg-[#2d7a4f15]', icon: CheckCircle2, tooltip: 'Etudiant admis avec succes' },
   AJOURNE: { label: 'Ajourne', className: 'bg-[#ef6c0015] text-[#ef6c00] border-0 hover:bg-[#ef6c0015]', icon: Clock, tooltip: 'Passage en session de rattrapage' },
@@ -103,6 +130,7 @@ const sessionStatusConfig: Record<string, { label: string; className: string }> 
 export function DeliberationPage() {
   const queryClient = useQueryClient()
   const tenantId = useAppStore((s) => s.user?.tenantId)
+  const setView = useAppStore((s) => s.setView)
   const { data: institutionQuery } = useInstitution() as {
     data: { tenant: { name: string; address: string | null; city: string | null; phone: string | null; email: string | null; rectorName: string | null; rectorTitle: string | null } } | undefined
   }
@@ -143,14 +171,24 @@ export function DeliberationPage() {
   }, [apiSessionType, deliberations, selectedSession])
 
   const deliberationStudents: DeliberationStudent[] = useMemo(() => deliberationData?.students ?? [], [deliberationData])
+  const readiness: DeliberationReadiness | null = deliberationData?.readiness ?? null
+  const isReadyForJury = Boolean(readiness?.ready)
   const isLocked: boolean = deliberationData?.selected?.isLocked ?? false
   const currentSession = deliberations.find(d => d.id === selectedSession)
   const hasStudents = deliberationStudents.length > 0
-  const canExportPV = Boolean(selectedSession && isLocked && hasStudents)
-  const canLock = Boolean(selectedSession && !isLocked && hasStudents)
+  const canExportPV = Boolean(selectedSession && isLocked && hasStudents && isReadyForJury)
+  const canLock = Boolean(selectedSession && !isLocked && hasStudents && isReadyForJury)
 
   const handleLaunch = async () => {
     if (isDeliberationLoading) return
+    if (!isReadyForJury) {
+      toast.error('Délibération bloquée', {
+        description: readiness
+          ? `${readiness.missingGradeCount} note(s) verrouillée(s) manquante(s). Complétez et verrouillez les notes avant le jury.`
+          : 'La complétude des notes est en cours de vérification.',
+      })
+      return
+    }
     if (!hasStudents) {
       toast.error('Aucune note à délibérer', { description: "Saisissez d'abord les notes de l'année académique en cours." })
       return
@@ -177,6 +215,14 @@ export function DeliberationPage() {
 
   const handleLock = async () => {
     if (!selectedSession) return
+    if (!isReadyForJury) {
+      toast.error('Validation bloquée', {
+        description: readiness
+          ? `${readiness.missingGradeCount} note(s) verrouillée(s) manquante(s).`
+          : 'La complétude des notes est en cours de vérification.',
+      })
+      return
+    }
     if (!hasStudents) {
       toast.error('Aucun résultat à valider')
       return
@@ -185,11 +231,14 @@ export function DeliberationPage() {
     setIsLocking(true)
     try {
       const res = await fetch(`/api/deliberation?id=${selectedSession}`, { method: 'PUT' })
-      if (!res.ok) throw new Error('failed')
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json.error || 'Echec de la validation')
       toast.success('Deliberation validee', { description: 'Les resultats sont officialises' })
       queryClient.invalidateQueries({ queryKey: ['deliberation'] })
-    } catch {
-      toast.error('Echec de la validation')
+    } catch (error) {
+      toast.error('Echec de la validation', {
+        description: error instanceof Error ? error.message : undefined,
+      })
     } finally {
       setIsLocking(false)
     }
@@ -206,6 +255,14 @@ export function DeliberationPage() {
     }
     if (!isLocked) {
       toast.error('Délibération non validée', { description: 'Validez officiellement la délibération avant de générer le PV.' })
+      return
+    }
+    if (!isReadyForJury) {
+      toast.error('PV bloqué', {
+        description: readiness
+          ? `${readiness.missingGradeCount} note(s) verrouillée(s) manquante(s). Le PV officiel exige une délibération complète.`
+          : 'La complétude des notes est en cours de vérification.',
+      })
       return
     }
     if (!hasStudents) {
@@ -279,7 +336,7 @@ export function DeliberationPage() {
     } finally {
       setIsExportingPV(false)
     }
-  }, [selectedSession, selectedSessionType, juryMembers, deliberations, deliberationStudents, tenantId, institutionQuery, currentYearName, isLocked, hasStudents])
+  }, [selectedSession, selectedSessionType, juryMembers, deliberations, deliberationStudents, tenantId, institutionQuery, currentYearName, isLocked, hasStudents, isReadyForJury, readiness])
 
   // ─── Computed Stats ────────────────────────────────────────────────────
   const stats = useMemo(() => {
@@ -442,6 +499,101 @@ export function DeliberationPage() {
           </Card>
         </motion.div>
 
+        {/* ─── Grade Readiness Gate ───────────────────────────────────────── */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.08 }}
+        >
+          <Card className={`border-l-4 ${isReadyForJury ? 'border-l-[#2d7a4f]' : 'border-l-[#d4a853]'}`}>
+            <CardContent className="p-4">
+              <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+                <div className="space-y-3 flex-1">
+                  <div className="flex items-start gap-3">
+                    <div className={`p-2 rounded-lg ${isReadyForJury ? 'bg-[#2d7a4f10]' : 'bg-[#d4a85315]'}`}>
+                      {isReadyForJury ? (
+                        <CheckCircle2 className="size-4 text-[#2d7a4f]" />
+                      ) : (
+                        <AlertTriangle className="size-4 text-[#d4a853]" />
+                      )}
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-semibold text-[#1a2744]">
+                        {isReadyForJury ? 'Notes prêtes pour jury' : 'Délibération bloquée : notes incomplètes'}
+                      </h3>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Le jury utilise uniquement les notes verrouillées des UE réellement inscrites. Les PV officiels sont bloqués tant que cette vérification n&apos;est pas complète.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    <div className="rounded-lg bg-gray-50 border border-gray-100 p-3">
+                      <p className="text-[10px] uppercase tracking-wide text-gray-400">Notes verrouillées</p>
+                      <p className="text-lg font-bold text-[#1a2744]">
+                        {readiness ? `${readiness.lockedGradeCount}/${readiness.expectedGradeCount}` : '—'}
+                      </p>
+                    </div>
+                    <div className="rounded-lg bg-gray-50 border border-gray-100 p-3">
+                      <p className="text-[10px] uppercase tracking-wide text-gray-400">Manquantes</p>
+                      <p className={`text-lg font-bold ${readiness?.missingGradeCount ? 'text-[#d4a853]' : 'text-[#2d7a4f]'}`}>
+                        {readiness?.missingGradeCount ?? '—'}
+                      </p>
+                    </div>
+                    <div className="rounded-lg bg-gray-50 border border-gray-100 p-3">
+                      <p className="text-[10px] uppercase tracking-wide text-gray-400">Étudiants complets</p>
+                      <p className="text-lg font-bold text-[#1a2744]">
+                        {readiness ? `${readiness.studentsReady}/${readiness.studentsTotal}` : '—'}
+                      </p>
+                    </div>
+                    <div className="rounded-lg bg-gray-50 border border-gray-100 p-3">
+                      <p className="text-[10px] uppercase tracking-wide text-gray-400">Session</p>
+                      <p className="text-lg font-bold text-[#1a2744]">
+                        {selectedSessionType === 'normale' ? 'Normale' : 'Rattrapage'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {!isReadyForJury && readiness && readiness.incompleteStudents.length > 0 && (
+                    <div className="rounded-lg border border-[#d4a85330] bg-[#d4a85308] p-3 space-y-2">
+                      <p className="text-xs font-medium text-[#1a2744]">Éléments à compléter en priorité</p>
+                      <div className="space-y-2">
+                        {readiness.incompleteStudents.slice(0, 3).map((student) => (
+                          <div key={student.studentId} className="text-xs text-gray-600">
+                            <span className="font-semibold text-[#1a2744]">{student.name}</span>
+                            <span className="text-gray-400"> ({student.matricule}) — </span>
+                            <span>{student.missing} note(s) manquante(s) : </span>
+                            <span className="text-gray-500">
+                              {student.missingItems.slice(0, 4).map((item) => (
+                                item.ecCode || item.ecName
+                                  ? `${item.ueCode || item.ueName} / ${item.ecCode || item.ecName}`
+                                  : `${item.ueCode || item.ueName}`
+                              )).join(', ')}
+                              {student.missingItems.length > 4 ? '…' : ''}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex lg:flex-col gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs"
+                    onClick={() => setView('grades')}
+                  >
+                    <BookOpen className="size-3.5 mr-1.5" />
+                    Ouvrir Notes
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
         {/* ─── Jury Configuration Card ─────────────────────────────────────── */}
         <motion.div
           initial={{ opacity: 0, y: 8 }}
@@ -592,10 +744,16 @@ export function DeliberationPage() {
                   size="sm"
                   className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs"
                   onClick={handleLaunch}
-                  disabled={isLaunching || isDeliberationLoading || !hasStudents || Boolean(selectedSession)}
+                  disabled={isLaunching || isDeliberationLoading || !hasStudents || !isReadyForJury || Boolean(selectedSession)}
                 >
                   <Shield className="size-3.5 mr-1.5" />
-                  {selectedSession ? 'Session deja lancee' : isLaunching ? 'Lancement...' : 'Lancer la deliberation'}
+                  {selectedSession
+                    ? 'Session deja lancee'
+                    : isLaunching
+                      ? 'Lancement...'
+                      : !isReadyForJury
+                        ? 'Notes incompletes'
+                        : 'Lancer la deliberation'}
                 </Button>
               </div>
             </CardContent>
