@@ -114,6 +114,16 @@ interface GradeCompletion {
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
+function isValidGradeInput(value: string) {
+  if (value.trim() === '') return false
+  const parsed = Number(value)
+  return !Number.isNaN(parsed) && parsed >= 0 && parsed <= 20
+}
+
+function isGradeReadyForLock(grade: GradeEntry) {
+  return grade.isLocked || (isValidGradeInput(grade.cc) && isValidGradeInput(grade.exam))
+}
+
 function flattenTeachingUnits(faculties: any[]): FlatUE[] {
   const result: FlatUE[] = []
   for (const faculty of faculties || []) {
@@ -489,11 +499,14 @@ export function GradesPage() {
     return missing.find(item => item.teachingUnitId !== selectedUE) ?? missing[0]
   }, [completion, selectedUE])
   const canSave = Boolean(currentUE?.courseElementId && academicYearId && hasLocalEdits && !saving && !savingAndLocking)
+  const unlockedGrades = grades.filter(g => !g.isLocked)
+  const allCurrentUEGradesReadyForLock = grades.length > 0 && grades.every(isGradeReadyForLock)
   const canSaveAndLockCurrentUE = Boolean(
     currentUE?.courseElementId &&
     academicYearId &&
     grades.length > 0 &&
-    grades.some(g => !g.isLocked) &&
+    unlockedGrades.length > 0 &&
+    allCurrentUEGradesReadyForLock &&
     !saving &&
     !savingAndLocking
   )
