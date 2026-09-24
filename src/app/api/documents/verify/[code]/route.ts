@@ -32,12 +32,26 @@ export async function GET(
       })
     }
 
+    const tenant = await db.tenant.findUnique({
+      where: { id: document.tenantId },
+      select: { name: true },
+    })
+
+    let contentTenantName = ''
+    try {
+      const parsed = JSON.parse(document.content || '{}') as { tenant?: { name?: string } }
+      contentTenantName = parsed.tenant?.name || ''
+    } catch {
+      contentTenantName = ''
+    }
+
     return NextResponse.json({
       valid: true,
       document: {
         type: document.type,
         number: document.number,
         status: document.status,
+        institution: tenant?.name || contentTenantName,
         generatedAt: document.createdAt,
         validatedAt: document.validatedAt,
         student: document.student
