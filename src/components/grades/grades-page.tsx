@@ -124,6 +124,32 @@ function isGradeReadyForLock(grade: GradeEntry) {
   return grade.isLocked || (isValidGradeInput(grade.cc) && isValidGradeInput(grade.exam))
 }
 
+function normalizeImportHeader(value: string) {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '')
+}
+
+function getImportValue(row: Record<string, unknown>, aliases: string[]) {
+  const normalizedAliases = new Set(aliases.map(normalizeImportHeader))
+  for (const [key, value] of Object.entries(row)) {
+    if (normalizedAliases.has(normalizeImportHeader(key))) return value
+  }
+  return undefined
+}
+
+function parseImportedGradeValue(value: unknown, label: string, line: number) {
+  if (value === undefined || value === null || String(value).trim() === '') return undefined
+  const normalized = String(value).trim().replace(',', '.')
+  const parsed = Number(normalized)
+  if (Number.isNaN(parsed) || parsed < 0 || parsed > 20) {
+    throw new Error(`ligne ${line}: ${label} doit être compris entre 0 et 20`)
+  }
+  return String(parsed)
+}
+
 function flattenTeachingUnits(faculties: any[]): FlatUE[] {
   const result: FlatUE[] = []
   for (const faculty of faculties || []) {
@@ -444,10 +470,36 @@ export function GradesPage() {
         TP: g.tp,
         Moyenne: g.moyenne ?? '',
         Statut: g.isLocked ? 'Valide' : (g.moyenne !== null ? 'A valider' : '-'),
+        UE: currentUE?.code || '',
+        ECUE: selectedCompletionItem?.ecCode || '',
       })),
       `notes_${currentUE?.code || 'export'}`
     )
     toast.success('Export généré')
+  }
+
+  const handleDownloadImportTemplate = () => {
+    if (grades.length === 0) {
+      toast.info('Aucun étudiant disponible pour ce modèle')
+      return
+    }
+    exportToExcel(
+      grades.map(g => ({
+        Matricule: g.matricule,
+        Nom: g.nom,
+        Prenom: g.prenom,
+        CC: g.isLocked ? g.cc : '',
+        Examen: g.isLocked ? g.exam : '',
+        TP: g.isLocked ? g.tp : '',
+        Statut: g.isLocked ? 'Déjà verrouillé - ne pas modifier' : 'À compléter',
+        UE: currentUE?.code || '',
+        ECUE: selectedCompletionItem?.ecCode || '',
+      })),
+      `modele_notes_${currentUE?.code || 'ue'}`
+    )
+    toast.success('Modèle généré', {
+      description: 'Complétez les colonnes CC et Examen, puis réimportez le fichier sur cette même UE.',
+    })
   }
 
   const handleImportClick = () => importInputRef.current?.click()
@@ -461,20 +513,77 @@ export function GradesPage() {
       const byMatricule = new Map(grades.map(g => [g.matricule, g]))
       const edits: Record<string, LocalEdit> = {}
       let matched = 0
-      for (const row of rows) {
-        const matricule = String(row['Matricule'] ?? row['matricule'] ?? '').trim()
-        if (!matricule) continue
-        const student = byMatricule.get(matricule)
-        if (!student) continue
-        matched++
-        edits[student.studentId] = {
-          cc: row['CC'] !== undefined ? String(row['CC']) : undefined,
-          exam: row['Examen'] !== undefined ? String(row['Examen']) : (row['Exam'] !== undefined ? String(row['Exam']) : undefined),
-          tp: row['TP'] !== undefined ? String(row['TP']) : undefined,
+      let ignoredLocked = 0
+      let ignoredEmpty = 0
+      let unknownMatricules = 0
+      const errors: string[] = []
+
+      rows.forEach((row, index) => {
+        const line = index + 2
+        const matricule = String(getImportValue(row, ['Matricule', 'Matricule étudiant', 'Numéro', 'Numero', 'Student ID']) ?? '').trim()
+        if (!matricule) {
+          ignoredEmpty++
+          return
         }
+        const student = byMatricule.get(matricule)
+        if (!student) {
+          unknownMatricules++
+          return
+        }
+        if (student.isLocked) {
+          ignoredLocked++
+          return
+        }
+
+        try {
+          const cc = parseImportedGradeValue(getImportValue(row, ['CC', 'Controle continu', 'Contrôle continu', 'Devoir']), 'CC', line)
+          const exam = parseImportedGradeValue(getImportValue(row, ['Examen', 'Exam', 'Note examen']), 'Examen', line)
+          const tp = parseImportedGradeValue(getImportValue(row, ['TP', 'Travaux pratiques']), 'TP', line)
+
+          if (cc === undefined && exam === undefined && tp === undefined) {
+            ignoredEmpty++
+            return
+          }
+
+          edits[student.studentId] = {
+            ...(cc !== undefined ? { cc } : {}),
+            ...(exam !== undefined ? { exam } : {}),
+            ...(tp !== undefined ? { tp } : {}),
+          }
+          matched++
+        } catch (error) {
+          errors.push(error instanceof Error ? error.message : `ligne ${line}: valeur invalide`)
+        }
+      })
+
+      if (errors.length > 0) {
+        toast.error('Import refusé', {
+          description: `${errors[0]}${errors.length > 1 ? ` (+${errors.length - 1} autre(s) erreur(s))` : ''}`,
+        })
+        return
       }
+
+      if (matched === 0) {
+        toast.warning('Aucune note importée', {
+          description: [
+            ignoredLocked ? `${ignoredLocked} ligne(s) verrouillée(s)` : '',
+            unknownMatricules ? `${unknownMatricules} matricule(s) inconnu(s)` : '',
+            ignoredEmpty ? `${ignoredEmpty} ligne(s) vide(s)` : '',
+          ].filter(Boolean).join(' · ') || 'Aucune ligne exploitable trouvée.',
+        })
+        return
+      }
+
       setLocalEdits(prev => ({ ...prev, ...edits }))
-      toast.success('Fichier importé', { description: `${matched} étudiant(s) mis à jour sur ${rows.length} ligne(s) lues. Cliquez sur Enregistrer pour sauvegarder.` })
+      toast.success('Fichier importé', {
+        description: [
+          `${matched} étudiant(s) préparé(s) sur ${rows.length} ligne(s)`,
+          ignoredLocked ? `${ignoredLocked} verrouillée(s) ignorée(s)` : '',
+          unknownMatricules ? `${unknownMatricules} matricule(s) inconnu(s)` : '',
+          ignoredEmpty ? `${ignoredEmpty} ligne(s) vide(s)` : '',
+          'Cliquez sur Enregistrer pour sauvegarder.',
+        ].filter(Boolean).join(' · '),
+      })
     } catch (err) {
       toast.error('Erreur import', { description: err instanceof Error ? err.message : 'Fichier illisible' })
     }
@@ -596,6 +705,9 @@ export function GradesPage() {
           <Button variant="outline" size="sm" className="text-xs" onClick={handleImportClick}>
             <Upload className="size-3.5 mr-1.5" />
             Importer Excel
+          </Button>
+          <Button variant="outline" size="sm" className="text-xs" onClick={handleDownloadImportTemplate}>
+            Modèle notes
           </Button>
           <Button variant="outline" size="sm" className="text-xs" onClick={handleExport}>
             <Download className="size-3.5 mr-1.5" />
