@@ -69,10 +69,35 @@ describe('POST /api/grades?action=bulk', () => {
     const body = await res.json()
 
     expect(res.status).toBe(200)
-    expect(body.data).toEqual({ created: 1, updated: 0, errors: [] })
+    expect(body.data).toEqual({ created: 1, updated: 0, lockedSkipped: 0, errors: [] })
     expect(dbMock.grade.create).toHaveBeenCalledTimes(1)
     const createArgs = dbMock.grade.create.mock.calls[0][0]
     expect(createArgs.data.finalGrade).toBeCloseTo(14 * 0.4 + 15 * 0.6, 5)
+  })
+
+  it('skips existing locked grades during bulk entry', async () => {
+    dbMock.student.findFirst.mockResolvedValue({ id: STUDENT_ID, tenantId: sessionUser.tenantId })
+    dbMock.courseElement.findFirst.mockResolvedValue({ id: COURSE_ELEMENT_ID, teachingUnitId: TEACHING_UNIT_ID })
+    dbMock.grade.findFirst.mockResolvedValue({ id: 'cgrade00000000000000000001', isLocked: true })
+
+    const res = await POST(req('/api/grades?action=bulk', {
+      academicYearId: ACADEMIC_YEAR_ID,
+      session: 'NORMALE',
+      grades: [{
+        studentId: STUDENT_ID,
+        teachingUnitId: TEACHING_UNIT_ID,
+        courseElementId: COURSE_ELEMENT_ID,
+        academicYearId: ACADEMIC_YEAR_ID,
+        session: 'NORMALE',
+        ccGrade: 18,
+        examGrade: 18,
+      }],
+    }))
+    const body = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(body.data).toEqual({ created: 0, updated: 0, lockedSkipped: 1, errors: [] })
+    expect(dbMock.grade.update).not.toHaveBeenCalled()
   })
 
   it("records a per-row error and does not throw when a student doesn't belong to the tenant", async () => {
