@@ -19,75 +19,19 @@ import {
   Building2,
   Calendar,
   User,
-  Camera,
-  ScanLine,
   Fingerprint,
   ShieldCheck,
-  TrendingUp,
-  AlertTriangle,
   Clock,
   Hash,
 } from 'lucide-react'
 
-// ─── Demo Verified Documents ──────────────────────────────────────────────────
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const verifiedDocuments: Record<string, {
+type VerificationResult = {
   type: string
   etudiant: string
   matricule: string
   institution: string
   date: string
   valide: boolean
-}> = {
-  'VER-UDN-2024-RN-001': {
-    type: 'Relevé de notes',
-    etudiant: 'ABAKAR Adam Hassane',
-    matricule: 'UDN/L2/2024/001',
-    institution: "Université de N'Djamena",
-    date: '20/01/2025',
-    valide: true,
-  },
-  'VER-UDN-2024-AI-001': {
-    type: "Attestation d'inscription",
-    etudiant: 'ABAKAR Adam Hassane',
-    matricule: 'UDN/L2/2024/001',
-    institution: "Université de N'Djamena",
-    date: '15/09/2024',
-    valide: true,
-  },
-  'VER-UDN-2024-CS-001': {
-    type: 'Certificat de scolarité',
-    etudiant: 'ABAKAR Adam Hassane',
-    matricule: 'UDN/L2/2024/001',
-    institution: "Université de N'Djamena",
-    date: '18/09/2024',
-    valide: true,
-  },
-  'VER-UDN-2024-AR-001': {
-    type: 'Attestation de réussite',
-    etudiant: 'DOUMNGAR Zakaria',
-    matricule: 'UDN/L3/2024/006',
-    institution: "Université de N'Djamena",
-    date: '05/07/2024',
-    valide: true,
-  },
-  'VER-UDN-2025-LR-001': {
-    type: 'Lettre de recommandation',
-    etudiant: 'AHMAT Achta',
-    matricule: 'UDN/M1/2024/016',
-    institution: "Université de N'Djamena",
-    date: '10/01/2025',
-    valide: true,
-  },
-  'INVALID-DOC': {
-    type: '',
-    etudiant: '',
-    matricule: '',
-    institution: '',
-    date: '',
-    valide: false,
-  },
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -95,8 +39,8 @@ const verifiedDocuments: Record<string, {
 export function VerifyPage() {
   const { setView } = useAppStore()
   const searchParams = useSearchParams()
-  const [code, setCode] = useState('VER-UDN-2024-RN-001')
-  const [searchResult, setSearchResult] = useState<typeof verifiedDocuments[string] | null | undefined>(undefined)
+  const [code, setCode] = useState('')
+  const [searchResult, setSearchResult] = useState<VerificationResult | null | undefined>(undefined)
   const [searched, setSearched] = useState(false)
   const [verifying, setVerifying] = useState(false)
 
@@ -110,9 +54,9 @@ export function VerifyPage() {
       if (data.valid) {
         setSearchResult({
           type: data.document.type,
-          etudiant: data.document.student?.name || 'Inconnu',
+          etudiant: data.document.student?.name || 'Document collectif',
           matricule: data.document.student?.matricule || '',
-          institution: '',
+          institution: data.document.institution || '—',
           date: data.document.generatedAt ? new Date(data.document.generatedAt).toLocaleDateString('fr-FR') : '',
           valide: true,
         })
@@ -143,11 +87,6 @@ export function VerifyPage() {
     setCode('')
     setSearchResult(undefined)
     setSearched(false)
-  }
-
-  const handleDemoVerify = () => {
-    setCode('VER-UDN-2024-RN-001')
-    verifyCode('VER-UDN-2024-RN-001')
   }
 
   return (
@@ -194,7 +133,10 @@ export function VerifyPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5 }}
-            onClick={() => setView('dashboard')}
+            onClick={() => {
+              setView('dashboard')
+              window.location.href = '/'
+            }}
             className="mt-6 inline-flex items-center gap-1.5 text-sm text-white/60 hover:text-white transition-colors"
           >
             <ArrowLeft className="size-4" />
@@ -221,19 +163,19 @@ export function VerifyPage() {
                     <div className="relative">
                       <Hash className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
                       <Input
-                        placeholder="VER-XXX-YYYY-TYPE-NNN"
+                        placeholder="Code figurant sous le QR code"
                         className="pl-9 h-12 text-sm font-mono tracking-wider"
                         value={code}
                         onChange={(e) => setCode(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                       />
                     </div>
-                    <p className="text-[10px] text-gray-400">Format : VER-XXX-YYYY-TYPE-NNN</p>
+                    <p className="text-[10px] text-gray-400">Saisissez le code imprimé sur le document officiel.</p>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div>
                     <Button
-                      className="h-11 bg-gradient-to-r from-[#2d7a4f] to-[#3da66a] hover:from-[#236b40] hover:to-[#2d7a4f] text-white text-sm"
+                      className="w-full h-11 bg-gradient-to-r from-[#2d7a4f] to-[#3da66a] hover:from-[#236b40] hover:to-[#2d7a4f] text-white text-sm"
                       onClick={handleSearch}
                       disabled={verifying}
                     >
@@ -247,13 +189,6 @@ export function VerifyPage() {
                         <ShieldCheck className="size-4 mr-2" />
                       )}
                       {verifying ? 'Vérification...' : 'Vérifier'}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="h-11 text-sm"
-                    >
-                      <Camera className="size-4 mr-2" />
-                      Scanner un QR code
                     </Button>
                   </div>
                 </div>
@@ -391,9 +326,9 @@ export function VerifyPage() {
                           variant="ghost"
                           size="sm"
                           className="text-xs text-[#2d7a4f] hover:text-[#236b40]"
-                          onClick={handleDemoVerify}
+                          onClick={handleReset}
                         >
-                          Essayer un autre code
+                          Effacer
                         </Button>
                       </div>
                     </motion.div>
@@ -403,14 +338,14 @@ export function VerifyPage() {
             </Card>
           </div>
 
-          {/* Sidebar: Statistics + Help */}
+          {/* Sidebar: Trust + Help */}
           <div className="lg:col-span-2 space-y-4">
-            {/* Statistics Card */}
+            {/* Trust Card */}
             <Card className="shadow-lg border-0 shadow-gray-200/50">
               <CardContent className="p-5">
                 <h3 className="text-sm font-semibold text-[#1a2744] mb-4 flex items-center gap-2">
-                  <TrendingUp className="size-4 text-[#2d7a4f]" />
-                  Statistiques de vérification
+                  <ShieldCheck className="size-4 text-[#2d7a4f]" />
+                  Vérification sécurisée
                 </h3>
 
                 <div className="space-y-3">
@@ -420,8 +355,8 @@ export function VerifyPage() {
                         <FileText className="size-4 text-[#2d7a4f]" />
                       </div>
                       <div>
-                        <p className="text-[10px] text-gray-400">Documents vérifiés ce mois</p>
-                        <p className="text-lg font-bold text-[#1a2744]">1,247</p>
+                        <p className="text-xs font-medium text-[#1a2744]">Base officielle</p>
+                        <p className="text-[11px] text-gray-500">Chaque code est recherché dans les documents réellement générés.</p>
                       </div>
                     </div>
                   </div>
@@ -432,20 +367,20 @@ export function VerifyPage() {
                         <ShieldCheck className="size-4 text-[#1a2744]" />
                       </div>
                       <div>
-                        <p className="text-[10px] text-gray-400">Taux de documents authentiques</p>
-                        <p className="text-lg font-bold text-[#2d7a4f]">99.2%</p>
+                        <p className="text-xs font-medium text-[#1a2744]">Empreinte numérique</p>
+                        <p className="text-[11px] text-gray-500">Un code absent ou révoqué est refusé automatiquement.</p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-[#c6282808] border border-[#c6282815]">
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-[#d4a85308] border border-[#d4a85320]">
                     <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-lg bg-[#c6282815] flex items-center justify-center">
-                        <AlertTriangle className="size-4 text-[#c62828]" />
+                      <div className="w-8 h-8 rounded-lg bg-[#d4a85315] flex items-center justify-center">
+                        <Fingerprint className="size-4 text-[#d4a853]" />
                       </div>
                       <div>
-                        <p className="text-[10px] text-gray-400">Tentatives de fraude</p>
-                        <p className="text-lg font-bold text-[#c62828]">3</p>
+                        <p className="text-xs font-medium text-[#1a2744]">Traçabilité</p>
+                        <p className="text-[11px] text-gray-500">Le résultat affiche uniquement les données associées au code officiel.</p>
                       </div>
                     </div>
                   </div>
@@ -491,22 +426,6 @@ export function VerifyPage() {
                 </div>
               </CardContent>
             </Card>
-
-            {/* Demo info */}
-            <div className="p-4 rounded-xl bg-gradient-to-br from-[#d4a85308] to-[#d4a85303] border border-[#d4a85320]">
-              <div className="flex items-start gap-3">
-                <ScanLine className="size-5 text-[#d4a853] shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-medium text-[#1a2744]">Code de démonstration</p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Un code de démo a été pré-rempli pour vous montrer le résultat d&apos;une vérification réussie.
-                  </p>
-                  <p className="text-xs font-mono text-[#d4a853] mt-1.5 bg-[#d4a85310] px-2 py-1 rounded">
-                    VER-UDN-2024-RN-001
-                  </p>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </div>

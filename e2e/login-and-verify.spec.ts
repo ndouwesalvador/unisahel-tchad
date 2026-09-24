@@ -24,7 +24,7 @@ test('document verification reports an honest "not found" for an unknown code', 
   // GET /api/documents/verify/[code] endpoint end-to-end.
   await page.goto('/verify')
 
-  const codeInput = page.getByPlaceholder('VER-XXX-YYYY-TYPE-NNN')
+  const codeInput = page.getByPlaceholder('Code figurant sous le QR code')
   await codeInput.fill('THIS-CODE-DOES-NOT-EXIST')
   await page.getByRole('button', { name: 'Vérifier', exact: true }).click()
 
