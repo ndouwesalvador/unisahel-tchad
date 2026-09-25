@@ -915,7 +915,7 @@ export function LibraryPage() {
               />
               <Select value={selectedStudentId} onValueChange={setSelectedStudentId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Selectionner un etudiant" />
+                  <SelectValue placeholder="Selectionner un étudiant" />
                 </SelectTrigger>
                 <SelectContent>
                   {filteredStudents.map(s => (
@@ -1299,7 +1299,7 @@ export function LibraryPage() {
                     <span className="text-sm font-semibold text-[#1a2744]">Emprunteurs actifs</span>
                   </div>
                   <p className="text-2xl font-bold text-[#1a2744]">{stats?.activeBorrowersCount ?? 0}</p>
-                  <p className="text-[10px] text-gray-400 mt-1">sur {stats?.totalStudents ?? 0} etudiants inscrits</p>
+                  <p className="text-[10px] text-gray-400 mt-1">sur {stats?.totalStudents ?? 0} étudiants inscrits</p>
                   <Progress value={stats && stats.totalStudents > 0 ? Math.round((stats.activeBorrowersCount / stats.totalStudents) * 100) : 0} className="h-1.5 bg-gray-200 mt-2 [&>[data-slot=progress-indicator]]:bg-[#1a2744]" />
                 </div>
 

@@ -664,7 +664,7 @@ export function StudentsList() {
                 )}
                 {!isLoading && paginatedStudents.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-10 text-sm text-gray-400">Aucun etudiant trouve</TableCell>
+                    <TableCell colSpan={8} className="text-center py-10 text-sm text-gray-400">Aucun étudiant trouvé</TableCell>
                   </TableRow>
                 )}
               </TableBody>

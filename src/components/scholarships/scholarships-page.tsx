@@ -412,7 +412,7 @@ export function ScholarshipsPage() {
       <motion.div variants={itemVariants} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-[#1a2744]">Bourses &amp; Aide financiere</h1>
-          <p className="text-sm text-gray-500">Gestion des bourses et de l&apos;aide financiere aux etudiants</p>
+          <p className="text-sm text-gray-500">Gestion des bourses et de l'aide financiaire aux étudiants</p>
         </div>
         <div className="flex gap-2">
           <Dialog open={showNewScholarship} onOpenChange={(open) => { setShowNewScholarship(open); if (!open) resetScholarshipForm() }}>
@@ -530,7 +530,7 @@ export function ScholarshipsPage() {
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Beneficiaires</p>
                 <p className="text-xl font-bold text-[#1a2744] mt-1">{totalBeneficiaires}</p>
-                <p className="text-xs text-gray-400 mt-1">etudiants soutenus</p>
+                <p className="text-xs text-gray-400 mt-1">étudiants soutenus</p>
               </div>
               <div className="w-10 h-10 rounded-xl bg-[#1a274415] flex items-center justify-center">
                 <Users className="size-5 text-[#1a2744]" />
@@ -808,7 +808,7 @@ export function ScholarshipsPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-gray-50">
-                    <TableHead className="text-xs font-semibold">Etudiant</TableHead>
+                    <TableHead className="text-xs font-semibold">Étudiant</TableHead>
                     <TableHead className="text-xs font-semibold">Programme</TableHead>
                     <TableHead className="text-xs font-semibold text-center">Niveau</TableHead>
                     <TableHead className="text-xs font-semibold">Type</TableHead>

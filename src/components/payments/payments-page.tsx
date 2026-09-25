@@ -384,7 +384,7 @@ export function PaymentsPage() {
                     </DialogHeader>
                     <div className="space-y-4 py-4">
                       <div className="space-y-2">
-                        <Label className="text-sm">Etudiant</Label>
+                        <Label className="text-sm">Étudiant</Label>
                         {newPayment.studentId ? (
                           <div className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
                             <span>{newPayment.studentLabel}</span>
@@ -400,7 +400,7 @@ export function PaymentsPage() {
                           <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
                             <Input
-                              placeholder="Rechercher un etudiant (nom, matricule)..."
+                              placeholder="Rechercher un étudiant (nom, matricule)..."
                               className="pl-9"
                               value={studentSearch}
                               onChange={(e) => setStudentSearch(e.target.value)}
@@ -408,7 +408,7 @@ export function PaymentsPage() {
                             {showStudentDropdown && (
                               <div className="absolute z-10 mt-1 w-full rounded-md border bg-white shadow-lg max-h-48 overflow-y-auto">
                                 {(studentMatches?.data ?? []).length === 0 ? (
-                                  <p className="px-3 py-2 text-xs text-gray-400">Aucun etudiant trouve</p>
+                                  <p className="px-3 py-2 text-xs text-gray-400">Aucun étudiant trouvé</p>
                                 ) : (
                                   studentMatches.data.map((s: { id: string; firstName: string; lastName: string; matricule?: string }) => (
                                     <button
@@ -868,7 +868,7 @@ export function PaymentsPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-gray-50">
-                    <TableHead className="text-xs font-semibold">Etudiant</TableHead>
+                    <TableHead className="text-xs font-semibold">Étudiant</TableHead>
                     <TableHead className="text-xs font-semibold">Description</TableHead>
                     <TableHead className="text-xs font-semibold text-right">Montant</TableHead>
                     <TableHead className="text-xs font-semibold">Methode</TableHead>

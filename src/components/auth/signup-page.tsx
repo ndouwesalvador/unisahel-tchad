@@ -107,7 +107,7 @@ export function SignupPage() {
         return
       }
 
-      toast.success('Bienvenue sur UniSahel !', { description: 'Votre etablissement a ete cree.' })
+      toast.success('Bienvenue sur UniSahel !', { description: 'Votre établissement a été créé.' })
       window.location.href = '/'
     } catch {
       toast.error('Erreur', { description: 'Impossible de creer le compte. Veuillez reessayer.' })
@@ -156,7 +156,7 @@ export function SignupPage() {
           className="flex items-center gap-2 text-gray-500 hover:text-[#1a2744] text-sm mb-6 transition-colors"
         >
           <ArrowLeft className="size-4" />
-          Retour a l&apos;accueil
+          Retour à l&apos;accueil
         </button>
 
         <div className="bg-gradient-to-br from-[#1a2744] via-[#2d7a4f] to-[#d4a853] p-[2px] rounded-2xl shadow-xl shadow-[#1a274420]">
@@ -172,7 +172,7 @@ export function SignupPage() {
               </div>
               <CardTitle className="text-xl font-bold text-[#1a2744]">Creer votre compte</CardTitle>
               <CardDescription className="text-gray-500">
-                Configurez votre etablissement en quelques minutes
+                Configurez votre établissement en quelques minutes
               </CardDescription>
             </CardHeader>
 
@@ -183,7 +183,7 @@ export function SignupPage() {
 
                   <div className="space-y-2">
                     <Label htmlFor="institutionName" className="text-sm font-medium text-gray-700">
-                      Nom de l&apos;etablissement
+                      Nom de l'établissement
                     </Label>
                     <div className="relative">
                       <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />

@@ -538,10 +538,10 @@ export function AdvisingPage() {
         ) : (
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label className="text-sm">Etudiant</Label>
+              <Label className="text-sm">Étudiant</Label>
               <Select value={newAppt.studentId} onValueChange={(v) => setNewAppt((f) => ({ ...f, studentId: v }))}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Selectionner un etudiant" />
+                  <SelectValue placeholder="Selectionner un étudiant" />
                 </SelectTrigger>
                 <SelectContent>
                   {studentOptions.map((s) => (
@@ -550,7 +550,7 @@ export function AdvisingPage() {
                     </SelectItem>
                   ))}
                   {studentOptions.length === 0 && (
-                    <div className="px-2 py-1.5 text-xs text-gray-400">Aucun etudiant trouve</div>
+                    <div className="px-2 py-1.5 text-xs text-gray-400">Aucun étudiant trouvé</div>
                   )}
                 </SelectContent>
               </Select>
@@ -636,14 +636,14 @@ export function AdvisingPage() {
           <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
             <div>
               <h1 className="text-2xl font-bold text-white">Orientation &amp; Accompagnement</h1>
-              <p className="text-sm text-white/70 mt-1">Conseil et suivi des parcours academiques</p>
+              <p className="text-sm text-white/70 mt-1">Conseil et suivi des parcours académiques</p>
             </div>
             <div className="flex flex-wrap gap-3">
               <div className="bg-white/10 backdrop-blur-sm border border-white/15 rounded-xl px-4 py-3 flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-white/10"><Users className="size-5 text-white" /></div>
                 <div>
                   <p className="text-xl font-bold text-white">{useCountUp(etudiantsAccompagnes, 1400)}</p>
-                  <p className="text-[10px] text-white/70">Etudiants accompagnes</p>
+                  <p className="text-[10px] text-white/70">Étudiants accompagnés</p>
                 </div>
               </div>
               <div className="bg-white/10 backdrop-blur-sm border border-white/15 rounded-xl px-4 py-3 flex items-center gap-3">
@@ -800,7 +800,7 @@ export function AdvisingPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-gray-50 sticky top-0 z-10">
-                    <TableHead className="text-xs font-semibold">Etudiant</TableHead>
+                    <TableHead className="text-xs font-semibold">Étudiant</TableHead>
                     <TableHead className="text-xs font-semibold">Type</TableHead>
                     <TableHead className="text-xs font-semibold">Date &amp; Heure</TableHead>
                     <TableHead className="text-xs font-semibold">Conseiller</TableHead>
@@ -1011,7 +1011,7 @@ export function AdvisingPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-gray-50 sticky top-0 z-10">
-                    <TableHead className="text-xs font-semibold">Etudiant</TableHead>
+                    <TableHead className="text-xs font-semibold">Étudiant</TableHead>
                     <TableHead className="text-xs font-semibold">Filiere</TableHead>
                     <TableHead className="text-xs font-semibold text-center">Niveau</TableHead>
                     <TableHead className="text-xs font-semibold text-center">Moyenne</TableHead>

@@ -68,7 +68,7 @@ function useCountUp(target: number, duration: number = 1400) {
 
 type AnnouncementType = 'INFO' | 'URGENT' | 'PAYMENT' | 'RESULT' | 'EXAM' | 'STAGE'
 type Priority = 'urgent' | 'important' | 'normal'
-type TargetAudience = 'Tous' | 'Etudiants' | 'Enseignants' | 'Scolarite'
+type TargetAudience = 'Tous' | 'Étudiants' | 'Enseignants' | 'Scolarité'
 type Category = 'academique' | 'administratif' | 'urgence' | 'evenement'
 
 interface Announcement {
@@ -89,7 +89,7 @@ const typeConfig: Record<AnnouncementType, { label: string; className: string; i
   INFO: { label: 'Info', className: 'bg-[#1a274415] text-[#1a2744] border-0', icon: Info },
   URGENT: { label: 'Urgent', className: 'bg-[#c6282815] text-[#c62828] border-0', icon: AlertTriangle },
   PAYMENT: { label: 'Paiement', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0', icon: CreditCard },
-  RESULT: { label: 'Resultat', className: 'bg-[#d4a85315] text-[#d4a853] border-0', icon: FileCheck },
+  RESULT: { label: 'Résultat', className: 'bg-[#d4a85315] text-[#d4a853] border-0', icon: FileCheck },
   EXAM: { label: 'Examen', className: 'bg-[#6a1b9a15] text-[#6a1b9a] border-0', icon: BookOpen },
   STAGE: { label: 'Stage', className: 'bg-[#e6510015] text-[#e65100] border-0', icon: Briefcase },
 }
@@ -640,9 +640,9 @@ export function AnnouncementsPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="tous">Tous</SelectItem>
-                      <SelectItem value="etudiants">Etudiants</SelectItem>
-                      <SelectItem value="enseignants">Enseignants</SelectItem>
-                      <SelectItem value="scolarite">Scolarite</SelectItem>
+<SelectItem value="etudiants">Étudiants</SelectItem>
+<SelectItem value="enseignants">Enseignants</SelectItem>
+<SelectItem value="scolarite">Scolarité</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

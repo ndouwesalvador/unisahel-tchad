@@ -1,0 +1,318 @@
+- generic:
+  - generic [aria-hidden]:
+    - generic:
+      - complementary:
+        - generic:
+          - generic:
+            - generic:
+              - generic: UniSahel
+              - generic: UNIVERSITE POLYTECHNIQUE DE MONGO
+          - generic:
+            - generic: SN
+            - generic:
+              - generic: SALVADOR NDOUWE
+              - generic: Admin Institution
+          - generic:
+            - generic:
+              - generic:
+                - navigation:
+                  - button:
+                    - generic: Tableau de bord
+                  - button:
+                    - generic: Étudiants
+                  - button:
+                    - generic: Enseignants
+                  - button:
+                    - generic: Utilisateurs
+                  - button:
+                    - generic: Candidatures
+                  - button:
+                    - generic: Structure
+                  - button:
+                    - generic: Programmes
+                  - button:
+                    - generic: Maquettes
+                  - button:
+                    - generic: Notes
+                  - button:
+                    - generic: Délibérations
+                  - button:
+                    - generic: Documents
+                  - button:
+                    - generic: Paiements
+                  - button:
+                    - generic: Stages
+                  - button:
+                    - generic: Emploi du temps
+                  - button:
+                    - generic: Examens
+                  - button:
+                    - generic: Annonces
+                  - button:
+                    - generic: Import/Export
+                  - button:
+                    - generic: Inscriptions Péd.
+                  - button:
+                    - generic: Bourses
+                  - button:
+                    - generic: Alumni
+                  - button:
+                    - generic: Orientation
+                  - button:
+                    - generic: Bibliothèque
+                  - button:
+                    - generic: Présences
+                  - button:
+                    - generic: Messages
+                  - button:
+                    - generic: Examens en ligne
+                  - button:
+                    - generic: Rapports
+                  - button:
+                    - generic: Personnel
+                  - button:
+                    - generic: Salles
+                  - button:
+                    - generic: Transport
+                  - button:
+                    - generic: Résultats
+                  - button:
+                    - generic: Institution
+          - generic:
+            - button:
+              - generic: Paramètres
+            - button:
+              - generic: Déconnexion
+        - button
+      - generic:
+        - banner:
+          - generic:
+            - generic:
+              - navigation:
+                - generic: UniSahel
+                - generic: /
+                - generic: Inscription Pédagogique
+            - generic:
+              - generic:
+                - textbox:
+                  - /placeholder: Rechercher...
+              - generic:
+                - generic: ⌘
+                - generic: K
+            - generic:
+              - combobox:
+                - generic: 2026-2027
+              - button
+              - button: Vérifier document
+              - button:
+                - generic: SN
+                - generic:
+                  - generic: SALVADOR NDOUWE
+                  - generic: Admin Institution
+        - main:
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - heading [level=1]: Inscription pedagogique
+                  - paragraph: Gestion des inscriptions pedagogiques selon la structure et les regles de l'institution
+                - generic: 2026-2027
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - paragraph: Inscriptions completes
+                          - paragraph: "0"
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - paragraph: En cours
+                          - paragraph: "0"
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - paragraph: Non inscrites
+                          - paragraph: "2"
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - paragraph: Taux de completion
+                          - paragraph: 0%
+                      - generic:
+                        - progressbar
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic: Periode d'inscription
+                          - paragraph: "Année académique : 2026-2027"
+                      - generic: En cours
+                  - generic:
+                    - generic:
+                      - button: Cloturer
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: Statut des inscriptions
+                        - generic: 2 etudiants
+                      - generic:
+                        - generic:
+                          - textbox:
+                            - /placeholder: Rechercher par nom ou matricule...
+                        - generic:
+                          - combobox:
+                            - generic: Tous les statuts
+                          - combobox:
+                            - generic: Tous niveaux
+                          - combobox:
+                            - generic: Toutes filieres
+                  - generic:
+                    - generic:
+                      - generic:
+                        - table:
+                          - rowgroup:
+                            - row:
+                              - columnheader: Etudiant
+                              - columnheader: Matricule
+                              - columnheader: Filiere
+                              - columnheader: Niveau
+                              - columnheader: UE inscrites
+                              - columnheader: Statut
+                              - columnheader: Actions
+                          - rowgroup:
+                            - row:
+                              - cell:
+                                - generic:
+                                  - generic: NH
+                                  - generic:
+                                    - paragraph: NDOUWE HUGUE
+                              - cell: UNSH-2026-L1-000002
+                              - cell: Licence en Génie Industriel et Maintenance
+                              - cell:
+                                - generic: Licence 1
+                              - cell:
+                                - generic: 0/1
+                              - cell:
+                                - generic: Non commencee
+                              - cell:
+                                - button [expanded]
+                            - row:
+                              - cell:
+                                - generic:
+                                  - generic: NS
+                                  - generic:
+                                    - paragraph: NDOUWE SALVADOR
+                              - cell: UNSH-2026-L1-000001
+                              - cell: Licence en Génie Industriel et Maintenance
+                              - cell:
+                                - generic: Licence 1
+                              - cell:
+                                - generic: 0/1
+                              - cell:
+                                - generic: Non commencee
+                              - cell:
+                                - button
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: Inscription aux UE
+                        - button: Etendre
+                    - generic:
+                      - generic:
+                        - generic:
+                          - text: Etudiant
+                          - combobox:
+                            - generic: Selectionner un etudiant
+                        - generic:
+                          - text: Périmètre
+                          - generic: UE du niveau courant — 2026-2027
+                      - generic: Unites d'enseignement disponibles
+                      - generic:
+                        - generic:
+                          - generic: Resume de l'inscription
+                          - generic: 0 credits
+                        - generic:
+                          - generic:
+                            - paragraph: Obligatoires
+                            - paragraph: "0"
+                          - generic:
+                            - paragraph: Optionnelles
+                            - paragraph: "0"
+                          - generic:
+                            - paragraph: Minimum requis
+                            - paragraph: "30"
+                          - generic:
+                            - paragraph: Maximum autorise
+                            - paragraph: "42"
+                        - generic: Il manque 30 credits pour atteindre le minimum de 30 credits
+                        - generic:
+                          - button [disabled]: Valider l'inscription
+                - generic:
+                  - generic:
+                    - generic: Regles de crédits
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic: Credits minimum / semestre
+                          - generic: "30"
+                        - generic:
+                          - generic: Credits maximum / semestre
+                          - generic: "42"
+                      - generic:
+                        - text: Plage de credits autorisee
+                        - generic:
+                          - generic:
+                            - generic: "0"
+                            - generic: "30"
+                            - generic: "42"
+                            - generic: "60"
+                        - generic:
+                          - generic: Insuffisant
+                          - generic: Zone conforme
+                          - generic: Exces
+                      - generic:
+                        - generic: Regles de compensation
+                        - list:
+                          - listitem:
+                            - generic: Compensation active dans les parametres de l'institution
+                          - listitem:
+                            - generic: "Seuil de validation : 10/20"
+                          - listitem:
+                            - generic: "Note eliminatoire : 0/20"
+                      - generic:
+                        - generic: Paiements en attente
+                        - paragraph: Les étudiants avec un paiement en attente restent visibles, mais leur dossier doit être régularisé avant validation administrative finale.
+                        - generic: 0 étudiant(s) concerné(s)
+                      - generic:
+                        - text: Repartition des credits
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic: UE Obligatoires
+                              - generic: 0 credits
+                            - progressbar
+                          - generic:
+                            - generic:
+                              - generic: UE Optionnelles
+                              - generic: 0 credits
+                            - progressbar
+      - button
+  - region "Notifications alt+T"
+  - alert
+  - generic [aria-hidden]: 0%
+  - menu [active] [ref=f1e930]:
+    - menuitem "Inscrire / modifier les UE" [ref=f1e931] [cursor=pointer]

@@ -1,0 +1,401 @@
+- generic [active] [ref=f3e1]:
+  - generic [ref=f3e3]:
+    - navigation [ref=f3e4]:
+      - generic [ref=f3e6]:
+        - button "Retour en haut de page" [ref=f3e7]:
+          - generic [ref=f3e11]: UniSahel
+        - generic [ref=f3e12]:
+          - button "Modules" [ref=f3e13]
+          - button "Comment ca marche" [ref=f3e14]
+          - button "Securite" [ref=f3e15]
+          - button "Tarifs" [ref=f3e16]
+          - button "FAQ" [ref=f3e17]
+        - generic [ref=f3e18]:
+          - button "Configuration" [ref=f3e19]
+          - button "Connexion" [ref=f3e20]
+          - button "Essai gratuit" [ref=f3e21]
+    - main [ref=f3e22]:
+      - generic [ref=f3e23]:
+        - generic [ref=f3e27]:
+          - generic [aria-hidden] [ref=f3e28]: 🌍
+          - text: Concu pour l'Afrique
+        - generic [ref=f3e29]: LMD, classique & sante
+        - generic [ref=f3e33]:
+          - generic [ref=f3e34]: Plateforme SaaS pour universites africaines
+          - heading "Digitalisez votre universite africaine" [level=1] [ref=f3e37]:
+            - text: Digitalisez votre
+            - generic [ref=f3e38]:
+              - generic [ref=f3e39]: universite africaine
+              - text: universite africaine
+          - paragraph [ref=f3e40]: La plateforme SaaS complete de gestion universitaire, concue pour le terrain africain. Scolarite, notes, paiements et documents officiels, dans un seul outil.
+          - generic [ref=f3e41]:
+            - button [ref=f3e42] [cursor=pointer]
+            - button "Voir la demo" [ref=f3e50]
+            - button [ref=f3e51]
+          - generic [ref=f3e53]:
+            - generic [ref=f3e54]:
+              - generic [ref=f3e55]:
+                - generic [ref=f3e56]: "0"
+                - generic [ref=f3e57]: +
+              - generic [ref=f3e58]: Modules metier
+            - generic [ref=f3e59]:
+              - generic [ref=f3e60]:
+                - generic [ref=f3e61]: "0"
+                - generic [ref=f3e62]: "%"
+              - generic [ref=f3e63]: Multi-tenant securise
+            - generic [ref=f3e64]:
+              - generic [ref=f3e65]:
+                - generic [ref=f3e66]: "0"
+                - generic [ref=f3e67]: +
+              - generic [ref=f3e68]: Pays pris en charge
+          - generic [ref=f3e69]:
+            - generic [ref=f3e71]:
+              - generic [ref=f3e72]: app.unisahel.africa
+              - generic [ref=f3e82]:
+                - generic [ref=f3e83]:
+                  - generic [ref=f3e84]: UniSahel
+                  - generic [ref=f3e89]: Tableau de bord
+                  - generic [ref=f3e92]: Etudiants
+                  - generic [ref=f3e98]: Notes
+                  - generic [ref=f3e102]: Paiements
+                  - generic [ref=f3e105]: Documents
+                - generic [ref=f3e122]:
+                  - generic [ref=f3e123]:
+                    - generic [ref=f3e130]: 4 218
+                    - generic [ref=f3e131]: Etudiants actifs
+                  - generic [ref=f3e132]:
+                    - generic [ref=f3e137]: 87%
+                    - generic [ref=f3e138]: Taux de reussite
+                  - generic [ref=f3e139]:
+                    - generic [ref=f3e143]: 92%
+                    - generic [ref=f3e144]: Paiements du mois
+            - generic [ref=f3e173]: Releve genere en 2s
+            - generic [ref=f3e178]: QR code anti-fraude
+      - generic [ref=f3e187]:
+        - paragraph [ref=f3e189]: Concu pour tous les etablissements d'enseignement superieur
+        - generic [ref=f3e191]:
+          - generic [ref=f3e192]:
+            - generic [ref=f3e193]: Universites publiques
+            - generic [ref=f3e196]: Facultes privees
+            - generic [ref=f3e202]: Ecoles de sante
+            - generic [ref=f3e206]: Grandes ecoles
+            - generic [ref=f3e210]: Instituts techniques
+          - generic [ref=f3e213]:
+            - generic [ref=f3e214]: Universites publiques
+            - generic [ref=f3e217]: Facultes privees
+            - generic [ref=f3e223]: Ecoles de sante
+            - generic [ref=f3e227]: Grandes ecoles
+            - generic [ref=f3e231]: Instituts techniques
+          - generic [ref=f3e234]:
+            - generic [ref=f3e235]: Universites publiques
+            - generic [ref=f3e238]: Facultes privees
+            - generic [ref=f3e244]: Ecoles de sante
+            - generic [ref=f3e248]: Grandes ecoles
+            - generic [ref=f3e252]: Instituts techniques
+          - generic [ref=f3e255]:
+            - generic [ref=f3e256]: Universites publiques
+            - generic [ref=f3e259]: Facultes privees
+            - generic [ref=f3e265]: Ecoles de sante
+            - generic [ref=f3e269]: Grandes ecoles
+            - generic [ref=f3e273]: Instituts techniques
+      - generic [ref=f3e277]:
+        - generic [ref=f3e279]:
+          - generic [ref=f3e280]: Modules
+          - heading "Tout ce dont votre universite a besoin" [level=2] [ref=f3e281]
+          - paragraph [ref=f3e282]: Une suite complete de modules couvrant tous les aspects de la gestion universitaire
+        - generic [ref=f3e283]:
+          - generic [ref=f3e288] [cursor=pointer]:
+            - heading "Gestion LMD" [level=3] [ref=f3e293]
+            - paragraph [ref=f3e294]: Licence, Master, Doctorat avec credits, compensation et rattrapage geres automatiquement.
+          - generic [ref=f3e299] [cursor=pointer]:
+            - heading "Inscriptions" [level=3] [ref=f3e305]
+            - paragraph [ref=f3e306]: Candidatures, admissions, inscriptions administratives et pedagogiques.
+          - generic [ref=f3e311] [cursor=pointer]:
+            - heading "Notes & deliberations" [level=3] [ref=f3e317]
+            - paragraph [ref=f3e318]: Saisie, calcul automatique, jurys, proces-verbaux.
+          - generic [ref=f3e323] [cursor=pointer]:
+            - heading "Documents officiels" [level=3] [ref=f3e329]
+            - paragraph [ref=f3e330]: Releves, attestations, recus avec QR code anti-fraude.
+          - generic [ref=f3e335] [cursor=pointer]:
+            - heading "Ecoles de sante" [level=3] [ref=f3e340]
+            - paragraph [ref=f3e341]: Stages hospitaliers, competences cliniques, carnets de stage.
+          - generic [ref=f3e346] [cursor=pointer]:
+            - heading "Paiements" [level=3] [ref=f3e351]
+            - paragraph [ref=f3e352]: Frais de scolarite, recus, suivi financier par etudiant.
+          - generic [ref=f3e357] [cursor=pointer]:
+            - heading "Statistiques" [level=3] [ref=f3e362]
+            - paragraph [ref=f3e363]: Tableaux de bord, taux de reussite, rapports exportables.
+          - generic [ref=f3e368] [cursor=pointer]:
+            - heading "Multi-etablissement" [level=3] [ref=f3e375]
+            - paragraph [ref=f3e376]: Architecture multi-tenant avec isolation stricte des donnees.
+        - button "Decouvrir tous les modules" [ref=f3e379]
+      - generic [ref=f3e381]:
+        - generic [ref=f3e383]:
+          - generic [ref=f3e384]: Systeme LMD
+          - heading "Gestion complete du systeme LMD" [level=2] [ref=f3e385]
+          - paragraph [ref=f3e386]: "Licence-Master-Doctorat : un cadre harmonise pour l'enseignement superieur africain"
+        - generic [ref=f3e389]:
+          - generic [ref=f3e390]: 180 credits
+          - generic [ref=f3e391]: 300 credits
+          - generic [ref=f3e392]: Recherche
+        - generic [ref=f3e398]:
+          - generic [ref=f3e400]:
+            - heading "Licence" [level=3] [ref=f3e405]
+            - generic [ref=f3e406]:
+              - generic [ref=f3e407]: 3 ans
+              - generic [ref=f3e408]: 180 credits
+            - paragraph [ref=f3e409]: Formation fondamentale et professionnelle
+          - generic [ref=f3e415]:
+            - heading "Master" [level=3] [ref=f3e420]
+            - generic [ref=f3e421]:
+              - generic [ref=f3e422]: 2 ans
+              - generic [ref=f3e423]: 120 credits
+            - paragraph [ref=f3e424]: Specialisation et recherche
+          - generic [ref=f3e430]:
+            - heading "Doctorat" [level=3] [ref=f3e435]
+            - generic [ref=f3e436]:
+              - generic [ref=f3e437]: 3 ans
+              - generic [ref=f3e438]: Recherche
+            - paragraph [ref=f3e439]: Production scientifique originale
+        - generic [ref=f3e441]:
+          - generic [ref=f3e447]:
+            - paragraph [ref=f3e448]: Compensation
+            - paragraph [ref=f3e449]: Compensation entre UEs au sein d'un semestre
+          - generic [ref=f3e457]:
+            - paragraph [ref=f3e458]: Rattrapage
+            - paragraph [ref=f3e459]: Sessions de rattrapage et notes de substitution
+          - generic [ref=f3e468]:
+            - paragraph [ref=f3e469]: Jury & PV
+            - paragraph [ref=f3e470]: Deliberations, proces-verbaux et decisions de jury
+      - generic [ref=f3e472]:
+        - generic [ref=f3e474]:
+          - generic [ref=f3e475]: Ecoles de sante
+          - heading "Gestion specialisee pour les ecoles de sante" [level=2] [ref=f3e476]
+          - paragraph [ref=f3e477]: Un module dedie pour les filieres medicales et paramedicales
+        - generic [ref=f3e478]:
+          - generic [ref=f3e480]:
+            - generic [ref=f3e481]: Medecine
+            - generic [ref=f3e492]: Pharmacie
+            - generic [ref=f3e502]: Soins infirmiers
+            - generic [ref=f3e516]: Sages-femmes
+            - generic [ref=f3e526]: Laborantins
+            - generic [ref=f3e537]: Kinesitherapie
+          - generic [ref=f3e546]:
+            - generic [ref=f3e553]:
+              - paragraph [ref=f3e554]: Carnet de stage numerique
+              - paragraph [ref=f3e555]: Suivi complet des stages hospitaliers
+            - generic [ref=f3e562]:
+              - paragraph [ref=f3e563]: Competences cliniques
+              - paragraph [ref=f3e564]: Evaluation et validation des competences
+            - generic [ref=f3e571]:
+              - paragraph [ref=f3e572]: Gardes & astreintes
+              - paragraph [ref=f3e573]: Planification et suivi des gardes
+            - generic [ref=f3e581]:
+              - paragraph [ref=f3e582]: Hopitaux partenaires
+              - paragraph [ref=f3e583]: Gestion des conventions hospitalieres
+            - button "Demander une demo sante" [ref=f3e586]
+      - generic [ref=f3e588]:
+        - generic [ref=f3e590]:
+          - generic [ref=f3e591]: Mise en route
+          - heading "Comment ca marche" [level=2] [ref=f3e592]
+          - paragraph [ref=f3e593]: De la configuration au lancement, un parcours pense pour aller vite
+        - generic [ref=f3e594]:
+          - generic [ref=f3e596]:
+            - generic [ref=f3e597]: "1"
+            - heading "Configuration" [level=3] [ref=f3e602]
+            - paragraph [ref=f3e603]: "On parametre votre etablissement : facultes, filieres, systeme academique et regles de notation."
+          - generic [ref=f3e605]:
+            - generic [ref=f3e606]: "2"
+            - heading "Import des donnees" [level=3] [ref=f3e611]
+            - paragraph [ref=f3e612]: Import en masse de vos etudiants, enseignants et maquettes via Excel — sans ressaisie.
+          - generic [ref=f3e614]:
+            - generic [ref=f3e615]: "3"
+            - heading "Formation des equipes" [level=3] [ref=f3e622]
+            - paragraph [ref=f3e623]: Scolarite, enseignants et administration prennent en main l'outil avec un accompagnement dedie.
+          - generic [ref=f3e625]:
+            - generic [ref=f3e626]: "4"
+            - heading "Lancement" [level=3] [ref=f3e633]
+            - paragraph [ref=f3e634]: Votre etablissement est operationnel, avec un support continu pour la suite.
+      - generic [ref=f3e637]:
+        - generic [ref=f3e639]:
+          - generic [ref=f3e640]: Securite
+          - heading "Securite et confiance avant tout" [level=2] [ref=f3e641]
+          - paragraph [ref=f3e642]: Protection de vos donnees et bonnes pratiques du secteur, de bout en bout
+        - generic [ref=f3e643]:
+          - generic [ref=f3e645]:
+            - heading "Isolation multi-tenant" [level=3] [ref=f3e649]
+            - paragraph [ref=f3e650]: Donnees isolees par etablissement
+          - generic [ref=f3e652]:
+            - heading "RBAC" [level=3] [ref=f3e657]
+            - paragraph [ref=f3e658]: Controle d'acces base sur les roles
+          - generic [ref=f3e660]:
+            - heading "Audit logs" [level=3] [ref=f3e665]
+            - paragraph [ref=f3e666]: Tracabilite complete des actions
+          - generic [ref=f3e668]:
+            - heading "QR code anti-fraude" [level=3] [ref=f3e674]
+            - paragraph [ref=f3e675]: Verification des documents officiels
+        - generic [ref=f3e677]:
+          - generic [ref=f3e678]: Isolation stricte des donnees
+          - generic [ref=f3e682]: Chiffrement en transit (SSL)
+          - generic [ref=f3e686]: Sauvegarde automatique
+          - generic [ref=f3e690]: Journal d'audit complet
+          - generic [ref=f3e694]: Hebergement Postgres manage
+      - generic [ref=f3e699]:
+        - generic [ref=f3e701]:
+          - generic [ref=f3e702]: Concu pour l'Afrique
+          - heading "Concu pour la realite africaine" [level=2] [ref=f3e703]
+          - paragraph [ref=f3e704]: UniSahel s'adapte aux contraintes et aux specificites du terrain africain
+        - generic [ref=f3e705]:
+          - generic [ref=f3e3382]:
+            - generic [ref=f3e3383]: 15+ pays couverts
+            - generic [ref=f3e3384]: Presence multi-pays
+          - generic [ref=f3e3386]:
+            - generic [ref=f3e3394]:
+              - heading "Faible connexion" [level=3] [ref=f3e3395]
+              - paragraph [ref=f3e3396]: Optimise pour les reseaux a faible debit et les zones a connectivite limitee
+            - generic [ref=f3e3403]:
+              - heading "Import Excel" [level=3] [ref=f3e3404]
+              - paragraph [ref=f3e3405]: Importation en masse via fichiers Excel pour un demarrage rapide
+            - generic [ref=f3e3411]:
+              - heading "Mobile Money" [level=3] [ref=f3e3412]
+              - paragraph [ref=f3e3413]: Paiements mobiles Orange Money, MTN, Airtel et Moov (en cours de deploiement)
+            - generic [ref=f3e3421]:
+              - heading "Documents imprimables" [level=3] [ref=f3e3422]
+              - paragraph [ref=f3e3423]: Generation de documents PDF optimises pour impression locale
+            - generic [ref=f3e3430]:
+              - heading "Cachets et signatures" [level=3] [ref=f3e3431]
+              - paragraph [ref=f3e3432]: Apposition numerique de cachets et signatures officielles
+            - generic [ref=f3e3440]:
+              - heading "Multi-langues" [level=3] [ref=f3e3441]
+              - paragraph [ref=f3e3442]: Interface disponible en francais, avec extension possible a d'autres langues
+      - generic [ref=f3e3444]:
+        - generic [ref=f3e3446]:
+          - generic [ref=f3e3447]: Tarifs
+          - heading "Une offre adaptee a votre etablissement" [level=2] [ref=f3e3448]
+          - paragraph [ref=f3e3449]: Le perimetre s'adapte a votre taille et vos besoins. Devis personnalise sous 48h.
+        - generic [ref=f3e3450]:
+          - generic [ref=f3e3452]:
+            - heading "Essentiel" [level=3] [ref=f3e3456]
+            - paragraph [ref=f3e3457]: Pour demarrer la digitalisation
+            - list [ref=f3e3458]:
+              - listitem [ref=f3e3459]: Un etablissement, un systeme academique
+              - listitem [ref=f3e3463]: Gestion des etudiants et des notes
+              - listitem [ref=f3e3467]: Documents officiels avec QR code
+              - listitem [ref=f3e3471]: Import Excel
+              - listitem [ref=f3e3475]: Support par email
+            - button "Demander un devis" [ref=f3e3479]
+          - generic [ref=f3e3481]:
+            - generic [ref=f3e3482]: Recommande
+            - heading "Pro" [level=3] [ref=f3e3486]
+            - paragraph [ref=f3e3487]: Pour une gestion complete
+            - list [ref=f3e3488]:
+              - listitem [ref=f3e3489]: "Tout Essentiel, plus :"
+              - listitem [ref=f3e3493]: Paiements et suivi financier
+              - listitem [ref=f3e3497]: Statistiques et rapports avances
+              - listitem [ref=f3e3501]: Annonces et communication
+              - listitem [ref=f3e3505]: Support prioritaire
+            - button "Demander un devis" [ref=f3e3509]
+          - generic [ref=f3e3511]:
+            - heading "Enterprise" [level=3] [ref=f3e3517]
+            - paragraph [ref=f3e3518]: Pour les groupes multi-etablissements
+            - list [ref=f3e3519]:
+              - listitem [ref=f3e3520]: "Tout Pro, plus :"
+              - listitem [ref=f3e3524]: Multi-etablissement (multi-tenant)
+              - listitem [ref=f3e3528]: Ecoles de sante et stages hospitaliers
+              - listitem [ref=f3e3532]: Integrations sur mesure
+              - listitem [ref=f3e3536]: Accompagnement dedie
+            - button "Demander un devis" [ref=f3e3540]
+        - paragraph [ref=f3e3542]: Tous les plans incluent l'hebergement securise et les mises a jour. Aucune carte bancaire requise pour l'essai.
+      - generic [ref=f3e3544]:
+        - generic [ref=f3e3546]:
+          - generic [ref=f3e3547]: FAQ
+          - heading "Questions frequentes" [level=2] [ref=f3e3548]
+          - paragraph [ref=f3e3549]: Tout ce qu'il faut savoir avant de se lancer
+        - generic [ref=f3e3552]:
+          - heading [level=3] [ref=f3e3554]:
+            - button "Ou sont hebergees nos donnees ?" [ref=f3e3555]
+          - heading [level=3] [ref=f3e3557]:
+            - button "UniSahel fonctionne-t-il avec une connexion internet limitee ?" [ref=f3e3558]
+          - heading [level=3] [ref=f3e3560]:
+            - button "Peut-on migrer depuis un systeme existant (Excel, papier, autre logiciel) ?" [ref=f3e3561]
+          - heading [level=3] [ref=f3e3563]:
+            - button "UniSahel gere-t-il le systeme classique en plus du LMD ?" [ref=f3e3564]
+          - heading [level=3] [ref=f3e3566]:
+            - button "Le paiement Mobile Money est-il disponible ?" [ref=f3e3567]
+          - heading [level=3] [ref=f3e3569]:
+            - button "Un groupe avec plusieurs etablissements peut-il utiliser UniSahel ?" [ref=f3e3570]
+        - paragraph [ref=f3e3572]:
+          - text: D'autres questions ?
+          - button "Contactez-nous" [ref=f3e3573]
+      - generic [ref=f3e3580]:
+        - heading "Pret a digitaliser votre etablissement ?" [level=2] [ref=f3e3581]
+        - paragraph [ref=f3e3582]: Configurez votre etablissement en quelques minutes et voyez UniSahel fonctionner avec vos propres donnees.
+        - generic [ref=f3e3583]:
+          - generic [ref=f3e3584]: Donnees isolees par etablissement
+          - generic [ref=f3e3588]: Infrastructure managee
+          - generic [ref=f3e3592]: Support reactif
+        - generic [ref=f3e3595]:
+          - button [ref=f3e3596] [cursor=pointer]
+          - button "Nous contacter" [ref=f3e3604]
+    - contentinfo [ref=f3e3605]:
+      - generic [ref=f3e3607]:
+        - generic [ref=f3e3608]:
+          - generic [ref=f3e3609]:
+            - button "UniSahel" [ref=f3e3610]
+            - paragraph [ref=f3e3615]: Plateforme SaaS de gestion universitaire, concue pour les etablissements d'enseignement superieur africains.
+            - generic [ref=f3e3616]:
+              - generic [ref=f3e3617]: contact@unisahel.africa
+              - generic [ref=f3e3621]: +235 66 00 00 00
+              - generic [ref=f3e3624]: N'Djamena, Tchad
+            - generic [ref=f3e3628]:
+              - button "Twitter" [ref=f3e3629]
+              - button "LinkedIn" [ref=f3e3632]
+              - button "Facebook" [ref=f3e3637]
+          - generic [ref=f3e3640]:
+            - heading "Produit" [level=4] [ref=f3e3641]
+            - list [ref=f3e3642]:
+              - listitem [ref=f3e3643]:
+                - button "Modules" [ref=f3e3644]
+              - listitem [ref=f3e3645]:
+                - button "Comment ca marche" [ref=f3e3646]
+              - listitem [ref=f3e3647]:
+                - button "Tarifs" [ref=f3e3648]
+              - listitem [ref=f3e3649]:
+                - button "FAQ" [ref=f3e3650]
+          - generic [ref=f3e3651]:
+            - heading "Entreprise" [level=4] [ref=f3e3652]
+            - list [ref=f3e3653]:
+              - listitem [ref=f3e3654]:
+                - button "A propos" [ref=f3e3655]
+              - listitem [ref=f3e3656]:
+                - button "Blog" [ref=f3e3657]
+              - listitem [ref=f3e3658]:
+                - button "Carrieres" [ref=f3e3659]
+          - generic [ref=f3e3660]:
+            - heading "Support" [level=4] [ref=f3e3661]
+            - list [ref=f3e3662]:
+              - listitem [ref=f3e3663]:
+                - button "Documentation" [ref=f3e3664]
+              - listitem [ref=f3e3665]:
+                - button "Statut du service" [ref=f3e3666]
+              - listitem [ref=f3e3667]:
+                - button "Contact" [ref=f3e3668]
+          - generic [ref=f3e3669]:
+            - heading "Legal" [level=4] [ref=f3e3670]
+            - list [ref=f3e3671]:
+              - listitem [ref=f3e3672]:
+                - button "Confidentialite" [ref=f3e3673]
+              - listitem [ref=f3e3674]:
+                - button "Conditions" [ref=f3e3675]
+              - listitem [ref=f3e3676]:
+                - button "Mentions legales" [ref=f3e3677]
+        - generic [ref=f3e3678]:
+          - paragraph [ref=f3e3679]: © 2026 UniSahel. Tous droits reserves.
+          - generic [ref=f3e3680]:
+            - button "Confidentialite" [ref=f3e3681]
+            - button "Conditions" [ref=f3e3682]
+            - button "Connexion" [ref=f3e3683]
+          - generic [ref=f3e3684]:
+            - text: Powered by
+            - generic [ref=f3e3688]: UniSahel
+  - region "Notifications alt+T"

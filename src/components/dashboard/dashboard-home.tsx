@@ -687,12 +687,12 @@ export function DashboardHome() {
             <CardTitle className="text-base font-semibold text-[#1a2744]">
               Repartition par filiere
             </CardTitle>
-            <p className="text-xs text-gray-400">Effectif etudiant par programme</p>
+            <p className="text-xs text-gray-400">Effectif étudiant par programme</p>
           </CardHeader>
           <CardContent>
             <div className="h-[300px]">
               {filiereData.length === 0 ? (
-                <EmptyState label="Aucun etudiant affecte a un programme pour le moment." />
+                <EmptyState label="Aucun étudiant affecté à un programme pour le moment." />
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={filiereData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
@@ -725,14 +725,14 @@ export function DashboardHome() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base font-semibold text-[#1a2744]">
-              Statut des etudiants
+              Statut des étudiants
             </CardTitle>
             <p className="text-xs text-gray-400">Repartition par statut administratif</p>
           </CardHeader>
           <CardContent>
             <div className="h-[300px]">
               {studentStatusData.length === 0 ? (
-                <EmptyState label="Aucun etudiant enregistre pour le moment." />
+                <EmptyState label="Aucun étudiant enregistré pour le moment." />
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -781,7 +781,7 @@ export function DashboardHome() {
           <CardContent>
             <div className="h-[300px]">
               {cycleData.length === 0 ? (
-                <EmptyState label="Aucun etudiant affecte a un programme pour le moment." />
+                <EmptyState label="Aucun étudiant affecté à un programme pour le moment." />
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>

@@ -85,7 +85,7 @@ export function StudentLoginPage() {
                 Uni<span className="text-[#2d7a4f]">Sahel</span>
               </span>
             </div>
-            <CardTitle className="text-xl font-bold text-[#1a2744]">Espace Etudiant</CardTitle>
+            <CardTitle className="text-xl font-bold text-[#1a2744]">Espace Étudiant</CardTitle>
             <CardDescription className="text-gray-500">
               Consultez vos notes, documents et informations academiques
             </CardDescription>
@@ -157,7 +157,7 @@ export function StudentLoginPage() {
                   onClick={handleDemoLogin}
                 >
                   <GraduationCap className="size-3.5 mr-1.5 text-[#2d7a4f]" />
-                  Connexion en tant qu&apos;etudiant
+                  Connexion en tant qu&apos;étudiant
                 </Button>
               </div>
             )}
@@ -167,7 +167,7 @@ export function StudentLoginPage() {
               onClick={() => setView('landing')}
               className="w-full mt-4 text-center text-xs text-gray-400 hover:text-[#2d7a4f] transition-colors"
             >
-              Retour a l&apos;accueil
+              Retour à l&apos;accueil
             </button>
           </CardContent>
         </Card>

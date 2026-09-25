@@ -214,7 +214,7 @@ export function PlatformInstitutionsPage() {
                     <TableHead className="text-xs">Localisation</TableHead>
                     <TableHead className="text-xs">Administrateur</TableHead>
                     <TableHead className="text-xs">Plan</TableHead>
-                    <TableHead className="text-xs text-center">Etudiants</TableHead>
+                    <TableHead className="text-xs text-center">Étudiants</TableHead>
                     <TableHead className="text-xs text-center">Enseignants</TableHead>
                     <TableHead className="text-xs">Statut</TableHead>
                     <TableHead className="text-xs">Creee le</TableHead>

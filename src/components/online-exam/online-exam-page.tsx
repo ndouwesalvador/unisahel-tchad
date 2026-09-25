@@ -694,10 +694,10 @@ export function OnlineExamPage() {
             <CardContent className="p-4 pt-0">
               <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-4">
                 <div className="p-4 rounded-lg bg-[#1a274408] border border-[#1a274415]">
-                  <h3 className="text-sm font-bold text-[#1a2744] mb-2">Passation cote etudiant, gestion cote admin</h3>
+                  <h3 className="text-sm font-bold text-[#1a2744] mb-2">Passation côte étudiant, gestion côte admin</h3>
                   <p className="text-xs text-gray-600 leading-relaxed">
                     Ce panneau admin ne simule plus une copie d&apos;examen. Il prepare les examens, gere la banque de questions,
-                    affiche les resultats enregistres et liste les incidents remontes par les sessions etudiantes reelles.
+                    affiche les résultats enregistrés et liste les incidents remontés par les sessions étudiantes réelles.
                   </p>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
                     <div className="p-3 rounded-lg bg-white border border-gray-100">
@@ -732,7 +732,7 @@ export function OnlineExamPage() {
                     </Button>
                   </div>
                   <p className="text-[10px] text-gray-500 mt-3 leading-relaxed">
-                    Les actions etudiantes demarrent depuis leur espace personnel, pas depuis ce panneau admin.
+                    Les actions étudiantes démarrent depuis leur espace personnel, pas depuis ce panneau admin.
                   </p>
                 </div>
               </div>
@@ -754,7 +754,7 @@ export function OnlineExamPage() {
                   <div className="relative w-48">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-gray-400" />
                     <Input
-                      placeholder="Rechercher etudiant..."
+                      placeholder="Rechercher un étudiant..."
                       className="pl-8 h-8 text-xs"
                       value={resultSearch}
                       onChange={(e) => setResultSearch(e.target.value)}
@@ -773,7 +773,7 @@ export function OnlineExamPage() {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-gray-50 sticky top-0 z-10">
-                      <TableHead className="text-xs font-semibold">Etudiant</TableHead>
+                      <TableHead className="text-xs font-semibold">Étudiant</TableHead>
                       <TableHead className="text-xs font-semibold">Matricule</TableHead>
                       <TableHead className="text-xs font-semibold text-center">Note</TableHead>
                       <TableHead className="text-xs font-semibold text-center">Temps</TableHead>

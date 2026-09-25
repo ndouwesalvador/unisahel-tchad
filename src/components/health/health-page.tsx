@@ -506,10 +506,10 @@ export function HealthPage() {
               <CardContent className="p-0">
                 <div className="overflow-x-auto">
                   <Table>
-                    <TableHeader>
-                      <TableRow className="bg-gray-50">
-                        <TableHead className="text-xs font-semibold">Etudiant</TableHead>
-                        <TableHead className="text-xs font-semibold">Filiere</TableHead>
+<TableHeader>
+                  <TableRow className="bg-gray-50 sticky top-0 z-10">
+                    <TableHead className="text-xs font-semibold">Étudiant</TableHead>
+                    <TableHead className="text-xs font-semibold">Filiere</TableHead>
                         <TableHead className="text-xs font-semibold">Hopital</TableHead>
                         <TableHead className="text-xs font-semibold">Service</TableHead>
                         <TableHead className="text-xs font-semibold">Periode</TableHead>
@@ -845,9 +845,8 @@ export function HealthPage() {
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-gray-50">
-                        <TableHead className="text-xs font-semibold">Date</TableHead>
-                        <TableHead className="text-xs font-semibold">Etudiant</TableHead>
+<TableRow className="bg-gray-50">
+                        <TableHead className="text-xs font-semibold">Étudiant</TableHead>
                         <TableHead className="text-xs font-semibold">Hopital</TableHead>
                         <TableHead className="text-xs font-semibold">Service</TableHead>
                         <TableHead className="text-xs font-semibold">Tranche</TableHead>

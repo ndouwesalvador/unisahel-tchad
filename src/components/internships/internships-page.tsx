@@ -756,7 +756,7 @@ export function InternshipsPage() {
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-gray-50">
-                        <TableHead className="text-xs font-semibold">Etudiant</TableHead>
+                        <TableHead className="text-xs font-semibold">Étudiant</TableHead>
                         <TableHead className="text-xs font-semibold">Entreprise</TableHead>
                         <TableHead className="text-xs font-semibold">Type</TableHead>
                         <TableHead className="text-xs font-semibold">Periode</TableHead>

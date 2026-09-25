@@ -236,7 +236,7 @@ export function LoginPage() {
           className="flex items-center gap-2 text-gray-500 hover:text-[#1a2744] text-sm mb-6 transition-colors"
         >
           <ArrowLeft className="size-4" />
-          Retour a l&apos;accueil
+          Retour à l&apos;accueil
         </button>
 
         <div className="bg-gradient-to-br from-[#1a2744] via-[#2d7a4f] to-[#d4a853] p-[2px] rounded-2xl shadow-xl shadow-[#1a274420]">
@@ -343,12 +343,12 @@ export function LoginPage() {
                   className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-[6px] bg-white text-sm font-medium text-[#1a2744] hover:bg-[#2d7a4f05] transition-colors"
                 >
                   <GraduationCap className="size-4 text-[#2d7a4f]" />
-                  Connexion etudiant
+                  Connexion étudiant
                 </motion.button>
               </div>
 
               <p className="mt-4 text-center text-sm text-gray-500">
-                Nouvel etablissement ?{' '}
+                Nouvel établissement ?{' '}
                 <button
                   onClick={() => setView('signup')}
                   className="text-[#2d7a4f] font-medium hover:underline"

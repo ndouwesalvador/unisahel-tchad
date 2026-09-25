@@ -427,7 +427,7 @@ export function InscriptionPedagogiquePage() {
                     Statut des inscriptions
                   </CardTitle>
                   <Badge variant="outline" className="text-xs text-gray-500">
-                    {filteredStudents.length} etudiants
+                    {filteredStudents.length} étudiants
                   </Badge>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-2">
@@ -484,7 +484,7 @@ export function InscriptionPedagogiquePage() {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-gray-50/80">
-                      <TableHead className="text-xs font-semibold text-[#1a2744]">Etudiant</TableHead>
+                      <TableHead className="text-xs font-semibold text-[#1a2744]">Étudiant</TableHead>
                       <TableHead className="text-xs font-semibold text-[#1a2744]">Matricule</TableHead>
                       <TableHead className="text-xs font-semibold text-[#1a2744] hidden md:table-cell">Filiere</TableHead>
                       <TableHead className="text-xs font-semibold text-[#1a2744] hidden sm:table-cell">Niveau</TableHead>
@@ -561,8 +561,8 @@ export function InscriptionPedagogiquePage() {
                     ))}
                     {filteredStudents.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center py-8 text-gray-400 text-sm">
-                          Aucun etudiant trouve
+<TableCell colSpan={7} className="text-center py-8 text-gray-400 text-sm">
+                          Aucun étudiant trouvé
                         </TableCell>
                       </TableRow>
                     )}
@@ -606,7 +606,7 @@ export function InscriptionPedagogiquePage() {
                     <label className="text-xs font-medium text-gray-600">Etudiant</label>
                     <Select value={selectedStudent} onValueChange={setSelectedStudent}>
                       <SelectTrigger className="w-full h-9 text-xs">
-                        <SelectValue placeholder="Selectionner un etudiant" />
+                        <SelectValue placeholder="Selectionner un étudiant" />
                       </SelectTrigger>
                       <SelectContent>
                         {students.map((s) => (

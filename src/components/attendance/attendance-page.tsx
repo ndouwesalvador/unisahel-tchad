@@ -294,7 +294,7 @@ export function AttendancePage() {
     }
 
     if (!payload.studentName.trim() || !payload.matricule.trim() || !payload.course.trim() || !payload.timeSlot.trim()) {
-      toast.error('Champs requis', { description: 'Etudiant, matricule, cours et plage horaire sont obligatoires.' })
+      toast.error('Champs requis', { description: 'Étudiant, matricule, cours et plage horaire sont obligatoires.' })
       return
     }
     if (forceAbsenceWithJustification && !attendanceForm.justification.trim()) {
@@ -821,7 +821,7 @@ export function AttendancePage() {
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
                   <Input
-                    placeholder="Rechercher par nom d'etudiant, matricule..."
+                    placeholder="Rechercher par nom d'étudiant, matricule..."
                     className="pl-9 h-9 text-sm"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -927,7 +927,7 @@ export function AttendancePage() {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-gray-50 sticky top-0 z-10">
-                      <TableHead className="text-xs font-semibold">Etudiant</TableHead>
+                      <TableHead className="text-xs font-semibold">Étudiant</TableHead>
                       <TableHead className="text-xs font-semibold">Cours</TableHead>
                       <TableHead className="text-xs font-semibold">Creneau</TableHead>
                       <TableHead className="text-xs font-semibold text-center">Statut</TableHead>
@@ -1258,7 +1258,7 @@ export function AttendancePage() {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-gray-50">
-                      <TableHead className="text-xs font-semibold">Etudiant</TableHead>
+                      <TableHead className="text-xs font-semibold">Étudiant</TableHead>
                       <TableHead className="text-xs font-semibold">Programme</TableHead>
                       <TableHead className="text-xs font-semibold text-center">Abs. cette sem.</TableHead>
                       <TableHead className="text-xs font-semibold text-center">Total absences</TableHead>

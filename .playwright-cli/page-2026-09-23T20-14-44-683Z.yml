@@ -1,0 +1,28 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3696]:
+    - button "Retour a l'accueil" [ref=e3697]
+    - generic [ref=e3701]:
+      - generic [ref=e3702]:
+        - generic [ref=e3703]: UniSahel
+        - generic [ref=e3710]: Connexion
+        - generic [ref=e3711]: Accedez a votre espace de gestion universitaire
+      - generic [ref=e3712]:
+        - generic [ref=e3713]:
+          - generic [ref=e3714]:
+            - generic [ref=e3715]: Adresse email
+            - textbox "Adresse email" [ref=e3720]:
+              - /placeholder: nom@universite.td
+          - generic [ref=e3721]:
+            - generic [ref=e3722]:
+              - generic [ref=e3723]: Mot de passe
+              - button "Mot de passe oublie ?" [ref=e3724]
+            - textbox "Mot de passe" [ref=e3729]:
+              - /placeholder: Entrez votre mot de passe
+          - button "Connexion" [ref=e3730]
+        - generic [ref=e3731]: ou
+        - button "Connexion etudiant" [ref=e3734]
+        - paragraph [ref=e3738]:
+          - text: Nouvel etablissement ?
+          - button "Creer un compte" [ref=e3739]
+  - region "Notifications alt+T"
+  - alert [ref=e3689]

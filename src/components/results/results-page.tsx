@@ -366,7 +366,7 @@ export function ResultsPage() {
             <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
               <div>
                 <h1 className="text-2xl font-bold text-white">Gestion des Resultats Academiques</h1>
-                <p className="text-sm text-white/70 mt-1">Publication, releves et suivi de la progression des etudiants</p>
+                <p className="text-sm text-white/70 mt-1">Publication, relevés et suivi de la progression des étudiants</p>
               </div>
               <div className="flex flex-wrap gap-3">
                 <AnimatedStat value={results.length} label="Resultats publies" icon={FileText} />
@@ -379,7 +379,7 @@ export function ResultsPage() {
         {/* ─── Stats Cards -- all real, derived from the results already loaded above ── */}
         <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
-            { label: 'Resultats publies', value: resultatsPublies, color: '#2d7a4f', icon: FileText },
+            { label: 'Résultats publiés', value: resultatsPublies, color: '#2d7a4f', icon: FileText },
             { label: 'Taux de reussite global', value: tauxReussiteGlobal, color: '#d4a853', icon: TrendingUp, suffix: '%' },
             { label: 'Mentions Tres Bien', value: mentionsTresBien, color: '#2d7a4f', icon: Trophy },
           ].map((stat) => (
@@ -623,7 +623,7 @@ export function ResultsPage() {
                     <div className="flex items-center gap-2 flex-1 w-full">
                       <Search className="size-4 text-gray-400 shrink-0" />
                       <Input
-                        placeholder="Rechercher par nom ou matricule de l'etudiant..."
+                        placeholder="Rechercher par nom ou matricule de l'étudiant..."
                         className="h-9 text-sm flex-1"
                         value={searchTranscript}
                         onChange={(e) => setSearchTranscript(e.target.value)}
@@ -631,7 +631,7 @@ export function ResultsPage() {
                     </div>
                     <Select value={effectiveTranscriptStudentId} onValueChange={setSelectedTranscriptStudentId}>
                       <SelectTrigger className="w-full sm:w-[260px] h-9 text-sm">
-                        <SelectValue placeholder="Choisir un etudiant" />
+                        <SelectValue placeholder="Choisir un étudiant" />
                       </SelectTrigger>
                       <SelectContent>
                         {transcriptCandidates.map((s) => (
@@ -867,14 +867,14 @@ export function ResultsPage() {
                   <CardHeader className="pb-3">
                     <div className="flex items-center gap-2">
                       <AlertTriangle className="size-4 text-[#c62828]" />
-                      <CardTitle className="text-sm font-semibold text-[#c62828]">Etudiants en difficulte</CardTitle>
+                      <CardTitle className="text-sm font-semibold text-[#c62828]">Étudiants en difficulté</CardTitle>
                     </div>
                   </CardHeader>
                   <CardContent className="p-4 pt-0">
                     <ScrollArea className="max-h-80">
                       <div className="space-y-2.5">
                         {atRiskStudents.length === 0 && (
-                          <p className="text-xs text-gray-400 text-center py-6">Aucun etudiant en difficulte pour la session en cours</p>
+                          <p className="text-xs text-gray-400 text-center py-6">Aucun étudiant en difficulté pour la session en cours</p>
                         )}
                         {atRiskStudents.map((student) => (
                           <motion.div

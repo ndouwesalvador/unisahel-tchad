@@ -1,0 +1,43 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e8]:
+    - button "Retour a l'accueil" [ref=e9]
+    - generic [ref=e13]:
+      - generic [ref=e14]:
+        - generic [ref=e15]: UniSahel
+        - generic [ref=e22]: Connexion
+        - generic [ref=e23]: Accedez a votre espace de gestion universitaire
+      - generic [ref=e24]:
+        - generic [ref=e25]:
+          - generic [ref=e26]:
+            - generic [ref=e27]: Adresse email
+            - textbox "Adresse email" [ref=e32]:
+              - /placeholder: nom@universite.td
+              - text: admin@unive-ndjamena.td
+          - generic [ref=e33]:
+            - generic [ref=e34]:
+              - generic [ref=e35]: Mot de passe
+              - button "Mot de passe oublie ?" [ref=e36]
+            - textbox "Mot de passe" [ref=e41]:
+              - /placeholder: Entrez votre mot de passe
+              - text: password123
+          - button "Connexion" [ref=e42]
+        - generic [ref=e43]: ou
+        - button "Connexion etudiant" [ref=e46]
+        - paragraph [ref=e50]:
+          - text: Nouvel etablissement ?
+          - button "Creer un compte" [ref=e51]
+        - generic [ref=e52]:
+          - paragraph [ref=e53]: Mode demonstration (dev uniquement)
+          - generic [ref=e54]:
+            - button "Super Admin" [ref=e56]
+            - button "Admin Institution" [ref=e58]
+            - button "Enseignant" [ref=e60]
+            - button "Scolarite" [ref=e62]
+  - region "Notifications alt+T":
+    - list:
+      - listitem [ref=e81]:
+        - generic [ref=e85]:
+          - generic [ref=e86]: Échec de la connexion
+          - generic [ref=e87]: "Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__[\"db\"].user.findFirst()` invocation in D:\\CODEX\\UNISAHEL-DEPLOY\\.next\\dev\\server\\chunks\\[root-of-the-server]__0z805w9._.js:212:160 209 const { email, password, login, pin } = parsed.data; 210 let user; 211 if (email) { → 212 user = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__[\"db\"].user.findFirst( error: Environment variable not found: DATABASE_URL. --> schema.prisma:10 | 9 | provider = \"postgresql\" 10 | url = env(\"DATABASE_URL\") | Validation Error Count: 1"
+  - button "Open Next.js Dev Tools" [ref=e76] [cursor=pointer]
+  - alert [ref=e80]

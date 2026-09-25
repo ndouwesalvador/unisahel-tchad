@@ -1,0 +1,49 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e8]:
+      - heading "Vérification de documents officiels" [level=1] [ref=e13]
+      - paragraph [ref=e14]: Vérifiez l'authenticité de vos documents UniSahel en entrant le code de vérification ou en scannant le QR code
+      - button "Retour au tableau de bord" [ref=e15]
+    - generic [ref=e19]:
+      - generic [ref=e22]:
+        - heading "Vérifier un document" [level=2] [ref=e23]
+        - generic [ref=e27]:
+          - generic [ref=e28]:
+            - text: Code de vérification
+            - textbox "Code figurant sous le QR code" [ref=e33]: BDWE3EE4HM9T
+            - paragraph [ref=e34]: Saisissez le code imprimé sur le document officiel.
+          - generic [ref=e35]:
+            - button "Vérification..." [disabled]
+      - generic [ref=e36]:
+        - generic [ref=e38]:
+          - heading "Vérification sécurisée" [level=3] [ref=e39]
+          - generic [ref=e43]:
+            - generic [ref=e50]:
+              - paragraph [ref=e51]: Base officielle
+              - paragraph [ref=e52]: Chaque code est recherché dans les documents réellement générés.
+            - generic [ref=e59]:
+              - paragraph [ref=e60]: Empreinte numérique
+              - paragraph [ref=e61]: Un code absent ou révoqué est refusé automatiquement.
+            - generic [ref=e74]:
+              - paragraph [ref=e75]: Traçabilité
+              - paragraph [ref=e76]: Le résultat affiche uniquement les données associées au code officiel.
+        - generic [ref=e78]:
+          - heading "Comment ça marche ?" [level=3] [ref=e79]
+          - generic [ref=e80]:
+            - generic [ref=e81]:
+              - generic [ref=e82]: "1"
+              - generic [ref=e83]:
+                - paragraph [ref=e84]: Scannez le QR code
+                - paragraph [ref=e85]: Utilisez votre appareil photo pour scanner le QR code sur le document
+            - generic [ref=e86]:
+              - generic [ref=e87]: "2"
+              - generic [ref=e88]:
+                - paragraph [ref=e89]: Entrez le code
+                - paragraph [ref=e90]: Ou saisissez manuellement le code de vérification
+            - generic [ref=e91]:
+              - generic [ref=e92]: "3"
+              - generic [ref=e93]:
+                - paragraph [ref=e94]: Vérifiez l'authenticité
+                - paragraph [ref=e95]: Le système confirme si le document est authentique
+  - region "Notifications alt+T"
+  - alert [ref=e96]

@@ -1,0 +1,260 @@
+- generic:
+  - generic [aria-hidden]:
+    - generic:
+      - complementary:
+        - generic:
+          - generic:
+            - generic:
+              - generic: UniSahel
+              - generic: UNIVERSITE POLYTECHNIQUE DE MONGO
+          - generic:
+            - generic: SN
+            - generic:
+              - generic: SALVADOR NDOUWE
+              - generic: Admin Institution
+          - generic:
+            - generic:
+              - generic:
+                - navigation:
+                  - button:
+                    - generic: Tableau de bord
+                  - button:
+                    - generic: Étudiants
+                  - button:
+                    - generic: Enseignants
+                  - button:
+                    - generic: Utilisateurs
+                  - button:
+                    - generic: Candidatures
+                  - button:
+                    - generic: Structure
+                  - button:
+                    - generic: Programmes
+                  - button:
+                    - generic: Maquettes
+                  - button:
+                    - generic: Notes
+                  - button:
+                    - generic: Délibérations
+                  - button:
+                    - generic: Documents
+                  - button:
+                    - generic: Paiements
+                  - button:
+                    - generic: Stages
+                  - button:
+                    - generic: Emploi du temps
+                  - button:
+                    - generic: Examens
+                  - button:
+                    - generic: Annonces
+                  - button:
+                    - generic: Import/Export
+                  - button:
+                    - generic: Inscriptions Péd.
+                  - button:
+                    - generic: Bourses
+                  - button:
+                    - generic: Alumni
+                  - button:
+                    - generic: Orientation
+                  - button:
+                    - generic: Bibliothèque
+                  - button:
+                    - generic: Présences
+                  - button:
+                    - generic: Messages
+                  - button:
+                    - generic: Examens en ligne
+                  - button:
+                    - generic: Rapports
+                  - button:
+                    - generic: Personnel
+                  - button:
+                    - generic: Salles
+                  - button:
+                    - generic: Transport
+                  - button:
+                    - generic: Résultats
+                  - button:
+                    - generic: Institution
+          - generic:
+            - button:
+              - generic: Paramètres
+            - button:
+              - generic: Déconnexion
+        - button
+      - generic:
+        - banner:
+          - generic:
+            - generic:
+              - navigation:
+                - generic: UniSahel
+                - generic: /
+                - generic: Étudiants
+            - generic:
+              - generic:
+                - textbox:
+                  - /placeholder: Rechercher...
+              - generic:
+                - generic: ⌘
+                - generic: K
+            - generic:
+              - combobox:
+                - generic: 2026-2027
+              - button
+              - button: Vérifier document
+              - button:
+                - generic: SN
+                - generic:
+                  - generic: SALVADOR NDOUWE
+                  - generic: Admin Institution
+        - main:
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - heading [level=1]: Gestion des etudiants
+                      - paragraph: 2 etudiants trouves
+                    - generic:
+                      - button: Importer
+                      - button: Excel
+                      - button: PDF
+                      - button: Nouvel etudiant
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - paragraph: "2"
+                          - paragraph: Total etudiants
+                      - generic:
+                        - generic:
+                          - paragraph: "2"
+                          - paragraph: Hommes
+                      - generic:
+                        - generic:
+                          - paragraph: "0"
+                          - paragraph: Femmes
+                      - generic:
+                        - generic:
+                          - paragraph: "44"
+                          - paragraph: Age moyen
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - textbox:
+                        - /placeholder: Rechercher par nom, prenom, matricule...
+                    - combobox:
+                      - generic: Toutes les filieres
+                    - combobox:
+                      - generic: Tous les niveaux
+                    - combobox:
+                      - generic: Tous les statuts
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - table:
+                        - rowgroup:
+                          - row:
+                            - columnheader: Matricule
+                            - columnheader: Nom
+                            - columnheader: Prenom
+                            - columnheader: Filiere
+                            - columnheader: Niveau
+                            - columnheader: Statut
+                            - columnheader: Credits
+                            - columnheader: Actions
+                        - rowgroup:
+                          - row:
+                            - cell: UNSH-2026-L1-000002
+                            - cell: NDOUWE
+                            - cell: HUGUE
+                            - cell: Licence en Génie Industriel et Maintenance
+                            - cell: L1
+                            - cell:
+                              - generic: Pré-inscrit
+                            - cell: "0"
+                            - cell:
+                              - button
+                              - button
+                              - button
+                          - row:
+                            - cell: UNSH-2026-L1-000001
+                            - cell: NDOUWE
+                            - cell: SALVADOR
+                            - cell: Licence en Génie Industriel et Maintenance
+                            - cell: L1
+                            - cell:
+                              - generic: Pré-inscrit
+                            - cell: "0"
+                            - cell:
+                              - button
+                              - button
+                              - button
+                  - generic:
+                    - paragraph: Affichage 1-2 sur 2
+                    - generic:
+                      - button [disabled]
+                      - button: "1"
+                      - button [disabled]
+      - button
+  - region "Notifications alt+T"
+  - alert
+  - generic [aria-hidden]: 0%
+  - dialog [ref=f2e4452]:
+    - heading "Modifier le dossier etudiant" [level=2] [ref=f2e4454]
+    - generic [ref=f2e4455]:
+      - generic [ref=f2e4456]:
+        - generic [ref=f2e4457]:
+          - generic [ref=f2e4458]: Nom
+          - textbox [active] [ref=f2e4459]: NDOUWE
+        - generic [ref=f2e4460]:
+          - generic [ref=f2e4461]: Prenom
+          - textbox [ref=f2e4462]: HUGUE
+      - generic [ref=f2e4463]:
+        - generic [ref=f2e4464]:
+          - generic [ref=f2e4465]: Sexe
+          - combobox [ref=f2e4466]:
+            - generic: Masculin
+        - generic [ref=f2e4467]:
+          - generic [ref=f2e4468]: Statut administratif
+          - combobox [ref=f2e4469]:
+            - generic: Pré-inscrit
+      - generic [ref=f2e4470]:
+        - generic [ref=f2e4471]:
+          - generic [ref=f2e4472]: Date de naissance
+          - textbox [ref=f2e4473]: 1966-10-10
+        - generic [ref=f2e4474]:
+          - generic [ref=f2e4475]: Lieu de naissance
+          - textbox [ref=f2e4476]: sarh
+      - generic [ref=f2e4477]:
+        - generic [ref=f2e4478]:
+          - generic [ref=f2e4479]: Filiere
+          - combobox [ref=f2e4480]:
+            - generic: Licence en Génie Industriel et Maintenance
+        - generic [ref=f2e4481]:
+          - generic [ref=f2e4482]: Niveau
+          - combobox [ref=f2e4483]:
+            - generic: Licence 1
+      - generic [ref=f2e4484]:
+        - generic [ref=f2e4485]:
+          - generic [ref=f2e4486]: Email
+          - textbox [ref=f2e4487]: salvador96@gmail.com
+        - generic [ref=f2e4488]:
+          - generic [ref=f2e4489]: Telephone
+          - textbox [ref=f2e4490]: "0758957183"
+      - generic [ref=f2e4491]:
+        - generic [ref=f2e4492]:
+          - generic [ref=f2e4493]: Nationalite
+          - textbox [ref=f2e4494]: Tchadienne
+        - generic [ref=f2e4495]:
+          - generic [ref=f2e4496]: Annee du bac
+          - spinbutton [ref=f2e4497]
+      - button "Enregistrer les modifications" [ref=f2e4498]
+    - button "Close" [ref=f2e4499]

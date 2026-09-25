@@ -1,0 +1,54 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e8]:
+      - heading "Vérification de documents officiels" [level=1] [ref=e13]
+      - paragraph [ref=e14]: Vérifiez l'authenticité de vos documents UniSahel en entrant le code de vérification ou en scannant le QR code
+      - button "Retour au tableau de bord" [ref=e15]
+    - generic [ref=e19]:
+      - generic [ref=e22]:
+        - heading "Vérifier un document" [level=2] [ref=e23]
+        - generic [ref=e27]:
+          - generic [ref=e28]:
+            - text: Code de vérification
+            - textbox "VER-XXX-YYYY-TYPE-NNN" [ref=e33]: BDWE3EE4HM9T
+            - paragraph [ref=e34]: "Format : VER-XXX-YYYY-TYPE-NNN"
+          - generic [ref=e35]:
+            - button "Vérification..." [disabled]
+            - button "Scanner un QR code" [ref=e36]
+      - generic [ref=e37]:
+        - generic [ref=e39]:
+          - heading "Statistiques de vérification" [level=3] [ref=e40]
+          - generic [ref=e44]:
+            - generic [ref=e51]:
+              - paragraph [ref=e52]: Documents vérifiés ce mois
+              - paragraph [ref=e53]: 1,247
+            - generic [ref=e60]:
+              - paragraph [ref=e61]: Taux de documents authentiques
+              - paragraph [ref=e62]: 99.2%
+            - generic [ref=e68]:
+              - paragraph [ref=e69]: Tentatives de fraude
+              - paragraph [ref=e70]: "3"
+        - generic [ref=e72]:
+          - heading "Comment ça marche ?" [level=3] [ref=e73]
+          - generic [ref=e74]:
+            - generic [ref=e75]:
+              - generic [ref=e76]: "1"
+              - generic [ref=e77]:
+                - paragraph [ref=e78]: Scannez le QR code
+                - paragraph [ref=e79]: Utilisez votre appareil photo pour scanner le QR code sur le document
+            - generic [ref=e80]:
+              - generic [ref=e81]: "2"
+              - generic [ref=e82]:
+                - paragraph [ref=e83]: Entrez le code
+                - paragraph [ref=e84]: Ou saisissez manuellement le code de vérification
+            - generic [ref=e85]:
+              - generic [ref=e86]: "3"
+              - generic [ref=e87]:
+                - paragraph [ref=e88]: Vérifiez l'authenticité
+                - paragraph [ref=e89]: Le système confirme si le document est authentique
+        - generic [ref=e97]:
+          - paragraph [ref=e98]: Code de démonstration
+          - paragraph [ref=e99]: Un code de démo a été pré-rempli pour vous montrer le résultat d'une vérification réussie.
+          - paragraph [ref=e100]: VER-UDN-2024-RN-001
+  - region "Notifications alt+T"
+  - alert [ref=e101]

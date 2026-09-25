@@ -1,0 +1,332 @@
+- generic:
+  - generic [aria-hidden]:
+    - generic:
+      - complementary:
+        - generic:
+          - generic:
+            - generic:
+              - generic: UniSahel
+              - generic: UNIVERSITE POLYTECHNIQUE DE MONGO
+          - generic:
+            - generic: SN
+            - generic:
+              - generic: SALVADOR NDOUWE
+              - generic: Admin Institution
+          - generic:
+            - generic:
+              - generic:
+                - navigation:
+                  - button:
+                    - generic: Tableau de bord
+                  - button:
+                    - generic: Étudiants
+                  - button:
+                    - generic: Enseignants
+                  - button:
+                    - generic: Utilisateurs
+                  - button:
+                    - generic: Candidatures
+                  - button:
+                    - generic: Structure
+                  - button:
+                    - generic: Programmes
+                  - button:
+                    - generic: Maquettes
+                  - button:
+                    - generic: Notes
+                  - button:
+                    - generic: Délibérations
+                  - button:
+                    - generic: Documents
+                  - button:
+                    - generic: Paiements
+                  - button:
+                    - generic: Stages
+                  - button:
+                    - generic: Emploi du temps
+                  - button:
+                    - generic: Examens
+                  - button:
+                    - generic: Annonces
+                  - button:
+                    - generic: Import/Export
+                  - button:
+                    - generic: Inscriptions Péd.
+                  - button:
+                    - generic: Bourses
+                  - button:
+                    - generic: Alumni
+                  - button:
+                    - generic: Orientation
+                  - button:
+                    - generic: Bibliothèque
+                  - button:
+                    - generic: Présences
+                  - button:
+                    - generic: Messages
+                  - button:
+                    - generic: Examens en ligne
+                  - button:
+                    - generic: Rapports
+                  - button:
+                    - generic: Personnel
+                  - button:
+                    - generic: Salles
+                  - button:
+                    - generic: Transport
+                  - button:
+                    - generic: Résultats
+                  - button:
+                    - generic: Institution
+          - generic:
+            - button:
+              - generic: Paramètres
+            - button:
+              - generic: Déconnexion
+        - button
+      - generic:
+        - banner:
+          - generic:
+            - generic:
+              - navigation:
+                - generic: UniSahel
+                - generic: /
+                - generic: Délibérations
+            - generic:
+              - generic:
+                - textbox:
+                  - /placeholder: Rechercher...
+              - generic:
+                - generic: ⌘
+                - generic: K
+            - generic:
+              - combobox:
+                - generic: 2026-2027
+              - button:
+                - generic: "1"
+              - button: Vérifier document
+              - button:
+                - generic: SN
+                - generic:
+                  - generic: SALVADOR NDOUWE
+                  - generic: Admin Institution
+        - main:
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - heading [level=1]: Session de deliberation
+                          - paragraph: Deliberations et decisions de jury
+                      - generic:
+                        - generic: Deliberation Normale 2026-2027
+                        - button: Exporter PV
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic: Statut du jury
+                      - generic: Deliberation terminee
+              - generic:
+                - generic:
+                  - generic: Configuration du jury
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: Session
+                        - combobox:
+                          - generic: Session Normale
+                      - generic:
+                        - paragraph: "Portee : tous les etudiants de l'annee academique 2026-2027"
+                    - generic:
+                      - generic:
+                        - generic: Membres du jury
+                        - generic: 0 membres
+                      - generic: Aucun membre ajouté. Ajoutez au moins un président avant de générer un PV officiel.
+                      - paragraph: La composition du jury est utilisée pour le PV généré dans cette session. Elle n'est pas encore persistée comme entité dédiée.
+                      - generic:
+                        - textbox:
+                          - /placeholder: Nom du membre...
+                          - text: SALVADOR NDOUWE
+                        - combobox [expanded]:
+                          - generic: Membre
+                        - button: Ajouter
+                    - generic:
+                      - button [disabled]: Session deja lancee
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic: "2"
+                          - paragraph: "2"
+                          - paragraph: Reussites
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic: "0"
+                          - paragraph: "0"
+                          - paragraph: Compenses
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic: "0"
+                          - paragraph: "0"
+                          - paragraph: Ajournes
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic: "0"
+                          - paragraph: "0"
+                          - paragraph: Exclus
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: Taux d'admission
+                        - generic: 100%
+                      - progressbar
+                      - generic:
+                        - paragraph: 2 reussites sur 2 etudiants
+                        - generic:
+                          - generic: Admis
+                          - generic: Compense
+                          - generic: Dette
+                          - generic: Ajourne
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: Resultats des etudiants
+                        - generic: 2 etudiants
+                      - generic:
+                        - button: PV
+                        - button [disabled]: Deliberation validee
+                  - generic:
+                    - generic:
+                      - generic:
+                        - table:
+                          - rowgroup:
+                            - row:
+                              - columnheader: "#"
+                              - columnheader: Matricule
+                              - columnheader: Nom Prenom
+                              - columnheader: Moyenne
+                              - columnheader: Credits valides
+                              - columnheader: Decision
+                              - columnheader: Observation
+                          - rowgroup:
+                            - row:
+                              - cell: "1"
+                              - cell: UNSH-2026-L1-000002
+                              - cell: NDOUWE HUGUE
+                              - cell: "12.2"
+                              - cell:
+                                - generic:
+                                  - generic: "4"
+                                  - generic: / 60
+                              - cell:
+                                - generic: Admis avec dette
+                              - cell: "-"
+                            - row:
+                              - cell: "2"
+                              - cell: UNSH-2026-L1-000001
+                              - cell: NDOUWE SALVADOR
+                              - cell: "15.2"
+                              - cell:
+                                - generic:
+                                  - generic: "4"
+                                  - generic: / 60
+                              - cell:
+                                - generic: Admis avec dette
+                              - cell: "-"
+              - generic:
+                - generic:
+                  - generic: Regles de compensation LMD
+                  - generic:
+                    - generic:
+                      - generic:
+                        - heading [level=3]: Regles de compensation
+                        - generic:
+                          - generic:
+                            - paragraph: Compensation entre UE
+                            - paragraph: Un etudiant peut compenser une UE dont la moyenne est entre 8 et 9.99 par une autre UE validee avec une moyenne superieure a 10, dans le meme semestre.
+                          - generic:
+                            - paragraph: Seuil de credits
+                            - paragraph: La délibération annuelle s'appuie sur les crédits validés sur l'année (60 crédits attendus par défaut) et une moyenne générale ≥ 10/20.
+                          - generic:
+                            - paragraph: Notes eliminatories
+                            - paragraph: Toute note inferieure a 8/20 dans une UE est eliminatorie et ne peut pas etre compensee. L'etudiant doit passer en rattrapage.
+                      - generic:
+                        - heading [level=3]: Flux de decision
+                        - generic:
+                          - generic:
+                            - generic: "1"
+                            - generic:
+                              - paragraph: Calcul de la moyenne par UE
+                              - paragraph: Moyenne = CC x 40% + Examen x 60% (+ TP si applicable)
+                          - generic:
+                            - generic: "2"
+                            - generic:
+                              - paragraph: Verification des seuils
+                              - paragraph: "Note ≥ 10 : valide | 8-9.99 : compensation possible | < 8 : eliminatorie"
+                          - generic:
+                            - generic: "3"
+                            - generic:
+                              - paragraph: Compensation inter-UE
+                              - paragraph: Les UE validees compensent les UE deficitaires si la moyenne du semestre ≥ 10
+                          - generic:
+                            - generic: "4"
+                            - generic:
+                              - paragraph: Decision du jury
+                              - paragraph: Admis / Admis avec dette / Compense / Ajourne / Exclu
+                        - generic:
+                          - paragraph: Seuils de credits (annee 60 credits)
+                          - generic:
+                            - generic:
+                              - paragraph: 60/60
+                              - paragraph: Admis
+                            - generic:
+                              - paragraph: 36-59
+                              - paragraph: Dette
+                            - generic:
+                              - paragraph: <36
+                              - paragraph: Ajourne
+              - generic:
+                - generic:
+                  - generic: Sessions de deliberation
+                  - generic:
+                    - generic:
+                      - table:
+                        - rowgroup:
+                          - row:
+                            - columnheader: Titre
+                            - columnheader: Date
+                            - columnheader: Statut
+                            - columnheader: Actions
+                        - rowgroup:
+                          - row:
+                            - cell: Deliberation Normale 2026-2027
+                            - cell: 23/09/2026
+                            - cell:
+                              - generic: Terminee
+                            - cell:
+                              - button: Detail
+                          - row:
+                            - cell: Deliberation Normale 2026-2027
+                            - cell: 22/09/2026
+                            - cell:
+                              - generic: Terminee
+                            - cell:
+                              - button: Detail
+      - button
+  - region "Notifications alt+T"
+  - alert
+  - generic [aria-hidden]: 0%
+  - listbox [ref=f1e4663]:
+    - option "President" [ref=f1e4664]
+    - option "Membre" [active] [selected] [ref=f1e4667]
