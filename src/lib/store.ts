@@ -152,12 +152,15 @@ export const useAppStore = create<AppState>((set, _get) => ({
     previousView: null 
   })),
   
-  login: (user) => set({ 
+  login: (user) => set((state) => ({ 
     user, 
     isAuthenticated: true, 
-    currentView: 'dashboard',
+    currentView:
+      state.isAuthenticated && state.user?.id === user.id
+        ? state.currentView
+        : 'dashboard',
     selectedTenantId: user.tenantId 
-  }),
+  })),
 
   updateUser: (updates) => set((state) => ({
     user: state.user ? { ...state.user, ...updates } : state.user,
