@@ -85,6 +85,70 @@ export interface ChatMessage {
   timestamp: Date
 }
 
+const LAST_AUTHENTICATED_VIEW_KEY = 'unisahel:last-authenticated-view'
+
+const nonRestorableViews = new Set<AppView>([
+  'landing',
+  'login',
+  'signup',
+  'student-login',
+  'student-detail',
+  'teacher-detail',
+  'student-exam',
+])
+
+const isRestorableAuthenticatedView = (view: AppView) => !nonRestorableViews.has(view)
+
+const getSessionStorage = () => {
+  if (typeof window === 'undefined') return null
+
+  try {
+    return window.sessionStorage
+  } catch {
+    return null
+  }
+}
+
+const rememberAuthenticatedView = (user: AppUser | null, view: AppView) => {
+  if (!user || !isRestorableAuthenticatedView(view)) return
+
+  const storage = getSessionStorage()
+  if (!storage) return
+
+  storage.setItem(
+    LAST_AUTHENTICATED_VIEW_KEY,
+    JSON.stringify({
+      userId: user.id,
+      tenantId: user.tenantId,
+      view,
+    })
+  )
+}
+
+const readAuthenticatedView = (user: AppUser): AppView | null => {
+  const storage = getSessionStorage()
+  if (!storage) return null
+
+  const raw = storage.getItem(LAST_AUTHENTICATED_VIEW_KEY)
+  if (!raw) return null
+
+  try {
+    const value = JSON.parse(raw) as { userId?: string; tenantId?: string; view?: AppView }
+    if (value.userId !== user.id || value.tenantId !== user.tenantId || !value.view) return null
+    if (!isRestorableAuthenticatedView(value.view)) return null
+
+    return value.view
+  } catch {
+    storage.removeItem(LAST_AUTHENTICATED_VIEW_KEY)
+    return null
+  }
+}
+
+const clearRememberedAuthenticatedView = () => {
+  const storage = getSessionStorage()
+  storage?.removeItem(LAST_AUTHENTICATED_VIEW_KEY)
+}
+
 interface AppState {
   currentView: AppView
   previousView: AppView | null
@@ -142,40 +206,64 @@ export const useAppStore = create<AppState>((set, _get) => ({
     }
   ],
 
-  setView: (view) => set((state) => ({ 
-    currentView: view, 
-    previousView: state.currentView 
-  })),
+  setView: (view) => set((state) => {
+    if (state.isAuthenticated) {
+      rememberAuthenticatedView(state.user, view)
+    }
+
+    return { 
+      currentView: view, 
+      previousView: state.currentView 
+    }
+  }),
   
-  goBack: () => set((state) => ({ 
-    currentView: state.previousView || 'dashboard',
-    previousView: null 
-  })),
+  goBack: () => set((state) => {
+    const view = state.previousView || 'dashboard'
+
+    if (state.isAuthenticated) {
+      rememberAuthenticatedView(state.user, view)
+    }
+
+    return { 
+      currentView: view,
+      previousView: null 
+    }
+  }),
   
-  login: (user) => set((state) => ({ 
-    user, 
-    isAuthenticated: true, 
-    currentView:
+  login: (user) => set((state) => {
+    const currentView =
       state.isAuthenticated && state.user?.id === user.id
         ? state.currentView
-        : 'dashboard',
-    selectedTenantId: user.tenantId 
-  })),
+        : readAuthenticatedView(user) ?? 'dashboard'
+
+    rememberAuthenticatedView(user, currentView)
+
+    return { 
+      user, 
+      isAuthenticated: true, 
+      currentView,
+      selectedTenantId: user.tenantId 
+    }
+  }),
 
   updateUser: (updates) => set((state) => ({
     user: state.user ? { ...state.user, ...updates } : state.user,
   })),
   
-  logout: () => set({ 
-    user: null, 
-    isAuthenticated: false, 
-    currentView: 'landing',
-    selectedTenantId: null,
-    selectedAcademicYearId: null,
-    selectedStudentId: null,
-    selectedProgramId: null,
-    selectedTeacherId: null
-  }),
+  logout: () => {
+    clearRememberedAuthenticatedView()
+
+    return set({ 
+      user: null, 
+      isAuthenticated: false, 
+      currentView: 'landing',
+      selectedTenantId: null,
+      selectedAcademicYearId: null,
+      selectedStudentId: null,
+      selectedProgramId: null,
+      selectedTeacherId: null
+    })
+  },
   
   setTenant: (tenantId) => set({ selectedTenantId: tenantId }),
   setAcademicYear: (yearId) => set({ selectedAcademicYearId: yearId }),
