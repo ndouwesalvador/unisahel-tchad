@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
 import {
@@ -518,11 +519,34 @@ const UPDATABLE: Record<EntityType, string[]> = {
   level: ['name', 'code', 'orderIndex', 'isActive'],
   semester: ['name', 'code', 'orderIndex'],
   'teaching-unit': ['code', 'name', 'credits', 'type', 'compensable', 'responsibleId', 'orderIndex'],
-  'course-element': ['code', 'name', 'coefficient', 'hoursCM', 'hoursTD', 'hoursTP', 'teacherId', 'orderIndex'],
+  'course-element': ['code', 'name', 'coefficient', 'hoursCM', 'hoursTD', 'hoursTP', 'hoursStage', 'hoursPersonal', 'teacherId', 'orderIndex'],
 }
 
-const NUMERIC_FIELDS = new Set(['duration', 'orderIndex', 'credits', 'coefficient', 'hoursCM', 'hoursTD', 'hoursTP'])
+const NUMERIC_FIELDS = new Set(['duration', 'orderIndex', 'credits', 'coefficient', 'hoursCM', 'hoursTD', 'hoursTP', 'hoursStage', 'hoursPersonal'])
 const SOFT_DELETE_TYPES = new Set<EntityType>(['faculty', 'department', 'program', 'level'])
+
+const updateTeachingUnitSchema = z.object({
+  code: z.string().max(20),
+  name: z.string().trim().min(1).max(200),
+  credits: z.number().int().positive(),
+  type: z.enum(['FONDAMENTALE', 'COMPLEMENTAIRE', 'TRANSVERSALE', 'METHODE', 'LANGUE', 'STAGE', 'MEMOIRE']),
+  compensable: z.boolean(),
+  responsibleId: z.string().cuid().nullable(),
+  orderIndex: z.number().int().min(0),
+}).partial()
+
+const updateCourseElementSchema = z.object({
+  code: z.string().max(20),
+  name: z.string().trim().min(1).max(200),
+  coefficient: z.number().positive(),
+  hoursCM: z.number().nonnegative(),
+  hoursTD: z.number().nonnegative(),
+  hoursTP: z.number().nonnegative(),
+  hoursStage: z.number().nonnegative(),
+  hoursPersonal: z.number().nonnegative(),
+  teacherId: z.string().cuid().nullable(),
+  orderIndex: z.number().int().min(0),
+}).partial()
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function delegate(type: EntityType): any {
@@ -581,6 +605,15 @@ async function updateEntityHandler(user: SessionUser, tenantId: string, request:
     }
     if (Object.keys(data).length === 0) {
       return NextResponse.json({ error: 'No updatable fields provided' }, { status: 400 })
+    }
+
+    if (type === 'teaching-unit' || type === 'course-element') {
+      const schema = type === 'teaching-unit' ? updateTeachingUnitSchema : updateCourseElementSchema
+      const result = schema.safeParse(data)
+      if (!result.success) {
+        return NextResponse.json({ error: 'Données de maquette invalides', details: formatZodError(result.error) }, { status: 400 })
+      }
+      Object.assign(data, result.data)
     }
 
     const updated = await delegate(type).update({ where: { id }, data })

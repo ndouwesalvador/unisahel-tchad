@@ -3,12 +3,25 @@
 import { exportToExcel } from '@/lib/export'
 import { useStructure } from '@/lib/api-hooks'
 import { useAppStore } from '@/lib/store'
+import { useQueryClient } from '@tanstack/react-query'
 import { useState, useEffect, useRef, Fragment } from 'react'
 import { toast } from 'sonner'
 import { motion } from 'framer-motion'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
 import {
   Table,
   TableBody,
@@ -37,13 +50,15 @@ import {
   Download,
   AlertTriangle,
   CheckCircle2,
+  Edit3,
 } from 'lucide-react'
 
 // ─── Types and API-backed data mapping ────────────────────────────────────────
 
-type UEType = 'Fondamentale' | 'Complémentaire' | 'Transversale'
+type UEType = 'Fondamentale' | 'Complémentaire' | 'Transversale' | 'Méthodologie' | 'Langue' | 'Stage' | 'Mémoire'
 
 interface ECUE {
+  id: string
   code: string
   nom: string
   coefficient: number
@@ -51,15 +66,20 @@ interface ECUE {
   td: number
   tp: number
   stage: number
+  personal: number
+  orderIndex: number
   enseignant: string
 }
 
 interface UE {
+  id: string
   code: string
   nom: string
   credits: number
   type: UEType
+  rawType: string
   compensable: boolean
+  orderIndex: number
   responsable: string
   ecues: ECUE[]
 }
@@ -87,6 +107,10 @@ const typeConfig: Record<UEType, { label: string; className: string }> = {
   'Fondamentale': { label: 'Fondamentale', className: 'bg-[#1a274415] text-[#1a2744] border-0' },
   'Complémentaire': { label: 'Complémentaire', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0' },
   'Transversale': { label: 'Transversale', className: 'bg-[#d4a85315] text-[#d4a853] border-0' },
+  'Méthodologie': { label: 'Méthodologie', className: 'bg-[#1a274415] text-[#1a2744] border-0' },
+  'Langue': { label: 'Langue', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0' },
+  'Stage': { label: 'Stage', className: 'bg-[#d4a85315] text-[#d4a853] border-0' },
+  'Mémoire': { label: 'Mémoire', className: 'bg-[#1a274415] text-[#1a2744] border-0' },
 }
 
 interface StructureTeacherRef {
@@ -102,6 +126,8 @@ interface StructureCourseElement {
   hoursTD: number
   hoursTP: number
   hoursStage: number
+  hoursPersonal?: number
+  orderIndex?: number
   teacher?: StructureTeacherRef | null
 }
 
@@ -112,6 +138,7 @@ interface StructureTeachingUnit {
   credits: number
   type: string
   compensable: boolean
+  orderIndex?: number
   responsible?: StructureTeacherRef | null
   courseElements: StructureCourseElement[]
 }
@@ -152,6 +179,10 @@ function mapUEType(type: string): UEType {
   const t = (type || '').toUpperCase()
   if (t.startsWith('COMPL')) return 'Complémentaire'
   if (t.startsWith('TRANSV')) return 'Transversale'
+  if (t === 'METHODE') return 'Méthodologie'
+  if (t === 'LANGUE') return 'Langue'
+  if (t === 'STAGE') return 'Stage'
+  if (t === 'MEMOIRE') return 'Mémoire'
   return 'Fondamentale'
 }
 
@@ -171,20 +202,26 @@ function mapStructureToPrograms(faculties: StructureFaculty[]): Program[] {
               id: sem.id,
               label: sem.name,
               ues: (sem.teachingUnits || []).map((tu) => ({
-                code: tu.code || tu.id,
+                id: tu.id,
+                code: tu.code ?? '',
                 nom: tu.name,
                 credits: tu.credits,
                 type: mapUEType(tu.type),
+                rawType: tu.type || 'FONDAMENTALE',
                 compensable: tu.compensable,
+                orderIndex: tu.orderIndex ?? 0,
                 responsable: teacherName(tu.responsible),
                 ecues: (tu.courseElements || []).map((ce) => ({
-                  code: ce.code || ce.id,
+                  id: ce.id,
+                  code: ce.code ?? '',
                   nom: ce.name,
                   coefficient: ce.coefficient,
                   cm: ce.hoursCM,
                   td: ce.hoursTD,
                   tp: ce.hoursTP,
                   stage: ce.hoursStage,
+                  personal: ce.hoursPersonal ?? 0,
+                  orderIndex: ce.orderIndex ?? 0,
                   enseignant: teacherName(ce.teacher),
                 })),
               })),
@@ -276,6 +313,261 @@ function useCountUp(target: number, duration: number = 1400) {
   return value
 }
 
+const UE_TYPE_OPTIONS = [
+  { value: 'FONDAMENTALE', label: 'Fondamentale' },
+  { value: 'COMPLEMENTAIRE', label: 'Complémentaire' },
+  { value: 'TRANSVERSALE', label: 'Transversale' },
+  { value: 'METHODE', label: 'Méthodologie' },
+  { value: 'LANGUE', label: 'Langue' },
+  { value: 'STAGE', label: 'Stage' },
+  { value: 'MEMOIRE', label: 'Mémoire' },
+]
+
+function validNumber(value: string, minimum: number, integer = false): boolean {
+  if (!value.trim()) return false
+  const parsed = Number(value)
+  return Number.isFinite(parsed) && parsed >= minimum && (!integer || Number.isInteger(parsed))
+}
+
+function EditTeachingUnitDialog({ ue }: { ue: UE }) {
+  const queryClient = useQueryClient()
+  const [open, setOpen] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [code, setCode] = useState(ue.code)
+  const [name, setName] = useState(ue.nom)
+  const [credits, setCredits] = useState(String(ue.credits))
+  const [type, setType] = useState(ue.rawType || 'FONDAMENTALE')
+  const [orderIndex, setOrderIndex] = useState(String(ue.orderIndex))
+  const [compensable, setCompensable] = useState(ue.compensable)
+
+  const reset = () => {
+    setCode(ue.code)
+    setName(ue.nom)
+    setCredits(String(ue.credits))
+    setType(ue.rawType || 'FONDAMENTALE')
+    setOrderIndex(String(ue.orderIndex))
+    setCompensable(ue.compensable)
+  }
+
+  const handleSave = async () => {
+    if (!name.trim() || name.trim().length > 200 || code.trim().length > 20 || !validNumber(credits, 1, true) || !validNumber(orderIndex, 0, true)) {
+      toast.error('Vérifiez l’intitulé, le code (20 caractères maximum), les crédits entiers positifs et l’ordre entier positif ou nul.')
+      return
+    }
+    setBusy(true)
+    try {
+      const res = await fetch('/api/structure?type=teaching-unit', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: ue.id,
+          code: code.trim(),
+          name: name.trim(),
+          credits: Number(credits),
+          type,
+          compensable,
+          orderIndex: Number(orderIndex),
+        }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json.error || 'Modification impossible')
+      toast.success('UE mise à jour')
+      queryClient.invalidateQueries({ queryKey: ['structure'] })
+      setOpen(false)
+    } catch (e) {
+      toast.error('Modification impossible', {
+        description: e instanceof Error ? e.message : 'Une erreur est survenue.',
+      })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(next) => { setOpen(next); if (next) reset() }}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Modifier l’UE" aria-label={`Modifier l’UE ${ue.nom}`} onClick={(e) => e.stopPropagation()}>
+          <Edit3 className="size-3.5 text-[#1a2744]" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <DialogHeader>
+          <DialogTitle className="text-[#1a2744]">Modifier l&apos;UE</DialogTitle>
+          <DialogDescription>Code, intitulé, crédits, type, compensation et ordre d&apos;affichage.</DialogDescription>
+        </DialogHeader>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4">
+          <div className="space-y-2">
+            <Label>Code UE</Label>
+            <Input value={code} onChange={(e) => setCode(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Crédits</Label>
+            <Input type="number" min="1" step="1" value={credits} onChange={(e) => setCredits(e.target.value)} />
+          </div>
+          <div className="space-y-2 sm:col-span-2">
+            <Label>Intitulé</Label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Type</Label>
+            <Select value={type} onValueChange={setType}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {UE_TYPE_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Ordre</Label>
+            <Input type="number" min="0" step="1" value={orderIndex} onChange={(e) => setOrderIndex(e.target.value)} />
+          </div>
+          <div className="sm:col-span-2 flex items-center justify-between rounded-lg border p-3">
+            <div>
+              <Label>Compensable</Label>
+              <p className="text-xs text-gray-500">L&apos;UE peut entrer dans les règles de compensation.</p>
+            </div>
+            <Switch checked={compensable} onCheckedChange={setCompensable} />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)} disabled={busy}>Annuler</Button>
+          <Button className="bg-[#2d7a4f] hover:bg-[#236b40] text-white" onClick={handleSave} disabled={busy}>
+            {busy ? 'Enregistrement…' : 'Enregistrer'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function EditCourseElementDialog({ ecue }: { ecue: ECUE }) {
+  const queryClient = useQueryClient()
+  const [open, setOpen] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [code, setCode] = useState(ecue.code)
+  const [name, setName] = useState(ecue.nom)
+  const [coefficient, setCoefficient] = useState(String(ecue.coefficient))
+  const [hoursCM, setHoursCM] = useState(String(ecue.cm))
+  const [hoursTD, setHoursTD] = useState(String(ecue.td))
+  const [hoursTP, setHoursTP] = useState(String(ecue.tp))
+  const [hoursStage, setHoursStage] = useState(String(ecue.stage))
+  const [hoursPersonal, setHoursPersonal] = useState(String(ecue.personal))
+  const [orderIndex, setOrderIndex] = useState(String(ecue.orderIndex))
+
+  const reset = () => {
+    setCode(ecue.code)
+    setName(ecue.nom)
+    setCoefficient(String(ecue.coefficient))
+    setHoursCM(String(ecue.cm))
+    setHoursTD(String(ecue.td))
+    setHoursTP(String(ecue.tp))
+    setHoursStage(String(ecue.stage))
+    setHoursPersonal(String(ecue.personal))
+    setOrderIndex(String(ecue.orderIndex))
+  }
+
+  const handleSave = async () => {
+    if (!name.trim() || name.trim().length > 200 || code.trim().length > 20 || !validNumber(coefficient, Number.EPSILON) || !validNumber(orderIndex, 0, true) || ![hoursCM, hoursTD, hoursTP, hoursStage, hoursPersonal].every((value) => validNumber(value, 0))) {
+      toast.error('Vérifiez l’intitulé, le code, le coefficient positif, les heures positives ou nulles et l’ordre entier.')
+      return
+    }
+    setBusy(true)
+    try {
+      const res = await fetch('/api/structure?type=course-element', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: ecue.id,
+          code: code.trim(),
+          name: name.trim(),
+          coefficient: Number(coefficient),
+          hoursCM: Number(hoursCM),
+          hoursTD: Number(hoursTD),
+          hoursTP: Number(hoursTP),
+          hoursStage: Number(hoursStage),
+          hoursPersonal: Number(hoursPersonal),
+          orderIndex: Number(orderIndex),
+        }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json.error || 'Modification impossible')
+      toast.success('Matière mise à jour')
+      queryClient.invalidateQueries({ queryKey: ['structure'] })
+      setOpen(false)
+    } catch (e) {
+      toast.error('Modification impossible', {
+        description: e instanceof Error ? e.message : 'Une erreur est survenue.',
+      })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(next) => { setOpen(next); if (next) reset() }}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Modifier la matière" aria-label={`Modifier la matière ${ecue.nom}`} onClick={(e) => e.stopPropagation()}>
+          <Edit3 className="size-3.5 text-[#1a2744]" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <DialogHeader>
+          <DialogTitle className="text-[#1a2744]">Modifier la matière / EC</DialogTitle>
+          <DialogDescription>Intitulé, coefficient, volumes horaires et ordre d&apos;affichage.</DialogDescription>
+        </DialogHeader>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4">
+          <div className="space-y-2">
+            <Label>Code EC</Label>
+            <Input value={code} onChange={(e) => setCode(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Coefficient</Label>
+            <Input type="number" min="0" step="any" value={coefficient} onChange={(e) => setCoefficient(e.target.value)} />
+          </div>
+          <div className="space-y-2 sm:col-span-2">
+            <Label>Intitulé</Label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Heures CM</Label>
+            <Input type="number" min="0" step="any" value={hoursCM} onChange={(e) => setHoursCM(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Heures TD</Label>
+            <Input type="number" min="0" step="any" value={hoursTD} onChange={(e) => setHoursTD(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Heures TP</Label>
+            <Input type="number" min="0" step="any" value={hoursTP} onChange={(e) => setHoursTP(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Stage</Label>
+            <Input type="number" min="0" step="any" value={hoursStage} onChange={(e) => setHoursStage(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Travail personnel</Label>
+            <Input type="number" min="0" step="any" value={hoursPersonal} onChange={(e) => setHoursPersonal(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Ordre</Label>
+            <Input type="number" min="0" step="1" value={orderIndex} onChange={(e) => setOrderIndex(e.target.value)} />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)} disabled={busy}>Annuler</Button>
+          <Button className="bg-[#2d7a4f] hover:bg-[#236b40] text-white" onClick={handleSave} disabled={busy}>
+            {busy ? 'Enregistrement…' : 'Enregistrer'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 // ─── Semester Component ───────────────────────────────────────────────────────
 
 function SemesterView({ semester }: { semester: Semester }) {
@@ -283,13 +575,13 @@ function SemesterView({ semester }: { semester: Semester }) {
   const totalCredits = getSemesterCredits(semester)
   const volume = getSemesterVolume(semester)
 
-  const toggleUE = (code: string) => {
+  const toggleUE = (id: string) => {
     setExpandedUEs(prev => {
       const next = new Set(prev)
-      if (next.has(code)) {
-        next.delete(code)
+      if (next.has(id)) {
+        next.delete(id)
       } else {
-        next.add(code)
+        next.add(id)
       }
       return next
     })
@@ -347,17 +639,18 @@ function SemesterView({ semester }: { semester: Semester }) {
                   <TableHead className="text-xs font-semibold">Type</TableHead>
                   <TableHead className="text-xs font-semibold text-center">Compensable</TableHead>
                   <TableHead className="text-xs font-semibold">Responsable</TableHead>
+                  <TableHead className="text-xs font-semibold text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {semester.ues.map((ue) => {
-                  const isExpanded = expandedUEs.has(ue.code)
+                  const isExpanded = expandedUEs.has(ue.id)
                   const hasEcues = ue.ecues.length > 0
                   return (
-                    <Fragment key={ue.code}>
+                    <Fragment key={ue.id}>
                       <TableRow
                         className={`hover:bg-gray-50/50 cursor-pointer ${hasEcues ? '' : 'opacity-80'}`}
-                        onClick={() => hasEcues && toggleUE(ue.code)}
+                        onClick={() => hasEcues && toggleUE(ue.id)}
                       >
                         <TableCell className="py-2 w-8">
                           {hasEcues && (
@@ -392,10 +685,15 @@ function SemesterView({ semester }: { semester: Semester }) {
                         <TableCell className="py-2">
                           <span className="text-xs text-gray-600">{ue.responsable}</span>
                         </TableCell>
+                        <TableCell className="py-2">
+                          <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                            <EditTeachingUnitDialog ue={ue} />
+                          </div>
+                        </TableCell>
                       </TableRow>
                       {isExpanded && hasEcues && (
                         ue.ecues.map((ecue) => (
-                          <TableRow key={ecue.code} className="bg-[#f8faf9] hover:bg-[#f0f5f1]">
+                          <TableRow key={ecue.id} className="bg-[#f8faf9] hover:bg-[#f0f5f1]">
                             <TableCell className="py-1.5 w-8"></TableCell>
                             <TableCell className="py-1.5">
                               <span className="text-[10px] font-mono text-gray-400 ml-4">{ecue.code}</span>
@@ -418,6 +716,11 @@ function SemesterView({ semester }: { semester: Semester }) {
                             <TableCell className="py-1.5">
                               <span className="text-[10px] text-gray-500">{ecue.enseignant}</span>
                             </TableCell>
+                            <TableCell className="py-1.5">
+                              <div className="flex justify-end gap-1">
+                                <EditCourseElementDialog ecue={ecue} />
+                              </div>
+                            </TableCell>
                           </TableRow>
                         ))
                       )}
@@ -426,7 +729,7 @@ function SemesterView({ semester }: { semester: Semester }) {
                 })}
                 {semester.ues.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={7} className="py-8 text-center text-sm text-gray-500">
+                    <TableCell colSpan={8} className="py-8 text-center text-sm text-gray-500">
                       Aucune UE n&apos;est encore configurée pour ce semestre.
                     </TableCell>
                   </TableRow>
