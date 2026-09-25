@@ -19,6 +19,17 @@ beforeEach(() => {
 })
 
 describe('GET /api/documents', () => {
+  it('refuses a teacher access to institution-wide document history', async () => {
+    const user = { id: 'teacher-A', role: 'ENSEIGNANT', tenantId: 'tenant-A' }
+    const request = new NextRequest('http://localhost:3000/api/documents')
+    const handler = GET as unknown as (sessionUser: typeof user, tenantId: string, request: NextRequest) => Promise<Response>
+
+    const response = await handler(user, 'tenant-A', request)
+
+    expect(response.status).toBe(403)
+    expect(dbMock.officialDocument.findMany).not.toHaveBeenCalled()
+  })
+
   it('refuses an unlinked student before querying institution documents', async () => {
     const user = { id: 'student-user-A', role: 'ETUDIANT', tenantId: 'tenant-A' }
     const request = new NextRequest('http://localhost:3000/api/documents')

@@ -3,6 +3,8 @@ import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
 import { resolveOwnStudentId, isStudentSelfRole } from '@/lib/auth/student-scope'
 
+const DOCUMENT_READ_ROLES = new Set(['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'RECTORAT', 'SCOLARITE', 'ETUDIANT', 'ETUDIANT_SANTE'])
+
 // GET /api/documents - real generated-document history + stats. Without
 // ?studentId, this is the documents-page.tsx dashboard (previously a
 // hardcoded demo list/counters). With ?studentId (staff only), it scopes to
@@ -10,6 +12,9 @@ import { resolveOwnStudentId, isStudentSelfRole } from '@/lib/auth/student-scope
 // ever sees documents generated for themselves, regardless of the param.
 async function handleGet(user: SessionUser, tenantId: string, request: NextRequest) {
   try {
+    if (!DOCUMENT_READ_ROLES.has(user.role)) {
+      return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
+    }
     const ownStudentId = await resolveOwnStudentId(user)
     if (isStudentSelfRole(user.role) && !ownStudentId) {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
