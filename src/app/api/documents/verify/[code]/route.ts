@@ -46,7 +46,8 @@ export async function GET(
     }
 
     return NextResponse.json({
-      valid: true,
+      valid: Boolean(document.validatedAt) && document.status !== 'REVOKED',
+      message: document.validatedAt ? undefined : 'Ce document existe, mais il n’a pas été validé par l’établissement.',
       document: {
         type: document.type,
         number: document.number,

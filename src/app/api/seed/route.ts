@@ -4,6 +4,9 @@ import bcrypt from 'bcryptjs'
 import type { SessionUser } from '@/lib/auth/helpers'
 
 export async function GET() {
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
   try {
     const { auth } = await import('@/lib/auth/config')
     const session = await auth()

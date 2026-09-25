@@ -11,6 +11,9 @@ import { resolveOwnStudentId, isStudentSelfRole } from '@/lib/auth/student-scope
 async function handleGet(user: SessionUser, tenantId: string, request: NextRequest) {
   try {
     const ownStudentId = await resolveOwnStudentId(user)
+    if (isStudentSelfRole(user.role) && !ownStudentId) {
+      return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
+    }
     const requestedStudentId = ownStudentId ? null : new URL(request.url).searchParams.get('studentId')
     const scopedStudentId = ownStudentId || requestedStudentId
     const where = scopedStudentId ? { tenantId, studentId: scopedStudentId } : { tenantId }
