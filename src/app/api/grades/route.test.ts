@@ -8,7 +8,8 @@ const { authMock, dbMock } = vi.hoisted(() => ({
     teacher: { findFirst: vi.fn() },
     teachingUnit: { findFirst: vi.fn() },
     student: { findFirst: vi.fn() },
-    courseElement: { findFirst: vi.fn() },
+    courseElement: { findFirst: vi.fn(), findMany: vi.fn() },
+    pedagogicalRegistration: { findFirst: vi.fn(), findMany: vi.fn() },
     grade: { findFirst: vi.fn(), findMany: vi.fn(), count: vi.fn(), create: vi.fn(), update: vi.fn(), findUnique: vi.fn() },
     tenantSettings: { findUnique: vi.fn() },
     auditLog: { create: vi.fn() },
@@ -50,6 +51,7 @@ beforeEach(() => {
   dbMock.tenantSettings.findUnique.mockResolvedValue(null) // -> default weights 0.4/0.6
   dbMock.academicYear.findFirst.mockResolvedValue({ id: ACADEMIC_YEAR_ID })
   dbMock.teacher.findFirst.mockResolvedValue({ id: TEACHER_ID })
+  dbMock.pedagogicalRegistration.findFirst.mockResolvedValue({ id: 'cregistration0000000000001' })
   dbMock.grade.findMany.mockResolvedValue([])
   dbMock.grade.count.mockResolvedValue(0)
 })
@@ -169,6 +171,19 @@ describe('POST /api/grades?action=bulk', () => {
     expect(dbMock.grade.create).not.toHaveBeenCalled()
   })
 
+  it('does not let a teacher write a grade for a student not registered to the UE', async () => {
+    dbMock.student.findFirst.mockResolvedValue({ id: STUDENT_ID, tenantId: sessionUser.tenantId })
+    dbMock.courseElement.findFirst.mockResolvedValue({ id: COURSE_ELEMENT_ID, teachingUnitId: TEACHING_UNIT_ID, teacherId: TEACHER_ID })
+    dbMock.pedagogicalRegistration.findFirst.mockResolvedValue(null)
+    const res = await POST(req('/api/grades?action=bulk', {
+      academicYearId: ACADEMIC_YEAR_ID,
+      grades: [{ studentId: STUDENT_ID, teachingUnitId: TEACHING_UNIT_ID, courseElementId: COURSE_ELEMENT_ID, academicYearId: ACADEMIC_YEAR_ID }],
+    }))
+    expect(res.status).toBe(200)
+    expect((await res.json()).data.errors[0].error).toContain('non inscrit pédagogiquement')
+    expect(dbMock.grade.create).not.toHaveBeenCalled()
+  })
+
   it('rejects a course element paired with a different teaching unit', async () => {
     dbMock.student.findFirst.mockResolvedValue({ id: STUDENT_ID })
     dbMock.courseElement.findFirst.mockResolvedValue({ id: COURSE_ELEMENT_ID, teachingUnitId: 'another-unit', teacherId: TEACHER_ID })
@@ -234,6 +249,66 @@ describe('POST /api/grades?action=bulk', () => {
 })
 
 describe('grade access beyond bulk entry', () => {
+  it('returns only pedagogically registered students for an assigned matter', async () => {
+    dbMock.courseElement.findFirst.mockResolvedValue({ teachingUnitId: TEACHING_UNIT_ID })
+    dbMock.pedagogicalRegistration.findMany.mockResolvedValue([{ student: { id: STUDENT_ID, matricule: 'UPM-001', firstName: 'A', lastName: 'B' } }])
+    const res = await GET(new NextRequest(`http://localhost:3000/api/grades?action=roster&courseElementId=${COURSE_ELEMENT_ID}&academicYearId=${ACADEMIC_YEAR_ID}`))
+    expect(res.status).toBe(200)
+    expect((await res.json()).data).toEqual([{ id: STUDENT_ID, matricule: 'UPM-001', firstName: 'A', lastName: 'B' }])
+    expect(dbMock.courseElement.findFirst).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        id: COURSE_ELEMENT_ID,
+        teachingUnit: { semester: { level: { program: { tenantId: sessionUser.tenantId } } } },
+        OR: [{ teacherId: TEACHER_ID }, { teachingUnit: { responsibleId: TEACHER_ID } }],
+      }),
+    }))
+    expect(dbMock.pedagogicalRegistration.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { teachingUnitId: TEACHING_UNIT_ID, academicYearId: ACADEMIC_YEAR_ID, status: 'ACTIVE', student: { tenantId: sessionUser.tenantId } },
+    }))
+  })
+
+  it('refuses the roster for an unassigned matter', async () => {
+    dbMock.courseElement.findFirst.mockResolvedValue(null)
+    const res = await GET(new NextRequest(`http://localhost:3000/api/grades?action=roster&courseElementId=${COURSE_ELEMENT_ID}&academicYearId=${ACADEMIC_YEAR_ID}`))
+    expect(res.status).toBe(403)
+    expect(dbMock.pedagogicalRegistration.findMany).not.toHaveBeenCalled()
+  })
+
+  it('lets administration access registered students without a teacher assignment', async () => {
+    authMock.mockResolvedValue({ user: { ...sessionUser, role: 'ADMIN_INSTITUTION' } })
+    dbMock.courseElement.findFirst.mockResolvedValue({ teachingUnitId: TEACHING_UNIT_ID })
+    dbMock.pedagogicalRegistration.findMany.mockResolvedValue([])
+    const res = await GET(new NextRequest(`http://localhost:3000/api/grades?action=roster&courseElementId=${COURSE_ELEMENT_ID}&academicYearId=${ACADEMIC_YEAR_ID}`))
+    expect(res.status).toBe(200)
+    expect(dbMock.courseElement.findFirst).toHaveBeenCalledWith(expect.objectContaining({
+      where: {
+        id: COURSE_ELEMENT_ID,
+        teachingUnit: { semester: { level: { program: { tenantId: sessionUser.tenantId } } } },
+      },
+    }))
+  })
+
+  it('lists only the connected teacher’s assigned course elements in their tenant', async () => {
+    dbMock.courseElement.findMany.mockResolvedValue([{ id: COURSE_ELEMENT_ID }])
+    const res = await GET(new NextRequest('http://localhost:3000/api/grades?action=assignments'))
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({ data: { courseElementIds: [COURSE_ELEMENT_ID] } })
+    expect(dbMock.courseElement.findMany).toHaveBeenCalledWith({
+      where: {
+        teachingUnit: { semester: { level: { program: { tenantId: sessionUser.tenantId } } } },
+        OR: [{ teacherId: TEACHER_ID }, { teachingUnit: { responsibleId: TEACHER_ID } }],
+      },
+      select: { id: true },
+    })
+  })
+
+  it('does not expose assignments of another teacher when no linked profile exists', async () => {
+    dbMock.teacher.findFirst.mockResolvedValue(null)
+    const res = await GET(new NextRequest('http://localhost:3000/api/grades?action=assignments'))
+    expect(res.status).toBe(403)
+    expect(dbMock.courseElement.findMany).not.toHaveBeenCalled()
+  })
+
   it('shows a linked student only their locked grades', async () => {
     authMock.mockResolvedValue({ user: { ...sessionUser, role: 'ETUDIANT' } })
     dbMock.student.findFirst.mockResolvedValue({ id: STUDENT_ID })
@@ -246,6 +321,13 @@ describe('grade access beyond bulk entry', () => {
 
   it('does not expose global completion data to a teacher', async () => {
     const res = await GET(new NextRequest('http://localhost:3000/api/grades?action=completion'))
+    expect(res.status).toBe(403)
+    expect(dbMock.grade.findMany).not.toHaveBeenCalled()
+  })
+
+  it('does not expose institution grades to another tenant role without grade privileges', async () => {
+    authMock.mockResolvedValue({ user: { ...sessionUser, role: 'PARENT' } })
+    const res = await GET(new NextRequest('http://localhost:3000/api/grades'))
     expect(res.status).toBe(403)
     expect(dbMock.grade.findMany).not.toHaveBeenCalled()
   })

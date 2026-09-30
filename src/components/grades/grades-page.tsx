@@ -39,9 +39,10 @@ import {
   Pencil,
   TrendingUp,
 } from 'lucide-react'
-import { useStructure, useStudents, useDashboardStats } from '@/lib/api-hooks'
+import { useStructure, useDashboardStats } from '@/lib/api-hooks'
 import { useAppStore } from '@/lib/store'
 import { exportToExcel, parseExcelFile } from '@/lib/export'
+import { flattenTeachingUnits } from './grade-selection'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -57,20 +58,6 @@ interface GradeEntry {
   moyenne: number | null
   isLocked: boolean
   observation: string
-}
-
-interface FlatUE {
-  teachingUnitId: string
-  courseElementId: string | null
-  courseElementName: string | null
-  code: string
-  name: string
-  semesterId: string
-  semesterName: string
-  levelId: string
-  levelName: string
-  programId: string
-  programName: string
 }
 
 type LocalEdit = { cc?: string; exam?: string; tp?: string; observation?: string }
@@ -152,36 +139,6 @@ function parseImportedGradeValue(value: unknown, label: string, line: number) {
   return String(parsed)
 }
 
-function flattenTeachingUnits(faculties: any[]): FlatUE[] {
-  const result: FlatUE[] = []
-  for (const faculty of faculties || []) {
-    for (const dept of faculty.departments || []) {
-      for (const program of dept.programs || []) {
-        for (const level of program.levels || []) {
-          for (const semester of level.semesters || []) {
-            for (const tu of semester.teachingUnits || []) {
-              result.push({
-                teachingUnitId: tu.id,
-                courseElementId: tu.courseElements?.[0]?.id || null,
-                courseElementName: tu.courseElements?.[0]?.name || null,
-                code: tu.code || tu.id,
-                name: tu.name,
-                semesterId: semester.id,
-                semesterName: semester.name,
-                levelId: level.id,
-                levelName: level.name,
-                programId: program.id,
-                programName: program.name,
-              })
-            }
-          }
-        }
-      }
-    }
-  }
-  return result
-}
-
 function computeMoyenne(cc: string, exam: string, tp: string): number | null {
   if (cc === '' || exam === '') return null
   const ccN = parseFloat(cc) || 0
@@ -204,14 +161,37 @@ export function GradesPage() {
   const { data: dashboardQuery } = useDashboardStats()
   const academicYearId: string | undefined = dashboardQuery?.currentAcademicYear?.id
 
-  const ueList = useMemo(() => flattenTeachingUnits(structureQuery?.faculties || []), [structureQuery])
+  const { data: assignmentsQuery, isPending: assignmentsPending, isError: assignmentsError } = useQuery<{ data: { courseElementIds: string[] } }>({
+    queryKey: ['grade-assignments'],
+    enabled: userRole === 'ENSEIGNANT',
+    queryFn: async () => {
+      const res = await fetch('/api/grades?action=assignments')
+      if (!res.ok) throw new Error('Impossible de charger les enseignements attribués')
+      return res.json()
+    },
+  })
+
+  const ueList = useMemo(() => flattenTeachingUnits(
+    structureQuery?.faculties || [],
+    userRole === 'ENSEIGNANT' ? new Set(assignmentsQuery?.data.courseElementIds || []) : undefined
+  ), [structureQuery, userRole, assignmentsQuery])
 
   const [selectedUE, setSelectedUE] = useState<string>('')
+  const [selectedCourseElementId, setSelectedCourseElementId] = useState<string>('')
   useEffect(() => {
-    if (!selectedUE && ueList.length > 0) setSelectedUE(ueList[0].teachingUnitId)
+    if (ueList.length > 0 && !ueList.some((ue) => ue.teachingUnitId === selectedUE)) setSelectedUE(ueList[0].teachingUnitId)
+    if (ueList.length === 0 && selectedUE) setSelectedUE('')
   }, [ueList, selectedUE])
 
   const currentUE = ueList.find(u => u.teachingUnitId === selectedUE)
+  useEffect(() => {
+    if (currentUE?.courseElements.length && !currentUE.courseElements.some((element) => element.id === selectedCourseElementId)) {
+      setSelectedCourseElementId(currentUE.courseElements[0].id)
+    } else if (!currentUE?.courseElements.length && selectedCourseElementId) {
+      setSelectedCourseElementId('')
+    }
+  }, [currentUE, selectedCourseElementId])
+  const currentCourseElement = currentUE?.courseElements.find((element) => element.id === selectedCourseElementId)
 
   const [selectedSession, setSelectedSession] = useState<'normale' | 'rattrapage'>('normale')
   const apiSession = selectedSession === 'rattrapage' ? 'RATTRAPAGE' : 'NORMALE'
@@ -222,23 +202,48 @@ export function GradesPage() {
   const [validatingId, setValidatingId] = useState<string | null>(null)
   const importInputRef = useRef<HTMLInputElement>(null)
 
-  const { data: studentsQuery, isLoading: studentsLoading } = useStudents({
-    programId: currentUE?.programId,
-    levelId: currentUE?.levelId,
-    limit: 1000,
+  const confirmDiscardEdits = () => {
+    if (Object.keys(localEdits).length === 0) return true
+    return window.confirm('Des notes non enregistrées seront perdues. Continuer ?')
+  }
+  const changeSelection = (teachingUnitId: string, courseElementId?: string | null) => {
+    const unit = ueList.find((item) => item.teachingUnitId === teachingUnitId)
+    if (!unit) return
+    const element = unit.courseElements.find((item) => item.id === courseElementId) || unit.courseElements[0]
+    if (selectedUE === unit.teachingUnitId && selectedCourseElementId === (element?.id || '')) return
+    if (!confirmDiscardEdits()) return
+    setLocalEdits({})
+    setSelectedUE(unit.teachingUnitId)
+    setSelectedCourseElementId(element?.id || '')
+  }
+  const changeSession = (session: 'normale' | 'rattrapage') => {
+    if (session === selectedSession || !confirmDiscardEdits()) return
+    setLocalEdits({})
+    setSelectedSession(session)
+  }
+
+  const { data: studentsQuery, isLoading: studentsLoading, isError: rosterError } = useQuery({
+    queryKey: ['grade-roster', selectedCourseElementId, academicYearId],
+    enabled: Boolean(currentCourseElement && academicYearId),
+    queryFn: async () => {
+      const params = new URLSearchParams({ action: 'roster', courseElementId: selectedCourseElementId, academicYearId: academicYearId! })
+      const res = await fetch(`/api/grades?${params.toString()}`)
+      if (!res.ok) throw new Error('Impossible de charger les étudiants inscrits à cet enseignement')
+      return res.json()
+    },
   })
 
   const { data: gradesQuery, isLoading: gradesLoading } = useQuery({
-    queryKey: ['grades', selectedUE, apiSession, academicYearId],
+    queryKey: ['grades', selectedUE, selectedCourseElementId, apiSession, academicYearId],
     queryFn: async () => {
       const params = new URLSearchParams({ teachingUnitId: selectedUE, session: apiSession, limit: '500' })
-      if (currentUE?.courseElementId) params.set('courseElementId', currentUE.courseElementId)
+      params.set('courseElementId', selectedCourseElementId)
       if (academicYearId) params.set('academicYearId', academicYearId)
       const res = await fetch(`/api/grades?${params.toString()}`)
       if (!res.ok) throw new Error('Failed to fetch grades')
       return res.json()
     },
-    enabled: !!selectedUE,
+    enabled: Boolean(selectedUE && currentCourseElement && academicYearId),
   })
   const { data: completionQuery, isLoading: completionLoading } = useQuery({
     queryKey: ['grades-completion', apiSession, academicYearId],
@@ -253,10 +258,10 @@ export function GradesPage() {
   })
   const completion: GradeCompletion | null = completionQuery?.data ?? null
   const selectedCompletionItem = completion?.byTeachingUnit.find((item) =>
-    item.teachingUnitId === selectedUE && item.courseElementId === currentUE?.courseElementId
+    item.teachingUnitId === selectedUE && item.courseElementId === selectedCourseElementId
   ) ?? null
 
-  const dataLoading = structureLoading || studentsLoading || gradesLoading
+  const dataLoading = structureLoading || (userRole === 'ENSEIGNANT' && assignmentsPending) || studentsLoading || gradesLoading
 
   const grades: GradeEntry[] = useMemo(() => {
     const students = studentsQuery?.data || []
@@ -291,7 +296,7 @@ export function GradesPage() {
   }
 
   const refetchGrades = () => {
-    queryClient.invalidateQueries({ queryKey: ['grades', selectedUE, apiSession, academicYearId] })
+    queryClient.invalidateQueries({ queryKey: ['grades', selectedUE, selectedCourseElementId, apiSession, academicYearId] })
     queryClient.invalidateQueries({ queryKey: ['grades-completion', apiSession, academicYearId] })
   }
 
@@ -309,7 +314,7 @@ export function GradesPage() {
 
   const buildGradePayload = (requireComplete: boolean) => {
     if (!currentUE) return
-    if (!currentUE.courseElementId) {
+    if (!currentCourseElement) {
       throw new Error("Aucun élément constitutif (ECUE) configuré pour cette UE")
     }
     if (!academicYearId) {
@@ -330,7 +335,7 @@ export function GradesPage() {
       return {
         studentId: g.studentId,
         teachingUnitId: currentUE.teachingUnitId,
-        courseElementId: currentUE.courseElementId,
+        courseElementId: currentCourseElement.id,
         academicYearId,
         session: apiSession,
         ccGrade,
@@ -368,7 +373,7 @@ export function GradesPage() {
 
   const fetchCurrentGrades = async () => {
     const params = new URLSearchParams({ teachingUnitId: selectedUE, session: apiSession, limit: '500' })
-    if (currentUE?.courseElementId) params.set('courseElementId', currentUE.courseElementId)
+    params.set('courseElementId', selectedCourseElementId)
     if (academicYearId) params.set('academicYearId', academicYearId)
     const res = await fetch(`/api/grades?${params.toString()}`)
     const data = await res.json().catch(() => ({}))
@@ -625,14 +630,14 @@ export function GradesPage() {
   const nextIncompleteUE = useMemo(() => {
     const missing = completion?.byTeachingUnit.filter(item => item.missing > 0) ?? []
     if (missing.length === 0) return null
-    return missing.find(item => item.teachingUnitId !== selectedUE) ?? missing[0]
-  }, [completion, selectedUE])
-  const canSave = Boolean(currentUE?.courseElementId && academicYearId && hasLocalEdits && !saving && !savingAndLocking)
+    return missing.find(item => item.teachingUnitId !== selectedUE || item.courseElementId !== selectedCourseElementId) ?? missing[0]
+  }, [completion, selectedUE, selectedCourseElementId])
+  const canSave = Boolean(currentCourseElement && academicYearId && hasLocalEdits && !saving && !savingAndLocking)
   const unlockedGrades = grades.filter(g => !g.isLocked)
   const allCurrentUEGradesReadyForLock = grades.length > 0 && grades.every(isGradeReadyForLock)
   const canSaveAndLockCurrentUE = Boolean(
     canLockGrades &&
-    currentUE?.courseElementId &&
+    currentCourseElement &&
     academicYearId &&
     grades.length > 0 &&
     unlockedGrades.length > 0 &&
@@ -718,8 +723,8 @@ export function GradesPage() {
             variant="outline"
             size="sm"
             className="text-xs"
-            disabled={!nextIncompleteUE || nextIncompleteUE.teachingUnitId === selectedUE}
-            onClick={() => nextIncompleteUE && setSelectedUE(nextIncompleteUE.teachingUnitId)}
+            disabled={!nextIncompleteUE || (nextIncompleteUE.teachingUnitId === selectedUE && nextIncompleteUE.courseElementId === selectedCourseElementId)}
+            onClick={() => nextIncompleteUE && changeSelection(nextIncompleteUE.teachingUnitId, nextIncompleteUE.courseElementId)}
           >
             UE suivante
           </Button>}
@@ -826,9 +831,9 @@ export function GradesPage() {
                           <button
                             key={`${item.teachingUnitId}:${item.courseElementId || 'UE'}`}
                             type="button"
-                            onClick={() => setSelectedUE(item.teachingUnitId)}
+                            onClick={() => changeSelection(item.teachingUnitId, item.courseElementId)}
                             className={`text-left rounded-lg border p-2.5 transition-all hover:shadow-sm ${
-                              selectedUE === item.teachingUnitId
+                              selectedUE === item.teachingUnitId && selectedCourseElementId === item.courseElementId
                                 ? 'border-[#2d7a4f] bg-white'
                                 : 'border-[#d4a85325] bg-white/70 hover:border-[#d4a853]'
                             }`}
@@ -978,12 +983,12 @@ export function GradesPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Selectors */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-gray-600">UE / ECUE</Label>
-                <Select value={selectedUE} onValueChange={setSelectedUE} disabled={ueList.length === 0}>
+                <Label className="text-xs font-medium text-gray-600">Unité d&apos;enseignement (UE)</Label>
+                <Select value={selectedUE} onValueChange={(value) => changeSelection(value)} disabled={ueList.length === 0}>
                   <SelectTrigger className="h-9 text-sm">
-                    <SelectValue placeholder={structureLoading ? 'Chargement...' : "Unite d'enseignement"} />
+                    <SelectValue placeholder={structureLoading || assignmentsPending && userRole === 'ENSEIGNANT' ? 'Chargement...' : "Unité d'enseignement"} />
                   </SelectTrigger>
                   <SelectContent>
                     {ueList.map(ue => (
@@ -995,8 +1000,21 @@ export function GradesPage() {
                 </Select>
               </div>
               <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-gray-600">Matière / ECUE</Label>
+                <Select value={selectedCourseElementId} onValueChange={(value) => changeSelection(selectedUE, value)} disabled={!currentUE?.courseElements.length}>
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue placeholder="Matière" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {currentUE?.courseElements.map((element) => (
+                      <SelectItem key={element.id} value={element.id}>{element.code} - {element.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
                 <Label className="text-xs font-medium text-gray-600">Session</Label>
-                <Select value={selectedSession} onValueChange={(v) => setSelectedSession(v as 'normale' | 'rattrapage')}>
+                <Select value={selectedSession} onValueChange={(v) => changeSession(v as 'normale' | 'rattrapage')}>
                   <SelectTrigger className="h-9 text-sm">
                     <SelectValue placeholder="Session" />
                   </SelectTrigger>
@@ -1008,7 +1026,19 @@ export function GradesPage() {
               </div>
             </div>
 
-            {currentUE && !currentUE.courseElementId && (
+            {userRole === 'ENSEIGNANT' && assignmentsError && (
+              <p className="text-xs text-[#c62828]">Impossible de vérifier vos enseignements attribués. Réessayez ou contactez l&apos;administration.</p>
+            )}
+            {userRole === 'ENSEIGNANT' && !assignmentsPending && !assignmentsError && ueList.length === 0 && (
+              <p className="text-xs text-gray-600">Aucune matière ne vous est attribuée. Contactez l&apos;administration pour configurer votre service d&apos;enseignement.</p>
+            )}
+            {!academicYearId && (
+              <p className="text-xs text-[#c62828]">Aucune année académique courante n&apos;est configurée. La saisie des notes est indisponible.</p>
+            )}
+            {rosterError && (
+              <p className="text-xs text-[#c62828]">Impossible de charger les étudiants inscrits à cette UE.</p>
+            )}
+            {currentUE && !currentUE.courseElements.length && (
               <div className="p-3 bg-[#c6282808] border border-[#c6282815] rounded-lg">
                 <p className="text-xs text-[#c62828] font-medium flex items-center gap-1.5">
                   <AlertCircle className="size-3.5" />
@@ -1144,7 +1174,7 @@ export function GradesPage() {
               <div className="flex items-center gap-2">
                 <FileCheck className="size-4 text-[#1a2744]" />
                 <CardTitle className="text-sm font-semibold text-[#1a2744]">
-                  {currentUE ? `${currentUE.code} - ${currentUE.name}${currentUE.courseElementName ? ` / ${currentUE.courseElementName}` : ''}` : 'Aucune UE sélectionnée'}
+                  {currentUE ? `${currentUE.code} - ${currentUE.name}${currentCourseElement ? ` / ${currentCourseElement.name}` : ''}` : 'Aucune UE sélectionnée'}
                 </CardTitle>
               </div>
               <div className="flex items-center gap-2">
@@ -1188,7 +1218,9 @@ export function GradesPage() {
                   )}
                   {!dataLoading && grades.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center py-8 text-sm text-gray-400">Aucun étudiant inscrit dans ce programme/niveau</TableCell>
+                      <TableCell colSpan={9} className="text-center py-8 text-sm text-gray-400">
+                        Aucun étudiant inscrit pédagogiquement à cette UE pour cette année
+                      </TableCell>
                     </TableRow>
                   )}
                   {!dataLoading && grades.map((grade, i) => (
