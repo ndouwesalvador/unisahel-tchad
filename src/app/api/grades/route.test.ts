@@ -10,9 +10,10 @@ const { authMock, dbMock } = vi.hoisted(() => ({
     student: { findFirst: vi.fn() },
     courseElement: { findFirst: vi.fn(), findMany: vi.fn() },
     pedagogicalRegistration: { findFirst: vi.fn(), findMany: vi.fn() },
-    grade: { findFirst: vi.fn(), findMany: vi.fn(), count: vi.fn(), create: vi.fn(), update: vi.fn(), findUnique: vi.fn() },
+    grade: { findFirst: vi.fn(), findMany: vi.fn(), count: vi.fn(), create: vi.fn(), update: vi.fn(), updateMany: vi.fn(), findUnique: vi.fn() },
     tenantSettings: { findUnique: vi.fn() },
     auditLog: { create: vi.fn() },
+    $transaction: vi.fn(),
   },
 }))
 
@@ -54,6 +55,8 @@ beforeEach(() => {
   dbMock.pedagogicalRegistration.findFirst.mockResolvedValue({ id: 'cregistration0000000000001' })
   dbMock.grade.findMany.mockResolvedValue([])
   dbMock.grade.count.mockResolvedValue(0)
+  dbMock.$transaction.mockImplementation(async (callback) => callback(dbMock))
+  dbMock.grade.updateMany.mockResolvedValue({ count: 1 })
 })
 
 describe('POST /api/grades?action=bulk', () => {
@@ -85,7 +88,21 @@ describe('POST /api/grades?action=bulk', () => {
     expect(createArgs.data.finalGrade).toBeCloseTo(14 * 0.4 + 15 * 0.6, 5)
   })
 
-  it('skips existing locked grades during bulk entry', async () => {
+  it('honours a configured zero CC coefficient and permits an exam-only grade', async () => {
+    dbMock.tenantSettings.findUnique.mockResolvedValue({ ccWeight: 0, examWeight: 1, tpWeight: 0, stageWeight: 0 })
+    dbMock.student.findFirst.mockResolvedValue({ id: STUDENT_ID, tenantId: sessionUser.tenantId })
+    dbMock.courseElement.findFirst.mockResolvedValue({ id: COURSE_ELEMENT_ID, teachingUnitId: TEACHING_UNIT_ID, teacherId: TEACHER_ID })
+    dbMock.grade.findFirst.mockResolvedValue(null)
+    dbMock.grade.create.mockResolvedValue({ id: 'cgrade00000000000000000001' })
+    const res = await POST(req('/api/grades?action=bulk', {
+      academicYearId: ACADEMIC_YEAR_ID,
+      grades: [{ studentId: STUDENT_ID, teachingUnitId: TEACHING_UNIT_ID, courseElementId: COURSE_ELEMENT_ID, academicYearId: ACADEMIC_YEAR_ID, examGrade: 16 }],
+    }))
+    expect(res.status).toBe(200)
+    expect(dbMock.grade.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ finalGrade: 16 }) }))
+  })
+
+  it('refuses a lot containing a locked grade without modifying it', async () => {
     dbMock.student.findFirst.mockResolvedValue({ id: STUDENT_ID, tenantId: sessionUser.tenantId })
     dbMock.courseElement.findFirst.mockResolvedValue({ id: COURSE_ELEMENT_ID, teachingUnitId: TEACHING_UNIT_ID, teacherId: TEACHER_ID })
     dbMock.grade.findFirst.mockResolvedValue({ id: 'cgrade00000000000000000001', isLocked: true })
@@ -105,9 +122,9 @@ describe('POST /api/grades?action=bulk', () => {
     }))
     const body = await res.json()
 
-    expect(res.status).toBe(200)
-    expect(body.data).toEqual({ created: 0, updated: 0, lockedSkipped: 1, errors: [] })
-    expect(dbMock.grade.update).not.toHaveBeenCalled()
+    expect(res.status).toBe(422)
+    expect(body.data.errors[0].error).toContain('verrouillée')
+    expect(dbMock.grade.updateMany).not.toHaveBeenCalled()
   })
 
   it("records a per-row error and does not throw when a student doesn't belong to the tenant", async () => {
@@ -128,10 +145,10 @@ describe('POST /api/grades?action=bulk', () => {
     }))
     const body = await res.json()
 
-    expect(res.status).toBe(200)
+    expect(res.status).toBe(422)
     expect(body.data.created).toBe(0)
     expect(body.data.errors).toHaveLength(1)
-    expect(body.data.errors[0]).toMatchObject({ studentId: OTHER_STUDENT_ID, error: 'Student not found' })
+    expect(body.data.errors[0]).toMatchObject({ studentId: OTHER_STUDENT_ID, error: 'Étudiant introuvable dans cet établissement' })
     expect(dbMock.grade.create).not.toHaveBeenCalled()
   })
 
@@ -179,7 +196,7 @@ describe('POST /api/grades?action=bulk', () => {
       academicYearId: ACADEMIC_YEAR_ID,
       grades: [{ studentId: STUDENT_ID, teachingUnitId: TEACHING_UNIT_ID, courseElementId: COURSE_ELEMENT_ID, academicYearId: ACADEMIC_YEAR_ID }],
     }))
-    expect(res.status).toBe(200)
+    expect(res.status).toBe(422)
     expect((await res.json()).data.errors[0].error).toContain('non inscrit pédagogiquement')
     expect(dbMock.grade.create).not.toHaveBeenCalled()
   })
@@ -193,7 +210,70 @@ describe('POST /api/grades?action=bulk', () => {
     }))
     const body = await res.json()
     expect(body.data.created).toBe(0)
-    expect(body.data.errors[0].error).toContain('does not belong')
+    expect(body.data.errors[0].error).toContain('ne correspond pas')
+    expect(dbMock.grade.create).not.toHaveBeenCalled()
+  })
+
+  it('writes nothing when a later row in the lot is invalid', async () => {
+    dbMock.student.findFirst.mockResolvedValueOnce({ id: STUDENT_ID }).mockResolvedValueOnce(null)
+    dbMock.courseElement.findFirst.mockResolvedValue({ id: COURSE_ELEMENT_ID, teachingUnitId: TEACHING_UNIT_ID, teacherId: TEACHER_ID })
+    dbMock.grade.findFirst.mockResolvedValue(null)
+    const res = await POST(req('/api/grades?action=bulk', {
+      academicYearId: ACADEMIC_YEAR_ID,
+      grades: [STUDENT_ID, OTHER_STUDENT_ID].map((studentId) => ({
+        studentId, teachingUnitId: TEACHING_UNIT_ID, courseElementId: COURSE_ELEMENT_ID,
+        academicYearId: ACADEMIC_YEAR_ID, ccGrade: 12, examGrade: 14,
+      })),
+    }))
+    expect(res.status).toBe(422)
+    expect(dbMock.grade.create).not.toHaveBeenCalled()
+    expect(dbMock.grade.updateMany).not.toHaveBeenCalled()
+    expect(dbMock.auditLog.create).not.toHaveBeenCalled()
+  })
+
+  it('detects a concurrent lock before changing an existing grade', async () => {
+    dbMock.student.findFirst.mockResolvedValue({ id: STUDENT_ID })
+    dbMock.courseElement.findFirst.mockResolvedValue({ id: COURSE_ELEMENT_ID, teachingUnitId: TEACHING_UNIT_ID, teacherId: TEACHER_ID })
+    dbMock.grade.findFirst.mockResolvedValue({ id: 'cgrade00000000000000000001', isLocked: false })
+    dbMock.grade.updateMany.mockResolvedValue({ count: 0 })
+    const res = await POST(req('/api/grades?action=bulk', {
+      academicYearId: ACADEMIC_YEAR_ID,
+      grades: [{ studentId: STUDENT_ID, teachingUnitId: TEACHING_UNIT_ID, courseElementId: COURSE_ELEMENT_ID, academicYearId: ACADEMIC_YEAR_ID, ccGrade: 12, examGrade: 14 }],
+    }))
+    expect(res.status).toBe(409)
+    expect(dbMock.auditLog.create).not.toHaveBeenCalled()
+  })
+
+  it('saves and locks a complete registered matter in one transaction', async () => {
+    authMock.mockResolvedValue({ user: { ...sessionUser, role: 'ADMIN_INSTITUTION' } })
+    dbMock.student.findFirst.mockResolvedValue({ id: STUDENT_ID })
+    dbMock.courseElement.findFirst.mockResolvedValue({ id: COURSE_ELEMENT_ID, teachingUnitId: TEACHING_UNIT_ID })
+    dbMock.grade.findFirst.mockResolvedValue(null)
+    dbMock.pedagogicalRegistration.findMany.mockResolvedValue([{ studentId: STUDENT_ID }])
+    dbMock.grade.create.mockResolvedValue({ id: 'cgrade00000000000000000001' })
+    const res = await POST(req('/api/grades?action=bulk', {
+      academicYearId: ACADEMIC_YEAR_ID, lockAfterSave: true,
+      grades: [{ studentId: STUDENT_ID, teachingUnitId: TEACHING_UNIT_ID, courseElementId: COURSE_ELEMENT_ID, academicYearId: ACADEMIC_YEAR_ID, ccGrade: 12, examGrade: 14 }],
+    }))
+    expect(res.status).toBe(200)
+    expect((await res.json()).data.locked).toBe(1)
+    expect(dbMock.grade.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ finalGrade: 13.2, isLocked: true, lockedBy: sessionUser.id }),
+    }))
+    expect(dbMock.auditLog.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ action: 'BULK_SAVE_AND_LOCK' }) }))
+  })
+
+  it('refuses to lock when an enrolled student is missing from the lot', async () => {
+    authMock.mockResolvedValue({ user: { ...sessionUser, role: 'ADMIN_INSTITUTION' } })
+    dbMock.student.findFirst.mockResolvedValue({ id: STUDENT_ID })
+    dbMock.courseElement.findFirst.mockResolvedValue({ id: COURSE_ELEMENT_ID, teachingUnitId: TEACHING_UNIT_ID })
+    dbMock.grade.findFirst.mockResolvedValue(null)
+    dbMock.pedagogicalRegistration.findMany.mockResolvedValue([{ studentId: STUDENT_ID }, { studentId: OTHER_STUDENT_ID }])
+    const res = await POST(req('/api/grades?action=bulk', {
+      academicYearId: ACADEMIC_YEAR_ID, lockAfterSave: true,
+      grades: [{ studentId: STUDENT_ID, teachingUnitId: TEACHING_UNIT_ID, courseElementId: COURSE_ELEMENT_ID, academicYearId: ACADEMIC_YEAR_ID, ccGrade: 12, examGrade: 14 }],
+    }))
+    expect(res.status).toBe(422)
     expect(dbMock.grade.create).not.toHaveBeenCalled()
   })
 
@@ -201,6 +281,21 @@ describe('POST /api/grades?action=bulk', () => {
     const res = await POST(req('/api/grades?action=lock&id=cgrade00000000000000000001&lock=false', {}))
     expect(res.status).toBe(403)
     expect(dbMock.grade.update).not.toHaveBeenCalled()
+  })
+
+  it('does not lock a grade without a final average', async () => {
+    authMock.mockResolvedValue({ user: { ...sessionUser, role: 'ADMIN_INSTITUTION' } })
+    dbMock.grade.findFirst.mockResolvedValue({
+      id: 'cgrade00000000000000000001', studentId: STUDENT_ID,
+      academicYearId: ACADEMIC_YEAR_ID, teachingUnitId: TEACHING_UNIT_ID,
+      courseElementId: COURSE_ELEMENT_ID, finalGrade: null,
+      student: { tenantId: sessionUser.tenantId },
+    })
+    dbMock.teachingUnit.findFirst.mockResolvedValue({ id: TEACHING_UNIT_ID })
+    dbMock.courseElement.findFirst.mockResolvedValue({ teachingUnitId: TEACHING_UNIT_ID })
+    const res = await POST(req('/api/grades?action=lock&id=cgrade00000000000000000001&lock=true', {}))
+    expect(res.status).toBe(409)
+    expect(dbMock.grade.updateMany).not.toHaveBeenCalled()
   })
 
   it('requires an administrator and a documented reason to unlock a grade', async () => {
@@ -249,6 +344,12 @@ describe('POST /api/grades?action=bulk', () => {
 })
 
 describe('grade access beyond bulk entry', () => {
+  it('returns the institution policy to a grade-entry role', async () => {
+    dbMock.tenantSettings.findUnique.mockResolvedValue({ ccWeight: 0, examWeight: 1, tpWeight: 0, stageWeight: 0 })
+    const res = await GET(new NextRequest('http://localhost:3000/api/grades?action=policy'))
+    expect(res.status).toBe(200)
+    expect((await res.json()).data).toEqual({ ccWeight: 0, examWeight: 1, tpWeight: 0, stageWeight: 0, passingGrade: 10 })
+  })
   it('returns only pedagogically registered students for an assigned matter', async () => {
     dbMock.courseElement.findFirst.mockResolvedValue({ teachingUnitId: TEACHING_UNIT_ID })
     dbMock.pedagogicalRegistration.findMany.mockResolvedValue([{ student: { id: STUDENT_ID, matricule: 'UPM-001', firstName: 'A', lastName: 'B' } }])

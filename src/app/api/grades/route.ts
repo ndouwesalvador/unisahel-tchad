@@ -3,10 +3,14 @@ import { db } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
 import { resolveOwnStudentId, isStudentSelfRole } from '@/lib/auth/student-scope'
+import { calculateFinalGrade, isValidGradingPolicy, resolveGradingPolicy } from '@/lib/grading-policy'
 import { gradeQuerySchema, createGradeSchema, updateGradeSchema, bulkGradeEntrySchema, calculateGradeSchema, validateQuery, validateBody, formatZodError } from '@/lib/validations/api'
 
 const GRADE_OVERSIGHT_ROLES = new Set(['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE', 'RECTORAT', 'RESPONSABLE_FILIERE', 'JURY'])
 const GRADE_ENTRY_ROLES = new Set(['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE', 'ENSEIGNANT', 'RESPONSABLE_FILIERE'])
+const GRADE_LOCK_ROLES = new Set(['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE', 'RESPONSABLE_FILIERE'])
+
+class GradeWriteConflict extends Error {}
 
 function gradeCompletionKey(studentId: string, teachingUnitId: string, courseElementId?: string | null) {
   return `${studentId}:${teachingUnitId}:${courseElementId || 'UE'}`
@@ -37,6 +41,18 @@ async function getTeacherAssignmentsHandler(user: SessionUser, tenantId: string)
     select: { id: true },
   })
   return NextResponse.json({ data: { courseElementIds: elements.map((element) => element.id) } })
+}
+
+async function getGradingPolicyHandler(user: SessionUser, tenantId: string) {
+  if (!GRADE_ENTRY_ROLES.has(user.role)) {
+    return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
+  }
+  const settings = await db.tenantSettings.findUnique({ where: { tenantId } })
+  const policy = resolveGradingPolicy(settings)
+  if (!isValidGradingPolicy(policy)) {
+    return NextResponse.json({ error: 'Coefficients de notation invalides dans les paramètres de l’établissement' }, { status: 409 })
+  }
+  return NextResponse.json({ data: { ...policy, passingGrade: settings?.passingGrade ?? 10 } })
 }
 
 async function getGradeRosterHandler(user: SessionUser, tenantId: string, request: NextRequest) {
@@ -643,38 +659,11 @@ async function createGradeHandler(user: SessionUser, tenantId: string, request: 
 
     // Calculate final grade
     const settings = await db.tenantSettings.findUnique({ where: { tenantId } })
-    const ccWeight = settings?.ccWeight || 0.4
-    const examWeight = settings?.examWeight || 0.6
-    const tpWeight = settings?.tpWeight || 0
-    const stageWeight = settings?.stageWeight || 0
-
-    const ccGrade = validatedBody.ccGrade ?? 0
-    const examGrade = validatedBody.examGrade ?? 0
-    const tpGrade = validatedBody.tpGrade ?? 0
-    const stageGrade = validatedBody.stageGrade ?? 0
-    const oralGrade = validatedBody.oralGrade ?? 0
-    const memoireGrade = validatedBody.memoireGrade ?? 0
-    const projectGrade = validatedBody.projectGrade ?? 0
-
-    let finalGrade: number | null = null
-    if (!validatedBody.isAbsent && !validatedBody.isDefaillant) {
-      const grades = [
-        { grade: ccGrade, weight: ccWeight },
-        { grade: examGrade, weight: examWeight },
-        { grade: tpGrade, weight: tpWeight },
-        { grade: stageGrade, weight: stageWeight },
-        { grade: oralGrade, weight: 0 },
-        { grade: memoireGrade, weight: 0 },
-        { grade: projectGrade, weight: 0 },
-      ].filter(g => g.grade > 0 || g.weight > 0)
-
-      if (grades.length > 0) {
-        const totalWeight = grades.reduce((sum, g) => sum + g.weight, 0)
-        if (totalWeight > 0) {
-          finalGrade = grades.reduce((sum, g) => sum + g.grade * g.weight, 0) / totalWeight
-        }
-      }
+    const policy = resolveGradingPolicy(settings)
+    if (!isValidGradingPolicy(policy)) {
+      return NextResponse.json({ error: 'Coefficients de notation invalides' }, { status: 409 })
     }
+    const finalGrade = calculateFinalGrade(validatedBody, policy)
 
     const grade = await db.grade.create({
       data: {
@@ -790,43 +779,13 @@ async function updateGradeHandler(user: SessionUser, tenantId: string, request: 
 
     // Recalculate final grade if grades changed
     let finalGrade = existingGrade.finalGrade
-    if (data.ccGrade !== undefined || data.examGrade !== undefined || data.tpGrade !== undefined || data.stageGrade !== undefined || data.oralGrade !== undefined || data.memoireGrade !== undefined || data.projectGrade !== undefined) {
+    if (data.ccGrade !== undefined || data.examGrade !== undefined || data.tpGrade !== undefined || data.stageGrade !== undefined || data.oralGrade !== undefined || data.memoireGrade !== undefined || data.projectGrade !== undefined || data.isAbsent !== undefined || data.isDefaillant !== undefined) {
       const settings = await db.tenantSettings.findUnique({ where: { tenantId } })
-      const ccWeight = settings?.ccWeight || 0.4
-      const examWeight = settings?.examWeight || 0.6
-      const tpWeight = settings?.tpWeight || 0
-      const stageWeight = settings?.stageWeight || 0
-
-      const ccGrade = data.ccGrade ?? existingGrade.ccGrade ?? 0
-      const examGrade = data.examGrade ?? existingGrade.examGrade ?? 0
-      const tpGrade = data.tpGrade ?? existingGrade.tpGrade ?? 0
-      const stageGrade = data.stageGrade ?? existingGrade.stageGrade ?? 0
-      const oralGrade = data.oralGrade ?? existingGrade.oralGrade ?? 0
-      const memoireGrade = data.memoireGrade ?? existingGrade.memoireGrade ?? 0
-      const projectGrade = data.projectGrade ?? existingGrade.projectGrade ?? 0
-      const isAbsent = data.isAbsent ?? existingGrade.isAbsent
-      const isDefaillant = data.isDefaillant ?? existingGrade.isDefaillant
-
-      if (!isAbsent && !isDefaillant) {
-        const grades = [
-          { grade: ccGrade, weight: ccWeight },
-          { grade: examGrade, weight: examWeight },
-          { grade: tpGrade, weight: tpWeight },
-          { grade: stageGrade, weight: stageWeight },
-          { grade: oralGrade, weight: 0 },
-          { grade: memoireGrade, weight: 0 },
-          { grade: projectGrade, weight: 0 },
-        ].filter(g => g.grade > 0 || g.weight > 0)
-
-        if (grades.length > 0) {
-          const totalWeight = grades.reduce((sum, g) => sum + g.weight, 0)
-          if (totalWeight > 0) {
-            finalGrade = grades.reduce((sum, g) => sum + g.grade * g.weight, 0) / totalWeight
-          }
-        }
-      } else {
-        finalGrade = null
+      const policy = resolveGradingPolicy(settings)
+      if (!isValidGradingPolicy(policy)) {
+        return NextResponse.json({ error: 'Coefficients de notation invalides' }, { status: 409 })
       }
+      finalGrade = calculateFinalGrade({ ...existingGrade, ...data }, policy)
     }
 
     const grade = await db.grade.update({
@@ -878,7 +837,13 @@ async function bulkGradeEntryHandler(user: SessionUser, tenantId: string, reques
   try {
     const body = await request.json()
     const validatedBody = validateBody(bulkGradeEntrySchema, body)
-    const { grades, academicYearId, session } = validatedBody
+    const { grades, academicYearId, session, lockAfterSave } = validatedBody
+    if (lockAfterSave && !GRADE_LOCK_ROLES.has(user.role)) {
+      return NextResponse.json({ error: 'Verrouillage non autorisé pour ce rôle' }, { status: 403 })
+    }
+    if (lockAfterSave && grades.length === 0) {
+      return NextResponse.json({ error: 'Aucune note à enregistrer et verrouiller' }, { status: 400 })
+    }
     if (!await academicYearBelongsToTenant(academicYearId, tenantId)) {
       return NextResponse.json({ error: 'Année académique introuvable dans cet établissement' }, { status: 404 })
     }
@@ -887,137 +852,135 @@ async function bulkGradeEntryHandler(user: SessionUser, tenantId: string, reques
       return NextResponse.json({ error: 'Enseignant non associé à cet établissement' }, { status: 403 })
     }
 
-    const results = {
-      created: 0,
-      updated: 0,
-      lockedSkipped: 0,
-      errors: [] as { studentId: string; courseElementId: string; error: string }[],
+    const settings = await db.tenantSettings.findUnique({ where: { tenantId } })
+    const policy = resolveGradingPolicy(settings)
+    if (!isValidGradingPolicy(policy)) {
+      return NextResponse.json({ error: 'Coefficients de notation invalides' }, { status: 409 })
     }
 
-    for (const gradeData of grades) {
-      try {
-        // Verify student belongs to tenant
-        const student = await db.student.findFirst({
-          where: { id: gradeData.studentId, tenantId },
-        })
-        if (!student) {
-          results.errors.push({ studentId: gradeData.studentId, courseElementId: gradeData.courseElementId, error: 'Student not found' })
+    const result = await db.$transaction(async (tx) => {
+      const errors: { studentId: string; courseElementId: string; error: string }[] = []
+      const prepared: { gradeData: typeof grades[number]; existingId: string | null }[] = []
+      const seen = new Set<string>()
+
+      for (const gradeData of grades) {
+        const rowError = (error: string) => errors.push({ studentId: gradeData.studentId, courseElementId: gradeData.courseElementId, error })
+        const key = `${gradeData.studentId}:${gradeData.courseElementId}`
+        if (seen.has(key)) { rowError('Cette note apparaît plusieurs fois dans le lot'); continue }
+        seen.add(key)
+        if (gradeData.academicYearId !== academicYearId || gradeData.session !== session) {
+          rowError('Année académique ou session incohérente dans le lot')
           continue
         }
+        const student = await tx.student.findFirst({ where: { id: gradeData.studentId, tenantId }, select: { id: true } })
+        if (!student) { rowError('Étudiant introuvable dans cet établissement'); continue }
+        const element = await tx.courseElement.findFirst({
+          where: { id: gradeData.courseElementId, teachingUnit: { semester: { level: { program: { tenantId } } } } },
+          select: { teachingUnitId: true, teacherId: true },
+        })
+        if (!element) { rowError('Matière introuvable dans cet établissement'); continue }
+        if (element.teachingUnitId !== gradeData.teachingUnitId) {
+          rowError('La matière ne correspond pas à l’UE indiquée')
+          continue
+        }
+        if (teacherId && element.teacherId !== teacherId &&
+            !await tx.teachingUnit.findFirst({ where: { id: gradeData.teachingUnitId, responsibleId: teacherId, semester: { level: { program: { tenantId } } } }, select: { id: true } })) {
+          rowError('Enseignement non attribué à cet enseignant')
+          continue
+        }
+        if (teacherId && !await tx.pedagogicalRegistration.findFirst({
+          where: { studentId: gradeData.studentId, teachingUnitId: gradeData.teachingUnitId, academicYearId, status: 'ACTIVE' },
+          select: { id: true },
+        })) {
+          rowError('Étudiant non inscrit pédagogiquement à cette UE pour cette année')
+          continue
+        }
+        const existing = await tx.grade.findFirst({
+          where: { studentId: gradeData.studentId, courseElementId: gradeData.courseElementId, academicYearId, session },
+          select: { id: true, isLocked: true },
+        })
+        if (existing?.isLocked) { rowError('La note est déjà verrouillée'); continue }
+        if (lockAfterSave && calculateFinalGrade(gradeData, policy) === null) {
+          rowError('Toutes les composantes pondérées sont requises avant verrouillage')
+          continue
+        }
+        prepared.push({ gradeData, existingId: existing?.id ?? null })
+      }
 
-        // Verify course element belongs to tenant
-        const courseElement = await db.courseElement.findFirst({
-          where: {
-            id: gradeData.courseElementId,
-            teachingUnit: {
-              semester: {
-                level: { program: { tenantId } },
-              },
+      if (lockAfterSave && errors.length === 0) {
+        const teachingUnitId = grades[0].teachingUnitId
+        const courseElementId = grades[0].courseElementId
+        if (grades.some((grade) => grade.teachingUnitId !== teachingUnitId || grade.courseElementId !== courseElementId)) {
+          errors.push({ studentId: grades[0].studentId, courseElementId, error: 'Un seul enseignement peut être verrouillé par lot' })
+        } else {
+          const registrations = await tx.pedagogicalRegistration.findMany({
+            where: { teachingUnitId, academicYearId, status: 'ACTIVE', student: { tenantId } },
+            select: { studentId: true },
+          })
+          const rosterIds = new Set(registrations.map((registration) => registration.studentId))
+          if (rosterIds.size === 0) {
+            errors.push({ studentId: grades[0].studentId, courseElementId, error: 'Aucun étudiant inscrit pédagogiquement à cette UE' })
+          }
+          for (const grade of grades) {
+            if (!rosterIds.has(grade.studentId)) {
+              errors.push({ studentId: grade.studentId, courseElementId, error: 'Étudiant absent des inscriptions pédagogiques de cette UE' })
+            }
+          }
+          const locked = await tx.grade.findMany({
+            where: {
+              studentId: { in: [...rosterIds] }, courseElementId, academicYearId, session,
+              isLocked: true, finalGrade: { not: null },
             },
-          },
-        })
-        if (!courseElement) {
-          results.errors.push({ studentId: gradeData.studentId, courseElementId: gradeData.courseElementId, error: 'Course element not found' })
-          continue
-        }
-        if (courseElement.teachingUnitId !== gradeData.teachingUnitId) {
-          results.errors.push({ studentId: gradeData.studentId, courseElementId: gradeData.courseElementId, error: 'Course element does not belong to the specified teaching unit' })
-          continue
-        }
-        if (teacherId && courseElement.teacherId !== teacherId &&
-            !await db.teachingUnit.findFirst({ where: { id: gradeData.teachingUnitId, responsibleId: teacherId, semester: { level: { program: { tenantId } } } }, select: { id: true } })) {
-          results.errors.push({ studentId: gradeData.studentId, courseElementId: gradeData.courseElementId, error: 'Enseignement non attribué à cet enseignant' })
-          continue
-        }
-        if (teacherId && !await isStudentRegistered(gradeData.studentId, gradeData.teachingUnitId, academicYearId)) {
-          results.errors.push({ studentId: gradeData.studentId, courseElementId: gradeData.courseElementId, error: 'Étudiant non inscrit pédagogiquement à cette UE pour cette année' })
-          continue
-        }
-
-        // Check existing
-        const existing = await db.grade.findFirst({
-          where: {
-            studentId: gradeData.studentId,
-            courseElementId: gradeData.courseElementId,
-            academicYearId,
-            session,
-          },
-        })
-
-        // Calculate final grade
-        const settings = await db.tenantSettings.findUnique({ where: { tenantId } })
-        const ccWeight = settings?.ccWeight || 0.4
-        const examWeight = settings?.examWeight || 0.6
-        const tpWeight = settings?.tpWeight || 0
-        const stageWeight = settings?.stageWeight || 0
-
-        const ccGrade = gradeData.ccGrade ?? 0
-        const examGrade = gradeData.examGrade ?? 0
-        const tpGrade = gradeData.tpGrade ?? 0
-        const stageGrade = gradeData.stageGrade ?? 0
-        const oralGrade = gradeData.oralGrade ?? 0
-        const memoireGrade = gradeData.memoireGrade ?? 0
-        const projectGrade = gradeData.projectGrade ?? 0
-
-        let finalGrade: number | null = null
-        if (!gradeData.isAbsent && !gradeData.isDefaillant) {
-          const gradesArr = [
-            { grade: ccGrade, weight: ccWeight },
-            { grade: examGrade, weight: examWeight },
-            { grade: tpGrade, weight: tpWeight },
-            { grade: stageGrade, weight: stageWeight },
-            { grade: oralGrade, weight: 0 },
-            { grade: memoireGrade, weight: 0 },
-            { grade: projectGrade, weight: 0 },
-          ].filter(g => g.grade > 0 || g.weight > 0)
-
-          if (gradesArr.length > 0) {
-            const totalWeight = gradesArr.reduce((sum, g) => sum + g.weight, 0)
-            if (totalWeight > 0) {
-              finalGrade = gradesArr.reduce((sum, g) => sum + g.grade * g.weight, 0) / totalWeight
+            select: { studentId: true },
+          })
+          const covered = new Set([...grades.map((grade) => grade.studentId), ...locked.map((grade) => grade.studentId)])
+          for (const studentId of rosterIds) {
+            if (!covered.has(studentId)) {
+              errors.push({ studentId, courseElementId, error: 'Note manquante pour un étudiant inscrit à cette UE' })
             }
           }
         }
+      }
 
-        if (existing) {
-          if (existing.isLocked) {
-            results.lockedSkipped++
-            continue
-          }
-          await db.grade.update({
-            where: { id: existing.id },
-            data: { ...gradeData, finalGrade, academicYearId, session },
-          })
-          results.updated++
-        } else {
-          await db.grade.create({
-            data: { ...gradeData, finalGrade, academicYearId, session },
-          })
-          results.created++
+      if (errors.length > 0) return { created: 0, updated: 0, lockedSkipped: 0, errors }
+
+      let created = 0
+      let updated = 0
+      for (const { gradeData, existingId } of prepared) {
+        const data = {
+          ...gradeData, academicYearId, session, finalGrade: calculateFinalGrade(gradeData, policy),
+          ...(lockAfterSave ? { isLocked: true, lockedBy: user.id, validatedBy: user.id } : {}),
         }
-      } catch (e) {
-        results.errors.push({
-          studentId: gradeData.studentId,
-          courseElementId: gradeData.courseElementId,
-          error: e instanceof Error ? e.message : 'Unknown error',
+        if (existingId) {
+          const update = await tx.grade.updateMany({ where: { id: existingId, isLocked: false }, data })
+          if (update.count !== 1) throw new GradeWriteConflict('Une note a été verrouillée entre la vérification et l’enregistrement')
+          updated++
+        } else {
+          await tx.grade.create({ data })
+          created++
+        }
+      }
+      if (prepared.length > 0) {
+        await tx.auditLog.create({
+          data: {
+            tenantId, userId: user.id, action: lockAfterSave ? 'BULK_SAVE_AND_LOCK' : 'BULK_CREATE', entity: 'Grade',
+            details: JSON.stringify({ created, updated, locked: lockAfterSave ? prepared.length : 0, academicYearId, session }),
+          },
         })
       }
+      return { created, updated, lockedSkipped: 0, errors, ...(lockAfterSave ? { locked: prepared.length } : {}) }
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable })
+
+    if (result.errors.length > 0) {
+      return NextResponse.json({ error: `Lot refusé : ${result.errors[0].error}`, data: result }, { status: 422 })
     }
-
-    // Audit log
-    await db.auditLog.create({
-      data: {
-        tenantId,
-        userId: user.id,
-        action: 'BULK_CREATE',
-        entity: 'Grade',
-        details: JSON.stringify({ created: results.created, updated: results.updated, lockedSkipped: results.lockedSkipped, errors: results.errors.length }),
-      },
-    })
-
-    return NextResponse.json({ data: results })
+    return NextResponse.json({ data: result })
   } catch (error) {
     console.error('Bulk grade entry error:', error)
+    if (error instanceof GradeWriteConflict ||
+        (error instanceof Prisma.PrismaClientKnownRequestError && ['P2002', 'P2034'].includes(error.code))) {
+      return NextResponse.json({ error: error instanceof GradeWriteConflict ? error.message : 'Conflit concurrent sur les notes : rechargez puis réessayez' }, { status: 409 })
+    }
     if (error instanceof Error && error.name === 'ZodError') {
       return NextResponse.json(
         { error: 'Validation failed', details: formatZodError(error as any) },
@@ -1037,33 +1000,27 @@ async function calculateGradeHandler(user: SessionUser, tenantId: string, reques
     const validatedBody = validateBody(calculateGradeSchema, body)
 
     const settings = await db.tenantSettings.findUnique({ where: { tenantId } })
-    const ccWeight = validatedBody.ccWeight ?? settings?.ccWeight ?? 0.4
-    const examWeight = validatedBody.examWeight ?? settings?.examWeight ?? 0.6
-    const tpWeight = validatedBody.tpWeight ?? settings?.tpWeight ?? 0
-    const stageWeight = validatedBody.stageWeight ?? settings?.stageWeight ?? 0
-
-    const grades = [
-      { grade: validatedBody.ccGrade ?? 0, weight: ccWeight },
-      { grade: validatedBody.examGrade ?? 0, weight: examWeight },
-      { grade: validatedBody.tpGrade ?? 0, weight: tpWeight },
-      { grade: validatedBody.stageGrade ?? 0, weight: stageWeight },
-      { grade: validatedBody.oralGrade ?? 0, weight: 0 },
-      { grade: validatedBody.memoireGrade ?? 0, weight: 0 },
-      { grade: validatedBody.projectGrade ?? 0, weight: 0 },
-    ].filter(g => g.grade > 0 || g.weight > 0)
-
-    let finalGrade: number | null = null
-    if (grades.length > 0) {
-      const totalWeight = grades.reduce((sum, g) => sum + g.weight, 0)
-      if (totalWeight > 0) {
-        finalGrade = Math.round(grades.reduce((sum, g) => sum + g.grade * g.weight, 0) / totalWeight * 100) / 100
-      }
+    const policy = { ...resolveGradingPolicy(settings),
+      ...(validatedBody.ccWeight !== undefined ? { ccWeight: validatedBody.ccWeight } : {}),
+      ...(validatedBody.examWeight !== undefined ? { examWeight: validatedBody.examWeight } : {}),
+      ...(validatedBody.tpWeight !== undefined ? { tpWeight: validatedBody.tpWeight } : {}),
+      ...(validatedBody.stageWeight !== undefined ? { stageWeight: validatedBody.stageWeight } : {}),
     }
+    if (!isValidGradingPolicy(policy)) {
+      return NextResponse.json({ error: 'Coefficients de notation invalides' }, { status: 409 })
+    }
+    const finalGrade = calculateFinalGrade(validatedBody, policy)
+    const breakdown = [
+      { grade: validatedBody.ccGrade ?? null, weight: policy.ccWeight },
+      { grade: validatedBody.examGrade ?? null, weight: policy.examWeight },
+      { grade: validatedBody.tpGrade ?? null, weight: policy.tpWeight },
+      { grade: validatedBody.stageGrade ?? null, weight: policy.stageWeight },
+    ]
 
     return NextResponse.json({
       data: {
         finalGrade,
-        breakdown: grades.map(g => ({ grade: g.grade, weight: g.weight })),
+        breakdown,
       },
     })
   } catch (error) {
@@ -1083,7 +1040,7 @@ async function calculateGradeHandler(user: SessionUser, tenantId: string, reques
 
 async function lockGradeHandler(user: SessionUser, tenantId: string, request: NextRequest) {
   try {
-    if (!['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE', 'RESPONSABLE_FILIERE'].includes(user.role)) {
+    if (!GRADE_LOCK_ROLES.has(user.role)) {
       return NextResponse.json({ error: 'Verrouillage non autorisé pour ce rôle' }, { status: 403 })
     }
     const { searchParams } = new URL(request.url)
@@ -1127,27 +1084,29 @@ async function lockGradeHandler(user: SessionUser, tenantId: string, request: Ne
         (element && existingGrade.teachingUnitId && element.teachingUnitId !== existingGrade.teachingUnitId)) {
       return NextResponse.json({ error: 'Contexte académique incohérent pour cet établissement' }, { status: 409 })
     }
+    if (lock && existingGrade.finalGrade === null) {
+      return NextResponse.json({ error: 'Une note incomplète ne peut pas être verrouillée' }, { status: 409 })
+    }
 
-    const grade = await db.grade.update({
-      where: { id },
-      data: { isLocked: lock },
+    await db.$transaction(async (tx) => {
+      const updated = await tx.grade.updateMany({
+        where: { id, isLocked: !lock, ...(lock ? { finalGrade: { not: null } } : {}) },
+        data: { isLocked: lock, lockedBy: lock ? user.id : null },
+      })
+      if (updated.count !== 1) throw new GradeWriteConflict('L’état de cette note a changé : rechargez-la puis réessayez')
+      await tx.auditLog.create({
+        data: {
+          tenantId, userId: user.id, action: lock ? 'LOCK' : 'UNLOCK', entity: 'Grade', entityId: id,
+          details: JSON.stringify({ studentId: existingGrade.studentId, courseElementId: existingGrade.courseElementId, before: existingGrade.isLocked, after: lock, reason: reason || null }),
+        },
+      })
     })
-
-    // Audit log
-    await db.auditLog.create({
-      data: {
-        tenantId,
-        userId: user.id,
-        action: lock ? 'LOCK' : 'UNLOCK',
-        entity: 'Grade',
-        entityId: grade.id,
-        details: JSON.stringify({ studentId: grade.studentId, courseElementId: grade.courseElementId, before: existingGrade.isLocked, after: lock, reason: reason || null }),
-      },
-    })
-
-    return NextResponse.json({ data: { id: grade.id, isLocked: grade.isLocked } })
+    return NextResponse.json({ data: { id, isLocked: lock } })
   } catch (error) {
     console.error('Lock grade error:', error)
+    if (error instanceof GradeWriteConflict) {
+      return NextResponse.json({ error: error.message }, { status: 409 })
+    }
     return NextResponse.json(
       { error: 'Failed to lock/unlock grade', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
@@ -1256,6 +1215,9 @@ export const GET = withTenantAuth(async (user: SessionUser, tenantId: string, re
   }
   if (action === 'roster') {
     return getGradeRosterHandler(user, tenantId, request)
+  }
+  if (action === 'policy') {
+    return getGradingPolicyHandler(user, tenantId)
   }
 
   if (action === 'stats') {

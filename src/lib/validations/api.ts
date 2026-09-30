@@ -112,6 +112,7 @@ export const bulkGradeEntrySchema = z.object({
   grades: z.array(createGradeSchema),
   academicYearId: z.string().cuid(),
   session: z.enum(['NORMALE', 'RATTRAPAGE', 'SPECIALE']).default('NORMALE'),
+  lockAfterSave: z.boolean().default(false),
 })
 
 export const calculateGradeSchema = z.object({
@@ -122,10 +123,10 @@ export const calculateGradeSchema = z.object({
   oralGrade: z.number().min(0).max(20).optional(),
   memoireGrade: z.number().min(0).max(20).optional(),
   projectGrade: z.number().min(0).max(20).optional(),
-  ccWeight: z.number().min(0).max(1).default(0.4),
-  examWeight: z.number().min(0).max(1).default(0.6),
-  tpWeight: z.number().min(0).max(1).default(0),
-  stageWeight: z.number().min(0).max(1).default(0),
+  ccWeight: z.number().min(0).max(1).optional(),
+  examWeight: z.number().min(0).max(1).optional(),
+  tpWeight: z.number().min(0).max(1).optional(),
+  stageWeight: z.number().min(0).max(1).optional(),
 })
 
 // ========================================

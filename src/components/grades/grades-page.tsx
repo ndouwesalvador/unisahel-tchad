@@ -43,6 +43,7 @@ import { useStructure, useDashboardStats } from '@/lib/api-hooks'
 import { useAppStore } from '@/lib/store'
 import { exportToExcel, parseExcelFile } from '@/lib/export'
 import { flattenTeachingUnits } from './grade-selection'
+import { calculateFinalGrade, type GradingPolicy } from '@/lib/grading-policy'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -55,12 +56,13 @@ interface GradeEntry {
   cc: string
   exam: string
   tp: string
+  stage: string
   moyenne: number | null
   isLocked: boolean
   observation: string
 }
 
-type LocalEdit = { cc?: string; exam?: string; tp?: string; observation?: string }
+type LocalEdit = { cc?: string; exam?: string; tp?: string; stage?: string; observation?: string }
 
 interface GradeCompletionItem {
   teachingUnitId: string
@@ -103,14 +105,8 @@ interface GradeCompletion {
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-function isValidGradeInput(value: string) {
-  if (value.trim() === '') return false
-  const parsed = Number(value)
-  return !Number.isNaN(parsed) && parsed >= 0 && parsed <= 20
-}
-
-function isGradeReadyForLock(grade: GradeEntry) {
-  return grade.isLocked || (isValidGradeInput(grade.cc) && isValidGradeInput(grade.exam))
+function isGradeReadyForLock(grade: GradeEntry, policy: GradingPolicy) {
+  return grade.isLocked || computeMoyenne(grade.cc, grade.exam, grade.tp, grade.stage, policy) !== null
 }
 
 function normalizeImportHeader(value: string) {
@@ -139,15 +135,12 @@ function parseImportedGradeValue(value: unknown, label: string, line: number) {
   return String(parsed)
 }
 
-function computeMoyenne(cc: string, exam: string, tp: string): number | null {
-  if (cc === '' || exam === '') return null
-  const ccN = parseFloat(cc) || 0
-  const examN = parseFloat(exam) || 0
-  const tpN = parseFloat(tp)
-  if (tp !== '' && !isNaN(tpN)) {
-    return parseFloat((ccN * 0.3 + examN * 0.5 + tpN * 0.2).toFixed(1))
-  }
-  return parseFloat((ccN * 0.4 + examN * 0.6).toFixed(1))
+function computeMoyenne(cc: string, exam: string, tp: string, stage: string, policy: GradingPolicy): number | null {
+  const toGrade = (value: string) => value.trim() === '' ? undefined : Number(value)
+  return calculateFinalGrade({
+    ccGrade: toGrade(cc), examGrade: toGrade(exam),
+    tpGrade: toGrade(tp), stageGrade: toGrade(stage),
+  }, policy)
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -160,6 +153,18 @@ export function GradesPage() {
   const { data: structureQuery, isLoading: structureLoading } = useStructure()
   const { data: dashboardQuery } = useDashboardStats()
   const academicYearId: string | undefined = dashboardQuery?.currentAcademicYear?.id
+
+  const { data: policyQuery, isPending: policyPending, isError: policyError } = useQuery<{ data: GradingPolicy & { passingGrade: number } }>({
+    queryKey: ['grades-policy'],
+    enabled: Boolean(userRole),
+    queryFn: async () => {
+      const res = await fetch('/api/grades?action=policy')
+      if (!res.ok) throw new Error('Impossible de charger les coefficients de notation')
+      return res.json()
+    },
+  })
+  const policy = policyQuery?.data
+  const passingGrade = policy?.passingGrade ?? 10
 
   const { data: assignmentsQuery, isPending: assignmentsPending, isError: assignmentsError } = useQuery<{ data: { courseElementIds: string[] } }>({
     queryKey: ['grade-assignments'],
@@ -261,7 +266,7 @@ export function GradesPage() {
     item.teachingUnitId === selectedUE && item.courseElementId === selectedCourseElementId
   ) ?? null
 
-  const dataLoading = structureLoading || (userRole === 'ENSEIGNANT' && assignmentsPending) || studentsLoading || gradesLoading
+  const dataLoading = structureLoading || (userRole === 'ENSEIGNANT' && assignmentsPending) || policyPending || studentsLoading || gradesLoading
 
   const grades: GradeEntry[] = useMemo(() => {
     const students = studentsQuery?.data || []
@@ -274,9 +279,11 @@ export function GradesPage() {
       const cc = edit.cc !== undefined ? edit.cc : (existing?.ccGrade != null ? String(existing.ccGrade) : '')
       const exam = edit.exam !== undefined ? edit.exam : (existing?.examGrade != null ? String(existing.examGrade) : '')
       const tp = edit.tp !== undefined ? edit.tp : (existing?.tpGrade != null ? String(existing.tpGrade) : '')
+      const stage = edit.stage !== undefined ? edit.stage : (existing?.stageGrade != null ? String(existing.stageGrade) : '')
       const observation = edit.observation !== undefined ? edit.observation : (existing?.comment || '')
-      const hasLocalEdit = edit.cc !== undefined || edit.exam !== undefined || edit.tp !== undefined
-      const moyenne = hasLocalEdit ? computeMoyenne(cc, exam, tp) : (existing?.finalGrade ?? computeMoyenne(cc, exam, tp))
+      const hasLocalEdit = edit.cc !== undefined || edit.exam !== undefined || edit.tp !== undefined || edit.stage !== undefined
+      const moyenne = hasLocalEdit ? (policy ? computeMoyenne(cc, exam, tp, stage, policy) : null) :
+        (existing?.finalGrade ?? (policy ? computeMoyenne(cc, exam, tp, stage, policy) : null))
 
       return {
         studentId: s.id,
@@ -284,14 +291,14 @@ export function GradesPage() {
         matricule: s.matricule || '',
         nom: s.lastName,
         prenom: s.firstName,
-        cc, exam, tp, observation,
+        cc, exam, tp, stage, observation,
         moyenne,
         isLocked: existing?.isLocked ?? false,
       } as GradeEntry
     })
-  }, [studentsQuery, gradesQuery, localEdits])
+  }, [studentsQuery, gradesQuery, localEdits, policy])
 
-  const handleGradeChange = (studentId: string, field: 'cc' | 'exam' | 'tp', value: string) => {
+  const handleGradeChange = (studentId: string, field: 'cc' | 'exam' | 'tp' | 'stage', value: string) => {
     setLocalEdits(prev => ({ ...prev, [studentId]: { ...prev[studentId], [field]: value } }))
   }
 
@@ -320,17 +327,15 @@ export function GradesPage() {
     if (!academicYearId) {
       throw new Error("Année académique courante introuvable")
     }
+    if (!policy) throw new Error('Coefficients de notation indisponibles')
 
     const toSave = grades.filter(g => !g.isLocked && (requireComplete || g.moyenne !== null))
     const payloadGrades = toSave.map(g => {
       const studentName = `${g.prenom} ${g.nom}`.trim()
-      const ccGrade = parseGradeValue(g.cc, 'CC', studentName, requireComplete)
-      const examGrade = parseGradeValue(g.exam, 'Examen', studentName, requireComplete)
-      const tpGrade = parseGradeValue(g.tp, 'TP', studentName, false)
-
-      if (requireComplete && (ccGrade === undefined || examGrade === undefined)) {
-        throw new Error(`CC et Examen sont requis pour ${studentName}`)
-      }
+      const ccGrade = parseGradeValue(g.cc, 'CC', studentName, requireComplete && policy.ccWeight > 0)
+      const examGrade = parseGradeValue(g.exam, 'Examen', studentName, requireComplete && policy.examWeight > 0)
+      const tpGrade = parseGradeValue(g.tp, 'TP', studentName, requireComplete && policy.tpWeight > 0)
+      const stageGrade = parseGradeValue(g.stage, 'Stage', studentName, requireComplete && policy.stageWeight > 0)
 
       return {
         studentId: g.studentId,
@@ -341,6 +346,7 @@ export function GradesPage() {
         ccGrade,
         examGrade,
         tpGrade,
+        stageGrade,
         comment: g.observation || undefined,
       }
     })
@@ -349,6 +355,7 @@ export function GradesPage() {
       academicYearId,
       session: apiSession,
       grades: payloadGrades,
+      lockAfterSave: requireComplete,
     }
   }
 
@@ -369,16 +376,6 @@ export function GradesPage() {
     const data = await res.json()
     if (!res.ok) throw new Error(data.error || "Échec de l'enregistrement")
     return data.data
-  }
-
-  const fetchCurrentGrades = async () => {
-    const params = new URLSearchParams({ teachingUnitId: selectedUE, session: apiSession, limit: '500' })
-    params.set('courseElementId', selectedCourseElementId)
-    if (academicYearId) params.set('academicYearId', academicYearId)
-    const res = await fetch(`/api/grades?${params.toString()}`)
-    const data = await res.json().catch(() => ({}))
-    if (!res.ok) throw new Error(data.error || 'Impossible de relire les notes enregistrées')
-    return data.data || []
   }
 
   const handleSave = async () => {
@@ -457,20 +454,9 @@ export function GradesPage() {
     setSavingAndLocking(true)
     try {
       const saved = await saveGrades(true)
-      if (saved?.errors?.length) {
-        throw new Error(`${saved.errors.length} note(s) refusée(s) : ${saved.errors[0]?.error || 'erreur inconnue'}`)
-      }
-      const refreshed = await fetchCurrentGrades()
-      const toLock = refreshed.filter((g: any) => g.id && g.finalGrade !== null && !g.isLocked)
-      if (toLock.length !== grades.filter(g => !g.isLocked).length) {
-        throw new Error("Toutes les notes de cette UE doivent être enregistrées avant verrouillage")
-      }
-      const results = await Promise.allSettled(toLock.map((g: any) => lockGrade(g.id)))
-      const failed = results.filter(r => r.status === 'rejected').length
-      if (failed) throw new Error(`${failed} note(s) n’ont pas pu être verrouillées`)
       setLocalEdits({})
       toast.success('Matière enregistrée et verrouillée', {
-        description: `${saved?.created ?? 0} créée(s), ${saved?.updated ?? 0} mise(s) à jour, ${toLock.length} verrouillée(s)`,
+        description: `${saved?.created ?? 0} créée(s), ${saved?.updated ?? 0} mise(s) à jour, ${saved?.locked ?? 0} verrouillée(s)`,
       })
       refetchGrades()
     } catch (e) {
@@ -493,6 +479,7 @@ export function GradesPage() {
         CC: g.cc,
         Examen: g.exam,
         TP: g.tp,
+        Stage: g.stage,
         Moyenne: g.moyenne ?? '',
         Statut: g.isLocked ? 'Valide' : (g.moyenne !== null ? 'A valider' : '-'),
         UE: currentUE?.code || '',
@@ -516,6 +503,7 @@ export function GradesPage() {
         CC: g.isLocked ? g.cc : '',
         Examen: g.isLocked ? g.exam : '',
         TP: g.isLocked ? g.tp : '',
+        Stage: g.isLocked ? g.stage : '',
         Statut: g.isLocked ? 'Déjà verrouillé - ne pas modifier' : 'À compléter',
         UE: currentUE?.code || '',
         ECUE: selectedCompletionItem?.ecCode || '',
@@ -523,7 +511,7 @@ export function GradesPage() {
       `modele_notes_${currentUE?.code || 'ue'}`
     )
     toast.success('Modèle généré', {
-      description: 'Complétez les colonnes CC et Examen, puis réimportez le fichier sur cette même UE.',
+      description: 'Complétez les colonnes dont le coefficient est positif, puis réimportez le fichier sur cette même matière.',
     })
   }
 
@@ -564,8 +552,9 @@ export function GradesPage() {
           const cc = parseImportedGradeValue(getImportValue(row, ['CC', 'Controle continu', 'Contrôle continu', 'Devoir']), 'CC', line)
           const exam = parseImportedGradeValue(getImportValue(row, ['Examen', 'Exam', 'Note examen']), 'Examen', line)
           const tp = parseImportedGradeValue(getImportValue(row, ['TP', 'Travaux pratiques']), 'TP', line)
+          const stage = parseImportedGradeValue(getImportValue(row, ['Stage', 'Note stage']), 'Stage', line)
 
-          if (cc === undefined && exam === undefined && tp === undefined) {
+          if (cc === undefined && exam === undefined && tp === undefined && stage === undefined) {
             ignoredEmpty++
             return
           }
@@ -574,6 +563,7 @@ export function GradesPage() {
             ...(cc !== undefined ? { cc } : {}),
             ...(exam !== undefined ? { exam } : {}),
             ...(tp !== undefined ? { tp } : {}),
+            ...(stage !== undefined ? { stage } : {}),
           }
           matched++
         } catch (error) {
@@ -616,7 +606,7 @@ export function GradesPage() {
 
   // ─── Computed Stats ──────────────────────────────────────────────────────
   const validGrades = grades.filter(g => g.moyenne !== null)
-  const validCount = validGrades.filter(g => g.moyenne! >= 10).length
+  const validCount = validGrades.filter(g => g.moyenne! >= passingGrade).length
   const classAverage = validGrades.length > 0
     ? validGrades.reduce((acc, g) => acc + (g.moyenne || 0), 0) / validGrades.length
     : 0
@@ -632,12 +622,13 @@ export function GradesPage() {
     if (missing.length === 0) return null
     return missing.find(item => item.teachingUnitId !== selectedUE || item.courseElementId !== selectedCourseElementId) ?? missing[0]
   }, [completion, selectedUE, selectedCourseElementId])
-  const canSave = Boolean(currentCourseElement && academicYearId && hasLocalEdits && !saving && !savingAndLocking)
+  const canSave = Boolean(policy && currentCourseElement && academicYearId && hasLocalEdits && !saving && !savingAndLocking)
   const unlockedGrades = grades.filter(g => !g.isLocked)
-  const allCurrentUEGradesReadyForLock = grades.length > 0 && grades.every(isGradeReadyForLock)
+  const allCurrentUEGradesReadyForLock = Boolean(policy && grades.length > 0 && grades.every((grade) => isGradeReadyForLock(grade, policy)))
   const canSaveAndLockCurrentUE = Boolean(
     canLockGrades &&
     currentCourseElement &&
+    policy &&
     academicYearId &&
     grades.length > 0 &&
     unlockedGrades.length > 0 &&
@@ -670,7 +661,6 @@ export function GradesPage() {
     return ranges
   }, [validGrades])
 
-  const hasTP = grades.some(g => g.tp && g.tp !== '')
   const maxDistCount = Math.max(...distribution.map(d => d.count), 1)
 
   // ─── Mediane & ecart-type ───────────────────────────────────────────────
@@ -691,15 +681,15 @@ export function GradesPage() {
   // ─── Color Helpers ──────────────────────────────────────────────────────
   const getGradeBgColor = (moyenne: number | null) => {
     if (moyenne === null) return ''
-    if (moyenne >= 10) return 'bg-[#2d7a4f10]'
-    if (moyenne >= 8) return 'bg-[#f9a82510]'
+    if (moyenne >= passingGrade) return 'bg-[#2d7a4f10]'
+    if (moyenne >= passingGrade - 2) return 'bg-[#f9a82510]'
     return 'bg-[#c6282810]'
   }
 
   const getGradeTextColor = (moyenne: number | null) => {
     if (moyenne === null) return 'text-gray-300'
-    if (moyenne >= 10) return 'text-[#2d7a4f]'
-    if (moyenne >= 8) return 'text-[#f9a825]'
+    if (moyenne >= passingGrade) return 'text-[#2d7a4f]'
+    if (moyenne >= passingGrade - 2) return 'text-[#f9a825]'
     return 'text-[#c62828]'
   }
 
@@ -905,8 +895,8 @@ export function GradesPage() {
               <div className="p-2 rounded-lg bg-[#d4a85310]">
                 <TrendingUp className="size-4 text-[#d4a853]" />
               </div>
-              <Badge className={`text-[10px] border-0 ${classAverage >= 10 ? 'bg-[#2d7a4f10] text-[#2d7a4f]' : 'bg-[#c6282810] text-[#c62828]'}`}>
-                {classAverage >= 10 ? 'Au-dessus' : 'En dessous'}
+              <Badge className={`text-[10px] border-0 ${classAverage >= passingGrade ? 'bg-[#2d7a4f10] text-[#2d7a4f]' : 'bg-[#c6282810] text-[#c62828]'}`}>
+                {classAverage >= passingGrade ? 'Au-dessus' : 'En dessous'}
               </Badge>
             </div>
             <p className="text-2xl font-bold text-[#d4a853]">{classAverage.toFixed(1)}</p>
@@ -1032,6 +1022,9 @@ export function GradesPage() {
             {userRole === 'ENSEIGNANT' && !assignmentsPending && !assignmentsError && ueList.length === 0 && (
               <p className="text-xs text-gray-600">Aucune matière ne vous est attribuée. Contactez l&apos;administration pour configurer votre service d&apos;enseignement.</p>
             )}
+            {policyError && (
+              <p className="text-xs text-[#c62828]">Les coefficients de notation ne sont pas disponibles ou sont invalides. La saisie et le verrouillage sont désactivés.</p>
+            )}
             {!academicYearId && (
               <p className="text-xs text-[#c62828]">Aucune année académique courante n&apos;est configurée. La saisie des notes est indisponible.</p>
             )}
@@ -1050,7 +1043,7 @@ export function GradesPage() {
             <div className="p-3 bg-[#1a274408] border border-[#1a274415] rounded-lg">
               <p className="text-xs text-[#1a2744] font-medium flex items-center gap-1.5">
                 <AlertCircle className="size-3.5" />
-                Saisissez les CC, examens et TP dans le tableau ci-dessous. Les notes validées sont verrouillées et ne peuvent plus être modifiées.
+                Saisissez les composantes dont le coefficient est positif dans le tableau ci-dessous. Les notes validées sont verrouillées et ne peuvent plus être modifiées.
                 {selectedCompletionItem && (
                   <span className="ml-1 font-semibold">
                     Cette UE : {selectedCompletionItem.locked}/{selectedCompletionItem.expected} note(s) verrouillée(s), {selectedCompletionItem.missing} manquante(s).
@@ -1113,11 +1106,11 @@ export function GradesPage() {
                   </div>
                   <div className="flex items-center gap-1.5">
                     <div className="w-3 h-3 rounded-sm bg-[#f9a82525]" />
-                    <span className="text-[10px] text-gray-500">8-10 (Compensation)</span>
+                    <span className="text-[10px] text-gray-500">{passingGrade - 2}–{passingGrade} (Compensation)</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <div className="w-3 h-3 rounded-sm bg-[#2d7a4f25]" />
-                    <span className="text-[10px] text-gray-500">&ge; 10 (Valide)</span>
+                    <span className="text-[10px] text-gray-500">&ge; {passingGrade} (Valide)</span>
                   </div>
                 </div>
               </div>
@@ -1202,9 +1195,10 @@ export function GradesPage() {
                     <TableHead className="text-xs font-semibold text-gray-500 w-8">#</TableHead>
                     <TableHead className="text-xs font-semibold text-gray-500">Matricule</TableHead>
                     <TableHead className="text-xs font-semibold text-gray-500">Nom Prenom</TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-500 text-center w-24">CC ({hasTP ? '30%' : '40%'})</TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-500 text-center w-24">Exam ({hasTP ? '50%' : '60%'})</TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-500 text-center w-24">TP</TableHead>
+                    <TableHead className="text-xs font-semibold text-gray-500 text-center w-24">CC ({Math.round((policy?.ccWeight ?? 0) * 100)}%)</TableHead>
+                    <TableHead className="text-xs font-semibold text-gray-500 text-center w-24">Exam ({Math.round((policy?.examWeight ?? 0) * 100)}%)</TableHead>
+                    <TableHead className="text-xs font-semibold text-gray-500 text-center w-24">TP ({Math.round((policy?.tpWeight ?? 0) * 100)}%)</TableHead>
+                    <TableHead className="text-xs font-semibold text-gray-500 text-center w-24">Stage ({Math.round((policy?.stageWeight ?? 0) * 100)}%)</TableHead>
                     <TableHead className="text-xs font-semibold text-gray-500 text-center w-24">Moyenne</TableHead>
                     <TableHead className="text-xs font-semibold text-gray-500 text-center w-20">Statut</TableHead>
                     <TableHead className="text-xs font-semibold text-gray-500 text-center w-24">Action</TableHead>
@@ -1213,12 +1207,12 @@ export function GradesPage() {
                 <TableBody>
                   {dataLoading && (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center py-8 text-sm text-gray-400">Chargement...</TableCell>
+                      <TableCell colSpan={10} className="text-center py-8 text-sm text-gray-400">Chargement...</TableCell>
                     </TableRow>
                   )}
                   {!dataLoading && grades.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center py-8 text-sm text-gray-400">
+                      <TableCell colSpan={10} className="text-center py-8 text-sm text-gray-400">
                         Aucun étudiant inscrit pédagogiquement à cette UE pour cette année
                       </TableCell>
                     </TableRow>
@@ -1267,14 +1261,27 @@ export function GradesPage() {
                           className="h-8 text-center text-sm w-20 mx-auto disabled:bg-gray-50"
                         />
                       </TableCell>
+                      <TableCell className="py-2">
+                        <Input
+                          type="number"
+                          min="0"
+                          max="20"
+                          step="0.5"
+                          value={grade.stage}
+                          onChange={(e) => handleGradeChange(grade.studentId, 'stage', e.target.value)}
+                          disabled={grade.isLocked}
+                          placeholder="-"
+                          className="h-8 text-center text-sm w-20 mx-auto disabled:bg-gray-50"
+                        />
+                      </TableCell>
                       <TableCell className="py-2 text-center">
                         <span className={`text-sm font-bold ${getGradeTextColor(grade.moyenne)}`}>
-                          {grade.moyenne !== null ? grade.moyenne.toFixed(1) : '-'}
+                          {grade.moyenne !== null ? grade.moyenne.toFixed(2) : '-'}
                         </span>
                       </TableCell>
                       <TableCell className="py-2 text-center">
                         {grade.moyenne !== null ? (
-                          grade.moyenne >= 10 ? (
+                          grade.moyenne >= passingGrade ? (
                             <CheckCircle2 className="size-4 text-[#2d7a4f] mx-auto" />
                           ) : (
                             <AlertCircle className="size-4 text-[#c62828] mx-auto" />
