@@ -124,9 +124,9 @@ const categoryConfig: Record<Category, { label: string; icon: React.ElementType;
 
 const targetConfig: Record<TargetAudience, { label: string; className: string }> = {
   Tous: { label: 'Tous', className: 'bg-gray-100 text-gray-600 border-0' },
-  Etudiants: { label: 'Etudiants', className: 'bg-[#2d7a4f10] text-[#2d7a4f] border-0' },
+  Étudiants: { label: 'Étudiants', className: 'bg-[#2d7a4f10] text-[#2d7a4f] border-0' },
   Enseignants: { label: 'Enseignants', className: 'bg-[#1a274410] text-[#1a2744] border-0' },
-  Scolarite: { label: 'Scolarite', className: 'bg-[#d4a85310] text-[#d4a853] border-0' },
+  Scolarité: { label: 'Scolarité', className: 'bg-[#d4a85310] text-[#d4a853] border-0' },
 }
 
 const categoryTabs: { value: string; label: string; icon: React.ElementType; filter: Category | null }[] = [
@@ -161,9 +161,9 @@ interface AnnouncementRecord {
 // Maps the API's English target values to the local French display labels.
 const apiTargetToLabel: Record<string, TargetAudience> = {
   ALL: 'Tous',
-  STUDENTS: 'Etudiants',
+  STUDENTS: 'Étudiants',
   TEACHERS: 'Enseignants',
-  STAFF: 'Scolarite',
+  STAFF: 'Scolarité',
 }
 
 // Maps the "new announcement" form's select values back to the API's target values.
