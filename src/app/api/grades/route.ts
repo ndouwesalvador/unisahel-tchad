@@ -5,12 +5,33 @@ import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
 import { resolveOwnStudentId, isStudentSelfRole } from '@/lib/auth/student-scope'
 import { gradeQuerySchema, createGradeSchema, updateGradeSchema, bulkGradeEntrySchema, calculateGradeSchema, validateQuery, validateBody, formatZodError } from '@/lib/validations/api'
 
+const GRADE_OVERSIGHT_ROLES = new Set(['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE', 'RECTORAT', 'RESPONSABLE_FILIERE', 'JURY'])
+
 function gradeCompletionKey(studentId: string, teachingUnitId: string, courseElementId?: string | null) {
   return `${studentId}:${teachingUnitId}:${courseElementId || 'UE'}`
 }
 
+async function assignedTeacherId(user: SessionUser, tenantId: string): Promise<string | null> {
+  if (user.role !== 'ENSEIGNANT') return null
+  const teacher = await db.teacher.findFirst({
+    where: { userId: user.id, tenantId, isActive: true },
+    select: { id: true },
+  })
+  return teacher?.id ?? null
+}
+
+async function academicYearBelongsToTenant(academicYearId: string, tenantId: string): Promise<boolean> {
+  const year = await db.academicYear.findFirst({
+    where: { id: academicYearId, tenantId },
+    select: { id: true },
+  })
+  return Boolean(year)
+}
+
 async function resolveAcademicYearId(tenantId: string, requestedAcademicYearId: string | null) {
-  if (requestedAcademicYearId) return requestedAcademicYearId
+  if (requestedAcademicYearId) {
+    return await academicYearBelongsToTenant(requestedAcademicYearId, tenantId) ? requestedAcademicYearId : null
+  }
   const current = await db.academicYear.findFirst({
     where: { tenantId, isCurrent: true },
     select: { id: true },
@@ -24,6 +45,9 @@ async function getGradesHandler(user: SessionUser, tenantId: string, request: Ne
     const validatedQuery = validateQuery(gradeQuerySchema, searchParams)
 
     const ownStudentId = await resolveOwnStudentId(user)
+    if (isStudentSelfRole(user.role) && !ownStudentId) {
+      return NextResponse.json({ error: 'FORBIDDEN', message: 'Accès refusé' }, { status: 403 })
+    }
     if (ownStudentId && validatedQuery.studentId && validatedQuery.studentId !== ownStudentId) {
       return NextResponse.json({ error: 'FORBIDDEN', message: 'Accès refusé' }, { status: 403 })
     }
@@ -31,12 +55,23 @@ async function getGradesHandler(user: SessionUser, tenantId: string, request: Ne
     const studentId = ownStudentId ?? validatedQuery.studentId
     const skip = (page - 1) * limit
 
-    const where: Prisma.GradeWhereInput = {}
+    const where: Prisma.GradeWhereInput = { student: { tenantId } }
+    if (isStudentSelfRole(user.role)) where.isLocked = true
+    const teacherId = await assignedTeacherId(user, tenantId)
+    if (user.role === 'ENSEIGNANT') {
+      if (!teacherId) return NextResponse.json({ error: 'Enseignant non associé à cet établissement' }, { status: 403 })
+      where.OR = [
+        { courseElement: { teacherId, teachingUnit: { semester: { level: { program: { tenantId } } } } } },
+        { teachingUnit: { responsibleId: teacherId, semester: { level: { program: { tenantId } } } } },
+      ]
+    }
 
     if (studentId) {
       where.studentId = studentId
-    } else {
-      where.student = { tenantId }
+    }
+
+    if (academicYearId && !await academicYearBelongsToTenant(academicYearId, tenantId)) {
+      return NextResponse.json({ error: 'Année académique introuvable' }, { status: 404 })
     }
 
     if (academicYearId) {
@@ -254,7 +289,7 @@ async function getGradesHandler(user: SessionUser, tenantId: string, request: Ne
 
 async function getGradeCompletionHandler(user: SessionUser, tenantId: string, request: NextRequest) {
   try {
-    if (isStudentSelfRole(user.role)) {
+    if (!GRADE_OVERSIGHT_ROLES.has(user.role)) {
       return NextResponse.json({ error: 'FORBIDDEN', message: 'Accès refusé' }, { status: 403 })
     }
 
@@ -458,6 +493,13 @@ async function createGradeHandler(user: SessionUser, tenantId: string, request: 
   try {
     const body = await request.json()
     const validatedBody = validateBody(createGradeSchema, body)
+    if (!await academicYearBelongsToTenant(validatedBody.academicYearId, tenantId)) {
+      return NextResponse.json({ error: 'Année académique introuvable dans cet établissement' }, { status: 404 })
+    }
+    const teacherId = await assignedTeacherId(user, tenantId)
+    if (user.role === 'ENSEIGNANT' && !teacherId) {
+      return NextResponse.json({ error: 'Enseignant non associé à cet établissement' }, { status: 403 })
+    }
 
     // Verify student belongs to tenant
     const student = await db.student.findFirst({
@@ -510,6 +552,9 @@ async function createGradeHandler(user: SessionUser, tenantId: string, request: 
         { error: 'Course element does not belong to the specified teaching unit' },
         { status: 400 }
       )
+    }
+    if (teacherId && courseElement.teacherId !== teacherId && courseElement.teachingUnit.responsibleId !== teacherId) {
+      return NextResponse.json({ error: 'Enseignement non attribué à cet enseignant' }, { status: 403 })
     }
 
     // Check if grade already exists for this student/course element/academic year/session
@@ -618,9 +663,10 @@ async function updateGradeHandler(user: SessionUser, tenantId: string, request: 
 
     // Verify grade exists and belongs to tenant
     const existingGrade = await db.grade.findFirst({
-      where: { id },
+      where: { id, student: { tenantId } },
       include: {
         student: { select: { tenantId: true } },
+        teachingUnit: { include: { semester: { include: { level: { include: { program: true } } } } } },
         courseElement: {
           include: {
             teachingUnit: {
@@ -640,9 +686,30 @@ async function updateGradeHandler(user: SessionUser, tenantId: string, request: 
         { status: 404 }
       )
     }
+    if (!await academicYearBelongsToTenant(existingGrade.academicYearId, tenantId) ||
+        (existingGrade.teachingUnit && existingGrade.teachingUnit.semester.level.program.tenantId !== tenantId) ||
+        (existingGrade.courseElement && existingGrade.courseElement.teachingUnit.semester.level.program.tenantId !== tenantId) ||
+        (existingGrade.courseElement && existingGrade.teachingUnitId && existingGrade.courseElement.teachingUnitId !== existingGrade.teachingUnitId)) {
+      return NextResponse.json({ error: 'Contexte académique incohérent pour cet établissement' }, { status: 409 })
+    }
+    if ((data.studentId && data.studentId !== existingGrade.studentId) ||
+        (data.teachingUnitId && data.teachingUnitId !== existingGrade.teachingUnitId) ||
+        (data.courseElementId && data.courseElementId !== existingGrade.courseElementId) ||
+        (data.academicYearId && data.academicYearId !== existingGrade.academicYearId) ||
+        (data.session && data.session !== existingGrade.session)) {
+      return NextResponse.json({ error: 'Le contexte d’une note ne peut pas être modifié' }, { status: 400 })
+    }
+    const teacherId = await assignedTeacherId(user, tenantId)
+    if (user.role === 'ENSEIGNANT' &&
+        (!teacherId ||
+         (existingGrade.courseElement?.teacherId !== teacherId && existingGrade.teachingUnit?.responsibleId !== teacherId))) {
+      return NextResponse.json({ error: 'Modification non autorisée pour cet enseignant' }, { status: 403 })
+    }
 
-    // Check if locked
-    if (existingGrade.isLocked && !data.isLocked) {
+    if (data.isLocked !== undefined) {
+      return NextResponse.json({ error: 'Utilisez l’action de verrouillage dédiée' }, { status: 400 })
+    }
+    if (existingGrade.isLocked) {
       return NextResponse.json(
         { error: 'Grade is locked and cannot be modified' },
         { status: 403 }
@@ -740,6 +807,13 @@ async function bulkGradeEntryHandler(user: SessionUser, tenantId: string, reques
     const body = await request.json()
     const validatedBody = validateBody(bulkGradeEntrySchema, body)
     const { grades, academicYearId, session } = validatedBody
+    if (!await academicYearBelongsToTenant(academicYearId, tenantId)) {
+      return NextResponse.json({ error: 'Année académique introuvable dans cet établissement' }, { status: 404 })
+    }
+    const teacherId = await assignedTeacherId(user, tenantId)
+    if (user.role === 'ENSEIGNANT' && !teacherId) {
+      return NextResponse.json({ error: 'Enseignant non associé à cet établissement' }, { status: 403 })
+    }
 
     const results = {
       created: 0,
@@ -772,6 +846,15 @@ async function bulkGradeEntryHandler(user: SessionUser, tenantId: string, reques
         })
         if (!courseElement) {
           results.errors.push({ studentId: gradeData.studentId, courseElementId: gradeData.courseElementId, error: 'Course element not found' })
+          continue
+        }
+        if (courseElement.teachingUnitId !== gradeData.teachingUnitId) {
+          results.errors.push({ studentId: gradeData.studentId, courseElementId: gradeData.courseElementId, error: 'Course element does not belong to the specified teaching unit' })
+          continue
+        }
+        if (teacherId && courseElement.teacherId !== teacherId &&
+            !await db.teachingUnit.findFirst({ where: { id: gradeData.teachingUnitId, responsibleId: teacherId, semester: { level: { program: { tenantId } } } }, select: { id: true } })) {
+          results.errors.push({ studentId: gradeData.studentId, courseElementId: gradeData.courseElementId, error: 'Enseignement non attribué à cet enseignant' })
           continue
         }
 
@@ -924,9 +1007,17 @@ async function calculateGradeHandler(user: SessionUser, tenantId: string, reques
 
 async function lockGradeHandler(user: SessionUser, tenantId: string, request: NextRequest) {
   try {
+    if (!['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE', 'RESPONSABLE_FILIERE'].includes(user.role)) {
+      return NextResponse.json({ error: 'Verrouillage non autorisé pour ce rôle' }, { status: 403 })
+    }
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
     const lock = searchParams.get('lock') === 'true'
+    const reason = searchParams.get('reason')?.trim() || ''
+
+    if (!lock && (!['SUPER_ADMIN', 'ADMIN_INSTITUTION'].includes(user.role) || reason.length < 10)) {
+      return NextResponse.json({ error: 'Déverrouillage réservé à l’administration avec un motif d’au moins 10 caractères' }, { status: 403 })
+    }
 
     if (!id) {
       return NextResponse.json(
@@ -937,7 +1028,7 @@ async function lockGradeHandler(user: SessionUser, tenantId: string, request: Ne
 
     // Verify grade exists and belongs to tenant
     const existingGrade = await db.grade.findFirst({
-      where: { id },
+      where: { id, student: { tenantId } },
       include: { student: { select: { tenantId: true } } },
     })
     if (!existingGrade || existingGrade.student.tenantId !== tenantId) {
@@ -945,6 +1036,20 @@ async function lockGradeHandler(user: SessionUser, tenantId: string, request: Ne
         { error: 'Grade not found' },
         { status: 404 }
       )
+    }
+    const [unit, element] = await Promise.all([
+      existingGrade.teachingUnitId
+        ? db.teachingUnit.findFirst({ where: { id: existingGrade.teachingUnitId, semester: { level: { program: { tenantId } } } }, select: { id: true } })
+        : Promise.resolve(null),
+      existingGrade.courseElementId
+        ? db.courseElement.findFirst({ where: { id: existingGrade.courseElementId, teachingUnit: { semester: { level: { program: { tenantId } } } } }, select: { teachingUnitId: true } })
+        : Promise.resolve(null),
+    ])
+    if (!await academicYearBelongsToTenant(existingGrade.academicYearId, tenantId) ||
+        (existingGrade.teachingUnitId && !unit) ||
+        (existingGrade.courseElementId && !element) ||
+        (element && existingGrade.teachingUnitId && element.teachingUnitId !== existingGrade.teachingUnitId)) {
+      return NextResponse.json({ error: 'Contexte académique incohérent pour cet établissement' }, { status: 409 })
     }
 
     const grade = await db.grade.update({
@@ -960,7 +1065,7 @@ async function lockGradeHandler(user: SessionUser, tenantId: string, request: Ne
         action: lock ? 'LOCK' : 'UNLOCK',
         entity: 'Grade',
         entityId: grade.id,
-        details: JSON.stringify({ studentId: grade.studentId, courseElementId: grade.courseElementId }),
+        details: JSON.stringify({ studentId: grade.studentId, courseElementId: grade.courseElementId, before: existingGrade.isLocked, after: lock, reason: reason || null }),
       },
     })
 
@@ -1071,7 +1176,7 @@ export const GET = withTenantAuth(async (user: SessionUser, tenantId: string, re
   const action = searchParams.get('action')
 
   if (action === 'stats') {
-    if (isStudentSelfRole(user.role)) {
+    if (!GRADE_OVERSIGHT_ROLES.has(user.role)) {
       return NextResponse.json({ error: 'FORBIDDEN', message: 'Accès refusé' }, { status: 403 })
     }
     return getGradeStatsHandler(user, tenantId, request)

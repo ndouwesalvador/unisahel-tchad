@@ -40,6 +40,7 @@ import {
   TrendingUp,
 } from 'lucide-react'
 import { useStructure, useStudents, useDashboardStats } from '@/lib/api-hooks'
+import { useAppStore } from '@/lib/store'
 import { exportToExcel, parseExcelFile } from '@/lib/export'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -61,6 +62,7 @@ interface GradeEntry {
 interface FlatUE {
   teachingUnitId: string
   courseElementId: string | null
+  courseElementName: string | null
   code: string
   name: string
   semesterId: string
@@ -161,6 +163,7 @@ function flattenTeachingUnits(faculties: any[]): FlatUE[] {
               result.push({
                 teachingUnitId: tu.id,
                 courseElementId: tu.courseElements?.[0]?.id || null,
+                courseElementName: tu.courseElements?.[0]?.name || null,
                 code: tu.code || tu.id,
                 name: tu.name,
                 semesterId: semester.id,
@@ -194,6 +197,8 @@ function computeMoyenne(cc: string, exam: string, tp: string): number | null {
 
 export function GradesPage() {
   const queryClient = useQueryClient()
+  const userRole = useAppStore((state) => state.user?.role)
+  const canLockGrades = ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE', 'RESPONSABLE_FILIERE'].includes(userRole || '')
 
   const { data: structureQuery, isLoading: structureLoading } = useStructure()
   const { data: dashboardQuery } = useDashboardStats()
@@ -227,6 +232,7 @@ export function GradesPage() {
     queryKey: ['grades', selectedUE, apiSession, academicYearId],
     queryFn: async () => {
       const params = new URLSearchParams({ teachingUnitId: selectedUE, session: apiSession, limit: '500' })
+      if (currentUE?.courseElementId) params.set('courseElementId', currentUE.courseElementId)
       if (academicYearId) params.set('academicYearId', academicYearId)
       const res = await fetch(`/api/grades?${params.toString()}`)
       if (!res.ok) throw new Error('Failed to fetch grades')
@@ -243,10 +249,12 @@ export function GradesPage() {
       if (!res.ok) throw new Error('Failed to fetch grade completion')
       return res.json()
     },
-    enabled: Boolean(academicYearId),
+    enabled: Boolean(academicYearId && canLockGrades),
   })
   const completion: GradeCompletion | null = completionQuery?.data ?? null
-  const selectedCompletionItem = completion?.byTeachingUnit.find((item) => item.teachingUnitId === selectedUE) ?? null
+  const selectedCompletionItem = completion?.byTeachingUnit.find((item) =>
+    item.teachingUnitId === selectedUE && item.courseElementId === currentUE?.courseElementId
+  ) ?? null
 
   const dataLoading = structureLoading || studentsLoading || gradesLoading
 
@@ -360,6 +368,7 @@ export function GradesPage() {
 
   const fetchCurrentGrades = async () => {
     const params = new URLSearchParams({ teachingUnitId: selectedUE, session: apiSession, limit: '500' })
+    if (currentUE?.courseElementId) params.set('courseElementId', currentUE.courseElementId)
     if (academicYearId) params.set('academicYearId', academicYearId)
     const res = await fetch(`/api/grades?${params.toString()}`)
     const data = await res.json().catch(() => ({}))
@@ -372,11 +381,18 @@ export function GradesPage() {
     try {
       const r = await saveGrades(false)
       if (!r) {
-      toast.info('Aucune note à enregistrer')
-      return
+        toast.info('Aucune note à enregistrer')
+        return
+      }
+      if (r.errors?.length) {
+        toast.error('Certaines notes n’ont pas été enregistrées', {
+          description: `${r.created} créées, ${r.updated} mises à jour, ${r.errors.length} erreur(s). ${r.errors[0]?.error || ''}`,
+        })
+        refetchGrades()
+        return
       }
       toast.success('Notes enregistrées', {
-        description: `${r.created} créées, ${r.updated} mises à jour${r.lockedSkipped ? `, ${r.lockedSkipped} déjà verrouillée(s) ignorée(s)` : ''}${r.errors?.length ? `, ${r.errors.length} erreur(s)` : ''}`,
+        description: `${r.created} créées, ${r.updated} mises à jour${r.lockedSkipped ? `, ${r.lockedSkipped} déjà verrouillée(s) ignorée(s)` : ''}`,
       })
       setLocalEdits({})
       refetchGrades()
@@ -422,9 +438,9 @@ export function GradesPage() {
     try {
       const results = await Promise.allSettled(toValidate.map(g => lockGrade(g.gradeId as string)))
       const failed = results.filter(r => r.status === 'rejected').length
-      toast.success('Validation terminée', {
-        description: `${toValidate.length - failed} note(s) validée(s)${failed ? `, ${failed} échec(s)` : ''}`,
-      })
+      const description = `${toValidate.length - failed} note(s) validée(s)${failed ? `, ${failed} échec(s)` : ''}`
+      if (failed) toast.error('Validation incomplète', { description })
+      else toast.success('Validation terminée', { description })
       refetchGrades()
     } finally {
       setValidatingId(null)
@@ -432,11 +448,13 @@ export function GradesPage() {
   }
 
   const handleSaveAndLockCurrentUE = async () => {
-    if (!window.confirm("Enregistrer et verrouiller toutes les notes de cette UE ? Après verrouillage, elles ne seront plus modifiables.")) return
+    if (!window.confirm("Enregistrer et verrouiller les notes de la matière affichée ? Après verrouillage, elles ne seront plus modifiables.")) return
     setSavingAndLocking(true)
     try {
       const saved = await saveGrades(true)
-      setLocalEdits({})
+      if (saved?.errors?.length) {
+        throw new Error(`${saved.errors.length} note(s) refusée(s) : ${saved.errors[0]?.error || 'erreur inconnue'}`)
+      }
       const refreshed = await fetchCurrentGrades()
       const toLock = refreshed.filter((g: any) => g.id && g.finalGrade !== null && !g.isLocked)
       if (toLock.length !== grades.filter(g => !g.isLocked).length) {
@@ -444,8 +462,10 @@ export function GradesPage() {
       }
       const results = await Promise.allSettled(toLock.map((g: any) => lockGrade(g.id)))
       const failed = results.filter(r => r.status === 'rejected').length
-      toast.success('UE enregistrée et verrouillée', {
-        description: `${saved?.created ?? 0} créée(s), ${saved?.updated ?? 0} mise(s) à jour, ${toLock.length - failed} verrouillée(s)${failed ? `, ${failed} échec(s)` : ''}`,
+      if (failed) throw new Error(`${failed} note(s) n’ont pas pu être verrouillées`)
+      setLocalEdits({})
+      toast.success('Matière enregistrée et verrouillée', {
+        description: `${saved?.created ?? 0} créée(s), ${saved?.updated ?? 0} mise(s) à jour, ${toLock.length} verrouillée(s)`,
       })
       refetchGrades()
     } catch (e) {
@@ -611,6 +631,7 @@ export function GradesPage() {
   const unlockedGrades = grades.filter(g => !g.isLocked)
   const allCurrentUEGradesReadyForLock = grades.length > 0 && grades.every(isGradeReadyForLock)
   const canSaveAndLockCurrentUE = Boolean(
+    canLockGrades &&
     currentUE?.courseElementId &&
     academicYearId &&
     grades.length > 0 &&
@@ -619,7 +640,7 @@ export function GradesPage() {
     !saving &&
     !savingAndLocking
   )
-  const canValidateAll = grades.some(g => g.gradeId && g.moyenne !== null && !g.isLocked)
+  const canValidateAll = canLockGrades && grades.some(g => g.gradeId && g.moyenne !== null && !g.isLocked)
 
   // ─── Distribution ────────────────────────────────────────────────────────
   const distribution = useMemo(() => {
@@ -693,7 +714,7 @@ export function GradesPage() {
           <p className="text-sm text-gray-500">Saisie, calcul et validation des notes</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button
+          {canLockGrades && <Button
             variant="outline"
             size="sm"
             className="text-xs"
@@ -701,7 +722,7 @@ export function GradesPage() {
             onClick={() => nextIncompleteUE && setSelectedUE(nextIncompleteUE.teachingUnitId)}
           >
             UE suivante
-          </Button>
+          </Button>}
           <Button variant="outline" size="sm" className="text-xs" onClick={handleImportClick}>
             <Upload className="size-3.5 mr-1.5" />
             Importer Excel
@@ -717,20 +738,20 @@ export function GradesPage() {
             <Save className="size-3.5 mr-1.5" />
             {saving ? 'Enregistrement...' : 'Enregistrer'}
           </Button>
-          <Button
+          {canLockGrades && <Button
             size="sm"
             className="bg-[#1a2744] hover:bg-[#253556] text-white text-xs"
             disabled={!canSaveAndLockCurrentUE}
             onClick={handleSaveAndLockCurrentUE}
           >
             <CheckCircle2 className="size-3.5 mr-1.5" />
-            {savingAndLocking ? 'Verrouillage...' : 'Enregistrer + verrouiller UE'}
-          </Button>
+            {savingAndLocking ? 'Verrouillage...' : 'Enregistrer + verrouiller la matière'}
+          </Button>}
         </div>
       </motion.div>
 
       {/* ─── Global Completion Gate ───────────────────────────────────────── */}
-      <motion.div
+      {canLockGrades && <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: 0.03 }}
@@ -840,7 +861,7 @@ export function GradesPage() {
             </div>
           </CardContent>
         </Card>
-      </motion.div>
+      </motion.div>}
 
       {/* ─── Enhanced Stats Cards ──────────────────────────────────────────── */}
       <motion.div
@@ -1123,7 +1144,7 @@ export function GradesPage() {
               <div className="flex items-center gap-2">
                 <FileCheck className="size-4 text-[#1a2744]" />
                 <CardTitle className="text-sm font-semibold text-[#1a2744]">
-                  {currentUE ? `${currentUE.code} - ${currentUE.name}` : 'Aucune UE sélectionnée'}
+                  {currentUE ? `${currentUE.code} - ${currentUE.name}${currentUE.courseElementName ? ` / ${currentUE.courseElementName}` : ''}` : 'Aucune UE sélectionnée'}
                 </CardTitle>
               </div>
               <div className="flex items-center gap-2">
@@ -1131,7 +1152,7 @@ export function GradesPage() {
                   <Download className="size-3.5 mr-1.5" />
                   Exporter
                 </Button>
-                <Button
+                {canLockGrades && <Button
                   size="sm"
                   className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs"
                   disabled={!canValidateAll || validatingId === 'all'}
@@ -1139,7 +1160,7 @@ export function GradesPage() {
                 >
                   <CheckCircle2 className="size-3.5 mr-1.5" />
                   {validatingId === 'all' ? 'Validation...' : canValidateAll ? 'Valider tout' : 'Tout validé'}
-                </Button>
+                </Button>}
               </div>
             </div>
           </CardHeader>
@@ -1231,7 +1252,7 @@ export function GradesPage() {
                         )}
                       </TableCell>
                       <TableCell className="py-2 text-center">
-                        {!grade.isLocked && grade.moyenne !== null ? (
+                        {canLockGrades && !grade.isLocked && grade.moyenne !== null ? (
                           <Button
                             variant="ghost"
                             size="sm"
