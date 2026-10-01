@@ -105,9 +105,17 @@ interface DeliberationReadiness {
   expectedGradeCount: number
   lockedGradeCount: number
   missingGradeCount: number
+  unexpectedGradeCount?: number
   studentsTotal: number
   studentsReady: number
   incompleteStudents: IncompleteStudent[]
+}
+
+function describeReadinessIssue(readiness: DeliberationReadiness): string {
+  const missing = `${readiness.missingGradeCount} note(s) définitive(s) manquante(s) ou incohérente(s).`
+  return readiness.unexpectedGradeCount
+    ? `${missing} ${readiness.unexpectedGradeCount} note(s) hors inscriptions actives à corriger.`
+    : missing
 }
 
 const decisionConfig: Record<Decision, { label: string; className: string; icon: React.ElementType; tooltip: string }> = {
@@ -184,7 +192,7 @@ export function DeliberationPage() {
     if (!isReadyForJury) {
       toast.error('Délibération bloquée', {
         description: readiness
-          ? `${readiness.missingGradeCount} note(s) verrouillée(s) manquante(s). Complétez et verrouillez les notes avant le jury.`
+          ? `${describeReadinessIssue(readiness)} Complétez et verrouillez les notes avant le jury.`
           : 'La complétude des notes est en cours de vérification.',
       })
       return
@@ -218,7 +226,7 @@ export function DeliberationPage() {
     if (!isReadyForJury) {
       toast.error('Validation bloquée', {
         description: readiness
-          ? `${readiness.missingGradeCount} note(s) verrouillée(s) manquante(s).`
+          ? describeReadinessIssue(readiness)
           : 'La complétude des notes est en cours de vérification.',
       })
       return
@@ -260,7 +268,7 @@ export function DeliberationPage() {
     if (!isReadyForJury) {
       toast.error('PV bloqué', {
         description: readiness
-          ? `${readiness.missingGradeCount} note(s) verrouillée(s) manquante(s). Le PV officiel exige une délibération complète.`
+          ? `${describeReadinessIssue(readiness)} Le PV officiel exige une délibération complète.`
           : 'La complétude des notes est en cours de vérification.',
       })
       return
@@ -520,13 +528,19 @@ export function DeliberationPage() {
                     </div>
                     <div>
                       <h3 className="text-sm font-semibold text-[#1a2744]">
-                        {isReadyForJury ? 'Notes prêtes pour jury' : 'Délibération bloquée : notes incomplètes'}
+                        {isReadyForJury ? 'Notes prêtes pour jury' : 'Délibération bloquée : notes incomplètes ou incohérentes'}
                       </h3>
                       <p className="text-xs text-gray-500 mt-1">
                         Le jury utilise uniquement les notes verrouillées des UE réellement inscrites. Les PV officiels sont bloqués tant que cette vérification n&apos;est pas complète.
                       </p>
                     </div>
                   </div>
+
+                  {Boolean(readiness?.unexpectedGradeCount) && (
+                    <p className="text-xs text-[#b45f14]">
+                      {readiness?.unexpectedGradeCount} note(s) hors inscriptions actives : corrigez ces lignes avant la validation du jury.
+                    </p>
+                  )}
 
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                     <div className="rounded-lg bg-gray-50 border border-gray-100 p-3">
@@ -910,7 +924,7 @@ export function DeliberationPage() {
                   <p className="text-[10px] text-gray-400">
                     {isReadyForJury
                       ? `${stats.admis + stats.admisDette + stats.compenses} reussites sur ${stats.total} etudiants`
-                      : 'Calcul indicatif uniquement : les notes verrouillées sont incomplètes, aucun PV officiel ne peut être généré.'}
+                      : 'Calcul indicatif uniquement : des notes sont incomplètes ou incohérentes, aucun PV officiel ne peut être généré.'}
                   </p>
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-1">

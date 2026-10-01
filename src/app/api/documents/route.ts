@@ -64,32 +64,15 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
   }
 }
 
-// PUT /api/documents - certify an already-generated document as officially
-// validated, without regenerating it. Staff only (a student can never
-// self-certify their own document).
-async function handlePut(user: SessionUser, tenantId: string, request: NextRequest) {
-  try {
-    if (isStudentSelfRole(user.role)) {
-      return NextResponse.json({ error: 'FORBIDDEN', message: 'Accès refusé' }, { status: 403 })
-    }
-    const body = await request.json()
-    const { id } = body
-    if (!id) {
-      return NextResponse.json({ error: 'id is required' }, { status: 400 })
-    }
-    const existing = await db.officialDocument.findFirst({ where: { id, tenantId } })
-    if (!existing) {
-      return NextResponse.json({ error: 'Document not found' }, { status: 404 })
-    }
-    const updated = await db.officialDocument.update({
-      where: { id },
-      data: { validatedBy: user.id, validatedAt: new Date() },
-    })
-    return NextResponse.json({ data: updated })
-  } catch (error) {
-    console.error('Validate document error:', error)
-    return NextResponse.json({ error: 'Failed to validate document' }, { status: 500 })
-  }
+// A generated PDF is immutable. Updating only the database validation flag
+// would make its verification page contradict the PDF that was downloaded.
+// Keep PUT as an explicit rejection for older clients; a new PDF must pass
+// generation-time checks and be validated atomically with sign=true.
+async function handlePut(_user: SessionUser, _tenantId: string, _request: NextRequest) {
+  return NextResponse.json(
+    { error: 'Ce PDF ne peut pas être validé après génération. Créez un nouveau PDF avec validation.' },
+    { status: 409 }
+  )
 }
 
 export const GET = withTenantAuth(handleGet)

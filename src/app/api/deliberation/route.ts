@@ -2,26 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
 import { isStudentSelfRole } from '@/lib/auth/student-scope'
+import { computeGradeReadiness } from '@/lib/deliberations/readiness'
 
 type Decision = 'ADMI' | 'AJOURNE' | 'REDOUBLANT' | 'EXCLU' | 'ADMI_DETTE' | 'COMPENSE'
-
-type ExpectedGradeItem = {
-  studentId: string
-  teachingUnitId: string
-  courseElementId: string | null
-  ueCode: string | null
-  ueName: string
-  ecCode: string | null
-  ecName: string | null
-  student: { id: string; firstName: string; lastName: string; matricule: string | null }
-}
-
-type MissingGradeItem = {
-  ueCode: string | null
-  ueName: string
-  ecCode: string | null
-  ecName: string | null
-}
 
 function round2(value: number): number {
   return Math.round(value * 100) / 100
@@ -29,133 +12,6 @@ function round2(value: number): number {
 
 async function resolveCurrentAcademicYear(tenantId: string) {
   return db.academicYear.findFirst({ where: { tenantId, isCurrent: true }, select: { id: true, name: true } })
-}
-
-function gradeKey(studentId: string, teachingUnitId: string, courseElementId?: string | null) {
-  return `${studentId}:${teachingUnitId}:${courseElementId || 'UE'}`
-}
-
-async function computeGradeReadiness(tenantId: string, academicYearId: string, session: string) {
-  const registrations = await db.pedagogicalRegistration.findMany({
-    where: {
-      academicYearId,
-      status: 'ACTIVE',
-      student: { tenantId },
-    },
-    select: {
-      studentId: true,
-      teachingUnitId: true,
-      student: { select: { id: true, firstName: true, lastName: true, matricule: true } },
-      teachingUnit: {
-        select: {
-          id: true,
-          code: true,
-          name: true,
-          courseElements: {
-            orderBy: { orderIndex: 'asc' },
-            select: { id: true, code: true, name: true },
-          },
-        },
-      },
-    },
-  })
-
-  const expected: ExpectedGradeItem[] = registrations.flatMap((registration): ExpectedGradeItem[] => {
-    const elements = registration.teachingUnit.courseElements
-    if (elements.length === 0) {
-      return [{
-        studentId: registration.studentId,
-        teachingUnitId: registration.teachingUnitId,
-        courseElementId: null,
-        ueCode: registration.teachingUnit.code,
-        ueName: registration.teachingUnit.name,
-        ecCode: null,
-        ecName: null,
-        student: registration.student,
-      }]
-    }
-
-    return elements.map((element) => ({
-      studentId: registration.studentId,
-      teachingUnitId: registration.teachingUnitId,
-      courseElementId: element.id,
-      ueCode: registration.teachingUnit.code,
-      ueName: registration.teachingUnit.name,
-      ecCode: element.code,
-      ecName: element.name,
-      student: registration.student,
-    }))
-  })
-
-  const lockedGrades = await db.grade.findMany({
-    where: {
-      student: { tenantId },
-      academicYearId,
-      session,
-      isLocked: true,
-      finalGrade: { not: null },
-    },
-    select: { studentId: true, teachingUnitId: true, courseElementId: true },
-  })
-  const lockedKeys = new Set(
-    lockedGrades
-      .filter((grade) => grade.teachingUnitId)
-      .map((grade) => gradeKey(grade.studentId, grade.teachingUnitId as string, grade.courseElementId))
-  )
-
-  const byStudent = new Map<string, {
-    studentId: string
-    name: string
-    matricule: string
-    expected: number
-    locked: number
-    missing: number
-    missingItems: MissingGradeItem[]
-  }>()
-
-  for (const item of expected) {
-    const existing = byStudent.get(item.studentId) || {
-      studentId: item.studentId,
-      name: `${item.student.firstName} ${item.student.lastName}`.trim(),
-      matricule: item.student.matricule || '—',
-      expected: 0,
-      locked: 0,
-      missing: 0,
-      missingItems: [],
-    }
-    existing.expected += 1
-
-    if (lockedKeys.has(gradeKey(item.studentId, item.teachingUnitId, item.courseElementId))) {
-      existing.locked += 1
-    } else {
-      existing.missing += 1
-      existing.missingItems.push({
-        ueCode: item.ueCode,
-        ueName: item.ueName,
-        ecCode: item.ecCode,
-        ecName: item.ecName,
-      })
-    }
-
-    byStudent.set(item.studentId, existing)
-  }
-
-  const students = Array.from(byStudent.values()).sort((a, b) => a.name.localeCompare(b.name))
-  const expectedGradeCount = students.reduce((sum, student) => sum + student.expected, 0)
-  const lockedGradeCount = students.reduce((sum, student) => sum + student.locked, 0)
-  const missingGradeCount = Math.max(expectedGradeCount - lockedGradeCount, 0)
-
-  return {
-    ready: expectedGradeCount > 0 && missingGradeCount === 0,
-    expectedGradeCount,
-    lockedGradeCount,
-    missingGradeCount,
-    studentsTotal: students.length,
-    studentsReady: students.filter((student) => student.expected > 0 && student.missing === 0).length,
-    incompleteStudents: students
-      .filter((student) => student.missing > 0)
-      .map((student) => ({ ...student, missingItems: student.missingItems.slice(0, 8) })),
-  }
 }
 
 // Suggested decision from real thresholds - the jury remains the final authority;
@@ -341,7 +197,7 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
     const readiness = await computeGradeReadiness(tenantId, academicYear.id, sessionType)
     if (!readiness.ready) {
       return NextResponse.json(
-        { error: 'Les notes verrouillées sont incomplètes pour cette session', readiness },
+        { error: 'Les notes sont incomplètes ou incohérentes pour cette session', readiness },
         { status: 409 }
       )
     }
@@ -395,7 +251,7 @@ async function handlePut(_user: SessionUser, tenantId: string, request: NextRequ
     const readiness = await computeGradeReadiness(tenantId, existing.academicYearId, sessionType)
     if (!readiness.ready) {
       return NextResponse.json(
-        { error: 'Les notes verrouillées sont incomplètes pour cette session', readiness },
+        { error: 'Les notes sont incomplètes ou incohérentes pour cette session', readiness },
         { status: 409 }
       )
     }

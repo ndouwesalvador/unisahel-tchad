@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 
-const { authMock, dbMock, renderPDFMock, eligibilityMock } = vi.hoisted(() => ({
+const { authMock, dbMock, renderPDFMock, eligibilityMock, readinessMock } = vi.hoisted(() => ({
   authMock: vi.fn(),
   renderPDFMock: vi.fn(),
+  readinessMock: vi.fn(),
   eligibilityMock: { level: vi.fn(), diploma: vi.fn() },
   dbMock: {
     academicYear: { findFirst: vi.fn() },
@@ -22,6 +23,7 @@ const { authMock, dbMock, renderPDFMock, eligibilityMock } = vi.hoisted(() => ({
 
 vi.mock('@/lib/auth/config', () => ({ auth: authMock }))
 vi.mock('@/lib/db', () => ({ db: dbMock }))
+vi.mock('@/lib/deliberations/readiness', () => ({ computeGradeReadiness: readinessMock }))
 vi.mock('@/lib/documents/eligibility', () => ({
   AwardEligibilityError: class AwardEligibilityError extends Error {},
   getValidatedLevelAward: eligibilityMock.level,
@@ -74,6 +76,7 @@ beforeEach(() => {
     finalDecision: { juryDate: new Date('2026-09-30') },
     awards: [{ academicYearId: 'year-A', levelId: 'level-3', deliberationId: 'delib-A', decisionId: 'decision-A', creditsAcquired: 60 }],
   })
+  readinessMock.mockResolvedValue({ ready: true, studentIds: [studentId], studentsTotal: 1 })
   renderPDFMock.mockResolvedValue(Buffer.from('pdf'))
   dbMock.officialDocument.create.mockResolvedValue({ id: 'doc-A' })
 })
@@ -268,7 +271,7 @@ describe('POST /api/documents/generate', () => {
 
   it('signs a PV from stored jury decisions rather than client student data', async () => {
     dbMock.deliberation.findFirst.mockResolvedValue({
-      id: 'delib-A', isLocked: true, academicYearId: 'year-A',
+      id: 'delib-A', isLocked: true, status: 'TERMINEE', academicYearId: 'year-A',
       name: 'Délibération annuelle', date: new Date('2026-10-01'), type: 'ANNUEL',
       decisions: [{ studentId, average: 13.9, decision: 'ADMI_DETTE' }],
     })
@@ -284,6 +287,34 @@ describe('POST /api/documents/generate', () => {
     expect(saved.validatedBy).toBe('admin-A')
     expect(snapshot.members[0].name).toBe('Président Test')
     expect(snapshot.students[0]).toMatchObject({ name: 'Awa Test', decision: 'ADMIS AVEC DETTE' })
+  })
+
+  it('refuses an old locked PV when grades have since become incomplete', async () => {
+    dbMock.deliberation.findFirst.mockResolvedValue({
+      id: 'delib-A', isLocked: true, status: 'TERMINEE', academicYearId: 'year-A', type: 'ANNUEL',
+      decisions: [{ studentId, decision: 'ADMI' }],
+    })
+    readinessMock.mockResolvedValue({ ready: false, studentIds: [studentId], missingGradeCount: 1 })
+    const response = await POST(request({
+      type: 'PV_DELIBERATION', tenantId, deliberationId: 'delib-A', sign: true,
+      data: { members: [{ name: 'Président Test', role: 'President' }] },
+    }))
+    expect(response.status).toBe(409)
+    expect(dbMock.officialDocument.create).not.toHaveBeenCalled()
+  })
+
+  it('refuses a PV whose decisions omit an enrolled student', async () => {
+    dbMock.deliberation.findFirst.mockResolvedValue({
+      id: 'delib-A', isLocked: true, status: 'TERMINEE', academicYearId: 'year-A', type: 'ANNUEL',
+      decisions: [{ studentId, decision: 'ADMI' }],
+    })
+    readinessMock.mockResolvedValue({ ready: true, studentIds: [studentId, 'student-B'], studentsTotal: 2 })
+    const response = await POST(request({
+      type: 'PV_DELIBERATION', tenantId, deliberationId: 'delib-A', sign: true,
+      data: { members: [{ name: 'Président Test', role: 'President' }] },
+    }))
+    expect(response.status).toBe(409)
+    expect(dbMock.officialDocument.create).not.toHaveBeenCalled()
   })
 
   it('refuses to sign a transcript with unlocked grades', async () => {

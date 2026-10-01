@@ -247,24 +247,6 @@ export function DocumentsPage() {
     }
   }, [selectedType, selectedStudentId, selectedYearId, user, queryClient])
 
-  const handleValidate = useCallback(async (id: string) => {
-    try {
-      const res = await fetch('/api/documents', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id }),
-      })
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        throw new Error(err.error || 'Echec de la validation')
-      }
-      toast.success('Document valide')
-      queryClient.invalidateQueries({ queryKey: ['documents'] })
-    } catch (error) {
-      toast.error('Erreur', { description: error instanceof Error ? error.message : 'Echec de la validation' })
-    }
-  }, [queryClient])
-
   const filteredDocs = generatedDocuments.filter(d => {
     const matchSearch = search === '' ||
       d.etudiant.toLowerCase().includes(search.toLowerCase()) ||
@@ -693,7 +675,7 @@ export function DocumentsPage() {
                         </TableCell>
                         <TableCell className="text-right py-2.5">
                           <div className="flex items-center justify-end gap-1">
-                            {doc.statut !== 'en_attente' && (
+                            {doc.statut !== 'en_attente' && doc.studentId && doc.academicYearId && documentTypeList.some((type) => type.key === doc.typeKey && type.implemented) && (
                               <div className="flex items-center gap-1">
                                 <Button
                                   variant="ghost"
@@ -702,22 +684,16 @@ export function DocumentsPage() {
                                   onClick={() => {
                                     const docType = documentTypeList.find((dt) => dt.key === doc.typeKey)
                                     if (docType?.apiType && docType.implemented) {
-                                      generateDoc(['ATTESTATION_NIVEAU', 'DIPLOME'].includes(docType.apiType), { type: docType.apiType, studentId: doc.studentId, academicYearId: doc.academicYearId })
+                                      generateDoc(true, { type: docType.apiType, studentId: doc.studentId, academicYearId: doc.academicYearId })
                                     } else {
                                       toast.error('Régénération indisponible', { description: 'Ce type de document n’est pas configuré depuis cet écran.' })
                                     }
                                   }}
                                 >
                                   <Download className="size-3.5 mr-1" />
-                                  Créer un nouveau PDF
+                                  Créer un PDF validé
                                 </Button>
                               </div>
-                            )}
-                            {doc.statut === 'genere' && (
-                              <Button variant="ghost" size="sm" className="h-7 text-xs text-[#2d7a4f] hover:text-[#2d7a4f] hover:bg-[#2d7a4f10]" onClick={() => handleValidate(doc.id)}>
-                                <CheckCircle2 className="size-3.5 mr-1" />
-                                Valider
-                              </Button>
                             )}
                           </div>
                         </TableCell>

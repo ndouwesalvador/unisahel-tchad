@@ -6,6 +6,7 @@ import { db } from '@/lib/db'
 import type { SessionUser } from '@/lib/auth/helpers'
 import { isStudentSelfRole, resolveOwnStudentId } from '@/lib/auth/student-scope'
 import { AwardEligibilityError, getValidatedDiplomaAward, getValidatedLevelAward } from '@/lib/documents/eligibility'
+import { computeGradeReadiness } from '@/lib/deliberations/readiness'
 
 const SIGNING_ROLES = new Set(['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'RECTORAT', 'SCOLARITE', 'JURY'])
 const GENERATING_ROLES = new Set([...SIGNING_ROLES, 'ETUDIANT', 'ETUDIANT_SANTE'])
@@ -332,11 +333,24 @@ export async function POST(request: NextRequest) {
         if (!delib) {
           return NextResponse.json({ error: 'Délibération introuvable dans cet établissement' }, { status: 404 })
         }
-        if (!delib.isLocked) {
-          return NextResponse.json({ error: 'Le PV exige une délibération verrouillée' }, { status: 409 })
+        if (!delib.isLocked || delib.status !== 'TERMINEE') {
+          return NextResponse.json({ error: 'Le PV exige une délibération finale verrouillée' }, { status: 409 })
         }
         if (delib.decisions.length === 0) {
           return NextResponse.json({ error: 'Aucune décision de jury à publier' }, { status: 409 })
+        }
+        const readiness = await computeGradeReadiness(
+          tenantId, delib.academicYearId, delib.type === 'RATTRAPAGE' ? 'RATTRAPAGE' : 'NORMALE'
+        )
+        if (!readiness.ready) {
+          return NextResponse.json({ error: 'Le PV officiel exige toutes les notes définitives verrouillées', readiness }, { status: 409 })
+        }
+        const decisionIds = delib.decisions.map((decision) => decision.studentId)
+        const registeredStudentIds = new Set(readiness.studentIds)
+        if (new Set(decisionIds).size !== decisionIds.length ||
+            decisionIds.length !== registeredStudentIds.size ||
+            decisionIds.some((id) => !registeredStudentIds.has(id))) {
+          return NextResponse.json({ error: 'Les décisions du jury ne couvrent pas exactement les étudiants inscrits' }, { status: 409 })
         }
         const delibYear = await db.academicYear.findFirst({ where: { id: delib.academicYearId, tenantId }, select: { id: true, name: true } })
         if (!delibYear) {
