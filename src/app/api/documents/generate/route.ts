@@ -23,6 +23,9 @@ export async function POST(request: NextRequest) {
     if (!type || !tenantId) {
       return NextResponse.json({ error: 'Type et tenant requis' }, { status: 400 })
     }
+    if (sign !== undefined && typeof sign !== 'boolean') {
+      return NextResponse.json({ error: 'Option de validation invalide' }, { status: 400 })
+    }
 
     if (sessionUser.role !== 'SUPER_ADMIN' && sessionUser.tenantId !== tenantId) {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
@@ -133,8 +136,12 @@ export async function POST(request: NextRequest) {
             where: {
               studentId,
               academicYearId: acYearId,
+              session: 'NORMALE',
               student: { tenantId },
-              teachingUnit: { semester: { level: { program: { tenantId } } } },
+              teachingUnit: {
+                semester: { level: { program: { tenantId } } },
+                pedagogicalRegistrations: { some: { studentId, academicYearId: acYearId, status: 'ACTIVE' } },
+              },
               OR: [
                 { courseElementId: null },
                 { courseElement: { teachingUnit: { semester: { level: { program: { tenantId } } } } } },
@@ -148,8 +155,25 @@ export async function POST(request: NextRequest) {
           if (grades.length === 0) {
             return NextResponse.json({ error: 'Aucune note disponible pour cette année académique' }, { status: 409 })
           }
+          const gradeKeys = grades.map((grade) => `${grade.teachingUnitId}:${grade.courseElementId}`)
+          if (grades.some((grade) => !grade.courseElementId || grade.courseElement?.teachingUnitId !== grade.teachingUnitId) ||
+              new Set(gradeKeys).size !== gradeKeys.length) {
+            return NextResponse.json({ error: 'Notes incohérentes ou en double : corrigez le dossier avant de générer un relevé' }, { status: 409 })
+          }
           if ((sign || isStudentSelfRole(sessionUser.role)) && grades.some((grade) => !grade.isLocked)) {
             return NextResponse.json({ error: 'Toutes les notes du relevé doivent être verrouillées avant publication' }, { status: 409 })
+          }
+          if (sign) {
+            const registrations = await db.pedagogicalRegistration.findMany({
+              where: { studentId, academicYearId: acYearId, status: 'ACTIVE', teachingUnit: { semester: { level: { program: { tenantId } } } } },
+              include: { teachingUnit: { include: { courseElements: { select: { id: true } } } } },
+            })
+            const completeGrades = new Set(grades.filter((grade) => grade.isLocked && grade.finalGrade !== null).map((grade) => grade.courseElementId))
+            if (registrations.length === 0 || registrations.some((registration) =>
+              registration.teachingUnit.courseElements.length === 0 ||
+              registration.teachingUnit.courseElements.some((element) => !completeGrades.has(element.id)))) {
+              return NextResponse.json({ error: 'Relevé incomplet : toutes les matières inscrites doivent avoir une note définitive verrouillée' }, { status: 409 })
+            }
           }
           const semesterIds = [...new Set(grades.map(g => g.teachingUnit?.semester?.id).filter(Boolean))] as string[]
           if (semesterIds.length > 0) {
@@ -157,9 +181,7 @@ export async function POST(request: NextRequest) {
               where: { id: { in: semesterIds }, level: { program: { tenantId } } },
               include: { level: { include: { program: true } } },
             })
-            if (semesters[0]) {
-              semester = semesters[0].name
-            }
+            semester = semesters.length === 1 ? semesters[0].name : 'Plusieurs semestres'
           }
 
           const ueMap = new Map<string, { ue: string; code: string; credits: number; notes: Array<{ ec: string; coef: number; cc?: number; exam?: number; final?: number }>; moyenne?: number }>()
@@ -178,12 +200,18 @@ export async function POST(request: NextRequest) {
               final: g.finalGrade ?? undefined,
             })
           }
-          ueGrades = Array.from(ueMap.values())
+          ueGrades = Array.from(ueMap.values()).map((unit) => {
+            const graded = unit.notes.filter((note) => note.final !== undefined && note.coef > 0)
+            const weight = graded.reduce((sum, note) => sum + note.coef, 0)
+            return { ...unit, moyenne: weight > 0 && graded.length === unit.notes.length
+              ? Math.round((graded.reduce((sum, note) => sum + note.final! * note.coef, 0) / weight + Number.EPSILON) * 100) / 100
+              : undefined }
+          })
         }
 
         DocumentComponent = React.createElement(ReleveNotesPDF, {
           tenant, student: student || { firstName: '', lastName: '', matricule: '', program: '', level: '' },
-          semester, ueGrades, academicYear, docNumber, verificationCode, qrCodeDataUrl,
+          semester, ueGrades, academicYear, docNumber, verificationCode, qrCodeDataUrl, isSigned: Boolean(sign),
         })
         documentData = { semester, ueGrades, academicYear }
         break
@@ -205,7 +233,7 @@ export async function POST(request: NextRequest) {
 
         DocumentComponent = React.createElement(AttestationInscriptionPDF, {
           tenant, student: student || { firstName: '', lastName: '', matricule: '' },
-          academicYear, docNumber, verificationCode, qrCodeDataUrl,
+          academicYear, docNumber, verificationCode, qrCodeDataUrl, isSigned: Boolean(sign),
         })
         documentData = { registrationId: reg.id, academicYear }
         break
@@ -217,10 +245,19 @@ export async function POST(request: NextRequest) {
 
       case 'PV_DELIBERATION': {
         const { PVDeliberationPDF } = await import('@/lib/pdf/templates')
+        if (!sign) {
+          return NextResponse.json({ error: 'Un PV officiel doit être validé par un membre habilité' }, { status: 409 })
+        }
         if (!deliberationId) {
           return NextResponse.json({ error: 'Délibération requise pour le PV' }, { status: 400 })
         }
-        const members = data?.members || []
+        const members = data?.members
+        if (!Array.isArray(members) || members.length === 0 || members.length > 12 ||
+            members.some((member) => !member || typeof member.name !== 'string' || member.name.trim().length < 2 || member.name.trim().length > 120 || !['President', 'Membre'].includes(member.role)) ||
+            members.filter((member) => member.role === 'President').length !== 1) {
+          return NextResponse.json({ error: 'Composition du jury invalide : un président est requis' }, { status: 400 })
+        }
+        const validatedMembers = members.map((member) => ({ name: member.name.trim(), role: member.role }))
 
         const delib = await db.deliberation.findFirst({
           where: { id: deliberationId, tenantId },
@@ -231,6 +268,9 @@ export async function POST(request: NextRequest) {
         }
         if (!delib.isLocked) {
           return NextResponse.json({ error: 'Le PV exige une délibération verrouillée' }, { status: 409 })
+        }
+        if (delib.decisions.length === 0) {
+          return NextResponse.json({ error: 'Aucune décision de jury à publier' }, { status: 409 })
         }
         const delibYear = await db.academicYear.findFirst({ where: { id: delib.academicYearId, tenantId }, select: { id: true, name: true } })
         if (!delibYear) {
@@ -249,8 +289,8 @@ export async function POST(request: NextRequest) {
         function mapDecision(d: string): string {
           switch (d) {
             case 'ADMI': return 'ADMIS'
-            case 'ADMI_DETTE': return 'ADMIS_CHANCE'
-            case 'COMPENSE': return 'ADMIS'
+            case 'ADMI_DETTE': return 'ADMIS AVEC DETTE'
+            case 'COMPENSE': return 'ADMIS PAR COMPENSATION'
             default: return d
           }
         }
@@ -265,11 +305,14 @@ export async function POST(request: NextRequest) {
             mention: d.average && d.average >= 16 ? 'Très Bien' : d.average && d.average >= 14 ? 'Bien' : d.average && d.average >= 12 ? 'Assez Bien' : d.average && d.average >= 10 ? 'Passable' : undefined,
           }
         })
+        if (decisionStudents.length !== delib.decisions.length) {
+          return NextResponse.json({ error: 'Décisions de jury incohérentes avec les étudiants de cet établissement' }, { status: 409 })
+        }
 
         DocumentComponent = React.createElement(PVDeliberationPDF, {
-          tenant, session, members, students, academicYear, docNumber, verificationCode, qrCodeDataUrl,
+          tenant, session, members: validatedMembers, students, academicYear, docNumber, verificationCode, qrCodeDataUrl, isSigned: true,
         })
-        documentData = { deliberationId, session, members, students, academicYear }
+        documentData = { deliberationId, session, members: validatedMembers, students, academicYear }
         break
       }
 
@@ -289,7 +332,7 @@ export async function POST(request: NextRequest) {
 
         DocumentComponent = React.createElement(CertificatScolaritePDF, {
           tenant, student: student || { firstName: '', lastName: '', matricule: '' },
-          academicYear, docNumber, verificationCode, qrCodeDataUrl,
+          academicYear, docNumber, verificationCode, qrCodeDataUrl, isSigned: Boolean(sign),
         })
         documentData = { registrationId: reg.id, academicYear }
         break

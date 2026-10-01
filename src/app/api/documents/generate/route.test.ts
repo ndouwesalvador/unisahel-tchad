@@ -9,6 +9,7 @@ const { authMock, dbMock, renderPDFMock } = vi.hoisted(() => ({
     administrativeRegistration: { findFirst: vi.fn() },
     deliberation: { findFirst: vi.fn() },
     grade: { findMany: vi.fn() },
+    pedagogicalRegistration: { findMany: vi.fn() },
     officialDocument: { create: vi.fn() },
     semester: { findMany: vi.fn() },
     student: { findFirst: vi.fn(), findMany: vi.fn() },
@@ -45,6 +46,7 @@ beforeEach(() => {
   dbMock.student.findFirst.mockResolvedValue({ id: studentId, firstName: 'Awa', lastName: 'Test', matricule: 'A-001' })
   dbMock.academicYear.findFirst.mockResolvedValue({ id: 'year-A', name: '2026-2027' })
   dbMock.grade.findMany.mockResolvedValue([])
+  dbMock.pedagogicalRegistration.findMany.mockResolvedValue([])
   dbMock.semester.findMany.mockResolvedValue([])
   dbMock.administrativeRegistration.findFirst.mockResolvedValue(null)
   dbMock.deliberation.findFirst.mockResolvedValue(null)
@@ -119,7 +121,7 @@ describe('POST /api/documents/generate', () => {
   })
 
   it('refuses a PV for a deliberation outside the institution', async () => {
-    const response = await POST(request({ type: 'PV_DELIBERATION', tenantId, deliberationId: 'delib-B', data: { students: [{ name: 'Forged' }] } }))
+    const response = await POST(request({ type: 'PV_DELIBERATION', tenantId, deliberationId: 'delib-B', sign: true, data: { members: [{ name: 'Président Test', role: 'President' }], students: [{ name: 'Forged' }] } }))
 
     expect(response.status).toBe(404)
     expect(dbMock.deliberation.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'delib-B', tenantId } }))
@@ -128,7 +130,7 @@ describe('POST /api/documents/generate', () => {
 
   it('refuses a PV while the deliberation is not locked', async () => {
     dbMock.deliberation.findFirst.mockResolvedValue({ id: 'delib-A', isLocked: false, decisions: [] })
-    const response = await POST(request({ type: 'PV_DELIBERATION', tenantId, deliberationId: 'delib-A' }))
+    const response = await POST(request({ type: 'PV_DELIBERATION', tenantId, deliberationId: 'delib-A', sign: true, data: { members: [{ name: 'Président Test', role: 'President' }] } }))
 
     expect(response.status).toBe(409)
     expect(dbMock.officialDocument.create).not.toHaveBeenCalled()
@@ -137,8 +139,9 @@ describe('POST /api/documents/generate', () => {
   it('stores a tenant-scoped snapshot based on real grades, not the submitted data', async () => {
     dbMock.grade.findMany.mockResolvedValue([{
       isLocked: true,
+      teachingUnitId: 'unit-A', courseElementId: 'element-A',
       teachingUnit: { id: 'unit-A', name: 'Mathématiques', code: 'MAT101', credits: 6, semester: { id: 'sem-A' } },
-      courseElement: { name: 'Algèbre', coefficient: 2 },
+      courseElement: { teachingUnitId: 'unit-A', name: 'Algèbre', coefficient: 2 },
       ccGrade: 14, examGrade: 16, finalGrade: 15,
     }])
     dbMock.semester.findMany.mockResolvedValue([{ name: 'Semestre 1', level: { program: { tenantId } } }])
@@ -152,13 +155,79 @@ describe('POST /api/documents/generate', () => {
     expect(saved.generatedBy).toBe('admin-A')
     expect(snapshot.student.firstName).toBe('Awa')
     expect(snapshot.ueGrades[0].ue).toBe('Mathématiques')
+    expect(snapshot.ueGrades[0].moyenne).toBe(15)
     expect(snapshot.academicYear).toBe('2026-2027')
+  })
+
+  it('refuses to certify a transcript with a missing registered subject', async () => {
+    dbMock.grade.findMany.mockResolvedValue([{
+      isLocked: true, teachingUnitId: 'unit-A', courseElementId: 'element-A', finalGrade: 15,
+      teachingUnit: { id: 'unit-A', name: 'Mathématiques', code: 'MAT101', credits: 6, semester: { id: 'sem-A' } },
+      courseElement: { teachingUnitId: 'unit-A', name: 'Algèbre', coefficient: 2 },
+    }])
+    dbMock.pedagogicalRegistration.findMany.mockResolvedValue([{
+      teachingUnit: { courseElements: [{ id: 'element-A' }, { id: 'element-B' }] },
+    }])
+
+    const response = await POST(request({ type: 'RELEVE_NOTES', tenantId, studentId, sign: true }))
+    expect(response.status).toBe(409)
+    expect(dbMock.officialDocument.create).not.toHaveBeenCalled()
+  })
+
+  it('certifies a complete locked transcript and calculates the weighted UE average', async () => {
+    dbMock.grade.findMany.mockResolvedValue([
+      { isLocked: true, teachingUnitId: 'unit-A', courseElementId: 'element-A', finalGrade: 12,
+        teachingUnit: { id: 'unit-A', name: 'Mathématiques', code: 'MAT101', credits: 6, semester: { id: 'sem-A' } },
+        courseElement: { teachingUnitId: 'unit-A', name: 'Algèbre', coefficient: 1 } },
+      { isLocked: true, teachingUnitId: 'unit-A', courseElementId: 'element-B', finalGrade: 18,
+        teachingUnit: { id: 'unit-A', name: 'Mathématiques', code: 'MAT101', credits: 6, semester: { id: 'sem-A' } },
+        courseElement: { teachingUnitId: 'unit-A', name: 'Analyse', coefficient: 2 } },
+    ])
+    dbMock.pedagogicalRegistration.findMany.mockResolvedValue([{
+      teachingUnit: { courseElements: [{ id: 'element-A' }, { id: 'element-B' }] },
+    }])
+    dbMock.semester.findMany.mockResolvedValue([{ name: 'Semestre 1' }])
+
+    const response = await POST(request({ type: 'RELEVE_NOTES', tenantId, studentId, sign: true }))
+    expect(response.status).toBe(200)
+    const saved = dbMock.officialDocument.create.mock.calls[0][0].data
+    expect(saved.validatedBy).toBe('admin-A')
+    expect(JSON.parse(saved.content).ueGrades[0].moyenne).toBe(16)
+  })
+
+  it('requires a validated PV with exactly one named president', async () => {
+    const unsigned = await POST(request({ type: 'PV_DELIBERATION', tenantId, deliberationId: 'delib-A' }))
+    expect(unsigned.status).toBe(409)
+    const noPresident = await POST(request({ type: 'PV_DELIBERATION', tenantId, deliberationId: 'delib-A', sign: true, data: { members: [{ name: 'Membre Test', role: 'Membre' }] } }))
+    expect(noPresident.status).toBe(400)
+    expect(dbMock.deliberation.findFirst).not.toHaveBeenCalled()
+  })
+
+  it('signs a PV from stored jury decisions rather than client student data', async () => {
+    dbMock.deliberation.findFirst.mockResolvedValue({
+      id: 'delib-A', isLocked: true, academicYearId: 'year-A',
+      name: 'Délibération annuelle', date: new Date('2026-10-01'), type: 'ANNUEL',
+      decisions: [{ studentId, average: 13.9, decision: 'ADMI_DETTE' }],
+    })
+    dbMock.student.findMany.mockResolvedValue([{ id: studentId, firstName: 'Awa', lastName: 'Test', matricule: 'A-001' }])
+    const response = await POST(request({
+      type: 'PV_DELIBERATION', tenantId, deliberationId: 'delib-A', sign: true,
+      data: { members: [{ name: '  Président Test  ', role: 'President' }], students: [{ name: 'Faux étudiant' }] },
+    }))
+
+    expect(response.status).toBe(200)
+    const saved = dbMock.officialDocument.create.mock.calls[0][0].data
+    const snapshot = JSON.parse(saved.content)
+    expect(saved.validatedBy).toBe('admin-A')
+    expect(snapshot.members[0].name).toBe('Président Test')
+    expect(snapshot.students[0]).toMatchObject({ name: 'Awa Test', decision: 'ADMIS AVEC DETTE' })
   })
 
   it('refuses to sign a transcript with unlocked grades', async () => {
     dbMock.grade.findMany.mockResolvedValue([{
-      isLocked: false,
+      isLocked: false, teachingUnitId: 'unit-A', courseElementId: 'element-A',
       teachingUnit: { id: 'unit-A', name: 'Mathématiques', code: 'MAT101', credits: 6, semester: { id: 'sem-A' } },
+      courseElement: { teachingUnitId: 'unit-A' },
     }])
 
     const response = await POST(request({ type: 'RELEVE_NOTES', tenantId, studentId, sign: true }))

@@ -1,14 +1,6 @@
 import React from 'react'
-import { Document, Page, Text, View, StyleSheet, Font, Image } from '@react-pdf/renderer'
+import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer'
 import { formatDate, formatNumber, getVerificationUrl, TenantInfo, StudentInfo } from './utils'
-
-Font.register({
-  family: 'Helvetica',
-  fonts: [
-    { src: 'https://fonts.cdnfonts.com/s/29107/Helvetica.woff', fontWeight: 'normal' },
-    { src: 'https://fonts.cdnfonts.com/s/29107/Helvetica-Bold.woff', fontWeight: 'bold' },
-  ],
-})
 
 const colors = {
   primary: '#1a2744',
@@ -227,7 +219,7 @@ function Stamp({ text = 'VALIDE' }: { text?: string }) {
   )
 }
 
-function Footer({ docNumber, verificationCode, qrCodeDataUrl }: { docNumber?: string; verificationCode?: string; qrCodeDataUrl?: string }) {
+function Footer({ docNumber, verificationCode, qrCodeDataUrl, isSigned = false }: { docNumber?: string; verificationCode?: string; qrCodeDataUrl?: string; isSigned?: boolean }) {
   return (
     <>
       {verificationCode && (
@@ -245,7 +237,7 @@ function Footer({ docNumber, verificationCode, qrCodeDataUrl }: { docNumber?: st
           UniSahel — Plateforme SaaS de Gestion Universitaire Africaine
           {docNumber ? ` | Document: ${docNumber}` : ''}
         </Text>
-        <Text>Document généré électroniquement — Fait foi jusqu&apos;à preuve du contraire</Text>
+        <Text>{isSigned ? 'Document validé par l’établissement - authenticité vérifiable avec le code ci-dessus' : 'Document non validé - ne constitue pas une pièce officielle'}</Text>
       </View>
       <Text style={styles.pageNumber} render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`} />
     </>
@@ -253,9 +245,9 @@ function Footer({ docNumber, verificationCode, qrCodeDataUrl }: { docNumber?: st
 }
 
 export function ReleveNotesPDF({
-  tenant, student, semester, ueGrades, academicYear, docNumber, verificationCode, qrCodeDataUrl,
+  tenant, student, semester, ueGrades, academicYear, docNumber, verificationCode, qrCodeDataUrl, isSigned = false,
 }: {
-  tenant: TenantInfo; student: StudentInfo; semester: string; ueGrades: Array<{ ue: string; code: string; credits: number; notes: Array<{ ec: string; coef: number; cc?: number; exam?: number; final?: number }>; moyenne?: number }>; academicYear: string; docNumber: string; verificationCode: string; qrCodeDataUrl?: string
+  tenant: TenantInfo; student: StudentInfo; semester: string; ueGrades: Array<{ ue: string; code: string; credits: number; notes: Array<{ ec: string; coef: number; cc?: number; exam?: number; final?: number }>; moyenne?: number }>; academicYear: string; docNumber: string; verificationCode: string; qrCodeDataUrl?: string; isSigned?: boolean
 }) {
   return (
     <Document>
@@ -264,7 +256,7 @@ export function ReleveNotesPDF({
           <View style={styles.headerLeft}>
             <Text style={styles.institutionName}>{tenant.name}</Text>
             <Text style={styles.institutionSub}>{tenant.address}{tenant.city ? `, ${tenant.city}` : ''}</Text>
-            <Text style={styles.institutionSub}>{tenant.phone} | {tenant.email}</Text>
+            {(tenant.phone || tenant.email) && <Text style={styles.institutionSub}>{[tenant.phone, tenant.email].filter(Boolean).join(' | ')}</Text>}
           </View>
           <View style={styles.headerRight}>
             <Text style={{ fontSize: 8, color: colors.muted }}>N° {docNumber}</Text>
@@ -312,17 +304,16 @@ export function ReleveNotesPDF({
           </View>
         ))}
 
-        <Stamp />
-        <Footer docNumber={docNumber} verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} />
+        <Footer docNumber={docNumber} verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} isSigned={isSigned} />
       </Page>
     </Document>
   )
 }
 
 export function AttestationInscriptionPDF({
-  tenant, student, academicYear, docNumber, verificationCode, qrCodeDataUrl,
+  tenant, student, academicYear, docNumber, verificationCode, qrCodeDataUrl, isSigned = false,
 }: {
-  tenant: TenantInfo; student: StudentInfo; academicYear: string; docNumber: string; verificationCode: string; qrCodeDataUrl?: string
+  tenant: TenantInfo; student: StudentInfo; academicYear: string; docNumber: string; verificationCode: string; qrCodeDataUrl?: string; isSigned?: boolean
 }) {
   return (
     <Document>
@@ -340,19 +331,19 @@ export function AttestationInscriptionPDF({
         <Text style={styles.docTitle}>ATTESTATION D&apos;INSCRIPTION</Text>
         <Text style={styles.docSubtitle}>Année académique {academicYear}</Text>
 
-        <View style={{ marginVertical: 20, lineHeight: 2 }}>
+        <View style={{ marginVertical: 20, lineHeight: 1.6 }}>
           <Text style={{ fontSize: 10, marginBottom: 10 }}>
             Le <Text style={{ fontWeight: 'bold' }}>{tenant.rectorTitle || 'Recteur'}</Text> de l&apos;<Text style={{ fontWeight: 'bold' }}>{tenant.name}</Text> atteste que :
           </Text>
           <Text style={{ fontSize: 12, fontWeight: 'bold', textAlign: 'center', marginVertical: 15 }}>
             {student.firstName} {student.lastName}
           </Text>
-          <View style={{ marginLeft: 20 }}>
-            <Text style={{ fontSize: 10 }}>• Né(e) le {student.dateOfBirth || '...'} à {student.placeOfBirth || '...'}</Text>
-            <Text style={{ fontSize: 10 }}>• Nationalité : {student.nationality || '...'}</Text>
-            <Text style={{ fontSize: 10 }}>• Matricule : {student.matricule || '...'}</Text>
-            <Text style={{ fontSize: 10 }}>• Programme : {student.program || '...'}</Text>
-            <Text style={{ fontSize: 10 }}>• Niveau : {student.level || '...'}</Text>
+          <View style={{ marginLeft: 20, gap: 6 }}>
+            {student.dateOfBirth && <Text style={{ fontSize: 10 }}>- Né(e) le {formatDate(student.dateOfBirth)}{student.placeOfBirth ? ` à ${student.placeOfBirth}` : ''}</Text>}
+            {student.nationality && <Text style={{ fontSize: 10 }}>- Nationalité : {student.nationality}</Text>}
+            {student.matricule && <Text style={{ fontSize: 10 }}>- Matricule : {student.matricule}</Text>}
+            {student.program && <Text style={{ fontSize: 10 }}>- Programme : {student.program}</Text>}
+            {student.level && <Text style={{ fontSize: 10 }}>- Niveau : {student.level}</Text>}
           </View>
           <Text style={{ fontSize: 10, marginTop: 15 }}>
             Est régulièrement inscrit(e) pour l&apos;année académique <Text style={{ fontWeight: 'bold' }}>{academicYear}</Text> au sein de notre établissement.
@@ -373,16 +364,16 @@ export function AttestationInscriptionPDF({
           </View>
         </View>
 
-        <Footer docNumber={docNumber} verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} />
+        <Footer docNumber={docNumber} verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} isSigned={isSigned} />
       </Page>
     </Document>
   )
 }
 
 export function DiplomePDF({
-  tenant, student, diploma, docNumber, verificationCode, qrCodeDataUrl,
+  tenant, student, diploma, docNumber, verificationCode, qrCodeDataUrl, isSigned = false,
 }: {
-  tenant: TenantInfo; student: StudentInfo; diploma: { title: string; mention: string; date: string }; docNumber: string; verificationCode: string; qrCodeDataUrl?: string
+  tenant: TenantInfo; student: StudentInfo; diploma: { title: string; mention: string; date: string }; docNumber: string; verificationCode: string; qrCodeDataUrl?: string; isSigned?: boolean
 }) {
   return (
     <Document>
@@ -410,7 +401,7 @@ export function DiplomePDF({
           <Text style={{ fontSize: 16, fontWeight: 'bold', color: colors.primary, marginVertical: 8 }}>
             {student.firstName} {student.lastName}
           </Text>
-          <Text style={{ fontSize: 9, color: colors.muted }}>Né(e) le {student.dateOfBirth} à {student.placeOfBirth}</Text>
+          {student.dateOfBirth && <Text style={{ fontSize: 9, color: colors.muted }}>Né(e) le {formatDate(student.dateOfBirth)}{student.placeOfBirth ? ` à ${student.placeOfBirth}` : ''}</Text>}
         </View>
 
         <View style={{ marginVertical: 15, lineHeight: 2, alignItems: 'center' }}>
@@ -431,26 +422,61 @@ export function DiplomePDF({
           </View>
         </View>
 
-        <Stamp text="AUTHENTIQUE" />
-        <Footer docNumber={docNumber} verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} />
+        {isSigned && <Stamp text="AUTHENTIQUE" />}
+        <Footer docNumber={docNumber} verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} isSigned={isSigned} />
       </Page>
     </Document>
   )
 }
 
 export function PVDeliberationPDF({
-  tenant, session, members, students, academicYear, docNumber, verificationCode, qrCodeDataUrl,
+  tenant, session, members, students, academicYear, docNumber, verificationCode, qrCodeDataUrl, isSigned = false,
 }: {
-  tenant: TenantInfo; session: { name: string; date: string; type: string }; members: Array<{ name: string; role: string }>; students: Array<{ name: string; matricule: string; moy: number; decision: string; mention?: string }>; academicYear: string; docNumber: string; verificationCode: string; qrCodeDataUrl?: string
+  tenant: TenantInfo; session: { name: string; date: string; type: string }; members: Array<{ name: string; role: string }>; students: Array<{ name: string; matricule: string; moy: number; decision: string; mention?: string }>; academicYear: string; docNumber: string; verificationCode: string; qrCodeDataUrl?: string; isSigned?: boolean
 }) {
   const stats = {
     total: students.length,
-    admis: students.filter(s => s.decision === 'ADMIS' || s.decision === 'ADMIS_CHANCE').length,
+    admis: students.filter(s => ['ADMIS', 'ADMIS AVEC DETTE', 'ADMIS PAR COMPENSATION'].includes(s.decision)).length,
     ajourne: students.filter(s => s.decision === 'AJOURNE').length,
     redoublant: students.filter(s => s.decision === 'REDOUBLANT').length,
     exclu: students.filter(s => s.decision === 'EXCLU').length,
-    rate: students.length ? Math.round(students.filter(s => s.decision === 'ADMIS' || s.decision === 'ADMIS_CHANCE' || s.decision === 'ADMIS').length / students.length * 100) : 0,
+    rate: students.length ? Math.round(students.filter(s => ['ADMIS', 'ADMIS AVEC DETTE', 'ADMIS PAR COMPENSATION'].includes(s.decision)).length / students.length * 100) : 0,
   }
+  const firstPageCapacity = Math.max(4, 12 - members.length)
+  const firstPageStudents = students.slice(0, firstPageCapacity)
+  const continuationPages: typeof students[] = []
+  for (let start = firstPageCapacity; start < students.length; start += 22) {
+    continuationPages.push(students.slice(start, start + 22))
+  }
+  const resultTable = (rows: typeof students, offset: number) => (
+    <View style={styles.table} wrap={false}>
+      <View style={styles.tableHeader}>
+        <Text style={[styles.tableHeaderCell, { width: '8%', textAlign: 'center' }]}>#</Text>
+        <Text style={[styles.tableHeaderCell, { width: '25%' }]}>Nom & Prénom</Text>
+        <Text style={[styles.tableHeaderCell, { width: '17%' }]}>Matricule</Text>
+        <Text style={[styles.tableHeaderCell, { width: '12%', textAlign: 'center' }]}>Moyenne</Text>
+        <Text style={[styles.tableHeaderCell, { width: '18%', textAlign: 'center' }]}>Décision</Text>
+        <Text style={[styles.tableHeaderCell, { width: '20%', textAlign: 'center' }]}>Mention</Text>
+      </View>
+      {rows.map((student, index) => (
+        <View key={index} style={[styles.tableRow, (offset + index) % 2 === 1 ? styles.tableRowAlt : {}]}>
+          <Text style={[styles.tableCellCenter, { width: '8%' }]}>{offset + index + 1}</Text>
+          <Text style={[styles.tableCell, { width: '25%' }]}>{student.name}</Text>
+          <Text style={[styles.tableCell, { width: '17%' }]}>{student.matricule}</Text>
+          <Text style={[styles.tableCellCenter, { width: '12%' }]}>{formatNumber(student.moy)}</Text>
+          <Text style={[styles.tableCellCenter, { width: '18%' }]}>{student.decision}</Text>
+          <Text style={[styles.tableCellCenter, { width: '20%' }]}>{student.mention || '-'}</Text>
+        </View>
+      ))}
+    </View>
+  )
+  const signatures = () => (
+    <View style={styles.signature} wrap={false}>
+      <View style={styles.signatureBlock}><Text style={styles.signatureLabel}>Le Président du Jury</Text></View>
+      <View style={styles.signatureBlock}><Text style={styles.signatureLabel}>Le Secrétaire</Text></View>
+      <View style={styles.signatureBlock}><Text style={styles.signatureLabel}>Le {tenant.rectorTitle || 'Recteur'}</Text></View>
+    </View>
+  )
 
   return (
     <Document>
@@ -471,7 +497,7 @@ export function PVDeliberationPDF({
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Session</Text>
           <View style={styles.row}><Text style={styles.label}>Intitulé</Text><Text style={styles.value}>{session.name}</Text></View>
-          <View style={styles.row}><Text style={styles.label}>Date</Text><Text style={styles.value}>{session.date}</Text></View>
+          <View style={styles.row}><Text style={styles.label}>Date</Text><Text style={styles.value}>{formatDate(session.date)}</Text></View>
           <View style={styles.row}><Text style={styles.label}>Type</Text><Text style={styles.value}>{session.type}</Text></View>
         </View>
 
@@ -512,49 +538,34 @@ export function PVDeliberationPDF({
           </View>
         </View>
 
-        <View style={styles.table}>
-          <View style={styles.tableHeader}>
-            <Text style={[styles.tableHeaderCell, { width: '8%', textAlign: 'center' }]}>#</Text>
-            <Text style={[styles.tableHeaderCell, { width: '25%' }]}>Nom & Prénom</Text>
-            <Text style={[styles.tableHeaderCell, { width: '17%' }]}>Matricule</Text>
-            <Text style={[styles.tableHeaderCell, { width: '12%', textAlign: 'center' }]}>Moyenne</Text>
-            <Text style={[styles.tableHeaderCell, { width: '18%', textAlign: 'center' }]}>Décision</Text>
-            <Text style={[styles.tableHeaderCell, { width: '20%', textAlign: 'center' }]}>Mention</Text>
-          </View>
-          {students.map((s, i) => (
-            <View key={i} style={[styles.tableRow, i % 2 === 1 ? styles.tableRowAlt : {}]}>
-              <Text style={[styles.tableCellCenter, { width: '8%' }]}>{i + 1}</Text>
-              <Text style={[styles.tableCell, { width: '25%' }]}>{s.name}</Text>
-              <Text style={[styles.tableCell, { width: '17%' }]}>{s.matricule}</Text>
-              <Text style={[styles.tableCellCenter, { width: '12%' }]}>{formatNumber(s.moy)}</Text>
-              <Text style={[styles.tableCellCenter, { width: '18%' }]}>{s.decision}</Text>
-              <Text style={[styles.tableCellCenter, { width: '20%' }]}>{s.mention || '-'}</Text>
-            </View>
-          ))}
-        </View>
+        {resultTable(firstPageStudents, 0)}
+        {continuationPages.length === 0 && signatures()}
 
-        <View style={styles.signature}>
-          <View style={styles.signatureBlock}>
-            <Text style={styles.signatureLabel}>Le Président du Jury</Text>
-          </View>
-          <View style={styles.signatureBlock}>
-            <Text style={styles.signatureLabel}>Le Secrétaire</Text>
-          </View>
-          <View style={styles.signatureBlock}>
-            <Text style={styles.signatureLabel}>Le {tenant.rectorTitle || 'Recteur'}</Text>
-          </View>
-        </View>
-
-        <Footer docNumber={docNumber} verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} />
+        <Footer docNumber={docNumber} verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} isSigned={isSigned} />
       </Page>
+      {continuationPages.map((pageStudents, pageIndex) => (
+        <Page key={pageIndex} size="A4" style={styles.page}>
+          <View style={styles.header}>
+            <View style={styles.headerLeft}>
+              <Text style={styles.institutionName}>{tenant.name}</Text>
+              <Text style={styles.institutionSub}>{session.name} - {academicYear}</Text>
+            </View>
+            <View style={styles.headerRight}><Text style={{ fontSize: 8, color: colors.muted }}>N° {docNumber}</Text></View>
+          </View>
+          <Text style={styles.docTitle}>PROCÈS-VERBAL DE DÉLIBÉRATION - SUITE</Text>
+          {resultTable(pageStudents, firstPageCapacity + pageIndex * 22)}
+          {pageIndex === continuationPages.length - 1 && signatures()}
+          <Footer docNumber={docNumber} verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} isSigned={isSigned} />
+        </Page>
+      ))}
     </Document>
   )
 }
 
 export function CertificatScolaritePDF({
-  tenant, student, academicYear, docNumber, verificationCode, qrCodeDataUrl,
+  tenant, student, academicYear, docNumber, verificationCode, qrCodeDataUrl, isSigned = false,
 }: {
-  tenant: TenantInfo; student: StudentInfo; academicYear: string; docNumber: string; verificationCode: string; qrCodeDataUrl?: string
+  tenant: TenantInfo; student: StudentInfo; academicYear: string; docNumber: string; verificationCode: string; qrCodeDataUrl?: string; isSigned?: boolean
 }) {
   return (
     <Document>
@@ -581,9 +592,9 @@ export function CertificatScolaritePDF({
             {student.firstName} {student.lastName}
           </Text>
           <View style={{ marginLeft: 20 }}>
-            <Text style={{ fontSize: 10 }}>• Matricule : {student.matricule || '...'}</Text>
-            <Text style={{ fontSize: 10 }}>• Programme : {student.program || '...'}</Text>
-            <Text style={{ fontSize: 10 }}>• Niveau d&apos;étude : {student.level || '...'}</Text>
+            {student.matricule && <Text style={{ fontSize: 10 }}>- Matricule : {student.matricule}</Text>}
+            {student.program && <Text style={{ fontSize: 10 }}>- Programme : {student.program}</Text>}
+            {student.level && <Text style={{ fontSize: 10 }}>- Niveau d&apos;étude : {student.level}</Text>}
           </View>
           <Text style={{ fontSize: 10, marginTop: 15 }}>
             Est régulièrement inscrit(e) pour l&apos;année académique {academicYear}.
@@ -601,7 +612,7 @@ export function CertificatScolaritePDF({
           </View>
         </View>
 
-        <Footer docNumber={docNumber} verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} />
+        <Footer docNumber={docNumber} verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} isSigned={isSigned} />
       </Page>
     </Document>
   )

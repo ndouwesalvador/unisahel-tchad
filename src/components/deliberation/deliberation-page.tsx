@@ -298,6 +298,7 @@ export function DeliberationPage() {
           type: 'PV_DELIBERATION',
           tenantId,
           deliberationId: selectedSession,
+          sign: true,
           data: {
             session, members, students, academicYear: currentYearName,
             tenant: tenant ? {
