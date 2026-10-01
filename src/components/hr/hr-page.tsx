@@ -47,7 +47,6 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
-  TrendingUp,
   TrendingDown,
   CalendarDays,
   Star,
@@ -258,7 +257,7 @@ export function HrPage() {
   // Count-up stats
   const totalPersonnel = useCountUp(staff.length, 1400)
   const activePersonnel = useCountUp(staff.filter(s => s.status === 'actif').length, 1200)
-  const tauxOccupation = useCountUp(staff.length > 0 ? Math.round((staff.filter(s => s.status === 'actif').length / staff.length) * 100) : 0, 1300)
+  const tauxActivite = useCountUp(staff.length > 0 ? Math.round((staff.filter(s => s.status === 'actif').length / staff.length) * 100) : 0, 1300)
   const adminCount = useCountUp(staff.filter(s => ['Administration', 'Scolarite', 'Comptabilite'].includes(s.department)).length, 1100)
   const permCount = useCountUp(staff.filter(s => s.contract === 'cdi').length, 1200)
   const vacCount = useCountUp(staff.filter(s => s.contract === 'vacataire').length, 1000)
@@ -561,8 +560,8 @@ export function HrPage() {
                 <p className="text-xl font-bold text-white">{activePersonnel}</p>
               </div>
               <div className="bg-white/10 backdrop-blur border border-white/15 rounded-lg px-4 py-3 text-center">
-                <p className="text-[10px] text-white/60 uppercase tracking-wider">Taux occupation</p>
-                <p className="text-xl font-bold text-white">{tauxOccupation}%</p>
+                <p className="text-[10px] text-white/60 uppercase tracking-wider">Part du personnel actif</p>
+                <p className="text-xl font-bold text-white">{tauxActivite}%</p>
               </div>
             </div>
           </div>
@@ -580,10 +579,6 @@ export function HrPage() {
                 <div>
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Personnel administratif</p>
                   <p className="text-xl font-bold text-[#1a2744] mt-1">{adminCount}</p>
-                  <div className="flex items-center gap-1 mt-1">
-                    <TrendingUp className="size-3 text-[#2d7a4f]" />
-                    <span className="text-[10px] text-[#2d7a4f] font-medium">+2 ce semestre</span>
-                  </div>
                 </div>
                 <div className="w-10 h-10 rounded-xl bg-[#1a274415] flex items-center justify-center">
                   <Building2 className="size-5 text-[#1a2744]" />
@@ -593,19 +588,15 @@ export function HrPage() {
           </Card>
         </motion.div>
 
-        {/* Enseignants permanents */}
+        {/* Contrats CDI */}
         <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
           <Card className="overflow-hidden relative border-l-4 border-l-[#2d7a4f]">
             <div className="h-1 bg-gradient-to-r from-[#2d7a4f] to-[#3da66a]" />
             <CardContent className="p-4">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Enseignants permanents</p>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Contrats CDI</p>
                   <p className="text-xl font-bold text-[#2d7a4f] mt-1">{permCount}</p>
-                  <div className="flex items-center gap-1 mt-1">
-                    <TrendingUp className="size-3 text-[#2d7a4f]" />
-                    <span className="text-[10px] text-[#2d7a4f] font-medium">+1 cette annee</span>
-                  </div>
                 </div>
                 <div className="w-10 h-10 rounded-xl bg-[#2d7a4f15] flex items-center justify-center">
                   <GraduationCap className="size-5 text-[#2d7a4f]" />
@@ -624,10 +615,6 @@ export function HrPage() {
                 <div>
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Vacataires</p>
                   <p className="text-xl font-bold text-[#d4a853] mt-1">{vacCount}</p>
-                  <div className="flex items-center gap-1 mt-1">
-                    <TrendingDown className="size-3 text-[#c62828]" />
-                    <span className="text-[10px] text-[#c62828] font-medium">-1 vs S1</span>
-                  </div>
                 </div>
                 <div className="w-10 h-10 rounded-xl bg-[#d4a85315] flex items-center justify-center">
                   <UserCheck className="size-5 text-[#d4a853]" />
