@@ -393,7 +393,7 @@ export function DashboardHome() {
   }
 
   const statsCards = [
-    { title: 'Etudiants inscrits', value: data.statsCards.totalStudents.toLocaleString('fr-FR'), icon: Users, color: '#2d7a4f', bgColor: '#2d7a4f15' },
+    { title: 'Dossiers étudiants', value: data.statsCards.totalStudents.toLocaleString('fr-FR'), icon: Users, color: '#2d7a4f', bgColor: '#2d7a4f15' },
     { title: 'Enseignants', value: data.statsCards.totalTeachers.toLocaleString('fr-FR'), icon: GraduationCap, color: '#1a2744', bgColor: '#1a274415' },
     { title: 'Programmes', value: data.statsCards.totalPrograms.toLocaleString('fr-FR'), icon: BookOpen, color: '#d4a853', bgColor: '#d4a85315' },
     { title: 'Paiements recus', value: `${data.statsCards.totalPaymentsAmount.toLocaleString('fr-FR')} FCFA`, icon: CreditCard, color: '#2d7a4f', bgColor: '#2d7a4f15' },
@@ -632,6 +632,7 @@ export function DashboardHome() {
       </div>
 
       {/* ── Stats Cards ── */}
+      <p className="text-xs text-gray-500">Indicateurs cumulés de l’institution, toutes années académiques confondues. L’année sélectionnée dans l’en-tête ne filtre pas cette synthèse.</p>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {statsCards.map((stat, i) => (
           <motion.div
@@ -820,7 +821,7 @@ export function DashboardHome() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base font-semibold text-[#1a2744]">
-              Taux de reussite par filiere
+              Notes au-dessus du seuil par programme
             </CardTitle>
             <p className="text-xs text-gray-400">Part des notes saisies au-dessus du seuil de passage, par programme</p>
           </CardHeader>
@@ -841,7 +842,7 @@ export function DashboardHome() {
                         boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
                         fontSize: '12px',
                       }}
-                      formatter={(value: number) => [`${value}%`, 'Taux de reussite']}
+                      formatter={(value: number) => [`${value}%`, 'Notes au-dessus du seuil']}
                     />
                     <Legend />
                     <Bar dataKey="taux" name="Taux (%)" radius={[0, 4, 4, 0]} barSize={20}>

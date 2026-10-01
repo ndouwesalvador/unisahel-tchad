@@ -46,58 +46,13 @@ async function handleGet(user: SessionUser, tenantId: string, _request: NextRequ
 
 export const GET = withTenantAuth(handleGet)
 
-// POST /api/reports - Create a new report
-async function handlePost(_user: SessionUser, tenantId: string, request: NextRequest) {
-  try {
-    const body = await request.json()
-    const { name, type, format, period, level, program, generatedBy, scheduledAt } = body
-
-    if (!name || !type || !format) {
-      return NextResponse.json(
-        { error: 'name, type, and format are required fields' },
-        { status: 400 }
-      )
-    }
-
-    const validTypes = ['PERFORMANCE', 'FINANCIAL', 'ATTENDANCE', 'EXAM', 'PROGRESS', 'INSTITUTIONAL']
-    if (!validTypes.includes(type)) {
-      return NextResponse.json(
-        { error: `type must be one of: ${validTypes.join(', ')}` },
-        { status: 400 }
-      )
-    }
-
-    const validFormats = ['PDF', 'EXCEL', 'CSV']
-    if (!validFormats.includes(format)) {
-      return NextResponse.json(
-        { error: `format must be one of: ${validFormats.join(', ')}` },
-        { status: 400 }
-      )
-    }
-
-    const report = await db.report.create({
-      data: {
-        tenantId,
-        name,
-        type,
-        format,
-        period: period ?? null,
-        level: level ?? null,
-        program: program ?? null,
-        generatedBy: generatedBy ?? 'system',
-        scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
-      },
-    })
-
-    return NextResponse.json({ report }, { status: 201 })
-  } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Create report error:', error)
-    return NextResponse.json(
-      { error: 'Failed to create report' },
-      { status: 500 }
-    )
-  }
+// A report row has no generated file or worker attached to it. Refuse legacy
+// creation calls instead of saving a permanently PENDING, misleading record.
+async function handlePost() {
+  return NextResponse.json(
+    { error: 'REPORT_GENERATION_UNAVAILABLE', message: 'Utilisez les exports réels de la page Rapports ou les documents officiels.' },
+    { status: 501 }
+  )
 }
 
 export const POST = withTenantAuth(handlePost)

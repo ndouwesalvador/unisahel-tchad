@@ -346,7 +346,7 @@ async function getDashboardHandler(user: SessionUser, tenantId: string, _request
       ...recentStudents.map((s) => ({
         id: `student-${s.id}`,
         type: 'inscription' as const,
-        description: `Inscription de ${s.firstName} ${s.lastName}`,
+        description: `${s.status === 'PRE_INSCRIT' ? 'Création du dossier' : 'Inscription'} de ${s.firstName} ${s.lastName}`,
         time: s.createdAt,
         user: 'Scolarité',
       })),
