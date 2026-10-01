@@ -370,17 +370,71 @@ export function AttestationInscriptionPDF({
   )
 }
 
+export function AttestationNiveauPDF({
+  tenant, student, academicYear, award, docNumber, verificationCode, qrCodeDataUrl,
+}: {
+  tenant: TenantInfo
+  student: StudentInfo
+  academicYear: string
+  award: { credits: number; level: string; program: string; juryDate: string }
+  docNumber: string
+  verificationCode: string
+  qrCodeDataUrl?: string
+}) {
+  return (
+    <Document>
+      <Page size="A4" style={styles.page}>
+        <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            <Text style={styles.institutionName}>{tenant.name}</Text>
+            {(tenant.address || tenant.city) && <Text style={styles.institutionSub}>{[tenant.address, tenant.city].filter(Boolean).join(', ')}</Text>}
+          </View>
+          <View style={styles.headerRight}><Text style={{ fontSize: 8, color: colors.muted }}>N° {docNumber}</Text></View>
+        </View>
+
+        <Text style={styles.docTitle}>ATTESTATION DE VALIDATION DE NIVEAU</Text>
+        <Text style={styles.docSubtitle}>Année académique {academicYear}</Text>
+
+        <View style={{ marginTop: 25, marginBottom: 24 }}>
+          <Text style={{ fontSize: 10, lineHeight: 1.7 }}>
+            {tenant.name} atteste que l’étudiant(e) ci-dessous a validé le niveau indiqué, conformément à la décision finale du jury.
+          </Text>
+        </View>
+
+        <View style={[styles.section, { padding: 16, borderWidth: 1, borderColor: colors.border, borderRadius: 4 }]}>
+          <View style={styles.row}><Text style={styles.label}>Étudiant(e)</Text><Text style={styles.value}>{student.firstName} {student.lastName}</Text></View>
+          {student.matricule && <View style={styles.row}><Text style={styles.label}>Matricule</Text><Text style={styles.value}>{student.matricule}</Text></View>}
+          <View style={styles.row}><Text style={styles.label}>Programme</Text><Text style={styles.value}>{award.program}</Text></View>
+          <View style={styles.row}><Text style={styles.label}>Niveau validé</Text><Text style={styles.value}>{award.level}</Text></View>
+          <View style={styles.row}><Text style={styles.label}>Crédits acquis</Text><Text style={styles.value}>{award.credits}</Text></View>
+          <View style={styles.row}><Text style={styles.label}>Décision du jury</Text><Text style={styles.value}>{formatDate(award.juryDate)}</Text></View>
+        </View>
+
+        <Text style={{ fontSize: 10, lineHeight: 1.6, marginTop: 20 }}>
+          Cette attestation certifie la validation de ce niveau sans dette de crédits pour l’année académique {academicYear}.
+        </Text>
+
+        <View style={styles.signature}>
+          <View style={styles.signatureBlock}><Text style={styles.signatureLabel}>Le service de scolarité</Text></View>
+          <View style={styles.signatureBlock}><Text style={styles.signatureLabel}>{tenant.rectorTitle || 'Le responsable de l’établissement'}</Text></View>
+        </View>
+        <Footer docNumber={docNumber} verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} isSigned />
+      </Page>
+    </Document>
+  )
+}
+
 export function DiplomePDF({
   tenant, student, diploma, docNumber, verificationCode, qrCodeDataUrl, isSigned = false,
 }: {
-  tenant: TenantInfo; student: StudentInfo; diploma: { title: string; mention: string; date: string }; docNumber: string; verificationCode: string; qrCodeDataUrl?: string; isSigned?: boolean
+  tenant: TenantInfo; student: StudentInfo; diploma: { title: string; program: string; mention?: string; date: string; credits: number }; docNumber: string; verificationCode: string; qrCodeDataUrl?: string; isSigned?: boolean
 }) {
   return (
     <Document>
       <Page size="A4" style={[styles.page, { paddingTop: 60 }]}>
         <View style={{ alignItems: 'center', marginBottom: 30 }}>
-          <Text style={{ fontSize: 10, color: colors.muted, letterSpacing: 3 }}>RÉPUBLIQUE DU TCHAD</Text>
-          <Text style={{ fontSize: 9, color: colors.muted, marginTop: 2 }}>MINISTÈRE DE L&apos;ENSEIGNEMENT SUPÉRIEUR</Text>
+          {tenant.country && <Text style={{ fontSize: 10, color: colors.muted, letterSpacing: 3 }}>{tenant.country.toUpperCase()}</Text>}
+          {tenant.ministry && <Text style={{ fontSize: 9, color: colors.muted, marginTop: 2 }}>{tenant.ministry.toUpperCase()}</Text>}
         </View>
 
         <View style={[styles.header, { borderBottomColor: colors.accent }]}>
@@ -394,7 +448,7 @@ export function DiplomePDF({
         </View>
 
         <Text style={[styles.docTitle, { fontSize: 18, marginTop: 25 }]}>DIPLÔME</Text>
-        <Text style={styles.docSubtitle}>{diploma.title}</Text>
+        <Text style={styles.docSubtitle}>Programme : {diploma.program}</Text>
 
         <View style={{ marginVertical: 25, alignItems: 'center' }}>
           <Text style={{ fontSize: 9, color: colors.muted, marginBottom: 5 }}>Décerné à</Text>
@@ -409,8 +463,9 @@ export function DiplomePDF({
           <Text style={{ fontSize: 13, fontWeight: 'bold', color: colors.secondary, marginVertical: 5 }}>
             {diploma.title}
           </Text>
-          <Text style={{ fontSize: 10 }}>Avec la mention <Text style={{ fontWeight: 'bold', color: colors.accent }}>{diploma.mention}</Text></Text>
-          <Text style={{ fontSize: 9, color: colors.muted, marginTop: 5 }}>En date du {diploma.date}</Text>
+          <Text style={{ fontSize: 10 }}>Après validation des {diploma.credits} crédits requis du cursus</Text>
+          {diploma.mention && <Text style={{ fontSize: 10 }}>Avec la mention <Text style={{ fontWeight: 'bold', color: colors.accent }}>{diploma.mention}</Text></Text>}
+          <Text style={{ fontSize: 9, color: colors.muted, marginTop: 5 }}>Décision du jury du {formatDate(diploma.date)}</Text>
         </View>
 
         <View style={styles.signature}>
@@ -681,6 +736,7 @@ export async function renderPDF(element: React.ReactElement): Promise<Buffer> {
 export const documentTypes = [
   { id: 'RELEVE_NOTES', label: 'Relevé de notes', prefix: 'RN' },
   { id: 'ATTESTATION_INSCRIPTION', label: "Attestation d'inscription", prefix: 'AI' },
+  { id: 'ATTESTATION_NIVEAU', label: 'Attestation de validation de niveau', prefix: 'AN' },
   { id: 'DIPLOME', label: 'Diplôme', prefix: 'DIP' },
   { id: 'PV_DELIBERATION', label: 'Procès-verbal de délibération', prefix: 'PV' },
   { id: 'CERTIFICAT_SCOLARITE', label: 'Certificat de scolarité', prefix: 'CS' },

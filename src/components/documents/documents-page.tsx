@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { QrDisplay } from '@/components/ui/qr-display'
 import { useAppStore } from '@/lib/store'
 import { useQueryClient } from '@tanstack/react-query'
-import { useDocuments, useStudents } from '@/lib/api-hooks'
+import { useAcademicYears, useDocuments, useStudents } from '@/lib/api-hooks'
 import {
   Tooltip,
   TooltipContent,
@@ -63,6 +63,8 @@ import {
 const documentTypeList = [
   { key: 'releve_notes', apiType: 'RELEVE_NOTES', label: 'Releve de notes', icon: FileText, implemented: true, requiresStudent: true, tooltip: 'Releve officiel des notes par semestre, genere pour un etudiant selectionne' },
   { key: 'attestation_inscription', apiType: 'ATTESTATION_INSCRIPTION', label: 'Attestation d\'inscription', icon: BookOpen, implemented: true, requiresStudent: true, tooltip: 'Attestation confirmant l\'inscription administrative de l\'etudiant selectionne' },
+  { key: 'attestation_niveau', apiType: 'ATTESTATION_NIVEAU', label: 'Attestation de niveau', icon: Award, implemented: true, requiresStudent: true, tooltip: 'Exige une année, une délibération finale validée et tous les crédits sans dette' },
+  { key: 'diplome', apiType: 'DIPLOME', label: 'Diplôme', icon: GraduationCap, implemented: true, requiresStudent: true, tooltip: 'Exige la validation de tous les niveaux du programme sans dette' },
   { key: 'certificat_scolarite', apiType: 'CERTIFICAT_SCOLARITE', label: 'Certificat de scolarite', icon: ScrollText, implemented: true, requiresStudent: true, tooltip: 'Certificat prouvant la frequentation reguliere de l\'etudiant selectionne' },
   { key: 'pv_deliberation', apiType: 'PV_DELIBERATION', label: 'PV de deliberation', icon: ClipboardList, implemented: false, requiresStudent: false, tooltip: 'A generer depuis un jury de deliberation selectionne' },
   { key: 'attestation_reussite', apiType: null, label: 'Attestation de reussite', icon: Award, implemented: false, requiresStudent: true, tooltip: 'Modele non configure dans ce module' },
@@ -131,6 +133,7 @@ export function DocumentsPage() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [selectedType, setSelectedType] = useState('')
   const [selectedStudentId, setSelectedStudentId] = useState('')
+  const [selectedYearId, setSelectedYearId] = useState('')
   const [selectedStudentLabel, setSelectedStudentLabel] = useState('')
   const [studentSearch, setStudentSearch] = useState('')
   const [isGenerating, setIsGenerating] = useState(false)
@@ -142,6 +145,16 @@ export function DocumentsPage() {
     data: { documents: Array<{ id: string; type: string; studentId: string | null; academicYearId: string | null; etudiant: string; matricule: string; date: string; statut: 'signe' | 'genere' | 'en_attente'; codeVerification: string }>; stats: { thisMonth: number; pending: number }; countByType: Record<string, number> } | undefined
   }
   const { data: studentMatches } = useStudents({ search: studentSearch, limit: 6 })
+  const { data: academicYearsResponse } = useAcademicYears()
+  const academicYears = useMemo(
+    () => (academicYearsResponse?.data ?? []) as Array<{ id: string; name: string; isCurrent: boolean }>,
+    [academicYearsResponse?.data]
+  )
+  useEffect(() => {
+    if (!selectedYearId && academicYears.length > 0) {
+      setSelectedYearId(academicYears.find((year) => year.isCurrent)?.id ?? academicYears[0].id)
+    }
+  }, [academicYears, selectedYearId])
   const showStudentDropdown = studentSearch.length >= 2 && !selectedStudentId
 
   const generatedDocuments: GeneratedDoc[] = (docsData?.documents ?? []).map((d) => ({
@@ -160,6 +173,7 @@ export function DocumentsPage() {
   const animatedDocsMonth = useCountUp(docsData?.stats?.thisMonth ?? 0, 1400)
   const animatedPending = useCountUp(docsData?.stats?.pending ?? 0, 1200)
   const selectedDocumentType = documentTypeList.find((dt) => dt.key === selectedType)
+  const signedOnlyDocument = ['ATTESTATION_NIVEAU', 'DIPLOME'].includes(selectedDocumentType?.apiType || '')
   const canGenerateSelectedDocument = Boolean(
     selectedDocumentType?.implemented &&
     selectedDocumentType.apiType &&
@@ -172,6 +186,10 @@ export function DocumentsPage() {
       ? documentTypeList.find((dt) => dt.apiType === override.type)
       : documentTypeList.find((dt) => dt.key === selectedType)
     if (!apiType || !user) return
+    if (['ATTESTATION_NIVEAU', 'DIPLOME'].includes(apiType) && !sign) {
+      toast.error('Validation requise', { description: 'Ce document officiel ne peut pas être généré comme brouillon.' })
+      return
+    }
     if (!docType?.implemented) {
       toast.error('Document non configuré', { description: 'Ce type ne peut pas être généré depuis cet écran.' })
       return
@@ -191,7 +209,7 @@ export function DocumentsPage() {
           type: apiType,
           tenantId: user.tenantId,
           studentId: override ? override.studentId || undefined : selectedStudentId || undefined,
-          academicYearId: override?.academicYearId || undefined,
+          academicYearId: override?.academicYearId || selectedYearId || undefined,
           sign,
         }),
       })
@@ -216,7 +234,7 @@ export function DocumentsPage() {
         setQrCode(verificationCode)
       }
 
-      toast.success(sign ? 'Document généré et signé' : 'Document généré avec succès', {
+      toast.success(sign ? 'Document généré et validé' : 'Document généré avec succès', {
         description: verificationCode ? `Code: ${verificationCode}` : 'Le fichier PDF a été téléchargé',
       })
       queryClient.invalidateQueries({ queryKey: ['documents'] })
@@ -227,7 +245,7 @@ export function DocumentsPage() {
     } finally {
       loading(false)
     }
-  }, [selectedType, selectedStudentId, user, queryClient])
+  }, [selectedType, selectedStudentId, selectedYearId, user, queryClient])
 
   const handleValidate = useCallback(async (id: string) => {
     try {
@@ -475,7 +493,7 @@ export function DocumentsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
               <Select value={selectedType} onValueChange={setSelectedType}>
                 <SelectTrigger className="h-9 text-sm w-full">
                   <SelectValue placeholder="Type de document" />
@@ -486,6 +504,12 @@ export function DocumentsPage() {
                       {dt.label}{!dt.implemented ? ' (non configuré)' : ''}
                     </SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+              <Select value={selectedYearId} onValueChange={setSelectedYearId}>
+                <SelectTrigger className="h-9 text-sm w-full"><SelectValue placeholder="Année académique" /></SelectTrigger>
+                <SelectContent>
+                  {academicYears.map((year) => <SelectItem key={year.id} value={year.id}>{year.name}{year.isCurrent ? ' (en cours)' : ''}</SelectItem>)}
                 </SelectContent>
               </Select>
               {selectedStudentId ? (
@@ -534,7 +558,7 @@ export function DocumentsPage() {
                   variant="outline"
                   size="sm"
                   className="text-xs flex-1 h-9"
-                  disabled={!canGenerateSelectedDocument || isGenerating}
+                  disabled={!canGenerateSelectedDocument || !selectedYearId || signedOnlyDocument || isGenerating}
                   onClick={() => generateDoc(false)}
                 >
                   {isGenerating ? <Loader2 className="size-3.5 mr-1.5 animate-spin" /> : <Eye className="size-3.5 mr-1.5" />}
@@ -544,11 +568,11 @@ export function DocumentsPage() {
               <Button
                 size="sm"
                 className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs h-9"
-                disabled={!canGenerateSelectedDocument || isGeneratingSigned}
+                disabled={!canGenerateSelectedDocument || !selectedYearId || isGeneratingSigned}
                 onClick={() => generateDoc(true)}
               >
                 {isGeneratingSigned ? <Loader2 className="size-3.5 mr-1.5 animate-spin" /> : <CheckCircle2 className="size-3.5 mr-1.5" />}
-                Generer et signer
+                Générer et valider
               </Button>
             </div>
             {selectedDocumentType?.requiresStudent && !selectedStudentId && (
@@ -556,6 +580,7 @@ export function DocumentsPage() {
                 Sélectionnez un étudiant pour activer la génération de ce document.
               </p>
             )}
+            {signedOnlyDocument && <p className="text-xs text-gray-500 mt-2">Ce document exige une délibération finale validée, les crédits complets sans dette et une validation par un responsable.</p>}
             {selectedDocumentType && !selectedDocumentType.implemented && (
               <p className="text-xs text-[#d4a853] mt-2">
                 Ce type n’est pas générable depuis cet écran : {selectedDocumentType.tooltip}.
@@ -677,14 +702,14 @@ export function DocumentsPage() {
                                   onClick={() => {
                                     const docType = documentTypeList.find((dt) => dt.key === doc.typeKey)
                                     if (docType?.apiType && docType.implemented) {
-                                      generateDoc(false, { type: docType.apiType, studentId: doc.studentId, academicYearId: doc.academicYearId })
+                                      generateDoc(['ATTESTATION_NIVEAU', 'DIPLOME'].includes(docType.apiType), { type: docType.apiType, studentId: doc.studentId, academicYearId: doc.academicYearId })
                                     } else {
                                       toast.error('Régénération indisponible', { description: 'Ce type de document n’est pas configuré depuis cet écran.' })
                                     }
                                   }}
                                 >
                                   <Download className="size-3.5 mr-1" />
-                                  Regenerer / PDF
+                                  Créer un nouveau PDF
                                 </Button>
                               </div>
                             )}

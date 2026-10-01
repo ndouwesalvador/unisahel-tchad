@@ -1,16 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 
-const { authMock, dbMock, renderPDFMock } = vi.hoisted(() => ({
+const { authMock, dbMock, renderPDFMock, eligibilityMock } = vi.hoisted(() => ({
   authMock: vi.fn(),
   renderPDFMock: vi.fn(),
+  eligibilityMock: { level: vi.fn(), diploma: vi.fn() },
   dbMock: {
     academicYear: { findFirst: vi.fn() },
-    administrativeRegistration: { findFirst: vi.fn() },
+    administrativeRegistration: { findFirst: vi.fn(), findMany: vi.fn() },
     deliberation: { findFirst: vi.fn() },
     grade: { findMany: vi.fn() },
     pedagogicalRegistration: { findMany: vi.fn() },
     officialDocument: { create: vi.fn() },
+    program: { findFirst: vi.fn() },
+    level: { findFirst: vi.fn() },
     semester: { findMany: vi.fn() },
     student: { findFirst: vi.fn(), findMany: vi.fn() },
     tenant: { findUnique: vi.fn() },
@@ -19,16 +22,24 @@ const { authMock, dbMock, renderPDFMock } = vi.hoisted(() => ({
 
 vi.mock('@/lib/auth/config', () => ({ auth: authMock }))
 vi.mock('@/lib/db', () => ({ db: dbMock }))
+vi.mock('@/lib/documents/eligibility', () => ({
+  AwardEligibilityError: class AwardEligibilityError extends Error {},
+  getValidatedLevelAward: eligibilityMock.level,
+  getValidatedDiplomaAward: eligibilityMock.diploma,
+}))
 vi.mock('@/lib/pdf/templates', () => ({
   renderPDF: renderPDFMock,
   ReleveNotesPDF: () => null,
   AttestationInscriptionPDF: () => null,
+  AttestationNiveauPDF: () => null,
+  DiplomePDF: () => null,
   CertificatScolaritePDF: () => null,
   PVDeliberationPDF: () => null,
   ListeEtudiantsPDF: () => null,
 }))
 
 const { POST } = await import('./route')
+const { AwardEligibilityError } = await import('@/lib/documents/eligibility')
 
 const tenantId = 'tenant-A'
 const studentId = 'student-A'
@@ -49,7 +60,20 @@ beforeEach(() => {
   dbMock.pedagogicalRegistration.findMany.mockResolvedValue([])
   dbMock.semester.findMany.mockResolvedValue([])
   dbMock.administrativeRegistration.findFirst.mockResolvedValue(null)
+  dbMock.administrativeRegistration.findMany.mockResolvedValue([])
+  dbMock.program.findFirst.mockResolvedValue(null)
+  dbMock.level.findFirst.mockResolvedValue(null)
   dbMock.deliberation.findFirst.mockResolvedValue(null)
+  eligibilityMock.level.mockResolvedValue({
+    deliberationId: 'delib-A', decisionId: 'decision-A', creditsAcquired: 60,
+    juryDate: new Date('2026-09-30'),
+  })
+  eligibilityMock.diploma.mockResolvedValue({
+    program: { id: 'program-A', name: 'Génie informatique', diplomaType: 'Licence' },
+    finalLevel: { id: 'level-3', name: 'Licence 3' }, creditsRequired: 180,
+    finalDecision: { juryDate: new Date('2026-09-30') },
+    awards: [{ academicYearId: 'year-A', levelId: 'level-3', deliberationId: 'delib-A', decisionId: 'decision-A', creditsAcquired: 60 }],
+  })
   renderPDFMock.mockResolvedValue(Buffer.from('pdf'))
   dbMock.officialDocument.create.mockResolvedValue({ id: 'doc-A' })
 })
@@ -108,6 +132,45 @@ describe('POST /api/documents/generate', () => {
     expect(dbMock.administrativeRegistration.findFirst).toHaveBeenCalledWith(expect.objectContaining({
       where: { studentId, tenantId, academicYearId: 'year-A', status: 'INSCRIT' },
     }))
+    expect(dbMock.officialDocument.create).not.toHaveBeenCalled()
+  })
+
+  it('requires validation before issuing an attestation of level or a diploma', async () => {
+    for (const type of ['ATTESTATION_NIVEAU', 'DIPLOME']) {
+      const response = await POST(request({ type, tenantId, studentId, sign: false }))
+      expect(response.status).toBe(409)
+    }
+    expect(dbMock.officialDocument.create).not.toHaveBeenCalled()
+  })
+
+  it('issues a level certificate from the historical registration and validated jury award', async () => {
+    dbMock.administrativeRegistration.findMany.mockResolvedValue([{ programId: 'program-A', levelId: 'level-3' }])
+    dbMock.program.findFirst.mockResolvedValue({ id: 'program-A', name: 'Génie informatique' })
+    dbMock.level.findFirst.mockResolvedValue({ id: 'level-3', name: 'Licence 3' })
+    const response = await POST(request({ type: 'ATTESTATION_NIVEAU', tenantId, studentId, academicYearId: 'year-A', sign: true }))
+    expect(response.status).toBe(200)
+    expect(eligibilityMock.level).toHaveBeenCalledWith({ tenantId, studentId, academicYearId: 'year-A', programId: 'program-A', levelId: 'level-3' })
+    const saved = dbMock.officialDocument.create.mock.calls[0][0].data
+    expect(saved.validatedBy).toBe('admin-A')
+    expect(JSON.parse(saved.content)).toMatchObject({ deliberationId: 'delib-A', levelId: 'level-3' })
+  })
+
+  it('issues a diploma only from the verified multi-level award', async () => {
+    const response = await POST(request({ type: 'DIPLOME', tenantId, studentId, academicYearId: 'year-A', sign: true, data: { title: 'Faux diplôme' } }))
+    expect(response.status).toBe(200)
+    expect(eligibilityMock.diploma).toHaveBeenCalledWith({ tenantId, studentId, academicYearId: 'year-A' })
+    const saved = dbMock.officialDocument.create.mock.calls[0][0].data
+    const snapshot = JSON.parse(saved.content)
+    expect(saved.validatedBy).toBe('admin-A')
+    expect(snapshot.diploma.title).toBe('Licence')
+    expect(snapshot.awards[0].decisionId).toBe('decision-A')
+  })
+
+  it('returns a conflict and stores nothing when a prior level is in debt', async () => {
+    eligibilityMock.diploma.mockRejectedValue(new AwardEligibilityError('Un niveau antérieur reste en dette'))
+    const response = await POST(request({ type: 'DIPLOME', tenantId, studentId, academicYearId: 'year-A', sign: true }))
+    expect(response.status).toBe(409)
+    expect((await response.json()).error).toContain('dette')
     expect(dbMock.officialDocument.create).not.toHaveBeenCalled()
   })
 

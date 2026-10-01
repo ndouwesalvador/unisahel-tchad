@@ -36,6 +36,8 @@ export interface TenantInfo {
   shortName?: string
   address?: string
   city?: string
+  country?: string
+  ministry?: string
   phone?: string
   email?: string
   website?: string

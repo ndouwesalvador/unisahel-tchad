@@ -5,6 +5,7 @@ import { renderPDF } from '@/lib/pdf/templates'
 import { db } from '@/lib/db'
 import type { SessionUser } from '@/lib/auth/helpers'
 import { isStudentSelfRole, resolveOwnStudentId } from '@/lib/auth/student-scope'
+import { AwardEligibilityError, getValidatedDiplomaAward, getValidatedLevelAward } from '@/lib/documents/eligibility'
 
 const SIGNING_ROLES = new Set(['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'RECTORAT', 'SCOLARITE', 'JURY'])
 const GENERATING_ROLES = new Set([...SIGNING_ROLES, 'ETUDIANT', 'ETUDIANT_SANTE'])
@@ -46,14 +47,17 @@ export async function POST(request: NextRequest) {
     if (sign && !SIGNING_ROLES.has(sessionUser.role)) {
       return NextResponse.json({ error: 'Signature non autorisée pour ce rôle' }, { status: 403 })
     }
-    if (['RELEVE_NOTES', 'ATTESTATION_INSCRIPTION', 'CERTIFICAT_SCOLARITE', 'DIPLOME'].includes(type) && !studentId) {
+    if (['RELEVE_NOTES', 'ATTESTATION_INSCRIPTION', 'CERTIFICAT_SCOLARITE', 'ATTESTATION_NIVEAU', 'DIPLOME'].includes(type) && !studentId) {
       return NextResponse.json({ error: 'Étudiant requis' }, { status: 400 })
+    }
+    if (['ATTESTATION_NIVEAU', 'DIPLOME'].includes(type) && !sign) {
+      return NextResponse.json({ error: 'Ce document exige une validation par un responsable habilité' }, { status: 409 })
     }
 
     // Fetch real tenant data
     const tenantDb = await db.tenant.findUnique({
       where: { id: tenantId },
-      select: { id: true, name: true, shortName: true, address: true, city: true, phone: true, email: true, logo: true, rectorName: true, rectorTitle: true, motto: true },
+      select: { id: true, name: true, shortName: true, address: true, city: true, country: true, ministry: true, phone: true, email: true, logo: true, rectorName: true, rectorTitle: true, motto: true },
     })
 
     if (!tenantDb) {
@@ -65,6 +69,8 @@ export async function POST(request: NextRequest) {
       shortName: tenantDb.shortName || '',
       address: tenantDb.address || '',
       city: tenantDb.city || '',
+      country: tenantDb.country || '',
+      ministry: tenantDb.ministry || '',
       phone: tenantDb.phone || '',
       email: tenantDb.email || '',
       logo: tenantDb.logo || '',
@@ -239,8 +245,68 @@ export async function POST(request: NextRequest) {
         break
       }
 
+      case 'ATTESTATION_NIVEAU': {
+        const { AttestationNiveauPDF } = await import('@/lib/pdf/templates')
+        if (!acYearId || !studentId || !student) {
+          return NextResponse.json({ error: 'Étudiant et année académique requis' }, { status: 409 })
+        }
+        const registrations = await db.administrativeRegistration.findMany({
+          where: { tenantId, studentId, academicYearId: acYearId, status: 'INSCRIT' },
+          select: { programId: true, levelId: true }, take: 2,
+        })
+        if (registrations.length !== 1) {
+          return NextResponse.json({ error: 'Inscription au niveau introuvable ou ambiguë pour cette année' }, { status: 409 })
+        }
+        const registration = registrations[0]
+        const [program, level] = await Promise.all([
+          db.program.findFirst({ where: { id: registration.programId, tenantId }, select: { id: true, name: true } }),
+          db.level.findFirst({ where: { id: registration.levelId, programId: registration.programId, program: { tenantId } }, select: { id: true, name: true } }),
+        ])
+        if (!program || !level) {
+          return NextResponse.json({ error: 'Programme ou niveau de cette inscription introuvable' }, { status: 409 })
+        }
+        const validatedAward = await getValidatedLevelAward({
+          tenantId, studentId, academicYearId: acYearId, programId: program.id, levelId: level.id,
+        })
+        const award = {
+          credits: validatedAward.creditsAcquired, level: level.name, program: program.name,
+          juryDate: validatedAward.juryDate.toISOString(),
+        }
+        DocumentComponent = React.createElement(AttestationNiveauPDF, {
+          tenant, student: { ...student, program: program.name, level: level.name },
+          academicYear: requestedYear?.name || '', award, docNumber, verificationCode, qrCodeDataUrl,
+        })
+        documentData = {
+          award, programId: program.id, levelId: level.id,
+          deliberationId: validatedAward.deliberationId, decisionId: validatedAward.decisionId,
+        }
+        break
+      }
+
       case 'DIPLOME': {
-        return NextResponse.json({ error: 'La génération du diplôme exige une décision de diplomation vérifiée et n’est pas encore disponible' }, { status: 501 })
+        const { DiplomePDF } = await import('@/lib/pdf/templates')
+        if (!acYearId || !studentId || !student) {
+          return NextResponse.json({ error: 'Étudiant et année de diplomation requis' }, { status: 409 })
+        }
+        const diplomaAward = await getValidatedDiplomaAward({ tenantId, studentId, academicYearId: acYearId })
+        const diploma = {
+          title: diplomaAward.program.diplomaType,
+          program: diplomaAward.program.name,
+          date: diplomaAward.finalDecision.juryDate.toISOString(),
+          credits: diplomaAward.creditsRequired,
+        }
+        DocumentComponent = React.createElement(DiplomePDF, {
+          tenant, student: { ...student, program: diplomaAward.program.name, level: diplomaAward.finalLevel.name },
+          diploma, docNumber, verificationCode, qrCodeDataUrl, isSigned: true,
+        })
+        documentData = {
+          diploma, programId: diplomaAward.program.id, levelId: diplomaAward.finalLevel.id,
+          awards: diplomaAward.awards.map((award) => ({
+            academicYearId: award.academicYearId, levelId: award.levelId, deliberationId: award.deliberationId,
+            decisionId: award.decisionId, creditsAcquired: award.creditsAcquired,
+          })),
+        }
+        break
       }
 
       case 'PV_DELIBERATION': {
@@ -405,6 +471,9 @@ export async function POST(request: NextRequest) {
       },
     })
   } catch (error) {
+    if (error instanceof AwardEligibilityError) {
+      return NextResponse.json({ error: error.message }, { status: 409 })
+    }
     // eslint-disable-next-line no-console
     console.error('Document generation error:', error)
     return NextResponse.json(
