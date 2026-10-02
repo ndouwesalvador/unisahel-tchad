@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -54,6 +54,7 @@ import {
   Trash2,
 } from 'lucide-react'
 import { useStructure } from '@/lib/api-hooks'
+import { useAppStore } from '@/lib/store'
 
 // ─── Faculty Data ────────────────────────────────────────────────────────────
 
@@ -155,6 +156,35 @@ interface StructureResponse {
     courseElements: number
     students?: number
   }
+}
+
+interface DuplicateLevelAudit {
+  id: string
+  name: string
+  code: string | null
+  semesters: string[]
+  teachingUnits: number
+  courseElements: number
+  credits: number
+  references: Record<string, number>
+}
+
+interface DuplicateAuditGroup {
+  programId: string
+  programName: string
+  levels: DuplicateLevelAudit[]
+}
+
+const AUDIT_REFERENCE_LABELS: Record<string, string> = {
+  students: 'étudiants',
+  administrativeRegistrations: 'inscriptions administratives',
+  admissions: 'admissions',
+  campaigns: 'campagnes',
+  deliberations: 'délibérations',
+  feeStructures: 'tarifs',
+  timetableSlots: 'créneaux',
+  pedagogicalRegistrations: 'inscriptions pédagogiques',
+  grades: 'notes',
 }
 
 // ─── Mapping: API shape → Local UI shape ───────────────────────────────────
@@ -752,6 +782,16 @@ function AddEntityDialog({
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 export function StructurePage() {
+  const canAudit = useAppStore((state) => ['SUPER_ADMIN', 'ADMIN_INSTITUTION'].includes(state.user?.role ?? ''))
+  const { data: duplicateAudit, isError: duplicateAuditError } = useQuery<{ data: DuplicateAuditGroup[] }>({
+    queryKey: ['structure-duplicate-audit'],
+    enabled: canAudit,
+    queryFn: async () => {
+      const response = await fetch('/api/structure/audit')
+      if (!response.ok) throw new Error('Audit de structure indisponible')
+      return response.json()
+    },
+  })
   const { data: structureQuery, isLoading } = useStructure() as {
     data: StructureResponse | undefined
     isLoading: boolean
@@ -997,6 +1037,42 @@ export function StructurePage() {
           />
         </div>
       </motion.div>
+
+      {canAudit && duplicateAuditError && (
+        <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-900">
+          Impossible de vérifier les doublons de structure pour le moment.
+        </p>
+      )}
+      {canAudit && Boolean(duplicateAudit?.data.length) && (
+        <Card className="border-amber-300 bg-amber-50">
+          <CardHeader>
+            <CardTitle className="text-base text-amber-950">Niveaux potentiellement en doublon</CardTitle>
+            <p className="text-sm text-amber-900">Ces niveaux appartiennent au même programme et portent le même nom après normalisation. Aucune fusion automatique n’est effectuée : vérifiez les parcours, inscriptions et maquettes avant de choisir celui à conserver.</p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {duplicateAudit?.data.map((group) => (
+              <div key={group.programId} className="rounded-lg border border-amber-200 bg-white p-4">
+                <p className="mb-3 font-semibold text-slate-950">{group.programName}</p>
+                <div className="grid gap-3 lg:grid-cols-2">
+                  {group.levels.map((level) => {
+                    const academicLinks = Object.entries(level.references)
+                      .filter(([, count]) => count > 0)
+                      .map(([key, count]) => `${count} ${AUDIT_REFERENCE_LABELS[key] ?? key}`)
+                    return (
+                      <div key={level.id} className="rounded-md border border-slate-200 p-3 text-sm text-slate-800">
+                        <p className="font-semibold text-slate-950">{level.name} {level.code ? `· ${level.code}` : ''}</p>
+                        <p>Semestres : {level.semesters.join(', ') || 'aucun'}</p>
+                        <p>{level.teachingUnits} UE · {level.courseElements} matière(s) · {level.credits} crédits configurés</p>
+                        <p>Rattachements : {academicLinks.join(' · ') || 'aucun repéré'}</p>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Stats */}
       <motion.div

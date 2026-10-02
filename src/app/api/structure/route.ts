@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
 import { getTeacherScope } from '@/lib/auth/teacher-scope'
+import { findStructureConflict } from '@/lib/structure-duplicates'
 import {
   createFacultySchema,
   createDepartmentSchema,
@@ -377,6 +378,13 @@ async function createLevelHandler(user: SessionUser, tenantId: string, request: 
     if (!program) {
       return NextResponse.json({ error: 'Program not found in this tenant' }, { status: 404 })
     }
+    const siblingLevels = await db.level.findMany({
+      where: { programId: data.programId, isActive: true },
+      select: { id: true, name: true, code: true },
+    })
+    if (findStructureConflict(siblingLevels, data)) {
+      return NextResponse.json({ error: 'Un niveau portant ce nom ou ce code existe déjà dans ce programme.' }, { status: 409 })
+    }
 
     const level = await db.level.create({
       data: {
@@ -408,6 +416,13 @@ async function createSemesterHandler(user: SessionUser, tenantId: string, reques
     const level = await db.level.findFirst({ where: { id: data.levelId, program: { tenantId } } })
     if (!level) {
       return NextResponse.json({ error: 'Level not found in this tenant' }, { status: 404 })
+    }
+    const siblingSemesters = await db.semester.findMany({
+      where: { levelId: data.levelId },
+      select: { id: true, name: true, code: true },
+    })
+    if (findStructureConflict(siblingSemesters, data)) {
+      return NextResponse.json({ error: 'Un semestre portant ce nom ou ce code existe déjà dans ce niveau.' }, { status: 409 })
     }
 
     // startDate/endDate are accepted by the schema but the Semester model has
@@ -609,6 +624,25 @@ async function updateEntityHandler(user: SessionUser, tenantId: string, request:
     }
     if (!(await ownsEntity(type, id, tenantId))) {
       return NextResponse.json({ error: 'Entity not found in this tenant' }, { status: 404 })
+    }
+
+    if ((type === 'level' || type === 'semester') && (body.name !== undefined || body.code !== undefined)) {
+      if ((body.name !== undefined && (typeof body.name !== 'string' || !body.name.trim())) ||
+          (body.code !== undefined && typeof body.code !== 'string')) {
+        return NextResponse.json({ error: 'Nom ou code invalide' }, { status: 400 })
+      }
+      const parent = type === 'level'
+        ? await db.level.findUnique({ where: { id }, select: { programId: true, name: true, code: true } })
+        : await db.semester.findUnique({ where: { id }, select: { levelId: true, name: true, code: true } })
+      if (!parent) return NextResponse.json({ error: 'Élément introuvable' }, { status: 404 })
+      const siblings = type === 'level'
+        ? await db.level.findMany({ where: { programId: 'programId' in parent ? parent.programId : '', isActive: true }, select: { id: true, name: true, code: true } })
+        : await db.semester.findMany({ where: { levelId: 'levelId' in parent ? parent.levelId : '' }, select: { id: true, name: true, code: true } })
+      const conflict = findStructureConflict(siblings, {
+        name: body.name ?? parent.name,
+        code: body.code ?? parent.code,
+      }, id)
+      if (conflict) return NextResponse.json({ error: 'Un élément portant ce nom ou ce code existe déjà au même niveau.' }, { status: 409 })
     }
 
     // Optional teacher references must belong to the tenant.
