@@ -144,6 +144,16 @@ async function handler(user: SessionUser, tenantId: string, _request: NextReques
         .filter((row) => row.currentProgramId)
         .map((row) => [row.currentProgramId as string, row._count._all])
     )
+    const teacherCounts = teacherScope ? [] : await db.teacher.groupBy({
+      by: ['departmentId'],
+      where: { tenantId, isActive: true, departmentId: { not: null } },
+      _count: { _all: true },
+    })
+    const teacherCountByDepartment = new Map(
+      teacherCounts
+        .filter((row) => row.departmentId)
+        .map((row) => [row.departmentId as string, row._count._all]),
+    )
 
     const facultiesWithCounts = scopedFaculties.map((faculty) => {
       const departments = faculty.departments.map((department) => {
@@ -155,12 +165,14 @@ async function handler(user: SessionUser, tenantId: string, _request: NextReques
           ...department,
           programs,
           studentCount: programs.reduce((sum, program) => sum + program.studentCount, 0),
+          teacherCount: teacherCountByDepartment.get(department.id) ?? 0,
         }
       })
       return {
         ...faculty,
         departments,
         studentCount: departments.reduce((sum, department) => sum + department.studentCount, 0),
+        teacherCount: departments.reduce((sum, department) => sum + department.teacherCount, 0),
       }
     })
 

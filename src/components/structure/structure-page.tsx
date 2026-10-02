@@ -127,6 +127,7 @@ interface ApiDepartment {
   id: string
   name: string
   studentCount?: number
+  teacherCount?: number
   programs: ApiProgram[]
 }
 
@@ -136,6 +137,7 @@ export interface ApiFaculty {
   deanName?: string | null
   deanTitle?: string | null
   studentCount?: number
+  teacherCount?: number
   departments: ApiDepartment[]
 }
 
@@ -234,7 +236,7 @@ function mapDepartment(dept: ApiDepartment, index: number): Department {
       name: program.name,
       levels: program.levels.map(level => level.name),
     })),
-    teachers: collectTeacherIdsFromPrograms(dept.programs).size,
+    teachers: dept.teacherCount ?? collectTeacherIdsFromPrograms(dept.programs).size,
     students: dept.studentCount ?? 0,
   }
 }
@@ -253,7 +255,7 @@ function mapFaculty(faculty: ApiFaculty, index: number): Faculty {
     gradientTo,
     departments: faculty.departments.map((dept, i) => mapDepartment(dept, i)),
     students: faculty.studentCount ?? 0,
-    teachers: collectTeacherIdsFromPrograms(allPrograms).size,
+    teachers: faculty.teacherCount ?? collectTeacherIdsFromPrograms(allPrograms).size,
   }
 }
 
@@ -1057,7 +1059,7 @@ export function StructurePage() {
                   {group.levels.map((level) => {
                     const academicLinks = Object.entries(level.references)
                       .filter(([, count]) => count > 0)
-                      .map(([key, count]) => `${count} ${AUDIT_REFERENCE_LABELS[key] ?? key}`)
+                      .map(([key, count]) => `${count} ${key === 'students' && count === 1 ? 'étudiant' : AUDIT_REFERENCE_LABELS[key] ?? key}`)
                     return (
                       <div key={level.id} className="rounded-md border border-slate-200 p-3 text-sm text-slate-800">
                         <p className="font-semibold text-slate-950">{level.name} {level.code ? `· ${level.code}` : ''}</p>
