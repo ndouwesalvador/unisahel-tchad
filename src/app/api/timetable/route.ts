@@ -4,6 +4,8 @@ import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
 import { getTeacherScope } from '@/lib/auth/teacher-scope'
 import { getOrganizationScope } from '@/lib/auth/organization-scope'
+import { isStudentSelfRole, resolveOwnStudentId } from '@/lib/auth/student-scope'
+import { latestPublishedVersions, parsePublishedSlots } from '@/lib/timetable-publication'
 
 const VALID_TYPES = ['CM', 'TD', 'TP', 'EXAM']
 
@@ -44,6 +46,51 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
     const academicYearId = searchParams.get('academicYearId') || undefined
     if (academicYearId && !await db.academicYear.findFirst({ where: { id: academicYearId, tenantId }, select: { id: true } })) {
       return NextResponse.json({ error: 'Année académique introuvable' }, { status: 404 })
+    }
+    const canReadDraft = ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE', 'FACULTE', 'DEPARTEMENT'].includes(user.role)
+    if (!canReadDraft) {
+      if (!['ENSEIGNANT', 'RECTORAT'].includes(user.role) && !isStudentSelfRole(user.role)) {
+        return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
+      }
+      if (!academicYearId) return NextResponse.json({ error: 'Année académique requise' }, { status: 400 })
+      let teacherId: string | null = null
+      let studentProgramId: string | null = null
+      let studentLevelId: string | null = null
+      if (user.role === 'ENSEIGNANT') {
+        const scope = await getTeacherScope(user, tenantId)
+        if (!scope.linked) return NextResponse.json({ slots: [], source: 'published' })
+        teacherId = scope.teacherId
+      }
+      if (isStudentSelfRole(user.role)) {
+        const studentId = await resolveOwnStudentId(user)
+        if (!studentId) return NextResponse.json({ slots: [], source: 'published' })
+        const registration = await db.administrativeRegistration.findFirst({
+          where: { tenantId, studentId, academicYearId, status: 'INSCRIT' },
+          select: { programId: true, levelId: true }, orderBy: { registrationDate: 'desc' },
+        })
+        if (!registration) return NextResponse.json({ slots: [], source: 'published' })
+        studentProgramId = registration.programId
+        studentLevelId = registration.levelId
+        if ((programId && programId !== studentProgramId) || (levelId && levelId !== studentLevelId)) {
+          return NextResponse.json({ error: 'Programme ou niveau hors de votre inscription.' }, { status: 403 })
+        }
+      }
+      const publications = await db.timetablePublication.findMany({ where: {
+        tenantId, academicYearId, status: { in: ['PUBLISHED', 'LEGACY_BASELINE'] },
+      }, select: { departmentId: true, version: true, snapshot: true } })
+      const slots = [] as NonNullable<ReturnType<typeof parsePublishedSlots>>
+      for (const publication of latestPublishedVersions(publications)) {
+        const snapshot = parsePublishedSlots(publication.snapshot)
+        if (!snapshot) return NextResponse.json({ error: 'Version publiée invalide.' }, { status: 500 })
+        slots.push(...snapshot.filter(slot =>
+          (!teacherId || slot.teacherId === teacherId)
+          && (!studentProgramId || slot.programId === studentProgramId && slot.levelId === studentLevelId)
+          && (!programId || slot.programId === programId)
+          && (!levelId || slot.levelId === levelId)
+        ))
+      }
+      slots.sort((a, b) => a.dayOfWeek - b.dayOfWeek || a.startTime.localeCompare(b.startTime))
+      return NextResponse.json({ slots, source: 'published' })
     }
     const teacherScope = user.role === 'ENSEIGNANT' ? await getTeacherScope(user, tenantId) : null
     if (teacherScope && !teacherScope.linked) return NextResponse.json({ slots: [] })
@@ -146,6 +193,7 @@ async function saveSlot(user: SessionUser, tenantId: string, request: NextReques
     const program = await db.program.findFirst({ where: { id: programId, tenantId, isActive: true }, select: { id: true, departmentId: true } })
     if (!program) return NextResponse.json({ error: 'Programme introuvable' }, { status: 404 })
     if (!program.departmentId) return NextResponse.json({ error: 'Rattachez le programme à un département avant de le planifier.' }, { status: 400 })
+    const targetDepartmentId = program.departmentId
     if (organizationScope && !organizationScope.departmentIds.includes(program.departmentId)) {
       return NextResponse.json({ error: 'Ce programme appartient à un autre département.' }, { status: 403 })
     }
@@ -204,6 +252,12 @@ async function saveSlot(user: SessionUser, tenantId: string, request: NextReques
             }, take: 1,
           })
           if (conflicts.length > 0) throw new Error('SLOT_CONFLICT')
+          const originalDepartment = existing?.programId ? await tx.program.findFirst({ where: { id: existing.programId, tenantId }, select: { departmentId: true } }) : null
+          const pending = await tx.timetablePublication.findFirst({ where: { tenantId, status: 'PENDING_REVIEW', OR: [
+            { academicYearId, departmentId: targetDepartmentId },
+            ...(existing && originalDepartment?.departmentId ? [{ academicYearId: existing.academicYearId, departmentId: originalDepartment.departmentId }] : []),
+          ] }, select: { id: true } })
+          if (pending) throw new Error('PUBLICATION_PENDING')
           const saved = existingId
             ? await tx.timetableSlot.update({ where: { id: existingId }, data: slotData })
             : await tx.timetableSlot.create({ data: slotData })
@@ -217,6 +271,9 @@ async function saveSlot(user: SessionUser, tenantId: string, request: NextReques
       } catch (error) {
         if (error instanceof Error && error.message === 'SLOT_CONFLICT') {
           return NextResponse.json({ error: 'Conflit détecté : salle, enseignant ou niveau déjà occupé sur ce créneau.' }, { status: 409 })
+        }
+        if (error instanceof Error && error.message === 'PUBLICATION_PENDING') {
+          return NextResponse.json({ error: 'Une version est en cours de validation. Attendez la décision avant de modifier le brouillon.' }, { status: 409 })
         }
         if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2034' && attempt < 2) continue
         throw error
@@ -255,14 +312,22 @@ async function handleDelete(user: SessionUser, tenantId: string, request: NextRe
       if (!program) return NextResponse.json({ error: 'Créneau hors de votre périmètre' }, { status: 403 })
     }
     await db.$transaction(async (tx) => {
+      const program = slot.programId ? await tx.program.findFirst({ where: { id: slot.programId, tenantId }, select: { departmentId: true } }) : null
+      if (program?.departmentId) {
+        const pending = await tx.timetablePublication.findFirst({ where: { tenantId, academicYearId: slot.academicYearId,
+          departmentId: program.departmentId, status: 'PENDING_REVIEW' }, select: { id: true } })
+        if (pending) throw new Error('PUBLICATION_PENDING')
+      }
       await tx.timetableSlot.delete({ where: { id } })
       await tx.auditLog.create({ data: {
         tenantId, userId: user.id, action: 'DELETE', entity: 'TimetableSlot', entityId: id,
         details: JSON.stringify({ programId: slot.programId, levelId: slot.levelId, courseElementId: slot.courseElementId, teacherId: slot.teacherId, roomId: slot.roomId, dayOfWeek: slot.dayOfWeek, startTime: slot.startTime, endTime: slot.endTime }),
       } })
-    })
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable })
     return NextResponse.json({ deleted: true })
   } catch (error) {
+    if (error instanceof Error && error.message === 'PUBLICATION_PENDING') return NextResponse.json({ error: 'Version en cours de validation : suppression suspendue.' }, { status: 409 })
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2034') return NextResponse.json({ error: 'Modification concurrente, réessayez.' }, { status: 409 })
     console.error('Delete timetable slot error:', error)
     return NextResponse.json({ error: 'Suppression du créneau impossible' }, { status: 500 })
   }

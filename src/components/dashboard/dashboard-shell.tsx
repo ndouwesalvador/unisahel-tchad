@@ -114,6 +114,7 @@ const TeacherMessagesPage = lazyView(() => import('@/components/teacher/teacher-
 const AnnouncementsPage = lazyView(() => import('@/components/announcements/announcements-page').then(m => m.AnnouncementsPage))
 const ImportExportPage = lazyView(() => import('@/components/import-export/import-export-page').then(m => m.ImportExportPage))
 const TimetablePage = lazyView(() => import('@/components/timetable/timetable-page').then(m => m.TimetablePage))
+const StudentTimetablePage = lazyView(() => import('@/components/timetable/student-timetable-page').then(m => m.StudentTimetablePage))
 const TeachingServicesPage = lazyView(() => import('@/components/teaching-services/teaching-services-page').then(m => m.TeachingServicesPage))
 const OrganizationDashboard = lazyView(() => import('@/components/dashboard/organization-dashboard').then(m => m.OrganizationDashboard))
 const CandidaturePage = lazyView(() => import('@/components/candidature/candidature-page').then(m => m.CandidaturePage))
@@ -529,6 +530,7 @@ function MainContent({ view }: { view: AppView }) {
     if (view === 'communication') return <TeacherMessagesPage />
     if (!['dashboard', 'grades', 'profile'].includes(view)) return <DashboardHome />
   }
+  if ((user?.role === 'ETUDIANT' || user?.role === 'ETUDIANT_SANTE') && view === 'timetable') return <StudentTimetablePage />
   if (view === 'health' && !isHealthAcademicSystem(user?.tenantAcademicSystem)) {
     return <DashboardHome />
   }

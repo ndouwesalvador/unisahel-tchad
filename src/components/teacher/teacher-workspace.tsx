@@ -129,7 +129,6 @@ type Slot = { id: string; dayOfWeek: number; startTime: string; endTime: string;
 const DAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
 
 export function TeacherTimetablePage() {
-  const { data: courses = [], isLoading: coursesLoading } = useTeacherCourses()
   const { academicYear, isLoading: yearLoading } = useTeacherYear()
   const slotsQuery = useQuery({
     queryKey: ['teacher-timetable', academicYear?.id], enabled: Boolean(academicYear?.id),
@@ -140,18 +139,14 @@ export function TeacherTimetablePage() {
   const slots = [...(slotsQuery.data?.slots ?? [])].sort((a, b) => a.dayOfWeek - b.dayOfWeek || a.startTime.localeCompare(b.startTime))
 
   return <div className="space-y-6 text-slate-900">
-    <PageHeading icon={CalendarDays} title="Mon emploi du temps" description="Vos créneaux planifiés pour l’année académique sélectionnée. La planification reste gérée par l’administration." />
+    <PageHeading icon={CalendarDays} title="Mon emploi du temps" description="Vos créneaux publiés pour l’année académique sélectionnée. Le brouillon du département reste interne." />
     {academicYear && <p className="text-sm font-semibold text-slate-700">Année académique : {academicYear.name}</p>}
-    {coursesLoading || yearLoading || slotsQuery.isLoading ? <Empty>Chargement de votre emploi du temps…</Empty> : !academicYear ? <Empty>Aucune année académique active n’est disponible.</Empty> : slotsQuery.isError ? <Empty>Impossible de charger votre emploi du temps.</Empty> : slots.length === 0 ? <Empty>Aucun créneau n’est planifié pour vos matières affectées.</Empty> :
-      <div className="grid gap-3 md:grid-cols-2">{slots.map((slot) => {
-        const course = courseById(courses, slot.courseElementId)
-        return <article key={slot.id} className="rounded-xl border border-slate-200 bg-white p-5">
+    {yearLoading || slotsQuery.isLoading ? <Empty>Chargement de votre emploi du temps…</Empty> : !academicYear ? <Empty>Aucune année académique active n’est disponible.</Empty> : slotsQuery.isError ? <Empty>Impossible de charger votre emploi du temps.</Empty> : slots.length === 0 ? <Empty>Aucun créneau publié pour cette année.</Empty> :
+      <div className="grid gap-3 md:grid-cols-2">{slots.map((slot) => <article key={slot.id} className="rounded-xl border border-slate-200 bg-white p-5">
           <p className="text-sm font-bold text-emerald-800">{DAYS[slot.dayOfWeek] ?? `Jour ${slot.dayOfWeek}`} · {slot.startTime}–{slot.endTime}</p>
-          <h2 className="mt-2 text-lg font-bold text-slate-950">{course?.name ?? slot.course}</h2>
-          <p className="mt-1 text-sm text-slate-700">{course ? `${course.program} · ${course.level} · ${course.teachingUnit}` : 'Matière planifiée'}</p>
+          <h2 className="mt-2 text-lg font-bold text-slate-950">{slot.course || 'Matière non indiquée'}</h2>
           <p className="mt-3 text-xs font-semibold text-slate-600">{slot.type}{slot.room ? ` · Salle ${slot.room}` : ' · Salle non précisée'}</p>
-        </article>
-      })}</div>}
+        </article>)}</div>}
   </div>
 }
 

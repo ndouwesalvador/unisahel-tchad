@@ -6,6 +6,7 @@ const teacherMethods: Record<string, readonly string[]> = {
   '/api/structure': ['GET'],
   '/api/grades': ['GET', 'POST', 'PUT'],
   '/api/timetable': ['GET'],
+  '/api/notifications': ['GET', 'PUT'],
   '/api/attendance': ['GET', 'POST', 'PUT'],
   '/api/online-exams': ['GET', 'POST'],
   '/api/communications': ['GET', 'POST'],

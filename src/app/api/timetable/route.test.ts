@@ -3,16 +3,20 @@ import { NextRequest } from 'next/server'
 
 const mocks = vi.hoisted(() => ({
   scope: vi.fn(), year: vi.fn(), program: vi.fn(), programs: vi.fn(), teacher: vi.fn(), room: vi.fn(), element: vi.fn(),
-  slots: vi.fn(), findSlot: vi.fn(), create: vi.fn(), update: vi.fn(), deleteSlot: vi.fn(), audit: vi.fn(), transaction: vi.fn(), service: vi.fn(),
+  slots: vi.fn(), findSlot: vi.fn(), create: vi.fn(), update: vi.fn(), deleteSlot: vi.fn(), audit: vi.fn(), transaction: vi.fn(), service: vi.fn(), publication: vi.fn(), registration: vi.fn(), publications: vi.fn(), ownStudent: vi.fn(), teacherScope: vi.fn(),
 }))
 
 vi.mock('@/lib/auth/helpers', () => ({ withTenantAuth: (handler: unknown) => handler }))
 vi.mock('@/lib/auth/organization-scope', () => ({ getOrganizationScope: mocks.scope }))
+vi.mock('@/lib/auth/teacher-scope', () => ({ getTeacherScope: mocks.teacherScope }))
+vi.mock('@/lib/auth/student-scope', () => ({ isStudentSelfRole: (role: string) => role === 'ETUDIANT' || role === 'ETUDIANT_SANTE', resolveOwnStudentId: mocks.ownStudent }))
 vi.mock('@/lib/db', () => ({ db: {
   academicYear: { findFirst: mocks.year }, program: { findFirst: mocks.program, findMany: mocks.programs },
   teacher: { findFirst: mocks.teacher }, room: { findFirst: mocks.room },
   courseElement: { findFirst: mocks.element },
   teachingService: { findFirst: mocks.service },
+  timetablePublication: { findFirst: mocks.publication, findMany: mocks.publications },
+  administrativeRegistration: { findFirst: mocks.registration },
   timetableSlot: { findMany: mocks.slots, findFirst: mocks.findSlot },
   $transaction: mocks.transaction,
 } }))
@@ -23,11 +27,18 @@ const get = GET as unknown as (user: { id: string; role: string; tenantId: strin
 const put = PUT as unknown as typeof post
 const deleteSlot = DELETE as unknown as typeof post
 const manager = { id: 'head-A', role: 'DEPARTEMENT', tenantId: 'tenant-A' }
+const teacherUser = { id: 'user-teacher', role: 'ENSEIGNANT', tenantId: 'tenant-A' }
+const studentUser = { id: 'user-student', role: 'ETUDIANT', tenantId: 'tenant-A' }
 const body = {
   academicYearId: 'year-A', dayOfWeek: 0, startTime: '08:00', endTime: '10:00',
   programId: 'program-A', levelId: 'level-A', courseElementId: 'element-A', teacherId: 'teacher-B', roomId: 'room-A', type: 'CM',
 }
 const request = (data: unknown) => new NextRequest('http://localhost/api/timetable', { method: 'POST', body: JSON.stringify(data) })
+const publishedSlot = {
+  id: 'slot-published', academicYearId: 'year-A', dayOfWeek: 0, startTime: '08:00', endTime: '10:00', type: 'CM',
+  course: 'Analyse', teacher: 'Enseignant B', room: 'Salle 1', courseElementId: 'element-A', teacherId: 'teacher-B',
+  roomId: 'room-A', programId: 'program-A', levelId: 'level-A',
+}
 
 beforeEach(() => {
   vi.resetAllMocks()
@@ -39,6 +50,10 @@ beforeEach(() => {
   mocks.room.mockResolvedValue({ id: 'room-A' })
   mocks.element.mockResolvedValue({ teacherId: 'teacher-B', teachingUnit: { responsibleId: null, semester: { level: { id: 'level-A', programId: 'program-A' } } } })
   mocks.service.mockResolvedValue({ id: 'service-A' })
+  mocks.publication.mockResolvedValue(null)
+  mocks.publications.mockResolvedValue([])
+  mocks.teacherScope.mockResolvedValue({ linked: true, teacherId: 'teacher-B' })
+  mocks.ownStudent.mockResolvedValue('student-A')
   mocks.slots.mockResolvedValue([])
   mocks.create.mockResolvedValue({ id: 'slot-A' })
   mocks.update.mockResolvedValue({ id: 'slot-A' })
@@ -46,6 +61,7 @@ beforeEach(() => {
   mocks.audit.mockResolvedValue({ id: 'audit-A' })
   mocks.transaction.mockImplementation((callback: (tx: unknown) => Promise<unknown>) => callback({
     timetableSlot: { findMany: mocks.slots, create: mocks.create, update: mocks.update, delete: mocks.deleteSlot },
+    timetablePublication: { findFirst: mocks.publication }, program: { findFirst: mocks.program },
     auditLog: { create: mocks.audit },
   }))
 })
@@ -93,11 +109,35 @@ describe('department timetable', () => {
     const response = await post(manager, 'tenant-A', request(body))
     expect(response.status).toBe(403)
   })
+  it('does not mutate a draft while a version is under review', async () => {
+    mocks.publication.mockResolvedValue({ id: 'pending-A' })
+    const response = await post(manager, 'tenant-A', request(body))
+    expect(response.status).toBe(409)
+    expect(mocks.create).not.toHaveBeenCalled()
+  })
 
   it('reads only its department and preserves a selected program filter', async () => {
     const response = await get(manager, 'tenant-A', new NextRequest('http://localhost/api/timetable?programId=program-A'))
     expect(response.status).toBe(200)
     expect(mocks.slots).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ tenantId: 'tenant-A', programId: { in: ['program-A'] } }) }))
+  })
+  it('gives a teacher only their slots from the latest published snapshot, never draft slots', async () => {
+    mocks.publications.mockResolvedValue([
+      { departmentId: 'department-A', version: 0, snapshot: [{ ...publishedSlot, id: 'old' }] },
+      { departmentId: 'department-A', version: 1, snapshot: [publishedSlot, { ...publishedSlot, id: 'other', teacherId: 'teacher-C' }] },
+    ])
+    const response = await get(teacherUser, 'tenant-A', new NextRequest('http://localhost/api/timetable?academicYearId=year-A'))
+    expect(response.status).toBe(200)
+    expect((await response.json()).slots).toEqual([publishedSlot])
+    expect(mocks.slots).not.toHaveBeenCalled()
+  })
+  it('limits a student to their annual registration even when a foreign program is requested', async () => {
+    mocks.registration.mockResolvedValue({ programId: 'program-A', levelId: 'level-A' })
+    const forbidden = await get(studentUser, 'tenant-A', new NextRequest('http://localhost/api/timetable?academicYearId=year-A&programId=program-B'))
+    expect(forbidden.status).toBe(403)
+    mocks.publications.mockResolvedValue([{ departmentId: 'department-A', version: 1, snapshot: [publishedSlot, { ...publishedSlot, id: 'level-B', levelId: 'level-B' }] }])
+    const allowed = await get(studentUser, 'tenant-A', new NextRequest('http://localhost/api/timetable?academicYearId=year-A'))
+    expect((await allowed.json()).slots).toEqual([publishedSlot])
   })
 
   it('rejects an attempted read of another department program', async () => {

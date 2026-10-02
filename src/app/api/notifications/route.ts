@@ -4,17 +4,20 @@ import { withAuth, type SessionUser } from '@/lib/auth/helpers'
 
 const NOTIFICATIONS_LIMIT = 50
 
+function visibleNotifications(user: SessionUser, tenantId: string) {
+  const central = ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE', 'RECTORAT'].includes(user.role)
+  return { tenantId, ...(central ? { OR: [{ recipientUserId: null }, { recipientUserId: user.id }] } : { recipientUserId: user.id }) }
+}
+
 // GET /api/notifications - list the tenant's most recent notifications + unread count
 async function handleGet(user: SessionUser, _request: NextRequest) {
   try {
-    // Legacy notifications have no recipient identifier and can concern other programmes.
-    if (['ENSEIGNANT', 'FACULTE', 'DEPARTEMENT'].includes(user.role)) return NextResponse.json({ notifications: [], unreadCount: 0 })
     if (!user.tenantId) {
       return NextResponse.json({ notifications: [], unreadCount: 0 })
     }
 
     const tenantId = user.tenantId
-    const where = { tenantId }
+    const where = visibleNotifications(user, tenantId)
 
     const [notifications, unreadCount] = await Promise.all([
       db.notification.findMany({
@@ -42,12 +45,12 @@ const NOTIFICATION_ACTIONS = ['read', 'read-all'] as const
 // PUT /api/notifications - mark every unread notification for the tenant read (action: 'read-all')
 async function handlePut(user: SessionUser, request: NextRequest) {
   try {
-    if (user.role === 'ENSEIGNANT') return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
     if (!user.tenantId) {
       return NextResponse.json({ count: 0 })
     }
 
     const tenantId = user.tenantId
+    const where = visibleNotifications(user, tenantId)
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
 
@@ -63,7 +66,7 @@ async function handlePut(user: SessionUser, request: NextRequest) {
 
     if (action === 'read-all') {
       const result = await db.notification.updateMany({
-        where: { tenantId, isRead: false },
+        where: { ...where, isRead: false },
         data: { isRead: true },
       })
       return NextResponse.json({ count: result.count })
@@ -74,15 +77,13 @@ async function handlePut(user: SessionUser, request: NextRequest) {
       return NextResponse.json({ error: 'id query parameter is required' }, { status: 400 })
     }
 
-    const existing = await db.notification.findFirst({ where: { id, tenantId } })
+    const existing = await db.notification.findFirst({ where: { id, ...where } })
     if (!existing) {
       return NextResponse.json({ error: 'Notification not found' }, { status: 404 })
     }
 
-    const notification = await db.notification.update({
-      where: { id },
-      data: { isRead: true },
-    })
+    await db.notification.updateMany({ where: { id, ...where }, data: { isRead: true } })
+    const notification = await db.notification.findFirst({ where: { id, ...where } })
 
     return NextResponse.json({ notification })
   } catch (error) {

@@ -26,6 +26,7 @@ import {
 } from '@/components/ui/select'
 import { useAcademicYears, useStructure, useTeachers, useTimetable, useRooms } from '@/lib/api-hooks'
 import { useAppStore } from '@/lib/store'
+import { TimetablePublicationPanel } from './timetable-publication-panel'
 import {
   Calendar,
   Plus,
@@ -642,6 +643,7 @@ export function TimetablePage() {
 
   return (
     <div className="space-y-6">
+      {canManageSlots && activeYearId && <TimetablePublicationPanel academicYearId={activeYearId} />}
       <Dialog open={canManageSlots && showCreateSlot} onOpenChange={(open) => { setShowCreateSlot(open); if (!open) setEditingSlotId(null) }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
