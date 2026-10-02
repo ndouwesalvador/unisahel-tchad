@@ -37,6 +37,13 @@ async function handleGet(_user: SessionUser, tenantId: string, _request: NextReq
   try {
     const where = { tenantId }
 
+    // Departmental planners need the shared room inventory, not other
+    // departments' reservation purposes and organizers.
+    if (_user.role === 'FACULTE' || _user.role === 'DEPARTEMENT') {
+      const rooms = await db.room.findMany({ where: { tenantId, isActive: true }, orderBy: { name: 'asc' }, take: 300 })
+      return NextResponse.json({ data: rooms.map((room) => ({ ...room, todaySchedule: [] })), stats: { total: rooms.length, available: rooms.length, occupied: 0, maintenance: 0, todayReservations: 0 }, reservations: [] })
+    }
+
     const [rooms, total, available, occupied, maintenance] = await Promise.all([
       db.room.findMany({
         where,

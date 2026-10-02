@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useAcademicYears, useStructure, useTeachers, useTimetable, useRooms } from '@/lib/api-hooks'
+import { useAppStore } from '@/lib/store'
 import {
   Calendar,
   Plus,
@@ -120,6 +121,7 @@ interface StructureFaculty {
         name: string
         semesters?: {
           teachingUnits?: {
+            responsibleId?: string | null
             courseElements?: {
               id: string
               code?: string | null
@@ -192,6 +194,7 @@ interface CourseElementOption extends AcademicOption {
   programId: string
   levelId: string
   teacherId?: string | null
+  responsibleId?: string | null
 }
 
 interface TimetableForm {
@@ -239,6 +242,7 @@ function flattenStructureOptions(faculties: StructureFaculty[] = []) {
                   programId: program.id,
                   levelId: level.id,
                   teacherId: element.teacher?.id ?? element.teacherId ?? null,
+                  responsibleId: unit.responsibleId ?? null,
                   label: `${element.code ? `${element.code} — ` : ''}${element.name}`,
                 })
               }
@@ -363,6 +367,8 @@ function DaySlotCard({ slot }: { slot: TimeSlot }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function TimetablePage() {
+  const { user } = useAppStore()
+  const canManageSlots = ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE', 'FACULTE', 'DEPARTEMENT'].includes(user?.role ?? '')
   const queryClient = useQueryClient()
   const [filterProgram, setFilterProgram] = useState('all')
   const [filterLevel, setFilterLevel] = useState('all')
@@ -398,6 +404,10 @@ export function TimetablePage() {
     })),
     [teachersData]
   )
+  const selectedElement = courseElements.find((element) => element.id === slotForm.courseElementId)
+  const assignedTeacherOptions = selectedElement
+    ? teacherOptions.filter((teacher) => teacher.id === selectedElement.teacherId || teacher.id === selectedElement.responsibleId)
+    : []
   const filteredLevels = useMemo(
     () => levels.filter((level) => !slotForm.programId || level.programId === slotForm.programId),
     [levels, slotForm.programId]
@@ -465,7 +475,7 @@ export function TimetablePage() {
       courseElementId,
       programId: selected?.programId ?? slotForm.programId,
       levelId: selected?.levelId ?? slotForm.levelId,
-      teacherId: selected?.teacherId || slotForm.teacherId,
+      teacherId: selected?.teacherId || selected?.responsibleId || '',
     })
   }
 
@@ -572,7 +582,7 @@ export function TimetablePage() {
 
   return (
     <div className="space-y-6">
-      <Dialog open={showCreateSlot} onOpenChange={setShowCreateSlot}>
+      <Dialog open={canManageSlots && showCreateSlot} onOpenChange={setShowCreateSlot}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Ajouter un créneau</DialogTitle>
@@ -692,13 +702,13 @@ export function TimetablePage() {
             </div>
             <div className="space-y-2">
               <Label>Enseignant *</Label>
-              <Select value={slotForm.teacherId || 'none'} onValueChange={(value) => updateSlotForm({ teacherId: value === 'none' ? '' : value })} disabled={teacherOptions.length === 0}>
+              <Select value={slotForm.teacherId || 'none'} onValueChange={(value) => updateSlotForm({ teacherId: value === 'none' ? '' : value })} disabled={assignedTeacherOptions.length === 0}>
                 <SelectTrigger>
                   <SelectValue placeholder="Sélectionner" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Sélectionner un enseignant</SelectItem>
-                  {teacherOptions.map((teacher) => (
+                  {assignedTeacherOptions.map((teacher) => (
                     <SelectItem key={teacher.id} value={teacher.id}>{teacher.label}</SelectItem>
                   ))}
                 </SelectContent>
@@ -743,7 +753,7 @@ export function TimetablePage() {
                   <Download className="size-3.5 mr-1.5" />
                   Export PDF
                 </Button>
-                <Button
+                {canManageSlots && <Button
                   size="sm"
                   className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs border border-white/20"
                   onClick={() => {
@@ -758,7 +768,7 @@ export function TimetablePage() {
                 >
                   <Plus className="size-3.5 mr-1.5" />
                   Ajouter creneau
-                </Button>
+                </Button>}
               </div>
             </div>
 

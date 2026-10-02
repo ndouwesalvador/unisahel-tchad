@@ -28,14 +28,33 @@ const createStaffSchema = z.object({
   email: z.string().email(),
   phone: z.string().max(30).optional(),
   role: z.enum(STAFF_ROLES),
+  facultyId: z.string().cuid().optional(),
+  departmentId: z.string().cuid().optional(),
 })
 
 const updateStaffSchema = z.object({
   id: z.string().cuid(),
   isActive: z.boolean().optional(),
   role: z.enum(STAFF_ROLES).optional(),
+  facultyId: z.string().cuid().nullable().optional(),
+  departmentId: z.string().cuid().nullable().optional(),
   resetPassword: z.boolean().optional(),
 })
+
+async function resolveStaffScope(tenantId: string, role: string, facultyId?: string | null, departmentId?: string | null) {
+  if (role === 'FACULTE') {
+    if (!facultyId || departmentId) return { error: 'Choisissez une faculté, sans département.' }
+    const faculty = await db.faculty.findFirst({ where: { id: facultyId, tenantId, isActive: true }, select: { id: true } })
+    return faculty ? { facultyId, departmentId: null } : { error: 'Faculté active introuvable dans cette institution.' }
+  }
+  if (role === 'DEPARTEMENT') {
+    if (!departmentId || facultyId) return { error: 'Choisissez un département, sans faculté.' }
+    const department = await db.department.findFirst({ where: { id: departmentId, tenantId, isActive: true }, select: { id: true, facultyId: true } })
+    return department?.facultyId ? { facultyId: null, departmentId } : { error: 'Département actif sans faculté de rattachement ou introuvable.' }
+  }
+  if (facultyId || departmentId) return { error: 'Ce rôle ne doit pas avoir de périmètre faculté ou département.' }
+  return { facultyId: null, departmentId: null }
+}
 
 // Lists every non-student, non-parent account in the tenant -- includes
 // ENSEIGNANT (managed via /api/teachers) for a unified staff directory, but
@@ -51,6 +70,8 @@ async function getUsersHandler(user: SessionUser, tenantId: string) {
         email: true,
         phone: true,
         role: true,
+        facultyId: true,
+        departmentId: true,
         isActive: true,
         mustChangePassword: true,
         lastLoginAt: true,
@@ -72,7 +93,9 @@ async function createStaffHandler(user: SessionUser, tenantId: string, request: 
     if (!parsed.success) {
       return NextResponse.json({ error: 'Donnees invalides', details: parsed.error.flatten() }, { status: 400 })
     }
-    const { firstName, lastName, email, phone, role } = parsed.data
+    const { firstName, lastName, email, phone, role, facultyId, departmentId } = parsed.data
+    const scope = await resolveStaffScope(tenantId, role, facultyId, departmentId)
+    if ('error' in scope) return NextResponse.json({ error: scope.error }, { status: 400 })
 
     // User.email is unique platform-wide
     const existing = await db.user.findUnique({ where: { email }, select: { id: true } })
@@ -84,8 +107,8 @@ async function createStaffHandler(user: SessionUser, tenantId: string, request: 
     const passwordHash = await bcrypt.hash(tempPassword, 12)
 
     const account = await db.user.create({
-      data: { tenantId, firstName, lastName, email, phone, role, passwordHash, mustChangePassword: true },
-      select: { id: true, firstName: true, lastName: true, email: true, phone: true, role: true, isActive: true },
+      data: { tenantId, firstName, lastName, email, phone, role, facultyId: scope.facultyId, departmentId: scope.departmentId, passwordHash, mustChangePassword: true },
+      select: { id: true, firstName: true, lastName: true, email: true, phone: true, role: true, facultyId: true, departmentId: true, isActive: true },
     })
 
     await db.auditLog.create({
@@ -95,7 +118,7 @@ async function createStaffHandler(user: SessionUser, tenantId: string, request: 
         action: 'CREATE',
         entity: 'User',
         entityId: account.id,
-        details: JSON.stringify({ role, email, firstName, lastName }),
+        details: JSON.stringify({ role, email, firstName, lastName, facultyId: scope.facultyId, departmentId: scope.departmentId }),
       },
     })
 
@@ -113,7 +136,7 @@ async function updateStaffHandler(user: SessionUser, tenantId: string, request: 
     if (!parsed.success) {
       return NextResponse.json({ error: 'Donnees invalides', details: parsed.error.flatten() }, { status: 400 })
     }
-    const { id, isActive, role, resetPassword } = parsed.data
+    const { id, isActive, role, facultyId, departmentId, resetPassword } = parsed.data
 
     const existing = await db.user.findFirst({ where: { id, tenantId } })
     if (!existing) {
@@ -122,11 +145,24 @@ async function updateStaffHandler(user: SessionUser, tenantId: string, request: 
     if (existing.id === user.id) {
       return NextResponse.json({ error: 'Impossible de modifier votre propre compte depuis cette page' }, { status: 400 })
     }
+    if (!STAFF_ROLES.includes(existing.role as (typeof STAFF_ROLES)[number])) {
+      return NextResponse.json({ error: 'Ce profil est géré par son module dédié.' }, { status: 403 })
+    }
+
+    const nextRole = role ?? existing.role
+    const scope = await resolveStaffScope(
+      tenantId, nextRole,
+      facultyId !== undefined ? facultyId : role && role !== existing.role ? null : existing.facultyId,
+      departmentId !== undefined ? departmentId : role && role !== existing.role ? null : existing.departmentId,
+    )
+    if ('error' in scope) return NextResponse.json({ error: scope.error }, { status: 400 })
 
     let tempPassword: string | undefined
-    const data: { isActive?: boolean; role?: (typeof STAFF_ROLES)[number]; passwordHash?: string; mustChangePassword?: boolean } = {}
+    const data: { isActive?: boolean; role?: (typeof STAFF_ROLES)[number]; facultyId?: string | null; departmentId?: string | null; passwordHash?: string; mustChangePassword?: boolean } = {}
     if (isActive !== undefined) data.isActive = isActive
     if (role !== undefined) data.role = role
+    data.facultyId = scope.facultyId
+    data.departmentId = scope.departmentId
     if (resetPassword) {
       tempPassword = generateTempPassword()
       data.passwordHash = await bcrypt.hash(tempPassword, 12)
@@ -136,7 +172,7 @@ async function updateStaffHandler(user: SessionUser, tenantId: string, request: 
     const updated = await db.user.update({
       where: { id },
       data,
-      select: { id: true, firstName: true, lastName: true, email: true, role: true, isActive: true },
+      select: { id: true, firstName: true, lastName: true, email: true, role: true, facultyId: true, departmentId: true, isActive: true },
     })
 
     await db.auditLog.create({
@@ -146,7 +182,7 @@ async function updateStaffHandler(user: SessionUser, tenantId: string, request: 
         action: 'UPDATE',
         entity: 'User',
         entityId: updated.id,
-        details: JSON.stringify({ isActive, role, resetPassword: Boolean(resetPassword) }),
+        details: JSON.stringify({ isActive, role, facultyId: scope.facultyId, departmentId: scope.departmentId, resetPassword: Boolean(resetPassword) }),
       },
     })
 

@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
 import { getTeacherScope } from '@/lib/auth/teacher-scope'
+import { getOrganizationScope } from '@/lib/auth/organization-scope'
 import { findStructureConflict } from '@/lib/structure-duplicates'
 import { getLevelReferences } from '@/lib/structure-level-references'
 import {
@@ -21,6 +22,7 @@ import {
 async function handler(user: SessionUser, tenantId: string, _request: NextRequest) {
   try {
     const teacherScope = user.role === 'ENSEIGNANT' ? await getTeacherScope(user, tenantId) : null
+    const organizationScope = await getOrganizationScope(user, tenantId)
     // Get tenant info
     const tenant = await db.tenant.findUnique({
       where: { id: tenantId },
@@ -51,10 +53,13 @@ async function handler(user: SessionUser, tenantId: string, _request: NextReques
     // faculties, mirroring the isActive filters already applied to the nested
     // departments/programs/levels below.
     const faculties = await db.faculty.findMany({
-      where: { tenantId, isActive: true },
+      where: {
+        tenantId, isActive: true,
+        ...(organizationScope ? { id: organizationScope.facultyId || '__unassigned__' } : {}),
+      },
       include: {
         departments: {
-          where: { isActive: true },
+          where: { isActive: true, ...(organizationScope ? { id: { in: organizationScope.departmentIds } } : {}) },
           include: {
             programs: {
               where: { isActive: true },

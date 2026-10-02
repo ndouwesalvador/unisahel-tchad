@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs'
 import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
 import { isStudentSelfRole } from '@/lib/auth/student-scope'
+import { getOrganizationScope } from '@/lib/auth/organization-scope'
 import { generateTempPassword } from '@/lib/password'
 import { paginationSchema, createTeacherSchema, updateTeacherSchema, validateQuery, validateBody, formatZodError } from '@/lib/validations/api'
 import { Prisma } from '@prisma/client'
@@ -32,6 +33,15 @@ async function getTeachersHandler(user: SessionUser, tenantId: string, request: 
 
     const where: Prisma.TeacherWhereInput = {
       tenantId,
+    }
+    const organizationScope = await getOrganizationScope(user, tenantId)
+    if (organizationScope) {
+      const ids = organizationScope.departmentIds
+      where.AND = [{ OR: [
+        { departmentId: { in: ids } },
+        { assignedElements: { some: { teachingUnit: { semester: { level: { program: { departmentId: { in: ids } } } } } } } },
+        { responsibleUnits: { some: { semester: { level: { program: { departmentId: { in: ids } } } } } } },
+      ] }]
     }
 
     if (search) {
@@ -67,9 +77,11 @@ async function getTeachersHandler(user: SessionUser, tenantId: string, request: 
             select: { id: true, email: true, phone: true, photo: true, firstName: true, lastName: true },
           },
           assignedElements: {
+            ...(organizationScope ? { where: { teachingUnit: { semester: { level: { program: { departmentId: { in: organizationScope.departmentIds } } } } } } } : {}),
             select: { id: true, code: true, name: true, coefficient: true, teachingUnit: { select: { id: true, code: true, name: true } } },
           },
           responsibleUnits: {
+            ...(organizationScope ? { where: { semester: { level: { program: { departmentId: { in: organizationScope.departmentIds } } } } } } : {}),
             select: { id: true, code: true, name: true, credits: true, semester: { select: { id: true, name: true, level: { select: { name: true } } } } },
           },
         },

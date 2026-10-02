@@ -114,6 +114,7 @@ const TeacherMessagesPage = lazyView(() => import('@/components/teacher/teacher-
 const AnnouncementsPage = lazyView(() => import('@/components/announcements/announcements-page').then(m => m.AnnouncementsPage))
 const ImportExportPage = lazyView(() => import('@/components/import-export/import-export-page').then(m => m.ImportExportPage))
 const TimetablePage = lazyView(() => import('@/components/timetable/timetable-page').then(m => m.TimetablePage))
+const OrganizationDashboard = lazyView(() => import('@/components/dashboard/organization-dashboard').then(m => m.OrganizationDashboard))
 const CandidaturePage = lazyView(() => import('@/components/candidature/candidature-page').then(m => m.CandidaturePage))
 const InscriptionPedagogiquePage = lazyView(() => import('@/components/inscription-pedagogique/inscription-pedagogique-page').then(m => m.InscriptionPedagogiquePage))
 const ProfilePage = lazyView(() => import('@/components/profile/profile-page').then(m => m.ProfilePage))
@@ -229,24 +230,11 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
   ],
   FACULTE: [
     { icon: LayoutDashboard, label: 'Tableau de bord', view: 'dashboard' },
-    { icon: Users, label: 'Étudiants', view: 'students' },
-    { icon: UserPlus, label: 'Candidatures', view: 'candidature' },
-    { icon: FileCheck, label: 'Notes', view: 'grades' },
-    { icon: CheckSquare, label: 'Délibérations', view: 'deliberation' },
-    { icon: FileText, label: 'Documents', view: 'documents' },
     { icon: Calendar, label: 'Emploi du temps', view: 'timetable' },
-    { icon: ClipboardCheck, label: 'Examens', view: 'exam-scheduling' },
-    { icon: DoorOpen, label: 'Salles', view: 'room-booking' },
-    { icon: Award, label: 'Resultats', view: 'results' },
-    { icon: BarChart3, label: 'Rapports', view: 'reports' },
   ],
   DEPARTEMENT: [
     { icon: LayoutDashboard, label: 'Tableau de bord', view: 'dashboard' },
-    { icon: Users, label: 'Étudiants', view: 'students' },
-    { icon: FileCheck, label: 'Notes', view: 'grades' },
-    { icon: CheckSquare, label: 'Délibérations', view: 'deliberation' },
-    { icon: FileText, label: 'Documents', view: 'documents' },
-    { icon: BarChart3, label: 'Rapports', view: 'reports' },
+    { icon: Calendar, label: 'Emploi du temps', view: 'timetable' },
   ],
   ENSEIGNANT: [
     { icon: LayoutDashboard, label: 'Tableau de bord', view: 'dashboard' },
@@ -316,8 +304,8 @@ const roleLabels: Record<UserRole, string> = {
   ADMIN_INSTITUTION: 'Admin Institution',
   RECTORAT: 'Rectorat',
   SCOLARITE: 'Scolarité',
-  FACULTE: 'Faculté',
-  DEPARTEMENT: 'Département',
+  FACULTE: 'Doyen / direction de faculté',
+  DEPARTEMENT: 'Chef de département',
   ENSEIGNANT: 'Enseignant',
   RESPONSABLE_FILIERE: 'Resp. Filière',
   JURY: 'Jury',
@@ -497,11 +485,11 @@ function SidebarContent() {
       {/* Bottom actions */}
       <div className="border-t border-white/10 p-3 space-y-1">
         <button
-          onClick={() => setView(user.role === 'ENSEIGNANT' ? 'profile' : 'settings')}
+          onClick={() => setView(['ENSEIGNANT', 'FACULTE', 'DEPARTEMENT'].includes(user.role) ? 'profile' : 'settings')}
           className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors ${sidebarCollapsed ? 'justify-center' : ''}`}
         >
           <Settings className="size-[18px] shrink-0" />
-          {!sidebarCollapsed && <span>{user.role === 'ENSEIGNANT' ? 'Mon profil' : 'Paramètres'}</span>}
+          {!sidebarCollapsed && <span>{['ENSEIGNANT', 'FACULTE', 'DEPARTEMENT'].includes(user.role) ? 'Mon profil' : 'Paramètres'}</span>}
         </button>
         <button
           onClick={handleLogout}
@@ -519,6 +507,11 @@ function SidebarContent() {
 
 function MainContent({ view }: { view: AppView }) {
   const { user } = useAppStore()
+  if (user?.role === 'FACULTE' || user?.role === 'DEPARTEMENT') {
+    if (view === 'timetable') return <TimetablePage />
+    if (view === 'profile') return <ProfilePage />
+    return <OrganizationDashboard />
+  }
   if (user?.role === 'ENSEIGNANT') {
     if (view === 'maquette') return <TeacherUnitsPage />
     if (view === 'timetable') return <TeacherTimetablePage />
@@ -639,6 +632,10 @@ export function DashboardShell() {
   useEffect(() => {
     if (user?.role !== 'ENSEIGNANT') return
     if (!['dashboard', 'maquette', 'grades', 'timetable', 'attendance', 'online-exam', 'communication', 'profile'].includes(currentView)) setView('dashboard')
+  }, [user?.role, currentView, setView])
+  useEffect(() => {
+    if (user?.role !== 'FACULTE' && user?.role !== 'DEPARTEMENT') return
+    if (!['dashboard', 'timetable', 'profile'].includes(currentView)) setView('dashboard')
   }, [user?.role, currentView, setView])
   const searchTerm = searchQuery.trim().toLowerCase()
   const searchResults = searchTerm
@@ -835,7 +832,7 @@ export function DashboardShell() {
                     <CircleUser className="size-4 mr-2" />
                     Mon profil
                   </DropdownMenuItem>
-                  {user.role !== 'ENSEIGNANT' && <DropdownMenuItem onClick={() => setView('settings')}>
+                  {!['ENSEIGNANT', 'FACULTE', 'DEPARTEMENT'].includes(user.role) && <DropdownMenuItem onClick={() => setView('settings')}>
                     <Settings className="size-4 mr-2" />
                     Paramètres
                   </DropdownMenuItem>}

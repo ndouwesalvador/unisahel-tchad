@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
-import { useStaffUsers } from '@/lib/api-hooks'
+import { useStaffUsers, useStructure } from '@/lib/api-hooks'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -42,6 +42,8 @@ interface StaffUserRow {
   email: string | null
   phone: string | null
   role: string
+  facultyId: string | null
+  departmentId: string | null
   isActive: boolean
   mustChangePassword: boolean
   lastLoginAt: string | null
@@ -64,8 +66,8 @@ const roleLabels: Record<string, string> = {
   ADMIN_INSTITUTION: 'Admin Institution',
   RECTORAT: 'Rectorat',
   SCOLARITE: 'Scolarite',
-  FACULTE: 'Faculte',
-  DEPARTEMENT: 'Departement',
+  FACULTE: 'Doyen / direction de faculté',
+  DEPARTEMENT: 'Chef de département',
   ENSEIGNANT: 'Enseignant',
   RESPONSABLE_FILIERE: 'Resp. Filiere',
   JURY: 'Jury',
@@ -73,7 +75,7 @@ const roleLabels: Record<string, string> = {
   MAITRE_STAGE: 'Maitre de Stage',
 }
 
-const emptyForm = { firstName: '', lastName: '', email: '', phone: '', role: '' }
+const emptyForm = { firstName: '', lastName: '', email: '', phone: '', role: '', facultyId: '', departmentId: '' }
 
 function formatDateFr(iso: string | null) {
   if (!iso) return 'Jamais'
@@ -84,12 +86,19 @@ export function StaffUsersPage() {
   const queryClient = useQueryClient()
   const { data, isLoading } = useStaffUsers() as { data: { data: StaffUserRow[] } | undefined; isLoading: boolean }
   const users = data?.data ?? []
+  const { data: structure } = useStructure()
+  const faculties: { id: string; name: string; departments: { id: string; name: string }[] }[] = structure?.faculties ?? []
+  const departments = faculties.flatMap((faculty) => faculty.departments.map((department) => ({ ...department, facultyName: faculty.name })))
 
   const [showCreate, setShowCreate] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
   const [form, setForm] = useState(emptyForm)
   const [createdCredentials, setCreatedCredentials] = useState<{ email: string; tempPassword: string; name: string } | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [editing, setEditing] = useState<StaffUserRow | null>(null)
+  const [editRole, setEditRole] = useState('')
+  const [editFacultyId, setEditFacultyId] = useState('')
+  const [editDepartmentId, setEditDepartmentId] = useState('')
 
   const staffCount = users.filter((u) => u.role !== 'ENSEIGNANT').length
   const activeCount = users.filter((u) => u.isActive).length
@@ -98,6 +107,10 @@ export function StaffUsersPage() {
   const handleCreate = async () => {
     if (!form.firstName || !form.lastName || !form.email || !form.role) {
       toast.error('Champs requis', { description: 'Nom, prenom, email et role sont obligatoires' })
+      return
+    }
+    if ((form.role === 'FACULTE' && !form.facultyId) || (form.role === 'DEPARTEMENT' && !form.departmentId)) {
+      toast.error('Périmètre requis', { description: 'Affectez ce responsable à sa faculté ou à son département.' })
       return
     }
     setIsCreating(true)
@@ -118,6 +131,30 @@ export function StaffUsersPage() {
       toast.error('Erreur', { description: error instanceof Error ? error.message : 'Echec de la creation' })
     } finally {
       setIsCreating(false)
+    }
+  }
+
+  const handleUpdateRole = async () => {
+    if (!editing) return
+    setBusyId(editing.id)
+    try {
+      const res = await fetch('/api/users', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: editing.id, role: editRole,
+          facultyId: editRole === 'FACULTE' ? editFacultyId || null : null,
+          departmentId: editRole === 'DEPARTEMENT' ? editDepartmentId || null : null,
+        }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json.error || 'Mise à jour impossible')
+      queryClient.invalidateQueries({ queryKey: ['staffUsers'] })
+      toast.success('Rôle et périmètre enregistrés')
+      setEditing(null)
+    } catch (error) {
+      toast.error('Erreur', { description: error instanceof Error ? error.message : 'Mise à jour impossible' })
+    } finally {
+      setBusyId(null)
     }
   }
 
@@ -235,6 +272,7 @@ export function StaffUsersPage() {
                     <TableHead className="text-xs">Nom</TableHead>
                     <TableHead className="text-xs">Email</TableHead>
                     <TableHead className="text-xs">Role</TableHead>
+                    <TableHead className="text-xs">Périmètre</TableHead>
                     <TableHead className="text-xs">Statut</TableHead>
                     <TableHead className="text-xs">Derniere connexion</TableHead>
                     <TableHead className="text-xs text-right">Actions</TableHead>
@@ -250,6 +288,11 @@ export function StaffUsersPage() {
                         {u.mustChangePassword && (
                           <Badge className="text-[10px] ml-1 bg-[#d4a85315] text-[#d4a853] border-0">Temp.</Badge>
                         )}
+                      </TableCell>
+                      <TableCell className="text-xs text-gray-600">
+                        {u.facultyId ? faculties.find((faculty) => faculty.id === u.facultyId)?.name || 'Faculté introuvable' :
+                          u.departmentId ? departments.find((department) => department.id === u.departmentId)?.name || 'Département introuvable' :
+                            u.role === 'FACULTE' || u.role === 'DEPARTEMENT' ? 'À affecter' : 'Institution'}
                       </TableCell>
                       <TableCell>
                         <Badge className={`text-[10px] border-0 ${u.isActive ? 'bg-[#2d7a4f15] text-[#2d7a4f]' : 'bg-[#c6282815] text-[#c62828]'}`}>
@@ -268,6 +311,11 @@ export function StaffUsersPage() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuItem className="text-xs" onClick={() => {
+                                setEditing(u); setEditRole(u.role); setEditFacultyId(u.facultyId || ''); setEditDepartmentId(u.departmentId || '')
+                              }}>
+                                Modifier rôle et périmètre
+                              </DropdownMenuItem>
                               <DropdownMenuItem className="text-xs" onClick={() => handleToggleActive(u)}>
                                 <ShieldAlert className="size-3.5 mr-2" />
                                 {u.isActive ? 'Suspendre' : 'Reactiver'}
@@ -316,7 +364,7 @@ export function StaffUsersPage() {
             </div>
             <div className="space-y-2">
               <Label className="text-sm">Role</Label>
-              <Select value={form.role} onValueChange={(v) => setForm((f) => ({ ...f, role: v }))}>
+              <Select value={form.role} onValueChange={(v) => setForm((f) => ({ ...f, role: v, facultyId: '', departmentId: '' }))}>
                 <SelectTrigger><SelectValue placeholder="Selectionner un role" /></SelectTrigger>
                 <SelectContent>
                   {STAFF_ROLE_OPTIONS.map((r) => (
@@ -325,11 +373,42 @@ export function StaffUsersPage() {
                 </SelectContent>
               </Select>
             </div>
+            {form.role === 'FACULTE' && <div className="space-y-2">
+              <Label>Faculté dirigée *</Label>
+              <Select value={form.facultyId} onValueChange={(value) => setForm((f) => ({ ...f, facultyId: value }))}>
+                <SelectTrigger><SelectValue placeholder="Choisir une faculté" /></SelectTrigger>
+                <SelectContent>{faculties.map((faculty) => <SelectItem key={faculty.id} value={faculty.id}>{faculty.name}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>}
+            {form.role === 'DEPARTEMENT' && <div className="space-y-2">
+              <Label>Département dirigé *</Label>
+              <Select value={form.departmentId} onValueChange={(value) => setForm((f) => ({ ...f, departmentId: value }))}>
+                <SelectTrigger><SelectValue placeholder="Choisir un département" /></SelectTrigger>
+                <SelectContent>{departments.map((department) => <SelectItem key={department.id} value={department.id}>{department.name} · {department.facultyName}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>}
             <p className="text-[11px] text-gray-400">Un mot de passe temporaire sera genere et affiche une seule fois apres la creation.</p>
             <Button className="w-full bg-[#2d7a4f] hover:bg-[#236b40] text-white" disabled={isCreating} onClick={handleCreate}>
               {isCreating ? 'Creation...' : 'Creer le compte'}
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(editing)} onOpenChange={(open) => { if (!open) setEditing(null) }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Rôle et périmètre</DialogTitle></DialogHeader>
+          <p className="text-sm text-gray-600">{editing?.firstName} {editing?.lastName}</p>
+          <div className="space-y-2">
+            <Label>Rôle</Label>
+            <Select value={editRole} onValueChange={(value) => { setEditRole(value); setEditFacultyId(''); setEditDepartmentId('') }}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>{STAFF_ROLE_OPTIONS.map((role) => <SelectItem key={role} value={role}>{roleLabels[role]}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+          {editRole === 'FACULTE' && <div className="space-y-2"><Label>Faculté</Label><Select value={editFacultyId} onValueChange={setEditFacultyId}><SelectTrigger><SelectValue placeholder="Choisir" /></SelectTrigger><SelectContent>{faculties.map((faculty) => <SelectItem key={faculty.id} value={faculty.id}>{faculty.name}</SelectItem>)}</SelectContent></Select></div>}
+          {editRole === 'DEPARTEMENT' && <div className="space-y-2"><Label>Département</Label><Select value={editDepartmentId} onValueChange={setEditDepartmentId}><SelectTrigger><SelectValue placeholder="Choisir" /></SelectTrigger><SelectContent>{departments.map((department) => <SelectItem key={department.id} value={department.id}>{department.name} · {department.facultyName}</SelectItem>)}</SelectContent></Select></div>}
+          <Button disabled={busyId === editing?.id || (editRole === 'FACULTE' && !editFacultyId) || (editRole === 'DEPARTEMENT' && !editDepartmentId)} onClick={handleUpdateRole}>Enregistrer</Button>
         </DialogContent>
       </Dialog>
 

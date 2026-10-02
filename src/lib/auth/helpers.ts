@@ -1,6 +1,7 @@
 import { auth } from '@/lib/auth/config'
 import { NextRequest, NextResponse } from 'next/server'
 import { isTeacherApiAllowed } from '@/lib/auth/teacher-policy'
+import { isOrganizationApiAllowed } from '@/lib/auth/organization-policy'
 
 export interface SessionUser {
   id: string
@@ -102,6 +103,13 @@ export function withAuth<T extends unknown[]>(
         return createAuthError('FORBIDDEN')
       }
 
+      if (sessionUser.role === 'FACULTE' || sessionUser.role === 'DEPARTEMENT') {
+        const request = args[0] as { url?: string; method?: string } | undefined
+        if (!request?.url || !isOrganizationApiAllowed(new URL(request.url).pathname, request.method || 'GET')) {
+          return createAuthError('FORBIDDEN')
+        }
+      }
+
       return handler(sessionUser, ...args)
     } catch (error) {
       if (error instanceof Error && (error.message === 'UNAUTHORIZED' || error.message === 'FORBIDDEN')) {
@@ -149,6 +157,9 @@ export function withTenantAuth(
 
       const url = new URL(request.url)
       if (sessionUser.role === 'ENSEIGNANT' && !isTeacherApiAllowed(url.pathname, request.method)) {
+        return createAuthError('FORBIDDEN')
+      }
+      if ((sessionUser.role === 'FACULTE' || sessionUser.role === 'DEPARTEMENT') && !isOrganizationApiAllowed(url.pathname, request.method)) {
         return createAuthError('FORBIDDEN')
       }
       const tenantId = url.searchParams.get('tenantId') || sessionUser.tenantId

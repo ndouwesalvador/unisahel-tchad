@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
 import { getTeacherScope } from '@/lib/auth/teacher-scope'
+import { getOrganizationScope } from '@/lib/auth/organization-scope'
 
 const VALID_TYPES = ['CM', 'TD', 'TP', 'EXAM']
 
@@ -45,10 +46,18 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
     }
     const teacherScope = user.role === 'ENSEIGNANT' ? await getTeacherScope(user, tenantId) : null
     if (teacherScope && !teacherScope.linked) return NextResponse.json({ slots: [] })
+    const organizationScope = await getOrganizationScope(user, tenantId)
+    if (organizationScope && organizationScope.departmentIds.length === 0) return NextResponse.json({ slots: [] })
+    const scopedProgramIds = organizationScope ? (await db.program.findMany({
+      where: { tenantId, isActive: true, departmentId: { in: organizationScope.departmentIds } }, select: { id: true },
+    })).map((program) => program.id) : null
+    if (scopedProgramIds && programId && !scopedProgramIds.includes(programId)) {
+      return NextResponse.json({ error: 'Programme hors de votre périmètre' }, { status: 403 })
+    }
 
     const where = {
       tenantId,
-      ...(programId ? { programId } : {}),
+      ...(scopedProgramIds ? { programId: { in: programId ? [programId] : scopedProgramIds } } : programId ? { programId } : {}),
       ...(levelId ? { levelId } : {}),
       ...(academicYearId ? { academicYearId } : {}),
       ...(teacherScope ? { courseElementId: { in: teacherScope.courseElementIds } } : {}),
@@ -91,11 +100,16 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
     const body = await request.json()
     const { academicYearId, dayOfWeek, startTime, endTime, courseElementId, teacherId, roomId, programId, levelId, type } = body
 
-    if (!academicYearId || dayOfWeek === undefined || !startTime || !endTime) {
+    if (!academicYearId || dayOfWeek === undefined || !startTime || !endTime || !courseElementId || !teacherId || !roomId || !programId || !levelId) {
       return NextResponse.json(
-        { error: 'academicYearId, dayOfWeek, startTime, and endTime are required fields' },
+        { error: 'Année, jour, horaires, programme, niveau, matière, enseignant et salle sont obligatoires.' },
         { status: 400 }
       )
+    }
+
+    const day = Number(dayOfWeek)
+    if (!Number.isInteger(day) || day < 0 || day > 6 || !/^([01]\d|2[0-3]):[0-5]\d$/.test(startTime) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(endTime)) {
+      return NextResponse.json({ error: 'Jour ou horaires invalides' }, { status: 400 })
     }
 
     if (type && !VALID_TYPES.includes(type)) {
@@ -111,6 +125,23 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
       return NextResponse.json({ error: 'academicYearId not found for this tenant' }, { status: 404 })
     }
 
+    const organizationScope = await getOrganizationScope(user, tenantId)
+    if (organizationScope && organizationScope.departmentIds.length === 0) {
+      return NextResponse.json({ error: 'Aucun département actif ne vous est attribué.' }, { status: 403 })
+    }
+    const program = await db.program.findFirst({ where: { id: programId, tenantId, isActive: true }, select: { id: true, departmentId: true } })
+    if (!program) return NextResponse.json({ error: 'Programme introuvable' }, { status: 404 })
+    if (!program.departmentId) return NextResponse.json({ error: 'Rattachez le programme à un département avant de le planifier.' }, { status: 400 })
+    if (organizationScope && !organizationScope.departmentIds.includes(program.departmentId)) {
+      return NextResponse.json({ error: 'Ce programme appartient à un autre département.' }, { status: 403 })
+    }
+
+    const [teacher, room] = await Promise.all([
+      db.teacher.findFirst({ where: { id: teacherId, tenantId, isActive: true }, select: { id: true } }),
+      db.room.findFirst({ where: { id: roomId, tenantId, isActive: true }, select: { id: true } }),
+    ])
+    if (!teacher || !room) return NextResponse.json({ error: 'Enseignant ou salle actif introuvable dans cette institution.' }, { status: 400 })
+
     if (courseElementId) {
       const element = await db.courseElement.findFirst({
         where: { id: courseElementId, teachingUnit: { semester: { level: { program: { tenantId } } } } },
@@ -120,7 +151,7 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
       if (programId !== element.teachingUnit.semester.level.programId || levelId !== element.teachingUnit.semester.level.id) {
         return NextResponse.json({ error: 'Programme ou niveau incohérent avec la matière' }, { status: 400 })
       }
-      if (teacherId && teacherId !== element.teacherId && teacherId !== element.teachingUnit.responsibleId) {
+      if (teacherId !== element.teacherId && teacherId !== element.teachingUnit.responsibleId) {
         return NextResponse.json({ error: 'Enseignant non affecté à cette matière' }, { status: 400 })
       }
     }
@@ -130,19 +161,20 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
         where: {
           tenantId,
           academicYearId,
-          dayOfWeek: Number(dayOfWeek),
+          dayOfWeek: day,
           startTime: { lt: endTime },
           endTime: { gt: startTime },
           OR: [
             ...(roomId ? [{ roomId }] : []),
             ...(teacherId ? [{ teacherId }] : []),
+            { levelId },
           ],
         },
         take: 1,
       })
       if (conflicts.length > 0) {
         return NextResponse.json(
-          { error: 'Conflit detecte: cette salle ou cet enseignant est deja occupe sur ce creneau.' },
+          { error: 'Conflit détecté : salle, enseignant ou niveau déjà occupé sur ce créneau.' },
           { status: 409 }
         )
       }
@@ -152,7 +184,7 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
       data: {
         tenantId,
         academicYearId,
-        dayOfWeek,
+        dayOfWeek: day,
         startTime,
         endTime,
         courseElementId: courseElementId ?? null,

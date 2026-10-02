@@ -177,6 +177,7 @@ model Faculty {
   deanTitle   String?
   isActive    Boolean      @default(true)
   departments Department[]
+  managers    User[]       @relation("FacultyManagers")
   programs    Program[]
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
@@ -205,6 +206,7 @@ model Department {
   headName   String?
   isActive   Boolean   @default(true)
   teachers   Teacher[]
+  managers   User[]     @relation("DepartmentManagers")
   programs   Program[]
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
@@ -397,6 +399,10 @@ model User {
   phone               String?
   photo               String?
   role                UserRole  @default(ETUDIANT)
+  facultyId           String?
+  faculty             Faculty?  @relation("FacultyManagers", fields: [facultyId], references: [id], onDelete: SetNull)
+  departmentId        String?
+  department          Department? @relation("DepartmentManagers", fields: [departmentId], references: [id], onDelete: SetNull)
   isActive            Boolean   @default(true)
   emailVerified       Boolean   @default(false)
   lastLoginAt         DateTime?
@@ -410,6 +416,8 @@ model User {
 
   @@index([tenantId, email])
   @@index([tenantId, login])
+  @@index([tenantId, facultyId])
+  @@index([tenantId, departmentId])
 }
 
 // ============================================

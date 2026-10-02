@@ -8,7 +8,7 @@ const NOTIFICATIONS_LIMIT = 50
 async function handleGet(user: SessionUser, _request: NextRequest) {
   try {
     // Legacy notifications have no recipient identifier and can concern other programmes.
-    if (user.role === 'ENSEIGNANT') return NextResponse.json({ notifications: [], unreadCount: 0 })
+    if (['ENSEIGNANT', 'FACULTE', 'DEPARTEMENT'].includes(user.role)) return NextResponse.json({ notifications: [], unreadCount: 0 })
     if (!user.tenantId) {
       return NextResponse.json({ notifications: [], unreadCount: 0 })
     }
