@@ -387,8 +387,12 @@ async function deleteTeacherHandler(user: SessionUser, tenantId: string, request
 
 async function getTeacherScheduleHandler(user: SessionUser, tenantId: string, request: NextRequest) {
   try {
+    if (user.role !== 'ADMIN_INSTITUTION') {
+      return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
+    }
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
+    const requestedYearId = searchParams.get('academicYearId')
 
     if (!id) {
       return NextResponse.json(
@@ -400,7 +404,8 @@ async function getTeacherScheduleHandler(user: SessionUser, tenantId: string, re
     const teacher = await db.teacher.findFirst({
       where: { id, tenantId },
       include: {
-        user: { select: { firstName: true, lastName: true } },
+        user: { select: { firstName: true, lastName: true, email: true, phone: true, photo: true } },
+        department: { select: { id: true, name: true } },
         assignedElements: {
           include: {
             teachingUnit: {
@@ -441,6 +446,25 @@ async function getTeacherScheduleHandler(user: SessionUser, tenantId: string, re
       )
     }
 
+    const academicYear = await db.academicYear.findFirst({
+      where: requestedYearId ? { id: requestedYearId, tenantId } : { tenantId, isCurrent: true },
+      select: { id: true, name: true },
+    })
+    if (requestedYearId && !academicYear) {
+      return NextResponse.json({ error: 'Année académique introuvable' }, { status: 404 })
+    }
+    const slots = academicYear ? await db.timetableSlot.findMany({
+      where: { tenantId, teacherId: teacher.id, academicYearId: academicYear.id },
+      orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }],
+    }) : []
+    const roomIds = [...new Set(slots.map(slot => slot.roomId).filter((roomId): roomId is string => Boolean(roomId)))]
+    const rooms = roomIds.length ? await db.room.findMany({
+      where: { tenantId, id: { in: roomIds } },
+      select: { id: true, name: true },
+    }) : []
+    const roomNames = new Map(rooms.map(room => [room.id, room.name]))
+    const elementNames = new Map(teacher.assignedElements.map(element => [element.id, { code: element.code, name: element.name }]))
+
     // Calculate total hours
     const totalCM = teacher.assignedElements.reduce((sum, el) => sum + (el.hoursCM || 0), 0)
     const totalTD = teacher.assignedElements.reduce((sum, el) => sum + (el.hoursTD || 0), 0)
@@ -453,11 +477,17 @@ async function getTeacherScheduleHandler(user: SessionUser, tenantId: string, re
           id: teacher.id,
           firstName: teacher.user?.firstName,
           lastName: teacher.user?.lastName,
+          linkedUser: Boolean(teacher.userId),
           employeeId: teacher.employeeId,
           grade: teacher.grade,
           specialization: teacher.specialization,
           maxHoursPerWeek: teacher.maxHoursPerWeek,
           currentHours: teacher.currentHours,
+          isActive: teacher.isActive,
+          department: teacher.department,
+          email: teacher.user?.email ?? null,
+          phone: teacher.user?.phone ?? null,
+          photo: teacher.user?.photo ?? null,
         },
         assignedElements: teacher.assignedElements.map(el => ({
           id: el.id,
@@ -495,6 +525,16 @@ async function getTeacherScheduleHandler(user: SessionUser, tenantId: string, re
               program: u.semester.level.program,
             },
           },
+        })),
+        academicYear,
+        timetable: slots.map(slot => ({
+          id: slot.id,
+          dayOfWeek: slot.dayOfWeek,
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+          type: slot.type,
+          course: slot.courseElementId ? elementNames.get(slot.courseElementId) ?? null : null,
+          room: slot.roomId ? roomNames.get(slot.roomId) ?? null : null,
         })),
         summary: {
           totalElements: teacher.assignedElements.length,

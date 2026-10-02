@@ -40,7 +40,6 @@ import {
   GraduationCap,
   Clock,
   Briefcase,
-  TrendingUp,
   UserCheck,
   Award,
   Mail,
@@ -121,8 +120,8 @@ function useCountUp(target: number, duration = 1400) {
 
 // ─── Types & Config ────────────────────────────────────────────────────────────
 
-type GradeType = 'Professeur' | 'MCF' | 'MA' | 'Assistant' | 'Vacataire' | 'Professionnel'
-type StatutType = 'Actif' | 'Conge' | 'Retraite'
+type GradeType = 'Professeur' | 'MCF' | 'MA' | 'Assistant' | 'Vacataire' | 'Non renseigné'
+type StatutType = 'Actif' | 'Inactif'
 
 interface Teacher {
   id: string
@@ -144,13 +143,12 @@ const gradeConfig: Record<GradeType, { label: string; className: string }> = {
   'MA': { label: 'MA', className: 'bg-[#d4a85315] text-[#d4a853] border-0' },
   'Assistant': { label: 'Ass.', className: 'bg-[#8b5cf615] text-[#8b5cf6] border-0' },
   'Vacataire': { label: 'Vac.', className: 'bg-[#ea580c15] text-[#ea580c] border-0' },
-  'Professionnel': { label: 'Pro.', className: 'bg-[#6b728015] text-[#6b7280] border-0' },
+  'Non renseigné': { label: 'Non renseigné', className: 'bg-slate-100 text-slate-700 border-0' },
 }
 
 const statutConfig: Record<StatutType, { label: string; className: string; dotColor: string }> = {
   'Actif': { label: 'Actif', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0', dotColor: '#2d7a4f' },
-  'Conge': { label: 'En conge', className: 'bg-[#d4a85315] text-[#d4a853] border-0', dotColor: '#d4a853' },
-  'Retraite': { label: 'Retraite', className: 'bg-[#6b728015] text-[#6b7280] border-0', dotColor: '#6b7280' },
+  'Inactif': { label: 'Inactif', className: 'bg-slate-100 text-slate-700 border-0', dotColor: '#64748b' },
 }
 
 const gradeFullNames: Record<GradeType, string> = {
@@ -159,7 +157,7 @@ const gradeFullNames: Record<GradeType, string> = {
   'MA': 'Maitre-Assistant',
   'Assistant': 'Assistant',
   'Vacataire': 'Vacataire',
-  'Professionnel': 'Professionnel',
+  'Non renseigné': 'Non renseigné',
 }
 
 const gradeApiToUi: Record<string, GradeType> = {
@@ -170,23 +168,35 @@ const gradeApiToUi: Record<string, GradeType> = {
   VACATAIRE: 'Vacataire',
 }
 
-function mapTeacher(t: any): Teacher {
+interface TeacherListApiRecord {
+  id: string
+  employeeId: string | null
+  grade: string | null
+  department: { name: string } | null
+  user: { firstName: string; lastName: string; phone: string | null; email: string | null } | null
+  specialization: string | null
+  currentHours: number
+  maxHoursPerWeek: number
+  isActive: boolean
+}
+
+function mapTeacher(t: TeacherListApiRecord): Teacher {
   return {
     id: t.id,
     matricule: t.employeeId || 'N/A',
     nom: t.user?.lastName || '',
     prenom: t.user?.firstName || '',
-    grade: gradeApiToUi[t.grade as string] || 'Professionnel',
+    grade: gradeApiToUi[t.grade as string] || 'Non renseigné',
     departement: t.department?.name || 'Non affecte',
     specialisation: t.specialization || '',
-    heuresSem: t.currentHours ?? t.maxHoursPerWeek ?? 0,
-    statut: t.isActive ? 'Actif' : 'Retraite',
+    heuresSem: t.currentHours ?? 0,
+    statut: t.isActive ? 'Actif' : 'Inactif',
     telephone: t.user?.phone || undefined,
     email: t.user?.email || undefined,
   }
 }
 
-const grades = ['Tous', 'Professeur', 'MCF', 'MA', 'Assistant', 'Vacataire', 'Professionnel']
+const grades = ['Tous', 'Professeur', 'MCF', 'MA', 'Assistant', 'Vacataire', 'Non renseigné']
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -290,7 +300,7 @@ export function TeachersPage() {
     'MA': teachers.filter(t => t.grade === 'MA').length,
     'Assistant': teachers.filter(t => t.grade === 'Assistant').length,
     'Vacataire': teachers.filter(t => t.grade === 'Vacataire').length,
-    'Professionnel': teachers.filter(t => t.grade === 'Professionnel').length,
+    'Non renseigné': teachers.filter(t => t.grade === 'Non renseigné').length,
   }
 
   // Count-up stats
@@ -362,7 +372,7 @@ export function TeachersPage() {
                 <div className="p-2 rounded-lg bg-white/10"><Clock className="size-5 text-white" /></div>
                 <div>
                   <p className="text-xl font-bold text-white">{countHeures}h</p>
-                  <p className="text-[10px] text-white/70">Heures/semaine</p>
+                  <p className="text-[10px] text-white/70">Charge déclarée (h/sem)</p>
                 </div>
               </div>
             </div>
@@ -378,12 +388,8 @@ export function TeachersPage() {
             <CardContent className="p-4">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Total enseignants</p>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Enseignants actifs</p>
                   <p className="text-xl font-bold text-[#1a2744] mt-1">{countTotal}</p>
-                  <div className="flex items-center gap-1 mt-1">
-                    <TrendingUp className="size-3 text-[#2d7a4f]" />
-                    <span className="text-[10px] text-[#2d7a4f] font-medium">+2 ce semestre</span>
-                  </div>
                 </div>
                 <div className="w-10 h-10 rounded-xl bg-[#1a274415] flex items-center justify-center">
                   <Users className="size-5 text-[#1a2744]" />
@@ -417,9 +423,9 @@ export function TeachersPage() {
             <CardContent className="p-4">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Heures/semaine</p>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Charge déclarée (h/sem)</p>
                   <p className="text-xl font-bold text-[#d4a853] mt-1">{countHeures}h</p>
-                  <p className="text-[10px] text-gray-400 mt-1">volume total</p>
+                  <p className="text-[10px] text-gray-600 mt-1">somme des charges enregistrées</p>
                 </div>
                 <div className="w-10 h-10 rounded-xl bg-[#d4a85315] flex items-center justify-center">
                   <Clock className="size-5 text-[#d4a853]" />
@@ -437,7 +443,6 @@ export function TeachersPage() {
                 <div>
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Vacataires</p>
                   <p className="text-xl font-bold text-[#ea580c] mt-1">{countVac}</p>
-                  <p className="text-[10px] text-gray-400 mt-1">contractuels</p>
                 </div>
                 <div className="w-10 h-10 rounded-xl bg-[#ea580c15] flex items-center justify-center">
                   <Briefcase className="size-5 text-[#ea580c]" />
@@ -553,7 +558,7 @@ export function TeachersPage() {
                       <TableHead className="text-xs font-semibold">Grade</TableHead>
                       <TableHead className="text-xs font-semibold">Departement</TableHead>
                       <TableHead className="text-xs font-semibold">Specialisation</TableHead>
-                      <TableHead className="text-xs font-semibold text-center">H/sem</TableHead>
+                      <TableHead className="text-xs font-semibold text-center">Charge h/sem</TableHead>
                       <TableHead className="text-xs font-semibold">Statut</TableHead>
                       <TableHead className="text-xs font-semibold text-right">Actions</TableHead>
                     </TableRow>
@@ -739,7 +744,7 @@ export function TeachersPage() {
                     <SelectValue placeholder="Selectionner" />
                   </SelectTrigger>
                   <SelectContent>
-                    {grades.filter(g => g !== 'Tous').map(g => (
+                    {grades.filter(g => g !== 'Tous' && g !== 'Non renseigné').map(g => (
                       <SelectItem key={g} value={g}>{g === 'MCF' ? 'Maitre de Conferences' : g === 'MA' ? 'Maitre-Assistant' : g}</SelectItem>
                     ))}
                   </SelectContent>
