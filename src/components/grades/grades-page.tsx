@@ -1126,11 +1126,11 @@ function StaffGradesPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Distribution Chart */}
               <div className="lg:col-span-2 space-y-3">
-                <p className="text-xs font-medium text-gray-500 uppercase">Distribution des notes</p>
+                <p className="text-sm font-semibold text-slate-800">Distribution des notes</p>
                 <div className="space-y-2">
                   {distribution.map((range) => (
                     <div key={range.label} className="flex items-center gap-3">
-                      <span className="text-xs font-mono text-gray-500 w-10 text-right">{range.label}</span>
+                      <span className="w-12 text-right font-mono text-sm text-slate-800">{range.label}</span>
                       <div className="flex-1 h-7 bg-gray-50 rounded-md overflow-hidden relative">
                         <motion.div
                           initial={{ width: 0 }}
@@ -1139,62 +1139,62 @@ function StaffGradesPage() {
                           className="h-full rounded-md flex items-center px-2"
                           style={{ backgroundColor: range.color + '25' }}
                         >
-                          <span className="text-[10px] font-bold" style={{ color: range.color }}>
+                          <span className="text-sm font-bold text-slate-950">
                             {range.count}
                           </span>
                         </motion.div>
                       </div>
-                      <span className="text-xs text-gray-400 w-8">
+                      <span className="w-10 text-right text-sm text-slate-700">
                         {validGrades.length > 0 ? Math.round((range.count / validGrades.length) * 100) : 0}%
                       </span>
                     </div>
                   ))}
                 </div>
                 {/* Color Legend */}
-                <div className="flex items-center gap-4 pt-2 border-t border-gray-100">
+                <div className="flex flex-wrap items-center gap-4 border-t border-gray-100 pt-2">
                   <div className="flex items-center gap-1.5">
                     <div className="w-3 h-3 rounded-sm bg-[#c6282825]" />
-                    <span className="text-[10px] text-gray-500">&lt; 8 (Echec)</span>
+                    <span className="text-xs text-slate-700">&lt; 8 (Échec)</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <div className="w-3 h-3 rounded-sm bg-[#f9a82525]" />
-                    <span className="text-[10px] text-gray-500">{passingGrade - 2}–{passingGrade} (Compensation)</span>
+                    <span className="text-xs text-slate-700">{passingGrade - 2}–{passingGrade} (Compensation)</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <div className="w-3 h-3 rounded-sm bg-[#2d7a4f25]" />
-                    <span className="text-[10px] text-gray-500">&ge; {passingGrade} (Valide)</span>
+                    <span className="text-xs text-slate-700">&ge; {passingGrade} (Validé)</span>
                   </div>
                 </div>
               </div>
 
               {/* Summary Stats */}
               <div className="space-y-3">
-                <p className="text-xs font-medium text-gray-500 uppercase">Indicateurs</p>
+                <p className="text-sm font-semibold text-slate-800">Indicateurs</p>
                 <div className="space-y-3">
                   <div className="p-3 bg-[#d4a85308] rounded-lg border border-[#d4a85315]">
-                    <p className="text-[10px] text-gray-500 uppercase">Moyenne</p>
-                    <p className="text-xl font-bold text-[#d4a853]">{classAverage.toFixed(2)}</p>
-                    <p className="text-[10px] text-gray-400">/ 20</p>
+                    <p className="text-sm font-medium text-slate-700">Moyenne</p>
+                    <p className="text-xl font-bold text-slate-950">{classAverage.toFixed(2)}</p>
+                    <p className="text-xs text-slate-700">/ 20</p>
                   </div>
                   <div className="p-3 bg-[#1a274408] rounded-lg border border-[#1a274415]">
-                    <p className="text-[10px] text-gray-500 uppercase">Mediane</p>
+                    <p className="text-sm font-medium text-slate-700">Médiane</p>
                     <p className="text-xl font-bold text-[#1a2744]">{mediane.toFixed(2)}</p>
-                    <p className="text-[10px] text-gray-400">/ 20</p>
+                    <p className="text-xs text-slate-700">/ 20</p>
                   </div>
                   <div className="p-3 bg-[#2d7a4f08] rounded-lg border border-[#2d7a4f15]">
-                    <p className="text-[10px] text-gray-500 uppercase">Ecart-type</p>
+                    <p className="text-sm font-medium text-slate-700">Écart-type</p>
                     <p className="text-xl font-bold text-[#2d7a4f]">{ecartType.toFixed(2)}</p>
-                    <p className="text-[10px] text-gray-400">dispersion</p>
+                    <p className="text-xs text-slate-700">Dispersion</p>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div className="p-2 bg-[#2d7a4f08] rounded-lg text-center">
-                      <p className="text-[10px] text-gray-500">Note max</p>
+                      <p className="text-xs font-medium text-slate-700">Note maximale</p>
                       <p className="text-sm font-bold text-[#2d7a4f]">
                         {validGrades.length > 0 ? Math.max(...validGrades.map(g => g.moyenne!)).toFixed(1) : '-'}
                       </p>
                     </div>
                     <div className="p-2 bg-[#c6282808] rounded-lg text-center">
-                      <p className="text-[10px] text-gray-500">Note min</p>
+                      <p className="text-xs font-medium text-slate-700">Note minimale</p>
                       <p className="text-sm font-bold text-[#c62828]">
                         {validGrades.length > 0 ? Math.min(...validGrades.map(g => g.moyenne!)).toFixed(1) : '-'}
                       </p>
