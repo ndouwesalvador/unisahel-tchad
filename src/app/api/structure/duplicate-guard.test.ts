@@ -53,4 +53,11 @@ describe('structure duplicate guard', () => {
     expect(response.status).toBe(409)
     expect(dbMock.level.update).not.toHaveBeenCalled()
   })
+
+  it('rejects reactivating a conflicting level', async () => {
+    dbMock.level.findUnique.mockResolvedValue({ programId, name: 'Licence 1', code: 'L1' })
+    const response = await PUT(request('PUT', 'level', { id: levelId, isActive: true }))
+    expect(response.status).toBe(409)
+    expect(dbMock.level.update).not.toHaveBeenCalled()
+  })
 })

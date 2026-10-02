@@ -1062,7 +1062,7 @@ export function StructurePage() {
                       <div key={level.id} className="rounded-md border border-slate-200 p-3 text-sm text-slate-800">
                         <p className="font-semibold text-slate-950">{level.name} {level.code ? `· ${level.code}` : ''}</p>
                         <p>Semestres : {level.semesters.join(', ') || 'aucun'}</p>
-                        <p>{level.teachingUnits} UE · {level.courseElements} matière(s) · {level.credits} crédits configurés</p>
+                        <p>{level.teachingUnits} UE · {level.courseElements} {level.courseElements === 1 ? 'matière' : 'matières'} · {level.credits} crédits configurés</p>
                         <p>Rattachements : {academicLinks.join(' · ') || 'aucun repéré'}</p>
                       </div>
                     )

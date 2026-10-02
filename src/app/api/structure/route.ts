@@ -626,7 +626,7 @@ async function updateEntityHandler(user: SessionUser, tenantId: string, request:
       return NextResponse.json({ error: 'Entity not found in this tenant' }, { status: 404 })
     }
 
-    if ((type === 'level' || type === 'semester') && (body.name !== undefined || body.code !== undefined)) {
+    if ((type === 'level' || type === 'semester') && (body.name !== undefined || body.code !== undefined || (type === 'level' && body.isActive === true))) {
       if ((body.name !== undefined && (typeof body.name !== 'string' || !body.name.trim())) ||
           (body.code !== undefined && typeof body.code !== 'string')) {
         return NextResponse.json({ error: 'Nom ou code invalide' }, { status: 400 })
@@ -709,9 +709,26 @@ async function deleteEntityHandler(user: SessionUser, tenantId: string, request:
       return NextResponse.json({ error: 'Entity not found in this tenant' }, { status: 404 })
     }
 
-    // Faculty/Department/Program/Level are deactivated (isActive:false), the
-    // same soft-delete used for teachers and reflected by the GET filters, so
-    // students/grades that reference them are never destroyed.
+    // An inactive level disappears from the structure even though its linked
+    // records remain. Never hide a level that still carries a curriculum or
+    // academic references; these must be reviewed and moved deliberately.
+    if (type === 'level') {
+      const counts = await Promise.all([
+        db.semester.count({ where: { levelId: id } }),
+        db.student.count({ where: { tenantId, currentLevelId: id } }),
+        db.administrativeRegistration.count({ where: { tenantId, levelId: id } }),
+        db.admission.count({ where: { tenantId, levelId: id } }),
+        db.admissionCampaign.count({ where: { tenantId, levelId: id } }),
+        db.deliberation.count({ where: { tenantId, levelId: id } }),
+        db.feeStructure.count({ where: { tenantId, levelId: id } }),
+        db.timetableSlot.count({ where: { tenantId, levelId: id } }),
+      ])
+      if (counts.some((count) => count > 0)) {
+        return NextResponse.json({ error: 'Ce niveau contient encore des semestres ou des rattachements académiques. Vérifiez et transférez-les avant de le désactiver.' }, { status: 409 })
+      }
+    }
+
+    // Faculty/Department/Program/Level are deactivated (isActive:false).
     if (SOFT_DELETE_TYPES.has(type)) {
       await delegate(type).update({ where: { id }, data: { isActive: false } })
       await db.auditLog.create({
