@@ -10,7 +10,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Progress } from '@/components/ui/progress'
 import { Separator } from '@/components/ui/separator'
 import { QrDisplay } from '@/components/ui/qr-display'
@@ -52,9 +54,7 @@ import {
   TrendingUp,
   Award,
   BookOpen,
-  Info,
   Trash2,
-  ArrowRight,
   ChevronRight,
   Activity,
 } from 'lucide-react'
@@ -82,6 +82,11 @@ interface DeliberationStudent {
   creditsTotal: number
   decision: Decision
   observation: string
+  isModified?: boolean
+  modificationReason?: string
+  updatedAt?: string
+  modifiedBy?: string | null
+  modifiedAt?: string | null
 }
 
 interface MissingGradeItem {
@@ -159,6 +164,10 @@ export function DeliberationPage() {
   const [juryMembers, setJuryMembers] = useState<{ id: string; name: string; role: string }[]>([])
   const [newMemberName, setNewMemberName] = useState('')
   const [newMemberRole, setNewMemberRole] = useState('Membre')
+  const [editingStudent, setEditingStudent] = useState<DeliberationStudent | null>(null)
+  const [editedDecision, setEditedDecision] = useState<Decision>('AJOURNE')
+  const [correctionReason, setCorrectionReason] = useState('')
+  const [isSavingCorrection, setIsSavingCorrection] = useState(false)
 
   const apiSessionType = selectedSessionType === 'normale' ? 'NORMALE' : 'RATTRAPAGE'
   const { data: deliberationData, isLoading: isDeliberationLoading } = useDeliberation(
@@ -203,6 +212,39 @@ export function DeliberationPage() {
   const hasStudents = deliberationStudents.length > 0
   const canExportPV = Boolean(selectedSession && isLocked && hasStudents && isReadyForJury)
   const canLock = Boolean(selectedSession && !isLocked && hasStudents && isReadyForJury && juryMembers.filter((member) => member.role === 'President').length === 1)
+
+  const openDecisionEditor = (student: DeliberationStudent) => {
+    if (!selectedSession || isLocked || !student.updatedAt) return
+    setEditingStudent(student)
+    setEditedDecision(student.decision)
+    setCorrectionReason('')
+  }
+
+  const saveDecisionCorrection = async () => {
+    if (!editingStudent || !selectedSession || !editingStudent.updatedAt || isSavingCorrection) return
+    const reason = correctionReason.trim()
+    if (editedDecision === editingStudent.decision || reason.length < 10 || reason.length > 1000) {
+      toast.error('Correction incomplète', { description: 'Choisissez une autre décision et justifiez-la en 10 à 1000 caractères.' })
+      return
+    }
+    setIsSavingCorrection(true)
+    try {
+      const response = await fetch(`/api/deliberation?id=${encodeURIComponent(selectedSession)}&decisionId=${encodeURIComponent(editingStudent.id)}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ decision: editedDecision, reason, expectedUpdatedAt: editingStudent.updatedAt }),
+      })
+      const result = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(result.error || 'Correction impossible')
+      setEditingStudent(null)
+      await queryClient.invalidateQueries({ queryKey: ['deliberation'] })
+      toast.success('Décision corrigée', { description: 'Le motif et l’auteur sont enregistrés dans l’historique du jury.' })
+    } catch (error) {
+      await queryClient.invalidateQueries({ queryKey: ['deliberation'] })
+      toast.error('Correction refusée', { description: error instanceof Error ? error.message : 'Veuillez réessayer.' })
+    } finally {
+      setIsSavingCorrection(false)
+    }
+  }
 
   const handleLaunch = async () => {
     if (isDeliberationLoading) return
@@ -996,6 +1038,9 @@ export function DeliberationPage() {
                 </div>
               </div>
             </CardHeader>
+            {selectedSession && !isLocked && hasStudents && (
+              <p className="px-5 pb-3 text-xs text-gray-600">Les décisions ci-dessous sont proposées automatiquement. Le jury peut les corriger avec un motif avant la validation finale ; moyenne et crédits restent issus des notes verrouillées.</p>
+            )}
             <CardContent className="p-0">
               <div className="overflow-x-auto">
                 <Table>
@@ -1008,17 +1053,18 @@ export function DeliberationPage() {
                       <TableHead className="text-xs font-semibold text-gray-500 text-center">Credits valides</TableHead>
                       <TableHead className="text-xs font-semibold text-gray-500">Decision</TableHead>
                       <TableHead className="text-xs font-semibold text-gray-500">Observation</TableHead>
+                      <TableHead className="text-xs font-semibold text-gray-500 text-right">Action du jury</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {isDeliberationLoading && (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center py-6 text-xs text-gray-400">Chargement...</TableCell>
+                        <TableCell colSpan={8} className="text-center py-6 text-xs text-gray-400">Chargement...</TableCell>
                       </TableRow>
                     )}
                     {!isDeliberationLoading && deliberationStudents.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center py-6 text-xs text-gray-400">
+                        <TableCell colSpan={8} className="text-center py-6 text-xs text-gray-400">
                           Aucune note trouvee pour l&apos;annee academique en cours
                         </TableCell>
                       </TableRow>
@@ -1076,9 +1122,22 @@ export function DeliberationPage() {
                                 <p>{config.tooltip}</p>
                               </TooltipContent>
                             </Tooltip>
+                            {student.isModified && <span className="mt-1 block text-[10px] font-medium text-[#1a2744]">Corrigée par le jury</span>}
                           </TableCell>
                           <TableCell className="py-2">
-                            <span className="text-xs text-gray-500">{student.observation || '-'}</span>
+                            <span className="text-xs text-gray-500">{student.modificationReason || student.observation || '-'}</span>
+                            {student.modifiedAt && (
+                              <span className="mt-1 block text-[10px] text-gray-500">
+                                {student.modifiedBy || 'Compte non disponible'} · {new Date(student.modifiedAt).toLocaleString('fr-FR')}
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell className="py-2 text-right">
+                            {!isLocked && selectedSession ? (
+                              <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => openDecisionEditor(student)} disabled={isDeliberationLoading}>
+                                Corriger
+                              </Button>
+                            ) : <span className="text-xs text-gray-500">{isLocked ? 'Finale' : '—'}</span>}
                           </TableCell>
                         </motion.tr>
                       )
@@ -1090,130 +1149,21 @@ export function DeliberationPage() {
           </Card>
         </motion.div>
 
-        {/* ─── LMD Compensation Rules Card ─────────────────────────────────── */}
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.25 }}
-        >
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.25 }}>
           <Card className="border-l-4 border-l-[#d4a853]">
             <CardHeader className="pb-3">
-              <div className="flex items-center gap-2">
-                <BookOpen className="size-4 text-[#d4a853]" />
-                <CardTitle className="text-sm font-semibold text-[#1a2744]">
-                  Regles de compensation LMD
-                </CardTitle>
-              </div>
+              <CardTitle className="text-sm font-semibold text-[#1a2744]">Méthode et responsabilité du jury</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-5">
-              {/* Rules Explanation */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                {/* Compensation Rules */}
-                <div className="space-y-3">
-                  <h3 className="text-xs font-semibold text-[#1a2744] uppercase flex items-center gap-1.5">
-                    <Info className="size-3.5 text-[#d4a853]" />
-                    Regles de compensation
-                  </h3>
-                  <div className="space-y-2">
-                    <div className="p-3 bg-[#2d7a4f08] border border-[#2d7a4f15] rounded-lg">
-                      <p className="text-xs font-medium text-[#2d7a4f]">Compensation entre UE</p>
-                      <p className="text-[11px] text-gray-600 mt-1">
-                        Un etudiant peut compenser une UE dont la moyenne est entre 8 et 9.99 par une autre UE validee avec une moyenne superieure a 10, dans le meme semestre.
-                      </p>
-                    </div>
-                    <div className="p-3 bg-[#d4a85308] border border-[#d4a85315] rounded-lg">
-                      <p className="text-xs font-medium text-[#d4a853]">Seuil de credits</p>
-                      <p className="text-[11px] text-gray-600 mt-1">
-                        La délibération annuelle s&apos;appuie sur les crédits validés sur l&apos;année (60 crédits attendus par défaut) et une moyenne générale &ge; 10/20.
-                      </p>
-                    </div>
-                    <div className="p-3 bg-[#c6282808] border border-[#c6282815] rounded-lg">
-                      <p className="text-xs font-medium text-[#c62828]">Notes eliminatories</p>
-                      <p className="text-[11px] text-gray-600 mt-1">
-                        Toute note inferieure a 8/20 dans une UE est eliminatorie et ne peut pas etre compensee. L&apos;etudiant doit passer en rattrapage.
-                      </p>
-                    </div>
-                  </div>
+            <CardContent className="space-y-3 text-xs text-gray-700">
+              <p>Les moyennes et crédits affichés proviennent des notes verrouillées. Les décisions initiales sont des propositions calculées ; le jury peut les corriger avec un motif avant leur validation définitive.</p>
+              {deliberationData?.rules && (
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="outline">Seuil de passage : {deliberationData.rules.passingGrade}/20</Badge>
+                  <Badge variant="outline">Crédits annuels configurés : {deliberationData.rules.creditsPerYear}</Badge>
+                  <Badge variant="outline">Compensation : {deliberationData.rules.compensationEnabled ? 'activée' : 'désactivée'}</Badge>
                 </div>
-
-                {/* Visual Compensation Flow */}
-                <div className="space-y-3">
-                  <h3 className="text-xs font-semibold text-[#1a2744] uppercase flex items-center gap-1.5">
-                    <TrendingUp className="size-3.5 text-[#d4a853]" />
-                    Flux de decision
-                  </h3>
-                  <div className="space-y-2">
-                    {/* Step 1 */}
-                    <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                      <div className="w-7 h-7 rounded-full bg-[#1a2744] text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
-                        1
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-xs font-semibold text-[#1a2744]">Calcul de la moyenne par UE</p>
-                        <p className="text-[11px] text-gray-500">Moyenne = CC x 40% + Examen x 60% (+ TP si applicable)</p>
-                      </div>
-                    </div>
-                    <div className="flex justify-center">
-                      <ArrowRight className="size-4 text-gray-300 rotate-90" />
-                    </div>
-                    {/* Step 2 */}
-                    <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                      <div className="w-7 h-7 rounded-full bg-[#2d7a4f] text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
-                        2
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-xs font-semibold text-[#2d7a4f]">Verification des seuils</p>
-                        <p className="text-[11px] text-gray-500">Note &ge; 10 : valide | 8-9.99 : compensation possible | &lt; 8 : eliminatorie</p>
-                      </div>
-                    </div>
-                    <div className="flex justify-center">
-                      <ArrowRight className="size-4 text-gray-300 rotate-90" />
-                    </div>
-                    {/* Step 3 */}
-                    <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                      <div className="w-7 h-7 rounded-full bg-[#d4a853] text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
-                        3
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-xs font-semibold text-[#d4a853]">Compensation inter-UE</p>
-                        <p className="text-[11px] text-gray-500">Les UE validees compensent les UE deficitaires si la moyenne du semestre &ge; 10</p>
-                      </div>
-                    </div>
-                    <div className="flex justify-center">
-                      <ArrowRight className="size-4 text-gray-300 rotate-90" />
-                    </div>
-                    {/* Step 4 */}
-                    <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                      <div className="w-7 h-7 rounded-full bg-[#1a2744] text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
-                        4
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-xs font-semibold text-[#1a2744]">Decision du jury</p>
-                        <p className="text-[11px] text-gray-500">Admis / Admis avec dette / Compense / Ajourne / Exclu</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Credit Thresholds Quick Reference */}
-                  <div className="mt-3 p-3 bg-[#1a274405] rounded-lg border border-[#1a274410]">
-                    <p className="text-[10px] font-semibold text-[#1a2744] uppercase mb-2">Seuils de credits (annee 60 credits)</p>
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="text-center p-2 bg-white rounded border border-gray-100">
-                        <p className="text-sm font-bold text-[#2d7a4f]">60/60</p>
-                        <p className="text-[10px] text-gray-500">Admis</p>
-                      </div>
-                      <div className="text-center p-2 bg-white rounded border border-gray-100">
-                        <p className="text-sm font-bold text-[#d4a853]">36-59</p>
-                        <p className="text-[10px] text-gray-500">Dette</p>
-                      </div>
-                      <div className="text-center p-2 bg-white rounded border border-gray-100">
-                        <p className="text-sm font-bold text-[#c62828]">&lt;36</p>
-                        <p className="text-[10px] text-gray-500">Ajourne</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              )}
+              <p className="text-gray-500">Les règles particulières d’un programme doivent être examinées par le jury ; cet écran ne déduit pas à lui seul une compensation réglementaire entre UE.</p>
             </CardContent>
           </Card>
         </motion.div>
@@ -1276,6 +1226,49 @@ export function DeliberationPage() {
           </Card>
         </motion.div>
       </div>
+
+      <Dialog open={Boolean(editingStudent)} onOpenChange={(open) => { if (!open && !isSavingCorrection) setEditingStudent(null) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Corriger une décision du jury</DialogTitle>
+            <DialogDescription>
+              {editingStudent ? `${editingStudent.prenom} ${editingStudent.nom} · ${editingStudent.matricule}` : ''}
+            </DialogDescription>
+          </DialogHeader>
+          {editingStudent && (
+            <div className="space-y-4">
+              <div className="rounded-lg border bg-gray-50 p-3 text-sm text-[#1a2744]">
+                <p>Proposition actuelle : <span className="font-semibold">{decisionConfig[editingStudent.decision].label}</span></p>
+                <p className="mt-1 text-xs text-gray-600">Moyenne {editingStudent.moyenne.toFixed(2)}/20 · {editingStudent.credits}/{editingStudent.creditsTotal} crédits. Ces valeurs ne sont pas modifiées par la décision.</p>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="jury-decision">Décision retenue</Label>
+                <Select value={editedDecision} onValueChange={(value) => setEditedDecision(value as Decision)} disabled={isSavingCorrection}>
+                  <SelectTrigger id="jury-decision"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {(Object.keys(decisionConfig) as Decision[]).map((decision) => (
+                      <SelectItem key={decision} value={decision}>{decisionConfig[decision].label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="jury-reason">Motif de la correction</Label>
+                <Textarea id="jury-reason" value={correctionReason} onChange={(event) => setCorrectionReason(event.target.value)}
+                  maxLength={1000} rows={4} disabled={isSavingCorrection}
+                  placeholder="Expliquez la décision prise par le jury (10 caractères minimum)." />
+                <p className="text-xs text-gray-500">{correctionReason.trim().length}/1000 caractères · motif et auteur conservés dans le journal.</p>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingStudent(null)} disabled={isSavingCorrection}>Annuler</Button>
+            <Button onClick={saveDecisionCorrection} disabled={isSavingCorrection || !editingStudent || editedDecision === editingStudent.decision || correctionReason.trim().length < 10}>
+              {isSavingCorrection ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}Enregistrer la correction
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* QR Code Dialog */}
       <AnimatePresence>

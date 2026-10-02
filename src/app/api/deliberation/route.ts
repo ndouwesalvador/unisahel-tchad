@@ -7,9 +7,23 @@ import { getOrganizationScope } from '@/lib/auth/organization-scope'
 import { parseJuryMembers } from '@/lib/deliberations/jury'
 
 type Decision = 'ADMI' | 'AJOURNE' | 'REDOUBLANT' | 'EXCLU' | 'ADMI_DETTE' | 'COMPENSE'
+const DECISIONS = new Set<Decision>(['ADMI', 'AJOURNE', 'REDOUBLANT', 'EXCLU', 'ADMI_DETTE', 'COMPENSE'])
+
+class DecisionEditError extends Error {
+  constructor(message: string, readonly status: number) { super(message) }
+}
 
 function round2(value: number): number {
   return Math.round(value * 100) / 100
+}
+
+function juryRuleSummary(settings: { passingGrade: number; eliminationGrade: number; compensationEnabled: boolean; creditsPerYear: number } | null) {
+  return {
+    passingGrade: settings?.passingGrade ?? 10,
+    eliminationGrade: settings?.eliminationGrade ?? 0,
+    compensationEnabled: settings?.compensationEnabled ?? true,
+    creditsPerYear: settings?.creditsPerYear ?? 60,
+  }
 }
 
 async function resolveCurrentAcademicYear(tenantId: string) {
@@ -160,9 +174,18 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
       const readinessSession = deliberation.type === 'RATTRAPAGE' ? 'RATTRAPAGE' : 'NORMALE'
       const [decisionRows, settings, readiness] = await Promise.all([
         db.deliberationDecision.findMany({ where: { deliberationId } }),
-        db.tenantSettings.findUnique({ where: { tenantId }, select: { creditsPerYear: true } }),
+        db.tenantSettings.findUnique({ where: { tenantId }, select: {
+          creditsPerYear: true, passingGrade: true, eliminationGrade: true, compensationEnabled: true,
+        } }),
         computeGradeReadiness(tenantId, deliberation.academicYearId, readinessSession, deliberation.departmentId!),
       ])
+      const latestCorrections = decisionRows.length ? await db.auditLog.findMany({
+        where: { tenantId, action: 'JURY_DECISION_CHANGED', entity: 'DeliberationDecision',
+          entityId: { in: decisionRows.map((decision) => decision.id) } },
+        orderBy: { createdAt: 'desc' }, distinct: ['entityId'],
+        select: { entityId: true, createdAt: true, user: { select: { firstName: true, lastName: true } } },
+      }) : []
+      const correctionByDecision = new Map(latestCorrections.map((entry) => [entry.entityId, entry]))
       const creditsTotal = settings?.creditsPerYear ?? 60
       const studentRows = await db.student.findMany({
         where: { id: { in: decisionRows.map((d) => d.studentId) }, tenantId },
@@ -171,6 +194,7 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
       const studentById = new Map(studentRows.map((s) => [s.id, s]))
       const students = decisionRows.map((d) => {
         const student = studentById.get(d.studentId)
+        const correction = correctionByDecision.get(d.id)
         return {
           id: d.id,
           studentId: d.studentId,
@@ -182,9 +206,14 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
           creditsTotal,
           decision: d.decision as Decision,
           observation: d.comment || '',
+          isModified: d.isModified,
+          modificationReason: d.modificationReason || '',
+          updatedAt: d.updatedAt.toISOString(),
+          modifiedBy: correction?.user ? `${correction.user.firstName} ${correction.user.lastName}`.trim() : null,
+          modifiedAt: correction?.createdAt.toISOString() || null,
         }
       })
-      return NextResponse.json({ departments, sessions, selected: { id: deliberation.id, departmentId: deliberation.departmentId, isLocked: deliberation.isLocked, juryMembers: deliberation.juryMembers }, students, readiness })
+      return NextResponse.json({ departments, sessions, selected: { id: deliberation.id, departmentId: deliberation.departmentId, isLocked: deliberation.isLocked, juryMembers: deliberation.juryMembers }, students, readiness, rules: juryRuleSummary(settings) })
     }
 
     // No deliberation selected yet: show a live preview computed from real grades
@@ -192,14 +221,79 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
     if (!academicYear) {
       return NextResponse.json({ departments, sessions, selected: null, students: [] })
     }
-    const readiness = await computeGradeReadiness(tenantId, academicYear.id, sessionType, selectedDepartmentId!)
+    const [readiness, settings] = await Promise.all([
+      computeGradeReadiness(tenantId, academicYear.id, sessionType, selectedDepartmentId!),
+      db.tenantSettings.findUnique({ where: { tenantId }, select: {
+        creditsPerYear: true, passingGrade: true, eliminationGrade: true, compensationEnabled: true,
+      } }),
+    ])
     const preview = await computeStudentDecisions(tenantId, academicYear.id, sessionType, readiness.studentIds)
     const students = preview.map((p) => ({ ...p, id: p.studentId, observation: '' }))
 
-    return NextResponse.json({ departments, sessions, selected: null, students, readiness, academicYearName: academicYear.name })
+    return NextResponse.json({ departments, sessions, selected: null, students, readiness, rules: juryRuleSummary(settings), academicYearName: academicYear.name })
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Deliberation API error:', error)
     return NextResponse.json({ error: 'Failed to fetch deliberation data' }, { status: 500 })
+  }
+}
+
+// PATCH /api/deliberation?id=...&decisionId=... — reasoned jury correction before finalization.
+// A no-op write on the parent row serializes corrections with PUT's final lock.
+async function handlePatch(user: SessionUser, tenantId: string, request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const id = searchParams.get('id')
+    const decisionId = searchParams.get('decisionId')
+    if (!id || !decisionId) return NextResponse.json({ error: 'Délibération et décision requises' }, { status: 400 })
+
+    const body = await request.json().catch(() => ({}))
+    const nextDecision = body.decision
+    const reason = typeof body.reason === 'string' ? body.reason.trim() : ''
+    if (!DECISIONS.has(nextDecision) || reason.length < 10 || reason.length > 1000 ||
+        typeof body.expectedUpdatedAt !== 'string' || !Number.isFinite(Date.parse(body.expectedUpdatedAt))) {
+      return NextResponse.json({ error: 'Décision, motif de 10 à 1000 caractères et version actuelle requis' }, { status: 400 })
+    }
+
+    const departments = await availableDepartments(user, tenantId)
+    const permittedIds = departments.map((department) => department.id)
+    if (permittedIds.length === 0) return NextResponse.json({ error: 'Département inaccessible' }, { status: 403 })
+
+    const updated = await db.$transaction(async (tx) => {
+      const parent = await tx.deliberation.updateMany({
+        where: { id, tenantId, departmentId: { in: permittedIds }, isLocked: false, status: 'EN_COURS' },
+        data: { updatedAt: new Date() },
+      })
+      if (parent.count !== 1) throw new DecisionEditError('Délibération introuvable, inaccessible ou finalisée', 409)
+
+      const previous = await tx.deliberationDecision.findFirst({
+        where: { id: decisionId, deliberationId: id },
+        select: { id: true, studentId: true, decision: true, updatedAt: true },
+      })
+      if (!previous) throw new DecisionEditError('Décision introuvable dans cette délibération', 404)
+      if (previous.updatedAt.toISOString() !== body.expectedUpdatedAt) {
+        throw new DecisionEditError('La décision a changé depuis son ouverture. Rechargez-la avant de corriger.', 409)
+      }
+      if (previous.decision === nextDecision) throw new DecisionEditError('Choisissez une décision différente', 409)
+
+      const decision = await tx.deliberationDecision.update({
+        where: { id: decisionId },
+        data: { decision: nextDecision, isModified: true, modificationReason: reason },
+      })
+      await tx.auditLog.create({ data: {
+        tenantId, userId: user.id, action: 'JURY_DECISION_CHANGED', entity: 'DeliberationDecision', entityId: decisionId,
+        details: JSON.stringify({ deliberationId: id, studentId: previous.studentId,
+          from: previous.decision, to: nextDecision, reason }),
+      } })
+      return decision
+    })
+
+    return NextResponse.json({ decision: updated })
+  } catch (error) {
+    if (error instanceof DecisionEditError) return NextResponse.json({ error: error.message }, { status: error.status })
+    // eslint-disable-next-line no-console
+    console.error('Correct deliberation decision error:', error)
+    return NextResponse.json({ error: 'Échec de la correction de la décision' }, { status: 500 })
   }
 }
 
@@ -265,6 +359,7 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
     if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2002') {
       return NextResponse.json({ error: 'Une délibération existe déjà pour ce département et cette session' }, { status: 409 })
     }
+    // eslint-disable-next-line no-console
     console.error('Launch deliberation error:', error)
     return NextResponse.json({ error: 'Failed to launch deliberation' }, { status: 500 })
   }
@@ -298,10 +393,11 @@ async function handlePut(user: SessionUser, tenantId: string, request: NextReque
         { status: 409 }
       )
     }
-    const decisions = await db.deliberationDecision.findMany({ where: { deliberationId: id }, select: { studentId: true } })
+    const decisions = await db.deliberationDecision.findMany({ where: { deliberationId: id }, select: { studentId: true, decision: true } })
     const decisionIds = decisions.map((decision) => decision.studentId)
     if (decisionIds.length !== readiness.studentIds.length || new Set(decisionIds).size !== decisionIds.length ||
-        decisionIds.some((studentId) => !readiness.studentIds.includes(studentId))) {
+        decisionIds.some((studentId) => !readiness.studentIds.includes(studentId)) ||
+        decisions.some((decision) => !DECISIONS.has(decision.decision as Decision))) {
       return NextResponse.json({ error: 'Les décisions ne correspondent plus aux inscrits du département' }, { status: 409 })
     }
 
@@ -314,6 +410,7 @@ async function handlePut(user: SessionUser, tenantId: string, request: NextReque
 
     return NextResponse.json({ deliberation })
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Lock deliberation error:', error)
     return NextResponse.json({ error: 'Failed to lock deliberation' }, { status: 500 })
   }
@@ -322,3 +419,4 @@ async function handlePut(user: SessionUser, tenantId: string, request: NextReque
 export const GET = withTenantAuth(handleGet, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'FACULTE', 'DEPARTEMENT', 'JURY'])
 export const POST = withTenantAuth(handlePost, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'FACULTE', 'DEPARTEMENT', 'JURY'])
 export const PUT = withTenantAuth(handlePut, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'FACULTE', 'DEPARTEMENT', 'JURY'])
+export const PATCH = withTenantAuth(handlePatch, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'FACULTE', 'DEPARTEMENT', 'JURY'])
