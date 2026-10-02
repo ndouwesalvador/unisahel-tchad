@@ -20,7 +20,16 @@ const decisionSchema = z.object({
 })
 const serviceInclude = {
   academicYear: { select: { name: true } },
-  courseElement: { select: { name: true, code: true } },
+  courseElement: { select: {
+    name: true, code: true,
+    teachingUnit: { select: {
+      name: true, code: true,
+      semester: { select: {
+        name: true,
+        level: { select: { name: true, program: { select: { name: true } } } },
+      } },
+    } },
+  } },
   teacher: { select: { user: { select: { firstName: true, lastName: true } } } },
   requestingDepartment: { select: { name: true } },
   homeDepartment: { select: { name: true } },
@@ -49,7 +58,7 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
     db.courseElement.findMany({ where: { teachingUnit: { semester: { level: { program: {
       tenantId, isActive: true, departmentId: departmentIds ? { in: departmentIds } : { not: null },
     } } } } }, select: { id: true, name: true, code: true, hoursCM: true, hoursTD: true, hoursTP: true,
-      teachingUnit: { select: { semester: { select: { level: { select: { name: true, program: { select: { name: true, departmentId: true, department: { select: { name: true } } } } } } } } } } },
+      teachingUnit: { select: { name: true, code: true, semester: { select: { name: true, level: { select: { name: true, program: { select: { name: true, departmentId: true, department: { select: { name: true } } } } } } } } } } },
       orderBy: { name: 'asc' }, take: 1000 }),
   ])
   return NextResponse.json({ services, teachers, elements, departmentIds: departmentIds ?? null })

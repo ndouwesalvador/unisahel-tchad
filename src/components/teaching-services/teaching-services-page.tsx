@@ -13,11 +13,11 @@ import { Textarea } from '@/components/ui/textarea'
 import type { ServiceAction, ServiceStatus } from '@/lib/teaching-service'
 
 interface TeacherOption { id: string; departmentId: string; user: { firstName: string; lastName: string } | null; department: { name: string } | null }
-interface ElementOption { id: string; name: string; code: string | null; hoursCM: number; hoursTD: number; hoursTP: number; teachingUnit: { semester: { level: { name: string; program: { name: string; departmentId: string | null; department: { name: string } | null } } } } }
+interface ElementOption { id: string; name: string; code: string | null; hoursCM: number; hoursTD: number; hoursTP: number; teachingUnit: { name: string; code: string | null; semester: { name: string; level: { name: string; program: { name: string; departmentId: string | null; department: { name: string } | null } } } } }
 interface ServiceRecord {
   id: string; status: ServiceStatus; plannedHours: number; requestReason: string; requestedById: string
   homeDepartmentId: string; requestingDepartmentId: string; homeDecisionReason: string | null; centralDecisionReason: string | null
-  academicYear: { name: string }; courseElement: { name: string; code: string | null }
+  academicYear: { name: string }; courseElement: { name: string; code: string | null; teachingUnit: { name: string; semester: { name: string; level: { name: string; program: { name: string } } } } }
   teacher: { user: { firstName: string; lastName: string } | null }
   requestingDepartment: { name: string }; homeDepartment: { name: string }
 }
@@ -97,7 +97,7 @@ export function TeachingServicesPage() {
       <CardHeader><CardTitle>Nouvelle demande · {years.find(year => year.id === yearId)?.name}</CardTitle></CardHeader>
       <CardContent className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2"><Label htmlFor="service-element">Matière / EC</Label><select id="service-element" className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900" value={elementId} onChange={event => setElementId(event.target.value)}>
-          <option value="">Sélectionner une matière</option>{data?.elements.map(element => <option key={element.id} value={element.id}>{element.teachingUnit.semester.level.program.name} · {element.name}</option>)}
+          <option value="">Sélectionner une matière</option>{data?.elements.map(element => <option key={element.id} value={element.id}>{element.teachingUnit.semester.level.program.name} · {element.teachingUnit.semester.level.name} · {element.teachingUnit.semester.name} · {element.teachingUnit.name} · {element.code ? `${element.code} — ` : ''}{element.name}</option>)}
         </select></div>
         <div className="space-y-2"><Label htmlFor="service-teacher">Enseignant sollicité</Label><select id="service-teacher" className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900" value={teacherId} onChange={event => setTeacherId(event.target.value)}>
           <option value="">Sélectionner un enseignant</option>{data?.teachers.map(teacher => <option key={teacher.id} value={teacher.id}>{teacherName(teacher)} · {teacher.department?.name ?? 'Département non défini'}</option>)}
@@ -118,6 +118,7 @@ export function TeachingServicesPage() {
         const canCentral = service.status === 'PENDING_CENTRAL' && ['ADMIN_INSTITUTION', 'SUPER_ADMIN'].includes(user?.role ?? '')
         return <Card key={service.id}><CardContent className="space-y-3 py-5">
           <div className="flex flex-wrap items-start justify-between gap-2"><div><h3 className="font-semibold text-slate-900">{service.courseElement.code ? `${service.courseElement.code} · ` : ''}{service.courseElement.name}</h3>
+            <p className="text-sm text-slate-600">{service.courseElement.teachingUnit.semester.level.program.name} · {service.courseElement.teachingUnit.semester.level.name} · {service.courseElement.teachingUnit.semester.name} · {service.courseElement.teachingUnit.name}</p>
             <p className="text-sm text-slate-700">{`${service.teacher.user?.lastName ?? ''} ${service.teacher.user?.firstName ?? ''}`.trim()} · {service.plannedHours} h/an</p>
             <p className="text-sm text-slate-600">{service.requestingDepartment.name} → {service.homeDepartment.name}</p></div>
             <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-800">{statusLabel[service.status]}</span></div>
