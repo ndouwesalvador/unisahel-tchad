@@ -3,7 +3,7 @@
 import { exportToExcel } from '@/lib/export'
 import { useStructure } from '@/lib/api-hooks'
 import { useAppStore } from '@/lib/store'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, useEffect, useRef, Fragment } from 'react'
 import { toast } from 'sonner'
 import { motion } from 'framer-motion'
@@ -69,6 +69,7 @@ interface ECUE {
   personal: number
   orderIndex: number
   enseignant: string
+  enseignantId: string | null
 }
 
 interface UE {
@@ -81,6 +82,7 @@ interface UE {
   compensable: boolean
   orderIndex: number
   responsable: string
+  responsableId: string | null
   ecues: ECUE[]
 }
 
@@ -114,8 +116,11 @@ const typeConfig: Record<UEType, { label: string; className: string }> = {
 }
 
 interface StructureTeacherRef {
+  id: string
   user?: { firstName: string; lastName: string } | null
 }
+
+type TeacherOption = { id: string; name: string; departmentId: string | null }
 
 interface StructureCourseElement {
   id: string
@@ -211,6 +216,7 @@ function mapStructureToPrograms(faculties: StructureFaculty[]): Program[] {
                 compensable: tu.compensable,
                 orderIndex: tu.orderIndex ?? 0,
                 responsable: teacherName(tu.responsible),
+                responsableId: tu.responsible?.id ?? null,
                 ecues: (tu.courseElements || []).map((ce) => ({
                   id: ce.id,
                   code: ce.code ?? '',
@@ -223,6 +229,7 @@ function mapStructureToPrograms(faculties: StructureFaculty[]): Program[] {
                   personal: ce.hoursPersonal ?? 0,
                   orderIndex: ce.orderIndex ?? 0,
                   enseignant: teacherName(ce.teacher),
+                  enseignantId: ce.teacher?.id ?? null,
                 })),
               })),
             })),
@@ -329,7 +336,7 @@ function validNumber(value: string, minimum: number, integer = false): boolean {
   return Number.isFinite(parsed) && parsed >= minimum && (!integer || Number.isInteger(parsed))
 }
 
-function EditTeachingUnitDialog({ ue }: { ue: UE }) {
+function EditTeachingUnitDialog({ ue, teachers }: { ue: UE; teachers: TeacherOption[] }) {
   const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -339,6 +346,7 @@ function EditTeachingUnitDialog({ ue }: { ue: UE }) {
   const [type, setType] = useState(ue.rawType || 'FONDAMENTALE')
   const [orderIndex, setOrderIndex] = useState(String(ue.orderIndex))
   const [compensable, setCompensable] = useState(ue.compensable)
+  const [responsibleId, setResponsibleId] = useState(ue.responsableId ?? '')
 
   const reset = () => {
     setCode(ue.code)
@@ -347,6 +355,7 @@ function EditTeachingUnitDialog({ ue }: { ue: UE }) {
     setType(ue.rawType || 'FONDAMENTALE')
     setOrderIndex(String(ue.orderIndex))
     setCompensable(ue.compensable)
+    setResponsibleId(ue.responsableId ?? '')
   }
 
   const handleSave = async () => {
@@ -356,6 +365,8 @@ function EditTeachingUnitDialog({ ue }: { ue: UE }) {
     }
     setBusy(true)
     try {
+      const reassignment = Boolean(ue.responsableId && responsibleId && ue.responsableId !== responsibleId)
+      if (reassignment && !window.confirm(`Cette UE est déjà confiée à ${ue.responsable}. La réattribuer à un autre enseignant ?`)) return
       const res = await fetch('/api/structure?type=teaching-unit', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -366,6 +377,8 @@ function EditTeachingUnitDialog({ ue }: { ue: UE }) {
           credits: Number(credits),
           type,
           compensable,
+          responsibleId: responsibleId || null,
+          confirmReassignment: reassignment,
           orderIndex: Number(orderIndex),
         }),
       })
@@ -432,6 +445,7 @@ function EditTeachingUnitDialog({ ue }: { ue: UE }) {
             </div>
             <Switch checked={compensable} onCheckedChange={setCompensable} />
           </div>
+          <div className="sm:col-span-2 space-y-2"><Label htmlFor={`ue-responsible-${ue.id}`}>Responsable de l’UE</Label><select id={`ue-responsible-${ue.id}`} value={responsibleId} onChange={(event) => setResponsibleId(event.target.value)} className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900"><option value="">Aucun responsable</option>{teachers.map((teacher) => <option key={teacher.id} value={teacher.id}>{teacher.name}</option>)}</select></div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)} disabled={busy}>Annuler</Button>
@@ -444,7 +458,7 @@ function EditTeachingUnitDialog({ ue }: { ue: UE }) {
   )
 }
 
-function EditCourseElementDialog({ ecue }: { ecue: ECUE }) {
+function EditCourseElementDialog({ ecue, teachers }: { ecue: ECUE; teachers: TeacherOption[] }) {
   const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -457,6 +471,7 @@ function EditCourseElementDialog({ ecue }: { ecue: ECUE }) {
   const [hoursStage, setHoursStage] = useState(String(ecue.stage))
   const [hoursPersonal, setHoursPersonal] = useState(String(ecue.personal))
   const [orderIndex, setOrderIndex] = useState(String(ecue.orderIndex))
+  const [teacherId, setTeacherId] = useState(ecue.enseignantId ?? '')
 
   const reset = () => {
     setCode(ecue.code)
@@ -468,6 +483,7 @@ function EditCourseElementDialog({ ecue }: { ecue: ECUE }) {
     setHoursStage(String(ecue.stage))
     setHoursPersonal(String(ecue.personal))
     setOrderIndex(String(ecue.orderIndex))
+    setTeacherId(ecue.enseignantId ?? '')
   }
 
   const handleSave = async () => {
@@ -477,6 +493,8 @@ function EditCourseElementDialog({ ecue }: { ecue: ECUE }) {
     }
     setBusy(true)
     try {
+      const reassignment = Boolean(ecue.enseignantId && teacherId && ecue.enseignantId !== teacherId)
+      if (reassignment && !window.confirm(`Cette matière est déjà confiée à ${ecue.enseignant}. La réattribuer à un autre enseignant ?`)) return
       const res = await fetch('/api/structure?type=course-element', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -490,6 +508,8 @@ function EditCourseElementDialog({ ecue }: { ecue: ECUE }) {
           hoursTP: Number(hoursTP),
           hoursStage: Number(hoursStage),
           hoursPersonal: Number(hoursPersonal),
+          teacherId: teacherId || null,
+          confirmReassignment: reassignment,
           orderIndex: Number(orderIndex),
         }),
       })
@@ -556,6 +576,7 @@ function EditCourseElementDialog({ ecue }: { ecue: ECUE }) {
             <Label>Ordre</Label>
             <Input type="number" min="0" step="1" value={orderIndex} onChange={(e) => setOrderIndex(e.target.value)} />
           </div>
+          <div className="sm:col-span-2 space-y-2"><Label htmlFor={`ec-teacher-${ecue.id}`}>Enseignant affecté</Label><select id={`ec-teacher-${ecue.id}`} value={teacherId} onChange={(event) => setTeacherId(event.target.value)} className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900"><option value="">Aucun enseignant</option>{teachers.map((teacher) => <option key={teacher.id} value={teacher.id}>{teacher.name}</option>)}</select></div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)} disabled={busy}>Annuler</Button>
@@ -570,7 +591,7 @@ function EditCourseElementDialog({ ecue }: { ecue: ECUE }) {
 
 // ─── Semester Component ───────────────────────────────────────────────────────
 
-function SemesterView({ semester }: { semester: Semester }) {
+function SemesterView({ semester, canManage, teachers }: { semester: Semester; canManage: boolean; teachers: TeacherOption[] }) {
   const [expandedUEs, setExpandedUEs] = useState<Set<string>>(new Set())
   const totalCredits = getSemesterCredits(semester)
   const volume = getSemesterVolume(semester)
@@ -639,7 +660,7 @@ function SemesterView({ semester }: { semester: Semester }) {
                   <TableHead className="text-xs font-semibold">Type</TableHead>
                   <TableHead className="text-xs font-semibold text-center">Compensable</TableHead>
                   <TableHead className="text-xs font-semibold">Responsable</TableHead>
-                  <TableHead className="text-xs font-semibold text-right">Actions</TableHead>
+                  {canManage && <TableHead className="text-xs font-semibold text-right">Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -685,11 +706,11 @@ function SemesterView({ semester }: { semester: Semester }) {
                         <TableCell className="py-2">
                           <span className="text-xs text-gray-600">{ue.responsable}</span>
                         </TableCell>
-                        <TableCell className="py-2">
+                        {canManage && <TableCell className="py-2">
                           <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-                            <EditTeachingUnitDialog ue={ue} />
+                            <EditTeachingUnitDialog ue={ue} teachers={teachers} />
                           </div>
-                        </TableCell>
+                        </TableCell>}
                       </TableRow>
                       {isExpanded && hasEcues && (
                         ue.ecues.map((ecue) => (
@@ -716,11 +737,11 @@ function SemesterView({ semester }: { semester: Semester }) {
                             <TableCell className="py-1.5">
                               <span className="text-[10px] text-gray-500">{ecue.enseignant}</span>
                             </TableCell>
-                            <TableCell className="py-1.5">
+                            {canManage && <TableCell className="py-1.5">
                               <div className="flex justify-end gap-1">
-                                <EditCourseElementDialog ecue={ecue} />
+                                <EditCourseElementDialog ecue={ecue} teachers={teachers} />
                               </div>
-                            </TableCell>
+                            </TableCell>}
                           </TableRow>
                         ))
                       )}
@@ -729,7 +750,7 @@ function SemesterView({ semester }: { semester: Semester }) {
                 })}
                 {semester.ues.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={8} className="py-8 text-center text-sm text-gray-500">
+                      <TableCell colSpan={canManage ? 8 : 7} className="py-8 text-center text-sm text-gray-500">
                       Aucune UE n&apos;est encore configurée pour ce semestre.
                     </TableCell>
                   </TableRow>
@@ -748,6 +769,9 @@ function SemesterView({ semester }: { semester: Semester }) {
 
 export function MaquettePage() {
   const setView = useAppStore((s) => s.setView)
+  const canManage = useAppStore((s) => ['SUPER_ADMIN', 'ADMIN_INSTITUTION'].includes(s.user?.role ?? ''))
+  const { data: teacherOptions } = useQuery<{ data: TeacherOption[] }>({ queryKey: ['teacher-options'], enabled: canManage, queryFn: async () => { const response = await fetch('/api/teachers?options=true'); if (!response.ok) throw new Error('Enseignants indisponibles'); return response.json() } })
+  const teachers = teacherOptions?.data ?? []
   const { data: structureData, isLoading } = useStructure()
   const programs = mapStructureToPrograms(structureData?.faculties || [])
   const creditsPerSemester = structureData?.tenant?.settings?.creditsPerSemester ?? 30
@@ -815,10 +839,10 @@ export function MaquettePage() {
           <p className="text-sm font-medium text-[#1a2744]">Aucun programme pédagogique configuré</p>
           <p className="text-sm text-gray-500 mt-1">Créez d&apos;abord la structure académique avant d&apos;afficher une maquette.</p>
         </div>
-        <Button className="bg-[#2d7a4f] hover:bg-[#236b40] text-white" onClick={() => setView('structure')}>
+        {canManage && <Button className="bg-[#2d7a4f] hover:bg-[#236b40] text-white" onClick={() => setView('structure')}>
           <Plus className="size-4 mr-2" />
           Gérer la structure
-        </Button>
+        </Button>}
       </div>
     )
   }
@@ -841,14 +865,14 @@ export function MaquettePage() {
               <p className="text-sm text-white/70 mt-1">Programmes, unites d&apos;enseignement et regles de compensation</p>
             </div>
             <div className="flex gap-2 flex-wrap">
-              <Button
+              {canManage && <Button
                 size="sm"
                 className="bg-white/10 backdrop-blur border border-white/20 hover:bg-white/20 text-white text-xs"
                 onClick={() => setView('structure')}
               >
                 <Plus className="size-3.5 mr-1.5" />
                 Gerer la structure
-              </Button>
+              </Button>}
               <Button
                 size="sm"
                 className="bg-white/10 backdrop-blur border border-white/20 hover:bg-white/20 text-white text-xs"
@@ -903,13 +927,13 @@ export function MaquettePage() {
                 )}
               </div>
             </div>
-            <Button
+            {canManage && <Button
               variant="outline"
               className="shrink-0 bg-white"
               onClick={() => setView('structure')}
             >
               Corriger dans Structure
-            </Button>
+            </Button>}
           </div>
         </CardContent>
       </Card>
@@ -1031,7 +1055,7 @@ export function MaquettePage() {
 
               {level.semesters.map(sem => (
                 <TabsContent key={sem.id} value={sem.id} className="mt-4">
-                  <SemesterView semester={sem} />
+                  <SemesterView semester={sem} canManage={canManage} teachers={teachers} />
                 </TabsContent>
               ))}
             </Tabs>

@@ -4,8 +4,9 @@ import { NextRequest } from 'next/server'
 const { authMock, dbMock } = vi.hoisted(() => ({
   authMock: vi.fn(),
   dbMock: {
-    teachingUnit: { findFirst: vi.fn(), update: vi.fn() },
-    courseElement: { findFirst: vi.fn(), update: vi.fn() },
+    teachingUnit: { findFirst: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
+    courseElement: { findFirst: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
+    teacher: { findFirst: vi.fn() },
     auditLog: { create: vi.fn() },
   },
 }))
@@ -33,6 +34,9 @@ beforeEach(() => {
   dbMock.courseElement.findFirst.mockResolvedValue({ id: elementId })
   dbMock.teachingUnit.update.mockResolvedValue({ id: unitId })
   dbMock.courseElement.update.mockResolvedValue({ id: elementId })
+  dbMock.teacher.findFirst.mockResolvedValue({ id: 'cteacher0000000000000001' })
+  dbMock.teachingUnit.findUnique.mockResolvedValue({ responsibleId: null })
+  dbMock.courseElement.findUnique.mockResolvedValue({ teacherId: null })
   dbMock.auditLog.create.mockResolvedValue({ id: 'caudit000000000000000001' })
 })
 
@@ -83,5 +87,38 @@ describe('PUT /api/structure', () => {
 
     expect(response.status).toBe(404)
     expect(dbMock.teachingUnit.update).not.toHaveBeenCalled()
+  })
+
+  it('only allows the institution admin to change the maquette', async () => {
+    authMock.mockResolvedValue({ user: { id: 'cteacher0000000000000001', role: 'ENSEIGNANT', tenantId } })
+    const response = await PUT(request('course-element', { id: elementId, teacherId: null }))
+    expect(response.status).toBe(403)
+    expect(dbMock.courseElement.update).not.toHaveBeenCalled()
+  })
+
+  it('rejects a teacher who is not active in the same institution', async () => {
+    dbMock.teacher.findFirst.mockResolvedValue(null)
+    const response = await PUT(request('course-element', { id: elementId, teacherId: 'cteacher0000000000000001' }))
+    expect(response.status).toBe(404)
+    expect(dbMock.courseElement.update).not.toHaveBeenCalled()
+  })
+
+  it('requires explicit confirmation before reassigning a course element', async () => {
+    dbMock.courseElement.findUnique.mockResolvedValue({ teacherId: 'cteacher0000000000000002' })
+    const body = { id: elementId, teacherId: 'cteacher0000000000000001' }
+    const refused = await PUT(request('course-element', body))
+    expect(refused.status).toBe(409)
+    expect(dbMock.courseElement.update).not.toHaveBeenCalled()
+
+    const confirmed = await PUT(request('course-element', { ...body, confirmReassignment: true }))
+    expect(confirmed.status).toBe(200)
+    expect(dbMock.courseElement.update).toHaveBeenCalledWith({ where: { id: elementId }, data: { teacherId: body.teacherId } })
+  })
+
+  it('can remove a responsible teacher without reassigning the UE', async () => {
+    dbMock.teachingUnit.findUnique.mockResolvedValue({ responsibleId: 'cteacher0000000000000001' })
+    const response = await PUT(request('teaching-unit', { id: unitId, responsibleId: null }))
+    expect(response.status).toBe(200)
+    expect(dbMock.teachingUnit.update).toHaveBeenCalledWith({ where: { id: unitId }, data: { responsibleId: null } })
   })
 })

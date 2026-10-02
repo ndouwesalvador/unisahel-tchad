@@ -72,6 +72,7 @@ import {
   MapPin,
 } from 'lucide-react'
 import { useRooms } from '@/lib/api-hooks'
+import { useAppStore } from '@/lib/store'
 
 // ─── Custom useCountUp Hook ────────────────────────────────────────────────────
 
@@ -139,6 +140,61 @@ interface RoomRecord {
   status: RoomStatus
   isActive: boolean
   todaySchedule?: { start: string; end: string; purpose: string }[]
+}
+
+function RoomCatalogDialog({ room, open, onOpenChange, onSaved }: { room: RoomRecord | null; open: boolean; onOpenChange: (open: boolean) => void; onSaved: () => void }) {
+  const [name, setName] = useState('')
+  const [type, setType] = useState('SALLE')
+  const [capacity, setCapacity] = useState('')
+  const [building, setBuilding] = useState('')
+  const [equipment, setEquipment] = useState('')
+  const [status, setStatus] = useState<RoomStatus>('libre')
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (!open) return
+    setName(room?.name ?? '')
+    setType(room?.type ?? 'SALLE')
+    setCapacity(room ? String(room.capacity) : '')
+    setBuilding(room?.building ?? '')
+    setEquipment(room?.equipment ?? '')
+    setStatus(room?.status ?? 'libre')
+  }, [open, room])
+
+  const save = async (event: React.FormEvent) => {
+    event.preventDefault()
+    const numericCapacity = Number(capacity)
+    if (!name.trim() || !Number.isInteger(numericCapacity) || numericCapacity < 1) { toast.error('Nom et capacité valide requis'); return }
+    setSaving(true)
+    try {
+      const params = new URLSearchParams({ entity: 'room' })
+      if (room) params.set('id', room.id)
+      const response = await fetch(`/api/rooms?${params}`, { method: room ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name.trim(), type, capacity: numericCapacity, building: building.trim(), equipment: equipment.trim(), status }) })
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(payload.error || 'Enregistrement impossible')
+      toast.success(room ? 'Salle mise à jour' : 'Salle créée')
+      onSaved()
+      onOpenChange(false)
+    } catch (error) { toast.error(error instanceof Error ? error.message : 'Enregistrement impossible') }
+    finally { setSaving(false) }
+  }
+
+  return <Dialog open={open} onOpenChange={(next) => { if (!saving) onOpenChange(next) }}>
+    <DialogContent className="sm:max-w-lg">
+      <DialogHeader><DialogTitle>{room ? 'Modifier la salle' : 'Créer une salle'}</DialogTitle></DialogHeader>
+      <form onSubmit={save} className="space-y-4">
+        <div className="space-y-1"><Label htmlFor="room-name">Nom de la salle</Label><Input id="room-name" value={name} onChange={(event) => setName(event.target.value)} maxLength={100} required placeholder="Ex. Salle B12" /></div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-1"><Label htmlFor="room-type">Type</Label><select id="room-type" value={type} onChange={(event) => setType(event.target.value)} className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900">{[['SALLE', 'Salle de cours'], ['AMPHITHEATRE', 'Amphithéâtre'], ['LABORATOIRE', 'Laboratoire'], ['ATELIER', 'Atelier'], ['BUREAU', 'Bureau'], ['AUTRE', 'Autre']].map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>
+          <div className="space-y-1"><Label htmlFor="room-capacity">Capacité</Label><Input id="room-capacity" type="number" min="1" max="10000" step="1" value={capacity} onChange={(event) => setCapacity(event.target.value)} required /></div>
+        </div>
+        <div className="space-y-1"><Label htmlFor="room-building">Bâtiment / site</Label><Input id="room-building" value={building} onChange={(event) => setBuilding(event.target.value)} maxLength={100} placeholder="Ex. Campus principal" /></div>
+        <div className="space-y-1"><Label htmlFor="room-equipment">Équipements</Label><Input id="room-equipment" value={equipment} onChange={(event) => setEquipment(event.target.value)} maxLength={1000} placeholder="WiFi, Tableau blanc, Vidéo-projecteur" /><p className="text-xs text-slate-600">Séparez les équipements par une virgule.</p></div>
+        <div className="space-y-1"><Label htmlFor="room-status">État</Label><select id="room-status" value={status} onChange={(event) => setStatus(event.target.value as RoomStatus)} className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900"><option value="libre">Disponible</option><option value="occupee">Occupée</option><option value="maintenance">En maintenance</option></select></div>
+        <div className="flex justify-end gap-2"><Button type="button" variant="outline" disabled={saving} onClick={() => onOpenChange(false)}>Annuler</Button><Button type="submit" disabled={saving} className="bg-emerald-800 text-white hover:bg-emerald-900">{saving ? 'Enregistrement…' : room ? 'Enregistrer' : 'Créer la salle'}</Button></div>
+      </form>
+    </DialogContent>
+  </Dialog>
 }
 
 function mapRoom(r: RoomRecord): Room {
@@ -249,6 +305,9 @@ function timeToMinutes(t: string): number {
 }
 
 export function RoomBookingPage() {
+  const canManageRooms = useAppStore((state) => ['SUPER_ADMIN', 'ADMIN_INSTITUTION'].includes(state.user?.role ?? ''))
+  const [catalogOpen, setCatalogOpen] = useState(false)
+  const [catalogRoom, setCatalogRoom] = useState<RoomRecord | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedRoom, setSelectedRoom] = useState('')
   const [reservDate, setReservDate] = useState('')
@@ -266,7 +325,7 @@ export function RoomBookingPage() {
   const [isSubmittingReservation, setIsSubmittingReservation] = useState(false)
   const queryClient = useQueryClient()
 
-  const { data: roomsQuery, isLoading } = useRooms()
+  const { data: roomsQuery, isLoading, isError } = useRooms()
   const rooms: Room[] = (roomsQuery?.data || []).map(mapRoom)
   const reservations: Reservation[] = (roomsQuery?.reservations || []).map(mapReservation)
 
@@ -469,6 +528,7 @@ export function RoomBookingPage() {
         initial="hidden"
         animate="visible"
       >
+        {canManageRooms && <RoomCatalogDialog room={catalogRoom} open={catalogOpen} onOpenChange={setCatalogOpen} onSaved={() => queryClient.invalidateQueries({ queryKey: ['rooms'] })} />}
         {/* ─── Gradient Header Banner ─────────────────────────────────────────── */}
         <motion.div variants={itemVariants} className="relative overflow-hidden rounded-xl">
           <div className="absolute inset-0 bg-gradient-to-r from-[#1a2744] via-[#1f3050] to-[#2d7a4f]" />
@@ -488,6 +548,7 @@ export function RoomBookingPage() {
                 <p className="text-sm text-white/70 mt-1">Gestion et reservation des espaces institutionnels</p>
               </div>
               <div className="flex flex-wrap gap-3">
+                {canManageRooms && <Button type="button" className="bg-white text-[#1a2744] hover:bg-slate-100" onClick={() => { setCatalogRoom(null); setCatalogOpen(true) }}><Plus className="mr-2 size-4" />Créer une salle</Button>}
                 <AnimatedStat value={availableCount} label="Salles disponibles" icon={DoorOpen} />
                 <AnimatedStat value={todayReservCount} label="Reservations aujourd&apos;hui" icon={Calendar} />
                 <AnimatedStat value={occupancyRate} label="Taux occupation %" icon={BarChart3} />
@@ -545,7 +606,7 @@ export function RoomBookingPage() {
             </div>
           )}
           {!isLoading && rooms.length === 0 && (
-            <div className="text-center py-8 text-sm text-gray-400">Aucune salle trouvee</div>
+            <div className="rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-700">{isError ? 'Impossible de charger les salles.' : canManageRooms ? 'Aucune salle configurée. Créez une salle avant de planifier une réservation.' : 'Aucune salle configurée.'}</div>
           )}
           {!isLoading && rooms.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -636,6 +697,7 @@ export function RoomBookingPage() {
                         <DoorOpen className="size-3 mr-1.5" />
                         Reserver
                       </Button>
+                      {canManageRooms && <Button type="button" variant="outline" size="sm" className="mt-2 w-full" onClick={() => { setCatalogRoom((roomsQuery?.data || []).find((candidate: RoomRecord) => candidate.id === room.id) ?? null); setCatalogOpen(true) }}>Modifier la salle</Button>}
                     </CardContent>
                   </Card>
                 </motion.div>
@@ -710,7 +772,7 @@ export function RoomBookingPage() {
                                 setSelectedRoom('')
                                 setReservDate(d.toISOString().slice(0, 10))
                                 setReservStart(slot)
-                                setDialogOpen(true)
+                                if (rooms.some((room) => room.status !== 'maintenance')) setDialogOpen(true)
                               }
                             }}
                           >
@@ -900,7 +962,7 @@ export function RoomBookingPage() {
                 </div>
                 <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button size="sm" className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs">
+                    <Button size="sm" disabled={!rooms.some((room) => room.status !== 'maintenance')} className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs">
                       <Plus className="size-3.5 mr-1.5" />
                       Nouvelle reservation
                     </Button>

@@ -123,6 +123,34 @@ interface DetailResponse {
   };
 }
 
+interface AssignmentStructure {
+  faculties?: {
+    name: string;
+    departments?: {
+      name: string;
+      programs?: {
+        name: string;
+        levels?: {
+          name: string;
+          semesters?: {
+            name: string;
+            teachingUnits?: {
+              id: string;
+              name: string;
+              responsible?: { id: string; user?: { firstName: string; lastName: string } | null } | null;
+              courseElements?: {
+                id: string;
+                name: string;
+                teacher?: { id: string; user?: { firstName: string; lastName: string } | null } | null;
+              }[];
+            }[];
+          }[];
+        }[];
+      }[];
+    }[];
+  }[];
+}
+
 function TeacherEditDialog({
   teacher,
   onClose,
@@ -377,10 +405,19 @@ function TeacherEditDialog({
 }
 
 export function TeacherDetail() {
-  const { goBack, selectedTeacherId, selectedAcademicYearId, setView } =
+  const { goBack, selectedTeacherId, selectedAcademicYearId, setView, user } =
     useAppStore();
   const [activeTab, setActiveTab] = useState("informations");
   const [editing, setEditing] = useState(false);
+  const [courseElementId, setCourseElementId] = useState("");
+  const [teachingUnitId, setTeachingUnitId] = useState("");
+  const [assignmentBusy, setAssignmentBusy] = useState(false);
+  const canManageAssignments = ["SUPER_ADMIN", "ADMIN_INSTITUTION"].includes(user?.role ?? "");
+  const { data: structure, isError: structureError } = useStructure() as {
+    data: AssignmentStructure | undefined;
+    isError: boolean;
+  };
+  const queryClient = useQueryClient();
   const {
     data: response,
     isPending,
@@ -459,6 +496,63 @@ export function TeacherDetail() {
     (sum, item) => sum + item.hoursCM + item.hoursTD + item.hoursTP,
     0,
   );
+  const units = (structure?.faculties ?? []).flatMap((faculty) =>
+    (faculty.departments ?? []).flatMap((department) =>
+      (department.programs ?? []).flatMap((program) =>
+        (program.levels ?? []).flatMap((level) =>
+          (level.semesters ?? []).flatMap((semester) =>
+            (semester.teachingUnits ?? []).map((unit) => ({
+              ...unit,
+              label: `${department.name} / ${program.name} / ${level.name} / ${semester.name} / ${unit.name}`,
+            })),
+          ),
+        ),
+      ),
+    ),
+  );
+  const elements = units.flatMap((unit) =>
+    (unit.courseElements ?? []).map((element) => ({
+      ...element,
+      label: `${unit.label} / ${element.name}`,
+    })),
+  );
+  const updateAssignment = async (
+    type: "course-element" | "teaching-unit",
+    id: string,
+    ownerId: string | null,
+    nextTeacherId: string | null,
+  ) => {
+    if (!canManageAssignments || !id) return;
+    const reassignment = Boolean(ownerId && nextTeacherId && ownerId !== nextTeacherId);
+    if (reassignment && !window.confirm("Cette affectation appartient déjà à un autre enseignant. Confirmer sa réattribution ?")) return;
+    if (!nextTeacherId && !window.confirm("Retirer cette affectation à l’enseignant ?")) return;
+    setAssignmentBusy(true);
+    try {
+      const result = await fetch(`/api/structure?type=${type}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id,
+          [type === "course-element" ? "teacherId" : "responsibleId"]: nextTeacherId,
+          ...(reassignment ? { confirmReassignment: true } : {}),
+        }),
+      });
+      const payload = await result.json().catch(() => ({}));
+      if (!result.ok) throw new Error(payload.error ?? "Affectation impossible");
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["teacherDetail", teacher.id] }),
+        queryClient.invalidateQueries({ queryKey: ["structure"] }),
+        queryClient.invalidateQueries({ queryKey: ["teachers"] }),
+      ]);
+      setCourseElementId("");
+      setTeachingUnitId("");
+      toast.success(nextTeacherId ? "Affectation enregistrée" : "Affectation retirée");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Affectation impossible");
+    } finally {
+      setAssignmentBusy(false);
+    }
+  };
   const exportAssignments = async () => {
     if (!assignedElements.length) return;
     try {
@@ -672,6 +766,33 @@ export function TeacherDetail() {
           </div>
         </TabsContent>
         <TabsContent value="affectations" className="mt-4 space-y-4">
+          {canManageAssignments && (
+            <Card className="border-slate-200">
+              <CardHeader>
+                <CardTitle className="text-base text-slate-950">Gérer les affectations</CardTitle>
+                <p className="text-sm text-slate-700">La responsabilité d’une UE donne accès à toutes ses matières et notes. Une affectation de matière donne accès uniquement à cette matière.</p>
+              </CardHeader>
+              <CardContent className="grid gap-4 lg:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="teacher-course-element">Matière à affecter</Label>
+                  <select id="teacher-course-element" className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-950" value={courseElementId} onChange={(event) => setCourseElementId(event.target.value)} disabled={assignmentBusy || structureError}>
+                    <option value="">Choisir une matière</option>
+                    {elements.filter((element) => element.teacher?.id !== teacher.id).map((element) => <option key={element.id} value={element.id}>{element.label}{element.teacher ? ` — attribuée à ${[element.teacher.user?.firstName, element.teacher.user?.lastName].filter(Boolean).join(" ") || "un autre enseignant"}` : ""}</option>)}
+                  </select>
+                  <Button size="sm" disabled={!courseElementId || assignmentBusy} onClick={() => { const element = elements.find((item) => item.id === courseElementId); if (element) void updateAssignment("course-element", element.id, element.teacher?.id ?? null, teacher.id); }}>Affecter la matière</Button>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="teacher-teaching-unit">UE à confier</Label>
+                  <select id="teacher-teaching-unit" className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-950" value={teachingUnitId} onChange={(event) => setTeachingUnitId(event.target.value)} disabled={assignmentBusy || structureError}>
+                    <option value="">Choisir une UE</option>
+                    {units.filter((unit) => unit.responsible?.id !== teacher.id).map((unit) => <option key={unit.id} value={unit.id}>{unit.label}{unit.responsible ? ` — confiée à ${[unit.responsible.user?.firstName, unit.responsible.user?.lastName].filter(Boolean).join(" ") || "un autre enseignant"}` : ""}</option>)}
+                  </select>
+                  <Button size="sm" disabled={!teachingUnitId || assignmentBusy} onClick={() => { const unit = units.find((item) => item.id === teachingUnitId); if (unit) void updateAssignment("teaching-unit", unit.id, unit.responsible?.id ?? null, teacher.id); }}>Confier l’UE</Button>
+                </div>
+                {structureError && <p role="alert" className="text-sm text-red-800">Impossible de charger la structure. Réessayez avant toute affectation.</p>}
+              </CardContent>
+            </Card>
+          )}
           <Card className="border-slate-200">
             <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
               <CardTitle className="text-base text-slate-950">
@@ -700,6 +821,7 @@ export function TeacherDetail() {
                         <TableHead className="text-right">
                           CM / TD / TP
                         </TableHead>
+                        {canManageAssignments && <TableHead className="text-right">Action</TableHead>}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -725,6 +847,7 @@ export function TeacherDetail() {
                           <TableCell className="text-right">
                             {item.hoursCM} / {item.hoursTD} / {item.hoursTP} h
                           </TableCell>
+                          {canManageAssignments && <TableCell className="text-right"><Button variant="outline" size="sm" disabled={assignmentBusy} onClick={() => void updateAssignment("course-element", item.id, teacher.id, null)}>Retirer</Button></TableCell>}
                         </TableRow>
                       ))}
                     </TableBody>
@@ -747,7 +870,8 @@ export function TeacherDetail() {
               {responsibleUnits.length ? (
                 <ul className="divide-y divide-slate-200">
                   {responsibleUnits.map((unit) => (
-                    <li key={unit.id} className="py-3 text-sm">
+                    <li key={unit.id} className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm">
+                      <div>
                       <p className="font-semibold text-slate-950">
                         {unit.code ? `${unit.code} · ` : ""}
                         {unit.name}
@@ -757,6 +881,8 @@ export function TeacherDetail() {
                         {unit.semester.level.name} · {unit.semester.name} ·{" "}
                         {unit.credits} crédits
                       </p>
+                      </div>
+                      {canManageAssignments && <Button variant="outline" size="sm" disabled={assignmentBusy} onClick={() => void updateAssignment("teaching-unit", unit.id, teacher.id, null)}>Retirer la responsabilité</Button>}
                     </li>
                   ))}
                 </ul>

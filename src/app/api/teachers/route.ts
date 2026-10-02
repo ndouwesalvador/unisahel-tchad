@@ -558,6 +558,19 @@ async function getTeacherScheduleHandler(user: SessionUser, tenantId: string, re
 
 export const GET = withTenantAuth(async (user: SessionUser, tenantId: string, request: NextRequest) => {
   const { searchParams } = new URL(request.url)
+  if (searchParams.get('options') === 'true') {
+    if (!['SUPER_ADMIN', 'ADMIN_INSTITUTION'].includes(user.role)) return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
+    const teachers = await db.teacher.findMany({
+      where: { tenantId, isActive: true, user: { isActive: true } },
+      select: { id: true, departmentId: true, user: { select: { firstName: true, lastName: true } } },
+      orderBy: { user: { lastName: 'asc' } },
+    })
+    return NextResponse.json({ data: teachers.map((teacher) => ({
+      id: teacher.id,
+      departmentId: teacher.departmentId,
+      name: [teacher.user?.firstName, teacher.user?.lastName].filter(Boolean).join(' ') || 'Enseignant sans nom',
+    })) })
+  }
   const id = searchParams.get('id')
   const schedule = searchParams.get('schedule')
 

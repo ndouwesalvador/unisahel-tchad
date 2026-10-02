@@ -443,7 +443,7 @@ async function createTeachingUnitHandler(user: SessionUser, tenantId: string, re
       return NextResponse.json({ error: 'Semester not found in this tenant' }, { status: 404 })
     }
     if (data.responsibleId) {
-      const teacher = await db.teacher.findFirst({ where: { id: data.responsibleId, tenantId } })
+      const teacher = await db.teacher.findFirst({ where: { id: data.responsibleId, tenantId, isActive: true, user: { isActive: true } } })
       if (!teacher) {
         return NextResponse.json({ error: 'Responsible teacher not found in this tenant' }, { status: 404 })
       }
@@ -484,7 +484,7 @@ async function createCourseElementHandler(user: SessionUser, tenantId: string, r
       return NextResponse.json({ error: 'Teaching unit not found in this tenant' }, { status: 404 })
     }
     if (data.teacherId) {
-      const teacher = await db.teacher.findFirst({ where: { id: data.teacherId, tenantId } })
+      const teacher = await db.teacher.findFirst({ where: { id: data.teacherId, tenantId, isActive: true, user: { isActive: true } } })
       if (!teacher) {
         return NextResponse.json({ error: 'Teacher not found in this tenant' }, { status: 404 })
       }
@@ -613,12 +613,25 @@ async function updateEntityHandler(user: SessionUser, tenantId: string, request:
 
     // Optional teacher references must belong to the tenant.
     if (type === 'teaching-unit' && body.responsibleId) {
-      const t = await db.teacher.findFirst({ where: { id: body.responsibleId, tenantId }, select: { id: true } })
+      const t = await db.teacher.findFirst({ where: { id: body.responsibleId, tenantId, isActive: true, user: { isActive: true } }, select: { id: true } })
       if (!t) return NextResponse.json({ error: 'Responsible teacher not found in this tenant' }, { status: 404 })
     }
     if (type === 'course-element' && body.teacherId) {
-      const t = await db.teacher.findFirst({ where: { id: body.teacherId, tenantId }, select: { id: true } })
+      const t = await db.teacher.findFirst({ where: { id: body.teacherId, tenantId, isActive: true, user: { isActive: true } }, select: { id: true } })
       if (!t) return NextResponse.json({ error: 'Teacher not found in this tenant' }, { status: 404 })
+    }
+
+    if (type === 'teaching-unit' && body.responsibleId) {
+      const current = await db.teachingUnit.findUnique({ where: { id }, select: { responsibleId: true } })
+      if (current?.responsibleId && current.responsibleId !== body.responsibleId && body.confirmReassignment !== true) {
+        return NextResponse.json({ error: 'Cette UE possède déjà un responsable. Confirmez sa réattribution.' }, { status: 409 })
+      }
+    }
+    if (type === 'course-element' && body.teacherId) {
+      const current = await db.courseElement.findUnique({ where: { id }, select: { teacherId: true } })
+      if (current?.teacherId && current.teacherId !== body.teacherId && body.confirmReassignment !== true) {
+        return NextResponse.json({ error: 'Cette matière est déjà affectée. Confirmez sa réattribution.' }, { status: 409 })
+      }
     }
 
     const data: Record<string, unknown> = {}
@@ -720,7 +733,7 @@ export const POST = withTenantAuth(async (user: SessionUser, tenantId: string, r
     case 'faculty':
     default: return createFacultyHandler(user, tenantId, request)
   }
-}, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'RECTORAT'])
+}, ['SUPER_ADMIN', 'ADMIN_INSTITUTION'])
 
 // PUT /api/structure?type=<entity> — edit any node in the hierarchy (id in body).
 export const PUT = withTenantAuth(async (user: SessionUser, tenantId: string, request: NextRequest) => {
@@ -729,7 +742,7 @@ export const PUT = withTenantAuth(async (user: SessionUser, tenantId: string, re
     return NextResponse.json({ error: `Unknown type: ${type}` }, { status: 400 })
   }
   return updateEntityHandler(user, tenantId, request, type as EntityType)
-}, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'RECTORAT'])
+}, ['SUPER_ADMIN', 'ADMIN_INSTITUTION'])
 
 // DELETE /api/structure?type=<entity>&id=<id> — soft-delete (faculty/department/
 // program/level) or guarded hard-delete (semester/teaching-unit/course-element).
@@ -739,4 +752,4 @@ export const DELETE = withTenantAuth(async (user: SessionUser, tenantId: string,
     return NextResponse.json({ error: `Unknown type: ${type}` }, { status: 400 })
   }
   return deleteEntityHandler(user, tenantId, request, type as EntityType)
-}, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'RECTORAT'])
+}, ['SUPER_ADMIN', 'ADMIN_INSTITUTION'])

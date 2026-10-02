@@ -1,6 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
+import { z } from 'zod'
+
+const ROOM_ADMIN_ROLES = ['SUPER_ADMIN', 'ADMIN_INSTITUTION']
+const roomInput = z.object({
+  name: z.string().trim().min(2).max(100),
+  type: z.enum(['SALLE', 'AMPHITHEATRE', 'LABORATOIRE', 'ATELIER', 'BUREAU', 'AUTRE']),
+  capacity: z.number().int().min(1).max(10000),
+  building: z.string().trim().max(100),
+  equipment: z.string().trim().max(1000),
+  status: z.enum(['libre', 'occupee', 'maintenance']),
+})
+
+async function saveRoom(user: SessionUser, tenantId: string, request: NextRequest, id?: string) {
+  if (!ROOM_ADMIN_ROLES.includes(user.role)) return NextResponse.json({ error: 'Accès réservé à l’administration' }, { status: 403 })
+  const parsed = roomInput.safeParse(await request.json().catch(() => null))
+  if (!parsed.success) return NextResponse.json({ error: 'Nom, type, capacité, bâtiment ou statut invalide' }, { status: 400 })
+  const data = parsed.data
+  const current = id ? await db.room.findFirst({ where: { id, tenantId } }) : null
+  if (id && !current) return NextResponse.json({ error: 'Salle introuvable' }, { status: 404 })
+  const duplicate = await db.room.findFirst({
+    where: { tenantId, name: { equals: data.name, mode: 'insensitive' }, ...(id ? { id: { not: id } } : {}) },
+    select: { id: true },
+  })
+  if (duplicate) return NextResponse.json({ error: 'Une salle porte déjà ce nom dans cet établissement' }, { status: 409 })
+  const room = id
+    ? await db.room.update({ where: { id }, data })
+    : await db.room.create({ data: { tenantId, ...data } })
+  await db.auditLog.create({ data: { tenantId, userId: user.id, action: id ? 'UPDATE' : 'CREATE', entity: 'Room', entityId: room.id, details: JSON.stringify({ name: room.name, type: room.type, status: room.status }) } })
+  return NextResponse.json({ data: room }, { status: id ? 200 : 201 })
+}
 
 // GET /api/rooms - List rooms with stats
 async function handleGet(_user: SessionUser, tenantId: string, _request: NextRequest) {
@@ -92,8 +122,9 @@ async function handleGet(_user: SessionUser, tenantId: string, _request: NextReq
 export const GET = withTenantAuth(handleGet)
 
 // POST /api/rooms - Create a new room reservation
-async function handlePost(_user: SessionUser, tenantId: string, request: NextRequest) {
+async function handlePost(user: SessionUser, tenantId: string, request: NextRequest) {
   try {
+    if (request.nextUrl.searchParams.get('entity') === 'room') return saveRoom(user, tenantId, request)
     const body = await request.json()
     const {
       roomId,
@@ -128,15 +159,23 @@ async function handlePost(_user: SessionUser, tenantId: string, request: NextReq
       where: { id: roomId, tenantId },
     })
 
-    if (!room) {
+    if (!room || !room.isActive) {
       return NextResponse.json(
         { error: 'Room not found' },
         { status: 404 }
       )
     }
+    if (room.status === 'maintenance') return NextResponse.json({ error: 'Cette salle est en maintenance' }, { status: 409 })
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(startTime) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(endTime) || startTime >= endTime) {
+      return NextResponse.json({ error: 'Date ou horaires invalides' }, { status: 400 })
+    }
+    if (!Number.isInteger(participants ?? 0) || (participants ?? 0) < 0 || (participants ?? 0) > room.capacity) {
+      return NextResponse.json({ error: 'Nombre de participants supérieur à la capacité de la salle' }, { status: 400 })
+    }
 
     // Check for time conflicts on the same room and date
     const reservationDate = new Date(date)
+    if (Number.isNaN(reservationDate.getTime()) || reservationDate.toISOString().slice(0, 10) !== date) return NextResponse.json({ error: 'Date invalide' }, { status: 400 })
     const dayStart = new Date(reservationDate)
     dayStart.setHours(0, 0, 0, 0)
     const dayEnd = new Date(reservationDate)
@@ -144,6 +183,7 @@ async function handlePost(_user: SessionUser, tenantId: string, request: NextReq
 
     const existingReservations = await db.roomReservation.findMany({
       where: {
+        tenantId,
         roomId,
         date: {
           gte: dayStart,
@@ -200,3 +240,14 @@ async function handlePost(_user: SessionUser, tenantId: string, request: NextReq
 }
 
 export const POST = withTenantAuth(handlePost)
+
+export const PUT = withTenantAuth(async (user: SessionUser, tenantId: string, request: NextRequest) => {
+  if (request.nextUrl.searchParams.get('entity') !== 'room') return NextResponse.json({ error: 'Opération inconnue' }, { status: 400 })
+  const id = request.nextUrl.searchParams.get('id')
+  if (!id) return NextResponse.json({ error: 'Identifiant de salle requis' }, { status: 400 })
+  try { return await saveRoom(user, tenantId, request, id) }
+  catch (error) {
+    console.error('Update room error:', error)
+    return NextResponse.json({ error: 'Modification de salle impossible' }, { status: 500 })
+  }
+}, ROOM_ADMIN_ROLES)
