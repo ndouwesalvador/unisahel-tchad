@@ -137,7 +137,14 @@ describe('department timetable', () => {
     expect(forbidden.status).toBe(403)
     mocks.publications.mockResolvedValue([{ departmentId: 'department-A', version: 1, snapshot: [publishedSlot, { ...publishedSlot, id: 'level-B', levelId: 'level-B' }] }])
     const allowed = await get(studentUser, 'tenant-A', new NextRequest('http://localhost/api/timetable?academicYearId=year-A'))
-    expect((await allowed.json()).slots).toEqual([publishedSlot])
+    expect(await allowed.json()).toMatchObject({ slots: [publishedSlot], registration: { programId: 'program-A', levelId: 'level-A' } })
+  })
+  it('does not expose any published slot before annual administrative enrollment', async () => {
+    mocks.registration.mockResolvedValue(null)
+    mocks.publications.mockResolvedValue([{ departmentId: 'department-A', version: 1, snapshot: [publishedSlot] }])
+    const response = await get(studentUser, 'tenant-A', new NextRequest('http://localhost/api/timetable?academicYearId=year-A'))
+    expect(await response.json()).toMatchObject({ slots: [], registration: null })
+    expect(mocks.publications).not.toHaveBeenCalled()
   })
 
   it('rejects an attempted read of another department program', async () => {

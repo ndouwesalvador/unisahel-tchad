@@ -7,11 +7,9 @@ import { isStudentSelfRole } from '@/lib/auth/student-scope'
 // hardcoded academicYears array.
 async function handleGet(user: SessionUser, tenantId: string) {
   try {
-    if (isStudentSelfRole(user.role)) {
-      return NextResponse.json({ error: 'FORBIDDEN', message: 'Accès refusé' }, { status: 403 })
-    }
     const years = await db.academicYear.findMany({
       where: { tenantId },
+      ...(isStudentSelfRole(user.role) ? { select: { id: true, name: true, startDate: true, endDate: true, isCurrent: true } } : {}),
       orderBy: { startDate: 'desc' },
     })
     return NextResponse.json({ data: years })

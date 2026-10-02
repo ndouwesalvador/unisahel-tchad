@@ -63,12 +63,12 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
       }
       if (isStudentSelfRole(user.role)) {
         const studentId = await resolveOwnStudentId(user)
-        if (!studentId) return NextResponse.json({ slots: [], source: 'published' })
+        if (!studentId) return NextResponse.json({ slots: [], source: 'published', registration: null })
         const registration = await db.administrativeRegistration.findFirst({
           where: { tenantId, studentId, academicYearId, status: 'INSCRIT' },
           select: { programId: true, levelId: true }, orderBy: { registrationDate: 'desc' },
         })
-        if (!registration) return NextResponse.json({ slots: [], source: 'published' })
+        if (!registration) return NextResponse.json({ slots: [], source: 'published', registration: null })
         studentProgramId = registration.programId
         studentLevelId = registration.levelId
         if ((programId && programId !== studentProgramId) || (levelId && levelId !== studentLevelId)) {
@@ -90,7 +90,7 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
         ))
       }
       slots.sort((a, b) => a.dayOfWeek - b.dayOfWeek || a.startTime.localeCompare(b.startTime))
-      return NextResponse.json({ slots, source: 'published' })
+      return NextResponse.json({ slots, source: 'published', ...(studentProgramId ? { registration: { programId: studentProgramId, levelId: studentLevelId } } : {}) })
     }
     const teacherScope = user.role === 'ENSEIGNANT' ? await getTeacherScope(user, tenantId) : null
     if (teacherScope && !teacherScope.linked) return NextResponse.json({ slots: [] })

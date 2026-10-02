@@ -369,6 +369,7 @@ async function getStudentDetailHandler(user: SessionUser, tenantId: string, requ
 
     const registrations = student.registrations.map((r) => ({
       id: r.id,
+      academicYearId: r.academicYearId,
       academicYear: r.academicYear.name,
       program: programById.get(r.programId) || '—',
       level: levelById.get(r.levelId) || '—',

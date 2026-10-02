@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAppStore } from '@/lib/store'
-import { useStudentDetail, useStudentTranscript, usePayments, useDocuments, useHealth } from '@/lib/api-hooks'
+import { useStudentDetail, useStudentTranscript, usePayments, useDocuments, useHealth, useAcademicYears } from '@/lib/api-hooks'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -185,11 +185,14 @@ export function StudentDetail() {
   const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState(canPreviewDashboard ? 'dashboard' : 'informations')
   const [isGenerating, setIsGenerating] = useState<string | null>(null)
+  const [isRegistering, setIsRegistering] = useState(false)
 
   const { data: detailData, isLoading: isLoadingDetail, isError: isDetailError, refetch: refetchDetail } = useStudentDetail(selectedStudentId || undefined)
   const { data: transcriptData } = useStudentTranscript(selectedStudentId || undefined)
   const { data: paymentsData } = usePayments(selectedStudentId ? { studentId: selectedStudentId, limit: 200 } : undefined)
   const { data: documentsData } = useDocuments(selectedStudentId || undefined)
+  const { data: yearsData } = useAcademicYears()
+  const currentYear: { id: string; name: string } | undefined = yearsData?.data?.find((year: { isCurrent?: boolean }) => year.isCurrent)
 
   const s = detailData?.data
 
@@ -230,6 +233,21 @@ export function StudentDetail() {
     } finally {
       setIsGenerating(null)
     }
+  }
+
+  const registerForCurrentYear = async () => {
+    if (!selectedStudentId || !currentYear) return
+    if (!window.confirm(`Valider l’inscription administrative de cet étudiant pour ${currentYear.name} ? Vérifiez d’abord son programme et son niveau.`)) return
+    setIsRegistering(true)
+    try {
+      const response = await fetch('/api/administrative-registrations', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentId: selectedStudentId, academicYearId: currentYear.id }) })
+      const body = await response.json()
+      if (!response.ok) throw new Error(body.error || 'Inscription impossible')
+      toast.success(`Inscription ${currentYear.name} validée`)
+      await Promise.all([refetchDetail(), queryClient.invalidateQueries({ queryKey: ['studentDashboardPreview', selectedStudentId] })])
+    } catch (error) { toast.error(error instanceof Error ? error.message : 'Inscription impossible') }
+    finally { setIsRegistering(false) }
   }
 
   if (!selectedStudentId) {
@@ -468,6 +486,17 @@ export function StudentDetail() {
 
         {/* Inscriptions Tab */}
         <TabsContent value="inscriptions" className="mt-4">
+          {['ADMIN_INSTITUTION', 'SUPER_ADMIN', 'SCOLARITE'].includes(user?.role ?? '') && <Card className="mb-4 border-emerald-200 bg-emerald-50/50">
+            <CardContent className="space-y-3 p-5 text-sm text-slate-800">
+              <h3 className="font-semibold text-slate-950">Inscription administrative annuelle</h3>
+              <p>La validation ouvre l’accès de l’étudiant à l’emploi du temps publié de son programme et de son niveau pour l’année courante. Elle ne modifie pas les années précédentes.</p>
+              {!currentYear ? <p>Aucune année courante n’est configurée.</p> : (s.registrations ?? []).some((registration: { academicYearId: string; status: string }) => registration.academicYearId === currentYear.id && registration.status === 'INSCRIT') ?
+                <p className="font-semibold text-emerald-900">Inscription {currentYear.name} déjà validée.</p> : <Button type="button" disabled={isRegistering || s.status !== 'INSCRIT' || !s.currentProgram || !s.currentLevel} onClick={registerForCurrentYear}>
+                  {isRegistering ? 'Validation en cours…' : `Valider l’inscription ${currentYear.name}`}
+                </Button>}
+              {s.status !== 'INSCRIT' && <p>Le dossier doit d’abord avoir le statut « Inscrit ».</p>}
+            </CardContent>
+          </Card>}
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-semibold text-[#1a2744]">Historique des inscriptions</CardTitle>
@@ -493,7 +522,7 @@ export function StudentDetail() {
                         <TableCell className="text-sm">{ins.level}</TableCell>
                         <TableCell className="text-sm">{ins.program}</TableCell>
                         <TableCell>
-                          <Badge className={`text-[10px] ${ins.status === 'VALIDE' ? 'bg-[#2d7a4f15] text-[#2d7a4f] border-0' : 'bg-[#d4a85315] text-[#d4a853] border-0'}`}>
+                          <Badge className={`text-[10px] ${ins.status === 'INSCRIT' ? 'bg-[#2d7a4f15] text-[#2d7a4f] border-0' : 'bg-[#d4a85315] text-[#d4a853] border-0'}`}>
                             {ins.status}
                           </Badge>
                         </TableCell>
