@@ -231,7 +231,7 @@ export function AIAssistantWidget() {
             exit={{ scale: 0, opacity: 0 }}
             transition={{ type: 'spring', stiffness: 260, damping: 20 }}
             onClick={toggleChat}
-            className="fixed bottom-6 right-6 z-50 size-14 rounded-full bg-gradient-to-br from-[#1a2744] to-[#2d7a4f] shadow-lg hover:shadow-xl flex items-center justify-center group"
+            className="fixed bottom-6 left-6 md:left-[276px] z-50 size-14 rounded-full bg-gradient-to-br from-[#1a2744] to-[#2d7a4f] shadow-lg hover:shadow-xl flex items-center justify-center group"
             aria-label="Ouvrir l'assistant IA"
           >
             <Sparkles className="size-6 text-white group-hover:scale-110 transition-transform" />
