@@ -4,7 +4,11 @@ import { NextRequest } from 'next/server'
 const { authMock, dbMock } = vi.hoisted(() => ({
   authMock: vi.fn(),
   dbMock: {
-    level: { findFirst: vi.fn(), update: vi.fn() },
+    level: { findFirst: vi.fn(), delete: vi.fn(), count: vi.fn() },
+    faculty: { findFirst: vi.fn(), delete: vi.fn() },
+    department: { findFirst: vi.fn(), delete: vi.fn(), count: vi.fn() },
+    program: { findFirst: vi.fn(), delete: vi.fn(), count: vi.fn() },
+    teacher: { count: vi.fn() },
     semester: { count: vi.fn() },
     student: { count: vi.fn() },
     administrativeRegistration: { count: vi.fn() },
@@ -17,6 +21,7 @@ const { authMock, dbMock } = vi.hoisted(() => ({
     grade: { count: vi.fn() },
     scheduledExam: { count: vi.fn() },
     auditLog: { create: vi.fn() },
+    $transaction: vi.fn(),
   },
 }))
 
@@ -32,10 +37,42 @@ beforeEach(() => {
   vi.clearAllMocks()
   authMock.mockResolvedValue({ user: { id: 'cadmin000000000000000001', role: 'ADMIN_INSTITUTION', tenantId } })
   dbMock.level.findFirst.mockResolvedValue({ id: levelId })
-  dbMock.level.update.mockResolvedValue({ id: levelId, isActive: false })
-  for (const delegate of [dbMock.semester, dbMock.student, dbMock.administrativeRegistration, dbMock.admission, dbMock.admissionCampaign, dbMock.deliberation, dbMock.feeStructure, dbMock.timetableSlot, dbMock.pedagogicalRegistration, dbMock.grade, dbMock.scheduledExam]) {
+  dbMock.faculty.findFirst.mockResolvedValue({ id: 'f1' })
+  dbMock.department.findFirst.mockResolvedValue({ id: 'd1' })
+  dbMock.program.findFirst.mockResolvedValue({ id: 'p1' })
+  dbMock.$transaction.mockImplementation(async (callback: (tx: typeof dbMock) => unknown) => callback(dbMock))
+  for (const delegate of [dbMock.level, dbMock.department, dbMock.program, dbMock.teacher, dbMock.semester, dbMock.student, dbMock.administrativeRegistration, dbMock.admission, dbMock.admissionCampaign, dbMock.deliberation, dbMock.feeStructure, dbMock.timetableSlot, dbMock.pedagogicalRegistration, dbMock.grade, dbMock.scheduledExam]) {
     delegate.count.mockResolvedValue(0)
   }
+})
+
+describe('parent structure deletion', () => {
+  it('blocks removal of a faculty that still owns a department', async () => {
+    dbMock.department.count.mockResolvedValue(1)
+    const response = await DELETE(new NextRequest('http://localhost:3000/api/structure?type=faculty&id=f1', { method: 'DELETE' }))
+    expect(response.status).toBe(409)
+    expect(dbMock.faculty.delete).not.toHaveBeenCalled()
+  })
+
+  it('blocks removal of a department linked to a teacher', async () => {
+    dbMock.teacher.count.mockResolvedValue(1)
+    const response = await DELETE(new NextRequest('http://localhost:3000/api/structure?type=department&id=d1', { method: 'DELETE' }))
+    expect(response.status).toBe(409)
+    expect(dbMock.department.delete).not.toHaveBeenCalled()
+  })
+
+  it('blocks removal of a program referenced by a student', async () => {
+    dbMock.student.count.mockResolvedValue(1)
+    const response = await DELETE(new NextRequest('http://localhost:3000/api/structure?type=program&id=p1', { method: 'DELETE' }))
+    expect(response.status).toBe(409)
+    expect(dbMock.program.delete).not.toHaveBeenCalled()
+  })
+
+  it('deletes an empty faculty instead of masking it', async () => {
+    const response = await DELETE(new NextRequest('http://localhost:3000/api/structure?type=faculty&id=f1', { method: 'DELETE' }))
+    expect(response.status).toBe(200)
+    expect(dbMock.faculty.delete).toHaveBeenCalledWith({ where: { id: 'f1' } })
+  })
 })
 
 describe('level archive guard', () => {
@@ -43,20 +80,20 @@ describe('level archive guard', () => {
     dbMock.semester.count.mockResolvedValue(1)
     const response = await DELETE(request())
     expect(response.status).toBe(409)
-    expect(dbMock.level.update).not.toHaveBeenCalled()
+    expect(dbMock.level.delete).not.toHaveBeenCalled()
   })
 
   it('does not hide a level referenced by a student', async () => {
     dbMock.student.count.mockResolvedValue(1)
     const response = await DELETE(request())
     expect(response.status).toBe(409)
-    expect(dbMock.level.update).not.toHaveBeenCalled()
+    expect(dbMock.level.delete).not.toHaveBeenCalled()
   })
 
-  it('permits archiving only an empty unreferenced level', async () => {
+  it('deletes only an empty unreferenced level', async () => {
     const response = await DELETE(request())
     expect(response.status).toBe(200)
-    expect(dbMock.level.update).toHaveBeenCalledWith({ where: { id: levelId }, data: { isActive: false } })
+    expect(dbMock.level.delete).toHaveBeenCalledWith({ where: { id: levelId } })
   })
 
   it('blocks the PUT isActive shortcut for a level with semesters', async () => {
@@ -65,7 +102,7 @@ describe('level archive guard', () => {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: levelId, isActive: false }),
     }))
-    expect(response.status).toBe(409)
-    expect(dbMock.level.update).not.toHaveBeenCalled()
+    expect(response.status).toBe(400)
+    expect(dbMock.level.delete).not.toHaveBeenCalled()
   })
 })

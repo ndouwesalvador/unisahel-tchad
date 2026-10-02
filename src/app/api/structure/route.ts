@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { Prisma } from '@prisma/client'
 import { z } from 'zod'
 import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
@@ -565,17 +566,17 @@ const ENTITY_LABEL: Record<EntityType, string> = {
 
 // Fields the client may update, per type. Anything else in the body is ignored.
 const UPDATABLE: Record<EntityType, string[]> = {
-  faculty: ['name', 'shortName', 'deanName', 'deanTitle', 'email', 'phone', 'isActive'],
-  department: ['name', 'shortName', 'headName', 'isActive'],
-  program: ['name', 'code', 'cycle', 'diplomaType', 'duration', 'isActive'],
-  level: ['name', 'code', 'orderIndex', 'isActive'],
+  faculty: ['name', 'shortName', 'deanName', 'deanTitle', 'email', 'phone'],
+  department: ['name', 'shortName', 'headName'],
+  program: ['name', 'code', 'cycle', 'diplomaType', 'duration'],
+  level: ['name', 'code', 'orderIndex'],
   semester: ['name', 'code', 'orderIndex'],
   'teaching-unit': ['code', 'name', 'credits', 'type', 'compensable', 'responsibleId', 'orderIndex'],
   'course-element': ['code', 'name', 'coefficient', 'hoursCM', 'hoursTD', 'hoursTP', 'hoursStage', 'hoursPersonal', 'teacherId', 'orderIndex'],
 }
 
 const NUMERIC_FIELDS = new Set(['duration', 'orderIndex', 'credits', 'coefficient', 'hoursCM', 'hoursTD', 'hoursTP', 'hoursStage', 'hoursPersonal'])
-const SOFT_DELETE_TYPES = new Set<EntityType>(['faculty', 'department', 'program', 'level'])
+const ROOT_TYPES = new Set<EntityType>(['faculty', 'department', 'program', 'level'])
 
 const updateTeachingUnitSchema = z.object({
   code: z.string().max(20),
@@ -639,14 +640,11 @@ async function updateEntityHandler(user: SessionUser, tenantId: string, request:
       return NextResponse.json({ error: 'Entity not found in this tenant' }, { status: 404 })
     }
 
-    if (type === 'level' && body.isActive === false) {
-      const references = await getLevelReferences(db, tenantId, id)
-      if (Object.values(references).some((count) => count > 0)) {
-        return NextResponse.json({ error: 'Ce niveau contient encore des semestres ou des rattachements académiques. Utilisez l’audit des doublons pour archiver un brouillon vérifié.' }, { status: 409 })
-      }
+    if (ROOT_TYPES.has(type) && body.isActive !== undefined) {
+      return NextResponse.json({ error: 'La désactivation est interdite : utilisez la suppression contrôlée pour un élément inutilisé.' }, { status: 400 })
     }
 
-    if ((type === 'level' || type === 'semester') && (body.name !== undefined || body.code !== undefined || (type === 'level' && body.isActive === true))) {
+    if ((type === 'level' || type === 'semester') && (body.name !== undefined || body.code !== undefined)) {
       if ((body.name !== undefined && (typeof body.name !== 'string' || !body.name.trim())) ||
           (body.code !== undefined && typeof body.code !== 'string')) {
         return NextResponse.json({ error: 'Nom ou code invalide' }, { status: 400 })
@@ -718,6 +716,55 @@ async function updateEntityHandler(user: SessionUser, tenantId: string, request:
   }
 }
 
+class LinkedStructureError extends Error {}
+
+async function deleteEmptyRoot(type: EntityType, id: string, tenantId: string, userId: string) {
+  await db.$transaction(async (tx) => {
+    let references: number[] = []
+    switch (type) {
+      case 'faculty':
+        references = await Promise.all([
+          tx.department.count({ where: { facultyId: id } }),
+          tx.program.count({ where: { facultyId: id } }),
+        ])
+        break
+      case 'department':
+        references = await Promise.all([
+          tx.program.count({ where: { departmentId: id } }),
+          tx.teacher.count({ where: { departmentId: id } }),
+        ])
+        break
+      case 'program':
+        references = await Promise.all([
+          tx.level.count({ where: { programId: id } }),
+          tx.student.count({ where: { tenantId, currentProgramId: id } }),
+          tx.administrativeRegistration.count({ where: { tenantId, programId: id } }),
+          tx.admission.count({ where: { tenantId, programId: id } }),
+          tx.admissionCampaign.count({ where: { tenantId, programId: id } }),
+          tx.deliberation.count({ where: { tenantId, programId: id } }),
+          tx.feeStructure.count({ where: { tenantId, programId: id } }),
+          tx.timetableSlot.count({ where: { tenantId, programId: id } }),
+        ])
+        break
+      case 'level':
+        references = Object.values(await getLevelReferences(tx, tenantId, id))
+        break
+    }
+    if (references.some((count) => count > 0)) {
+      throw new LinkedStructureError('Cet élément possède des sous-éléments ou des rattachements académiques. Supprimez ou transférez-les d’abord.')
+    }
+    switch (type) {
+      case 'faculty': await tx.faculty.delete({ where: { id } }); break
+      case 'department': await tx.department.delete({ where: { id } }); break
+      case 'program': await tx.program.delete({ where: { id } }); break
+      case 'level': await tx.level.delete({ where: { id } }); break
+    }
+    await tx.auditLog.create({
+      data: { tenantId, userId, action: 'DELETE', entity: ENTITY_LABEL[type], entityId: id, details: JSON.stringify({ soft: false }) },
+    })
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable })
+}
+
 async function deleteEntityHandler(user: SessionUser, tenantId: string, request: NextRequest, type: EntityType) {
   try {
     const { searchParams } = new URL(request.url)
@@ -729,23 +776,9 @@ async function deleteEntityHandler(user: SessionUser, tenantId: string, request:
       return NextResponse.json({ error: 'Entity not found in this tenant' }, { status: 404 })
     }
 
-    // An inactive level disappears from the structure even though its linked
-    // records remain. Never hide a level that still carries a curriculum or
-    // academic references; these must be reviewed and moved deliberately.
-    if (type === 'level') {
-      const references = await getLevelReferences(db, tenantId, id)
-      if (Object.values(references).some((count) => count > 0)) {
-        return NextResponse.json({ error: 'Ce niveau contient encore des semestres ou des rattachements académiques. Vérifiez et transférez-les avant de le désactiver.' }, { status: 409 })
-      }
-    }
-
-    // Faculty/Department/Program/Level are deactivated (isActive:false).
-    if (SOFT_DELETE_TYPES.has(type)) {
-      await delegate(type).update({ where: { id }, data: { isActive: false } })
-      await db.auditLog.create({
-        data: { tenantId, userId: user.id, action: 'DELETE', entity: ENTITY_LABEL[type], entityId: id, details: JSON.stringify({ soft: true }) },
-      })
-      return NextResponse.json({ data: { id, isActive: false } })
+    if (ROOT_TYPES.has(type)) {
+      await deleteEmptyRoot(type, id, tenantId, user.id)
+      return NextResponse.json({ data: { id, deleted: true } })
     }
 
     // Semester/UE/EC have no isActive column, so they are hard-deleted — but
@@ -770,6 +803,7 @@ async function deleteEntityHandler(user: SessionUser, tenantId: string, request:
     })
     return NextResponse.json({ data: { id, deleted: true } })
   } catch (error) {
+    if (error instanceof LinkedStructureError) return NextResponse.json({ error: error.message }, { status: 409 })
     console.error(`Delete ${type} error:`, error)
     return NextResponse.json({ error: `Failed to delete ${type}` }, { status: 500 })
   }

@@ -13,11 +13,11 @@ async function handleGet(_user: SessionUser, tenantId: string, _request: NextReq
       id: true,
       name: true,
       levels: {
-        where: { isActive: true },
         select: {
           id: true,
           name: true,
           code: true,
+          isActive: true,
           semesters: {
             select: {
               id: true,
@@ -46,6 +46,7 @@ async function handleGet(_user: SessionUser, tenantId: string, _request: NextReq
           id: level.id,
           name: level.name,
           code: level.code,
+          isActive: level.isActive,
           semesters: level.semesters.map((semester) => semester.name),
           teachingUnits: units.length,
           courseElements: units.reduce((sum, unit) => sum + unit._count.courseElements, 0),
@@ -59,7 +60,7 @@ async function handleGet(_user: SessionUser, tenantId: string, _request: NextReq
         programName: program.name,
         levels: detailedLevels.map((level) => ({
           ...level,
-          canArchiveDraft: !hasExternalLevelReferences(level.references) && level.courseElements === 0 && level.teacherResponsibilities === 0 && detailedLevels.some((other) => other.id !== level.id && (other.references.students > 0 || other.references.pedagogicalRegistrations > 0 || other.references.grades > 0)),
+          canDeleteDraft: !hasExternalLevelReferences(level.references) && level.courseElements === 0 && level.teacherResponsibilities === 0 && detailedLevels.some((other) => other.id !== level.id && other.isActive && (other.references.students > 0 || other.references.pedagogicalRegistrations > 0 || other.references.grades > 0)),
         })),
       }
     }),
@@ -70,25 +71,25 @@ async function handleGet(_user: SessionUser, tenantId: string, _request: NextReq
 
 export const GET = withTenantAuth(handleGet, ['SUPER_ADMIN', 'ADMIN_INSTITUTION'])
 
-const archiveRequest = z.object({
+const deleteRequest = z.object({
   candidateLevelId: z.string().min(1),
   keepLevelId: z.string().min(1),
 }).refine((value) => value.candidateLevelId !== value.keepLevelId)
 
-class ArchiveRejected extends Error {
+class DeleteRejected extends Error {
   constructor(message: string, public readonly status: number) { super(message) }
 }
 
-async function handlePost(user: SessionUser, tenantId: string, request: NextRequest) {
+async function handleDelete(user: SessionUser, tenantId: string, request: NextRequest) {
   const body = await request.json().catch(() => null)
-  const parsed = archiveRequest.safeParse(body)
+  const parsed = deleteRequest.safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: 'Niveaux à vérifier invalides.' }, { status: 400 })
 
   try {
     const result = await db.$transaction(async (tx) => {
       const [candidate, kept] = await Promise.all([
         tx.level.findFirst({
-          where: { id: parsed.data.candidateLevelId, program: { tenantId }, isActive: true },
+          where: { id: parsed.data.candidateLevelId, program: { tenantId } },
           include: { semesters: { include: { teachingUnits: { include: { courseElements: { select: { id: true } } } } } } },
         }),
         tx.level.findFirst({
@@ -96,9 +97,9 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
           select: { id: true, programId: true, name: true },
         }),
       ])
-      if (!candidate || !kept) throw new ArchiveRejected('Niveau actif introuvable dans cette institution.', 404)
+      if (!candidate || !kept) throw new DeleteRejected('Niveau introuvable dans cette institution.', 404)
       if (candidate.programId !== kept.programId || normalizeStructureLabel(candidate.name) !== normalizeStructureLabel(kept.name)) {
-        throw new ArchiveRejected('Ces niveaux ne sont pas des doublons dans le même programme.', 409)
+        throw new DeleteRejected('Ces niveaux ne sont pas des doublons dans le même programme.', 409)
       }
 
       const [candidateRefs, keptRefs] = await Promise.all([
@@ -107,27 +108,27 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
       ])
       const units = candidate.semesters.flatMap((semester) => semester.teachingUnits)
       if (hasExternalLevelReferences(candidateRefs) || units.some((unit) => unit.responsibleId || unit.courseElements.length > 0)) {
-        throw new ArchiveRejected('Ce niveau possède des données pédagogiques ou des rattachements à conserver.', 409)
+        throw new DeleteRejected('Ce niveau possède des données pédagogiques ou des rattachements à conserver.', 409)
       }
       if (keptRefs.students + keptRefs.pedagogicalRegistrations + keptRefs.grades === 0) {
-        throw new ArchiveRejected('Le niveau à conserver ne porte pas encore de parcours étudiant vérifié.', 409)
+        throw new DeleteRejected('Le niveau à conserver ne porte pas encore de parcours étudiant vérifié.', 409)
       }
 
-      await tx.level.update({ where: { id: candidate.id }, data: { isActive: false } })
+      await tx.level.delete({ where: { id: candidate.id } })
       await tx.auditLog.create({
         data: {
-          tenantId, userId: user.id, action: 'ARCHIVE_DRAFT', entity: 'Level', entityId: candidate.id,
+          tenantId, userId: user.id, action: 'DELETE_DRAFT', entity: 'Level', entityId: candidate.id,
           details: JSON.stringify({ keptLevelId: kept.id, candidateSnapshot: candidate, references: candidateRefs }),
         },
       })
-      return { archivedLevelId: candidate.id, keptLevelId: kept.id }
+      return { deletedLevelId: candidate.id, keptLevelId: kept.id }
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable })
     return NextResponse.json({ data: result })
   } catch (error) {
-    if (error instanceof ArchiveRejected) return NextResponse.json({ error: error.message }, { status: error.status })
-    console.error('Archive draft level error:', error)
-    return NextResponse.json({ error: 'Archivage du brouillon impossible.' }, { status: 500 })
+    if (error instanceof DeleteRejected) return NextResponse.json({ error: error.message }, { status: error.status })
+    console.error('Delete draft level error:', error)
+    return NextResponse.json({ error: 'Suppression du brouillon impossible.' }, { status: 500 })
   }
 }
 
-export const POST = withTenantAuth(handlePost, ['SUPER_ADMIN', 'ADMIN_INSTITUTION'])
+export const DELETE = withTenantAuth(handleDelete, ['SUPER_ADMIN', 'ADMIN_INSTITUTION'])

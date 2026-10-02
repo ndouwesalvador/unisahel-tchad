@@ -164,12 +164,13 @@ interface DuplicateLevelAudit {
   id: string
   name: string
   code: string | null
+  isActive: boolean
   semesters: string[]
   teachingUnits: number
   courseElements: number
   credits: number
   teacherResponsibilities: number
-  canArchiveDraft: boolean
+  canDeleteDraft: boolean
   references: Record<string, number>
 }
 
@@ -317,10 +318,8 @@ function buildOrgTree(faculties: Faculty[], institutionName: string): OrgNode {
 
 // ─── Node edit / delete controls ────────────────────────────────────────────
 //
-// Rename (PUT) and delete (DELETE) a faculty/department/program straight from
-// the org tree. Deletion is soft on the backend (isActive:false) and the API
-// refuses to remove anything with real academic data hanging off it, so the
-// confirmation copy stays reassuring rather than alarming.
+// Rename (PUT) and permanently delete (DELETE) an unused
+// faculty/department/program from the org tree. Linked records block deletion.
 
 const API_TYPE_LABEL: Record<string, string> = {
   faculty: 'la faculté',
@@ -411,7 +410,7 @@ function NodeActions({ apiType, id, name }: { apiType: 'faculty' | 'department' 
           <DialogHeader>
             <DialogTitle className="text-[#1a2744]">Supprimer {API_TYPE_LABEL[apiType]}</DialogTitle>
             <DialogDescription>
-              « {name} » sera désactivé et masqué de la structure. Les étudiants et notes déjà rattachés sont conservés. Continuer ?
+              « {name} » sera supprimé définitivement uniquement s’il ne possède aucun sous-élément ni rattachement académique. Cette action est irréversible. Continuer ?
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -789,7 +788,7 @@ function AddEntityDialog({
 
 export function StructurePage() {
   const queryClient = useQueryClient()
-  const [archivingLevelId, setArchivingLevelId] = useState<string | null>(null)
+  const [deletingLevelId, setDeletingLevelId] = useState<string | null>(null)
   const canAudit = useAppStore((state) => ['SUPER_ADMIN', 'ADMIN_INSTITUTION'].includes(state.user?.role ?? ''))
   const { data: duplicateAudit, isError: duplicateAuditError } = useQuery<{ data: DuplicateAuditGroup[] }>({
     queryKey: ['structure-duplicate-audit'],
@@ -804,26 +803,26 @@ export function StructurePage() {
     data: StructureResponse | undefined
     isLoading: boolean
   }
-  async function archiveDraftLevel(candidate: DuplicateLevelAudit, kept: DuplicateLevelAudit) {
-    if (!window.confirm(`Archiver le brouillon « ${candidate.name} · ${candidate.code ?? 'sans code'} » ?\n\nLe niveau « ${kept.name} · ${kept.code ?? 'sans code'} » reste actif avec ses étudiants et notes. Le brouillon et ses semestres/UE restent en base mais ne seront plus proposés dans les parcours actifs.`)) return
-    setArchivingLevelId(candidate.id)
+  async function deleteDraftLevel(candidate: DuplicateLevelAudit, kept: DuplicateLevelAudit) {
+    if (!window.confirm(`Supprimer définitivement le brouillon « ${candidate.name} · ${candidate.code ?? 'sans code'} », ses semestres et son UE ?\n\nLe niveau « ${kept.name} · ${kept.code ?? 'sans code'} » et ses étudiants/notes seront conservés. Cette suppression est irréversible.`)) return
+    setDeletingLevelId(candidate.id)
     try {
       const response = await fetch('/api/structure/audit', {
-        method: 'POST',
+        method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ candidateLevelId: candidate.id, keepLevelId: kept.id }),
       })
       const result = await response.json()
-      if (!response.ok) throw new Error(result.error ?? 'Archivage impossible')
+      if (!response.ok) throw new Error(result.error ?? 'Suppression impossible')
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['structure'] }),
         queryClient.invalidateQueries({ queryKey: ['structure-duplicate-audit'] }),
       ])
-      toast.success('Brouillon archivé ; le parcours étudiant est conservé.')
+      toast.success('Brouillon supprimé ; le parcours étudiant est conservé.')
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Archivage impossible')
+      toast.error(error instanceof Error ? error.message : 'Suppression impossible')
     } finally {
-      setArchivingLevelId(null)
+      setDeletingLevelId(null)
     }
   }
   const [viewMode, setViewMode] = useState<'cards' | 'tree'>('cards')
@@ -1077,7 +1076,7 @@ export function StructurePage() {
         <Card className="border-amber-300 bg-amber-50">
           <CardHeader>
             <CardTitle className="text-base text-amber-950">Niveaux potentiellement en doublon</CardTitle>
-            <p className="text-sm text-amber-900">Ces niveaux appartiennent au même programme et portent le même nom après normalisation. Seul un brouillon sans étudiant, matière, affectation ni donnée académique peut être archivé ; aucune fusion ni suppression n’est effectuée.</p>
+            <p className="text-sm text-amber-900">Ces niveaux portent le même nom dans un programme. Un brouillon sans étudiant, matière, affectation ni donnée académique peut être supprimé définitivement après vérification. Le parcours utilisé reste intact.</p>
           </CardHeader>
           <CardContent className="space-y-4">
             {duplicateAudit?.data.map((group) => (
@@ -1085,20 +1084,20 @@ export function StructurePage() {
                 <p className="mb-3 font-semibold text-slate-950">{group.programName}</p>
                 <div className="grid gap-3 lg:grid-cols-2">
                   {group.levels.map((level) => {
-                    const kept = group.levels.find((other) => other.id !== level.id && (other.references.students > 0 || other.references.pedagogicalRegistrations > 0 || other.references.grades > 0))
+                    const kept = group.levels.find((other) => other.id !== level.id && other.isActive && (other.references.students > 0 || other.references.pedagogicalRegistrations > 0 || other.references.grades > 0))
                     const academicLinks = Object.entries(level.references)
                       .filter(([, count]) => count > 0)
                       .map(([key, count]) => `${count} ${key === 'students' && count === 1 ? 'étudiant' : AUDIT_REFERENCE_LABELS[key] ?? key}`)
                     return (
                       <div key={level.id} className="rounded-md border border-slate-200 p-3 text-sm text-slate-800">
-                        <p className="font-semibold text-slate-950">{level.name} {level.code ? `· ${level.code}` : ''}</p>
+                        <p className="font-semibold text-slate-950">{level.name} {level.code ? `· ${level.code}` : ''} {!level.isActive && <span className="text-amber-800">· inactif</span>}</p>
                         <p>Semestres : {level.semesters.join(', ') || 'aucun'}</p>
                         <p>{level.teachingUnits} UE · {level.courseElements} {level.courseElements === 1 ? 'matière' : 'matières'} · {level.credits} crédits configurés</p>
                         <p>Rattachements : {academicLinks.join(' · ') || 'aucun repéré'}</p>
                         {level.teacherResponsibilities > 0 && <p>Responsables d’UE : {level.teacherResponsibilities}</p>}
-                        {level.canArchiveDraft && kept && (
-                          <Button type="button" variant="outline" className="mt-3 border-amber-400 text-amber-950" disabled={archivingLevelId !== null} onClick={() => archiveDraftLevel(level, kept)}>
-                            {archivingLevelId === level.id ? 'Archivage…' : 'Archiver ce brouillon'}
+                        {level.canDeleteDraft && kept && (
+                          <Button type="button" variant="outline" className="mt-3 border-red-300 text-red-800" disabled={deletingLevelId !== null} onClick={() => deleteDraftLevel(level, kept)}>
+                            {deletingLevelId === level.id ? 'Suppression…' : 'Supprimer ce brouillon'}
                           </Button>
                         )}
                       </div>
