@@ -4,6 +4,7 @@ import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
 import { getTeacherScope } from '@/lib/auth/teacher-scope'
 import { findStructureConflict } from '@/lib/structure-duplicates'
+import { getLevelReferences } from '@/lib/structure-level-references'
 import {
   createFacultySchema,
   createDepartmentSchema,
@@ -638,6 +639,13 @@ async function updateEntityHandler(user: SessionUser, tenantId: string, request:
       return NextResponse.json({ error: 'Entity not found in this tenant' }, { status: 404 })
     }
 
+    if (type === 'level' && body.isActive === false) {
+      const references = await getLevelReferences(db, tenantId, id)
+      if (Object.values(references).some((count) => count > 0)) {
+        return NextResponse.json({ error: 'Ce niveau contient encore des semestres ou des rattachements académiques. Utilisez l’audit des doublons pour archiver un brouillon vérifié.' }, { status: 409 })
+      }
+    }
+
     if ((type === 'level' || type === 'semester') && (body.name !== undefined || body.code !== undefined || (type === 'level' && body.isActive === true))) {
       if ((body.name !== undefined && (typeof body.name !== 'string' || !body.name.trim())) ||
           (body.code !== undefined && typeof body.code !== 'string')) {
@@ -725,17 +733,8 @@ async function deleteEntityHandler(user: SessionUser, tenantId: string, request:
     // records remain. Never hide a level that still carries a curriculum or
     // academic references; these must be reviewed and moved deliberately.
     if (type === 'level') {
-      const counts = await Promise.all([
-        db.semester.count({ where: { levelId: id } }),
-        db.student.count({ where: { tenantId, currentLevelId: id } }),
-        db.administrativeRegistration.count({ where: { tenantId, levelId: id } }),
-        db.admission.count({ where: { tenantId, levelId: id } }),
-        db.admissionCampaign.count({ where: { tenantId, levelId: id } }),
-        db.deliberation.count({ where: { tenantId, levelId: id } }),
-        db.feeStructure.count({ where: { tenantId, levelId: id } }),
-        db.timetableSlot.count({ where: { tenantId, levelId: id } }),
-      ])
-      if (counts.some((count) => count > 0)) {
+      const references = await getLevelReferences(db, tenantId, id)
+      if (Object.values(references).some((count) => count > 0)) {
         return NextResponse.json({ error: 'Ce niveau contient encore des semestres ou des rattachements académiques. Vérifiez et transférez-les avant de le désactiver.' }, { status: 409 })
       }
     }

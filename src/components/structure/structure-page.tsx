@@ -168,6 +168,8 @@ interface DuplicateLevelAudit {
   teachingUnits: number
   courseElements: number
   credits: number
+  teacherResponsibilities: number
+  canArchiveDraft: boolean
   references: Record<string, number>
 }
 
@@ -178,6 +180,7 @@ interface DuplicateAuditGroup {
 }
 
 const AUDIT_REFERENCE_LABELS: Record<string, string> = {
+  semesters: 'semestres',
   students: 'étudiants',
   administrativeRegistrations: 'inscriptions administratives',
   admissions: 'admissions',
@@ -187,6 +190,7 @@ const AUDIT_REFERENCE_LABELS: Record<string, string> = {
   timetableSlots: 'créneaux',
   pedagogicalRegistrations: 'inscriptions pédagogiques',
   grades: 'notes',
+  scheduledExams: 'examens programmés',
 }
 
 // ─── Mapping: API shape → Local UI shape ───────────────────────────────────
@@ -784,6 +788,8 @@ function AddEntityDialog({
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 export function StructurePage() {
+  const queryClient = useQueryClient()
+  const [archivingLevelId, setArchivingLevelId] = useState<string | null>(null)
   const canAudit = useAppStore((state) => ['SUPER_ADMIN', 'ADMIN_INSTITUTION'].includes(state.user?.role ?? ''))
   const { data: duplicateAudit, isError: duplicateAuditError } = useQuery<{ data: DuplicateAuditGroup[] }>({
     queryKey: ['structure-duplicate-audit'],
@@ -797,6 +803,28 @@ export function StructurePage() {
   const { data: structureQuery, isLoading } = useStructure() as {
     data: StructureResponse | undefined
     isLoading: boolean
+  }
+  async function archiveDraftLevel(candidate: DuplicateLevelAudit, kept: DuplicateLevelAudit) {
+    if (!window.confirm(`Archiver le brouillon « ${candidate.name} · ${candidate.code ?? 'sans code'} » ?\n\nLe niveau « ${kept.name} · ${kept.code ?? 'sans code'} » reste actif avec ses étudiants et notes. Le brouillon et ses semestres/UE restent en base mais ne seront plus proposés dans les parcours actifs.`)) return
+    setArchivingLevelId(candidate.id)
+    try {
+      const response = await fetch('/api/structure/audit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ candidateLevelId: candidate.id, keepLevelId: kept.id }),
+      })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error ?? 'Archivage impossible')
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['structure'] }),
+        queryClient.invalidateQueries({ queryKey: ['structure-duplicate-audit'] }),
+      ])
+      toast.success('Brouillon archivé ; le parcours étudiant est conservé.')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Archivage impossible')
+    } finally {
+      setArchivingLevelId(null)
+    }
   }
   const [viewMode, setViewMode] = useState<'cards' | 'tree'>('cards')
   const [searchQuery, setSearchQuery] = useState('')
@@ -1049,7 +1077,7 @@ export function StructurePage() {
         <Card className="border-amber-300 bg-amber-50">
           <CardHeader>
             <CardTitle className="text-base text-amber-950">Niveaux potentiellement en doublon</CardTitle>
-            <p className="text-sm text-amber-900">Ces niveaux appartiennent au même programme et portent le même nom après normalisation. Aucune fusion automatique n’est effectuée : vérifiez les parcours, inscriptions et maquettes avant de choisir celui à conserver.</p>
+            <p className="text-sm text-amber-900">Ces niveaux appartiennent au même programme et portent le même nom après normalisation. Seul un brouillon sans étudiant, matière, affectation ni donnée académique peut être archivé ; aucune fusion ni suppression n’est effectuée.</p>
           </CardHeader>
           <CardContent className="space-y-4">
             {duplicateAudit?.data.map((group) => (
@@ -1057,6 +1085,7 @@ export function StructurePage() {
                 <p className="mb-3 font-semibold text-slate-950">{group.programName}</p>
                 <div className="grid gap-3 lg:grid-cols-2">
                   {group.levels.map((level) => {
+                    const kept = group.levels.find((other) => other.id !== level.id && (other.references.students > 0 || other.references.pedagogicalRegistrations > 0 || other.references.grades > 0))
                     const academicLinks = Object.entries(level.references)
                       .filter(([, count]) => count > 0)
                       .map(([key, count]) => `${count} ${key === 'students' && count === 1 ? 'étudiant' : AUDIT_REFERENCE_LABELS[key] ?? key}`)
@@ -1066,6 +1095,12 @@ export function StructurePage() {
                         <p>Semestres : {level.semesters.join(', ') || 'aucun'}</p>
                         <p>{level.teachingUnits} UE · {level.courseElements} {level.courseElements === 1 ? 'matière' : 'matières'} · {level.credits} crédits configurés</p>
                         <p>Rattachements : {academicLinks.join(' · ') || 'aucun repéré'}</p>
+                        {level.teacherResponsibilities > 0 && <p>Responsables d’UE : {level.teacherResponsibilities}</p>}
+                        {level.canArchiveDraft && kept && (
+                          <Button type="button" variant="outline" className="mt-3 border-amber-400 text-amber-950" disabled={archivingLevelId !== null} onClick={() => archiveDraftLevel(level, kept)}>
+                            {archivingLevelId === level.id ? 'Archivage…' : 'Archiver ce brouillon'}
+                          </Button>
+                        )}
                       </div>
                     )
                   })}
