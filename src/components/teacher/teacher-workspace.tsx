@@ -145,7 +145,7 @@ export function TeacherTimetablePage() {
       <div className="grid gap-3 md:grid-cols-2">{slots.map((slot) => <article key={slot.id} className="rounded-xl border border-slate-200 bg-white p-5">
           <p className="text-sm font-bold text-emerald-800">{DAYS[slot.dayOfWeek] ?? `Jour ${slot.dayOfWeek}`} · {slot.startTime}–{slot.endTime}</p>
           <h2 className="mt-2 text-lg font-bold text-slate-950">{slot.course || 'Matière non indiquée'}</h2>
-          <p className="mt-3 text-xs font-semibold text-slate-600">{slot.type}{slot.room ? ` · Salle ${slot.room}` : ' · Salle non précisée'}</p>
+          <p className="mt-3 text-xs font-semibold text-slate-600">{slot.type}{slot.room ? ` · ${slot.room}` : ' · Salle non précisée'}</p>
         </article>)}</div>}
   </div>
 }
