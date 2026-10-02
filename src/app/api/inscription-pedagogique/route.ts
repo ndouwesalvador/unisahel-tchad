@@ -121,8 +121,12 @@ async function handleGet(_user: SessionUser, tenantId: string, request: NextRequ
     }
     const studentLevel = new Map(students.map((student) => [student.id, student.currentLevelId]))
     const registeredCountByStudent = new Map<string, number>()
+    const outsideLevelCountByStudent = new Map<string, number>()
     for (const registration of registrationCounts) {
-      if (levelByUnit.get(registration.teachingUnitId) !== studentLevel.get(registration.studentId)) continue
+      if (levelByUnit.get(registration.teachingUnitId) !== studentLevel.get(registration.studentId)) {
+        outsideLevelCountByStudent.set(registration.studentId, (outsideLevelCountByStudent.get(registration.studentId) ?? 0) + 1)
+        continue
+      }
       registeredCountByStudent.set(registration.studentId, (registeredCountByStudent.get(registration.studentId) ?? 0) + 1)
     }
     const debtByStudent = new Set(debtGroups.map((d) => d.studentId))
@@ -139,6 +143,7 @@ async function handleGet(_user: SessionUser, tenantId: string, request: NextRequ
         niveau: s.currentLevel?.name || '—',
         ueInscrites,
         totalUe,
+        outsideLevelRegistrations: outsideLevelCountByStudent.get(s.id) ?? 0,
         statut,
         hasDebt: debtByStudent.has(s.id),
       }

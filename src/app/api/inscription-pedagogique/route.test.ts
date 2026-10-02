@@ -167,6 +167,6 @@ describe('pedagogical registration tenant isolation', () => {
     const response = await GET(new NextRequest('http://localhost:3000/api/inscription-pedagogique'))
     const body = await response.json()
     expect(response.status).toBe(200)
-    expect(body.students[0]).toMatchObject({ ueInscrites: 1, totalUe: 2, statut: 'en-cours' })
+    expect(body.students[0]).toMatchObject({ ueInscrites: 1, totalUe: 2, outsideLevelRegistrations: 1, statut: 'en-cours' })
   })
 })

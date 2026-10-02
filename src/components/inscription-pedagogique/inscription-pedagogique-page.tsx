@@ -73,6 +73,7 @@ interface StudentRegistration {
   niveau: string
   ueInscrites: number
   totalUe: number
+  outsideLevelRegistrations: number
   statut: 'complete' | 'en-cours' | 'non-commencee' | 'en-attente'
   hasDebt: boolean
 }
@@ -116,9 +117,9 @@ const itemVariants = {
 
 function StatusBadge({ statut }: { statut: StudentRegistration['statut'] }) {
   const config: Record<StudentRegistration['statut'], { label: string; className: string }> = {
-    complete: { label: 'Complete', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-[#2d7a4f30]' },
+    complete: { label: 'Complète', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-[#2d7a4f30]' },
     'en-cours': { label: 'En cours', className: 'bg-[#d4a85315] text-[#b8922e] border-[#d4a85330]' },
-    'non-commencee': { label: 'Non commencee', className: 'bg-gray-100 text-gray-500 border-gray-200' },
+    'non-commencee': { label: 'Non commencée', className: 'bg-gray-100 text-gray-500 border-gray-200' },
     'en-attente': { label: 'En attente de validation', className: 'bg-[#1a274410] text-[#1a2744] border-[#1a274420]' },
   }
   const c = config[statut]
@@ -514,6 +515,12 @@ export function InscriptionPedagogiquePage() {
                             </div>
                             <div className="min-w-0">
                               <p className="text-sm font-medium text-[#1a2744] truncate">{student.name}</p>
+                              {student.outsideLevelRegistrations > 0 && (
+                                <p className="flex items-center gap-1 text-[11px] font-medium text-amber-800">
+                                  <AlertTriangle className="size-3 shrink-0" />
+                                  {student.outsideLevelRegistrations} UE d’un autre niveau cette année — à vérifier avant toute délibération
+                                </p>
+                              )}
                               {student.hasDebt && (
                                 <div className="flex items-center gap-1">
                                   <AlertTriangle className="size-3 text-[#d4a853]" />
@@ -533,7 +540,7 @@ export function InscriptionPedagogiquePage() {
                             <div className="w-12 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                               <div
                                 className="h-full bg-[#2d7a4f] rounded-full transition-all"
-                                style={{ width: `${(student.ueInscrites / student.totalUe) * 100}%` }}
+                                style={{ width: `${(student.ueInscrites / Math.max(student.totalUe, 1)) * 100}%` }}
                               />
                             </div>
                             <span className="text-gray-600">{student.ueInscrites}/{student.totalUe}</span>
