@@ -61,7 +61,9 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
       ...(scopedProgramIds ? { programId: { in: programId ? [programId] : scopedProgramIds } } : programId ? { programId } : {}),
       ...(levelId ? { levelId } : {}),
       ...(academicYearId ? { academicYearId } : {}),
-      ...(teacherScope ? { courseElementId: { in: teacherScope.courseElementIds } } : {}),
+      // Slots carry their actual annual teacher. A current EC/UE assignment
+      // must never reveal another teacher's schedule or hide approved visitors.
+      ...(teacherScope ? { teacherId: teacherScope.teacherId } : {}),
     }
 
     const slots = await db.timetableSlot.findMany({
@@ -163,8 +165,16 @@ async function saveSlot(user: SessionUser, tenantId: string, request: NextReques
       if (programId !== element.teachingUnit.semester.level.programId || levelId !== element.teachingUnit.semester.level.id) {
         return NextResponse.json({ error: 'Programme ou niveau incohérent avec la matière' }, { status: 400 })
       }
-      if (teacherId !== element.teacherId && teacherId !== element.teachingUnit.responsibleId) {
-        return NextResponse.json({ error: 'Enseignant non affecté à cette matière' }, { status: 400 })
+      // Existing legacy slots remain editable without inventing approval
+      // history. Any new pairing must use an explicitly approved annual service.
+      const unchangedLegacyPair = existing?.academicYearId === academicYearId
+        && existing?.courseElementId === courseElementId && existing?.teacherId === teacherId
+      if (!unchangedLegacyPair) {
+        const service = await db.teachingService.findFirst({ where: {
+          tenantId, academicYearId, courseElementId, teacherId, status: 'APPROVED',
+          requestingDepartmentId: program.departmentId,
+        }, select: { id: true } })
+        if (!service) return NextResponse.json({ error: 'Service annuel non approuvé pour cet enseignant, cette matière et cette année.' }, { status: 409 })
       }
     }
 

@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -374,7 +375,7 @@ function DaySlotCard({ slot, onClick }: { slot: TimeSlot; onClick?: () => void }
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function TimetablePage() {
-  const { user, selectedAcademicYearId } = useAppStore()
+  const { user, selectedAcademicYearId, setView } = useAppStore()
   const canManageSlots = ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE', 'FACULTE', 'DEPARTEMENT'].includes(user?.role ?? '')
   const queryClient = useQueryClient()
   const [filterProgram, setFilterProgram] = useState('all')
@@ -399,6 +400,14 @@ export function TimetablePage() {
   const { data: roomsQuery, isLoading: isRoomsLoading } = useRooms()
   const { data: structureData } = useStructure()
   const { data: teachersData } = useTeachers({ limit: 1000 })
+  const { data: serviceData } = useQuery<{ services: { status: string; academicYearId: string; courseElementId: string; teacherId: string }[]; teachers: { id: string; user: { firstName: string; lastName: string } | null }[] }>({
+    queryKey: ['teaching-services', activeYearId], enabled: Boolean(activeYearId) && canManageSlots,
+    queryFn: async () => {
+      const response = await fetch(`/api/teaching-services?academicYearId=${encodeURIComponent(activeYearId)}`)
+      if (!response.ok) throw new Error('Services annuels indisponibles')
+      return response.json()
+    },
+  })
   const timeSlots: TimeSlot[] = (timetableQuery?.slots || []).map(mapSlot)
   const rooms: RoomInfo[] = (roomsQuery?.data || []).map(mapRoom)
   const academicYears: { id: string; name: string; isCurrent?: boolean }[] = useMemo(
@@ -410,15 +419,19 @@ export function TimetablePage() {
     [structureData]
   )
   const teacherOptions: AcademicOption[] = useMemo(
-    () => (teachersData?.data ?? []).map((teacher: { id: string; employeeId?: string | null; user?: { firstName?: string | null; lastName?: string | null }; firstName?: string | null; lastName?: string | null }) => ({
+    () => [...new Map([...(teachersData?.data ?? []), ...(serviceData?.teachers ?? [])].map((teacher: { id: string; employeeId?: string | null; user?: { firstName?: string | null; lastName?: string | null }; firstName?: string | null; lastName?: string | null }) => [teacher.id, teacher])).values()].map((teacher) => ({
       id: teacher.id,
       label: `${teacher.user?.lastName || teacher.lastName || ''} ${teacher.user?.firstName || teacher.firstName || ''}`.trim() || teacher.employeeId || teacher.id,
     })),
-    [teachersData]
+    [teachersData, serviceData]
   )
   const selectedElement = courseElements.find((element) => element.id === slotForm.courseElementId)
+  const approvedTeacherIds = new Set((serviceData?.services ?? []).filter(service => service.status === 'APPROVED'
+    && service.academicYearId === slotForm.academicYearId && service.courseElementId === slotForm.courseElementId).map(service => service.teacherId))
+  const editingLegacySlot = editingSlotId ? (timetableQuery?.slots as TimetableSlotRecord[] | undefined)?.find(slot => slot.id === editingSlotId) : null
   const assignedTeacherOptions = selectedElement
-    ? teacherOptions.filter((teacher) => teacher.id === selectedElement.teacherId || teacher.id === selectedElement.responsibleId)
+    ? teacherOptions.filter((teacher) => approvedTeacherIds.has(teacher.id) || (editingLegacySlot?.academicYearId === slotForm.academicYearId
+      && editingLegacySlot.courseElementId === slotForm.courseElementId && editingLegacySlot.teacherId === teacher.id))
     : []
   const filteredLevels = useMemo(
     () => levels.filter((level) => !slotForm.programId || level.programId === slotForm.programId),
@@ -480,11 +493,13 @@ export function TimetablePage() {
 
   const handleCourseElementChange = (courseElementId: string) => {
     const selected = courseElements.find((element) => element.id === courseElementId)
+    const approved = (serviceData?.services ?? []).find(service => service.status === 'APPROVED'
+      && service.academicYearId === slotForm.academicYearId && service.courseElementId === courseElementId)
     updateSlotForm({
       courseElementId,
       programId: selected?.programId ?? slotForm.programId,
       levelId: selected?.levelId ?? slotForm.levelId,
-      teacherId: selected?.teacherId || selected?.responsibleId || '',
+      teacherId: approved?.teacherId || '',
     })
   }
 
@@ -758,6 +773,7 @@ export function TimetablePage() {
                   ))}
                 </SelectContent>
               </Select>
+              {slotForm.courseElementId && assignedTeacherOptions.length === 0 && <p className="text-xs text-amber-800">Aucun service annuel approuvé pour cette matière et cette année. {['ADMIN_INSTITUTION', 'FACULTE', 'DEPARTEMENT'].includes(user?.role ?? '') ? <button type="button" className="underline" onClick={() => { setShowCreateSlot(false); setView('teaching-services') }}>Ouvrir les services enseignants</button> : 'Demandez son approbation à l’administration.'}</p>}
             </div>
           </div>
           <div className="flex justify-end gap-2">

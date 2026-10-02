@@ -27,6 +27,7 @@ export type AppView =
   | 'verify'
   | 'announcements'
   | 'timetable'
+  | 'teaching-services'
   | 'import-export'
   | 'inscription-pedagogique'
   | 'scholarships'

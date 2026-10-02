@@ -114,6 +114,7 @@ const TeacherMessagesPage = lazyView(() => import('@/components/teacher/teacher-
 const AnnouncementsPage = lazyView(() => import('@/components/announcements/announcements-page').then(m => m.AnnouncementsPage))
 const ImportExportPage = lazyView(() => import('@/components/import-export/import-export-page').then(m => m.ImportExportPage))
 const TimetablePage = lazyView(() => import('@/components/timetable/timetable-page').then(m => m.TimetablePage))
+const TeachingServicesPage = lazyView(() => import('@/components/teaching-services/teaching-services-page').then(m => m.TeachingServicesPage))
 const OrganizationDashboard = lazyView(() => import('@/components/dashboard/organization-dashboard').then(m => m.OrganizationDashboard))
 const CandidaturePage = lazyView(() => import('@/components/candidature/candidature-page').then(m => m.CandidaturePage))
 const InscriptionPedagogiquePage = lazyView(() => import('@/components/inscription-pedagogique/inscription-pedagogique-page').then(m => m.InscriptionPedagogiquePage))
@@ -185,6 +186,7 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
     { icon: Heart, label: 'Santé', view: 'health', module: 'health' },
     { icon: Briefcase, label: 'Stages', view: 'internships' },
     { icon: Calendar, label: 'Emploi du temps', view: 'timetable' },
+    { icon: BookOpenCheck, label: 'Services enseignants', view: 'teaching-services' },
     { icon: ClipboardCheck, label: 'Examens', view: 'exam-scheduling' },
     { icon: Megaphone, label: 'Annonces', view: 'announcements' },
     { icon: Download, label: 'Import/Export', view: 'import-export' },
@@ -231,11 +233,13 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
   FACULTE: [
     { icon: LayoutDashboard, label: 'Tableau de bord', view: 'dashboard' },
     { icon: Calendar, label: 'Emploi du temps', view: 'timetable' },
+    { icon: BookOpenCheck, label: 'Services enseignants', view: 'teaching-services' },
     { icon: CheckSquare, label: 'Délibérations', view: 'deliberation' },
   ],
   DEPARTEMENT: [
     { icon: LayoutDashboard, label: 'Tableau de bord', view: 'dashboard' },
     { icon: Calendar, label: 'Emploi du temps', view: 'timetable' },
+    { icon: BookOpenCheck, label: 'Services enseignants', view: 'teaching-services' },
     { icon: CheckSquare, label: 'Délibérations', view: 'deliberation' },
   ],
   ENSEIGNANT: [
@@ -345,6 +349,7 @@ const viewLabels: Record<AppView, string> = {
   verify: 'Vérification',
   announcements: 'Annonces',
   timetable: 'Emploi du temps',
+  'teaching-services': 'Services enseignants',
   'import-export': 'Import/Export',
   'inscription-pedagogique': 'Inscription Pédagogique',
   scholarships: 'Bourses & Aide financière',
@@ -511,6 +516,7 @@ function MainContent({ view }: { view: AppView }) {
   const { user } = useAppStore()
   if (user?.role === 'FACULTE' || user?.role === 'DEPARTEMENT') {
     if (view === 'timetable') return <TimetablePage />
+    if (view === 'teaching-services') return <TeachingServicesPage />
     if (view === 'deliberation') return <DeliberationPage />
     if (view === 'profile') return <ProfilePage />
     return <OrganizationDashboard />
@@ -574,6 +580,8 @@ function MainContent({ view }: { view: AppView }) {
       return <AnnouncementsPage />
     case 'timetable':
       return <TimetablePage />
+    case 'teaching-services':
+      return <TeachingServicesPage />
     case 'import-export':
       return <ImportExportPage />
     case 'candidature':
@@ -638,7 +646,7 @@ export function DashboardShell() {
   }, [user?.role, currentView, setView])
   useEffect(() => {
     if (user?.role !== 'FACULTE' && user?.role !== 'DEPARTEMENT') return
-    if (!['dashboard', 'timetable', 'deliberation', 'profile'].includes(currentView)) setView('dashboard')
+    if (!['dashboard', 'timetable', 'teaching-services', 'deliberation', 'profile'].includes(currentView)) setView('dashboard')
   }, [user?.role, currentView, setView])
   const searchTerm = searchQuery.trim().toLowerCase()
   const searchResults = searchTerm

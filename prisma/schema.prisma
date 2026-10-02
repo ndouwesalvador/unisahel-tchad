@@ -33,122 +33,123 @@ enum UserRole {
 // ============================================
 
 model Tenant {
-  id               String    @id @default(cuid())
-  name             String
-  shortName        String?
-  slug             String    @unique
-  logo             String?
-  stamp            String?
-  motto            String?
-  address          String?
-  city             String?
-  country          String?
-  phone            String?
-  email            String?
-  website          String?
-  ministry         String?
-  rectorName       String?
-  rectorTitle      String?
-  academicSystem   String    @default("LMD")
-  matriculeFormat  String?   @default("UNSH-{YEAR}-{LEVEL}-{SEQ}")
-  loginFormat      String?   @default("UNSH-{YEAR}-{LEVEL}-{SEQ}")
-  isActive         Boolean   @default(true)
-  subscriptionPlan String    @default("STARTER")
-  subscriptionEnd  DateTime?
-  settings         TenantSettings?
-  campuses         Campus[]
-  faculties        Faculty[]
-  institutes       Institute[]
-  departments      Department[]
-  domains          Domain[]
-  programs         Program[]
-  academicYears    AcademicYear[]
-  users            User[]
-  students         Student[]
-  teachers         Teacher[]
-  gradingRules     GradingRule[]
-  compensationRules CompensationRule[]
-  documentTemplates DocumentTemplate[]
-  feeStructures    FeeStructure[]
-  hospitals        Hospital[]
-  clinicalSites    ClinicalSite[]
-  announcements    Announcement[]
-  auditLogs        AuditLog[]
-  importLogs       ImportLog[]
-  exportLogs       ExportLog[]
-  scholarships     Scholarship[]
-  alumni           Alumni[]
-  reports          Report[]
-  scheduledReports ScheduledReport[]
-  attendances      Attendance[]
-  onlineExams      OnlineExam[]
-  communications   Communication[]
-  internships        Internship[]
-  internshipPartners InternshipPartner[]
-  staff              Staff[]
-  leaveRequests      LeaveRequest[]
-  rooms              Room[]
-  roomReservations   RoomReservation[]
-  notifications      Notification[]
-  libraryResources   LibraryResource[]
-  libraryLoans       LibraryLoan[]
-  libraryRooms       LibraryRoom[]
-  transportVehicles  TransportVehicle[]
-  transportRoutes    TransportRoute[]
-  transportDepartures TransportDeparture[]
-  transportMaintenances TransportMaintenance[]
-  transportAlerts    TransportAlert[]
+  id                     String                  @id @default(cuid())
+  name                   String
+  shortName              String?
+  slug                   String                  @unique
+  logo                   String?
+  stamp                  String?
+  motto                  String?
+  address                String?
+  city                   String?
+  country                String?
+  phone                  String?
+  email                  String?
+  website                String?
+  ministry               String?
+  rectorName             String?
+  rectorTitle            String?
+  academicSystem         String                  @default("LMD")
+  matriculeFormat        String?                 @default("UNSH-{YEAR}-{LEVEL}-{SEQ}")
+  loginFormat            String?                 @default("UNSH-{YEAR}-{LEVEL}-{SEQ}")
+  isActive               Boolean                 @default(true)
+  subscriptionPlan       String                  @default("STARTER")
+  subscriptionEnd        DateTime?
+  settings               TenantSettings?
+  campuses               Campus[]
+  faculties              Faculty[]
+  institutes             Institute[]
+  departments            Department[]
+  domains                Domain[]
+  programs               Program[]
+  academicYears          AcademicYear[]
+  users                  User[]
+  students               Student[]
+  teachers               Teacher[]
+  teachingServices       TeachingService[]
+  gradingRules           GradingRule[]
+  compensationRules      CompensationRule[]
+  documentTemplates      DocumentTemplate[]
+  feeStructures          FeeStructure[]
+  hospitals              Hospital[]
+  clinicalSites          ClinicalSite[]
+  announcements          Announcement[]
+  auditLogs              AuditLog[]
+  importLogs             ImportLog[]
+  exportLogs             ExportLog[]
+  scholarships           Scholarship[]
+  alumni                 Alumni[]
+  reports                Report[]
+  scheduledReports       ScheduledReport[]
+  attendances            Attendance[]
+  onlineExams            OnlineExam[]
+  communications         Communication[]
+  internships            Internship[]
+  internshipPartners     InternshipPartner[]
+  staff                  Staff[]
+  leaveRequests          LeaveRequest[]
+  rooms                  Room[]
+  roomReservations       RoomReservation[]
+  notifications          Notification[]
+  libraryResources       LibraryResource[]
+  libraryLoans           LibraryLoan[]
+  libraryRooms           LibraryRoom[]
+  transportVehicles      TransportVehicle[]
+  transportRoutes        TransportRoute[]
+  transportDepartures    TransportDeparture[]
+  transportMaintenances  TransportMaintenance[]
+  transportAlerts        TransportAlert[]
   transportSubscriptions TransportSubscription[]
-  advisors           Advisor[]
-  advisingAppointments AdvisingAppointment[]
-  advisingWorkshops  AdvisingWorkshop[]
-  examBankQuestions  ExamBankQuestion[]
-  examResults        ExamResult[]
-  examIncidents      ExamIncident[]
-  scheduledExams     ScheduledExam[]
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  advisors               Advisor[]
+  advisingAppointments   AdvisingAppointment[]
+  advisingWorkshops      AdvisingWorkshop[]
+  examBankQuestions      ExamBankQuestion[]
+  examResults            ExamResult[]
+  examIncidents          ExamIncident[]
+  scheduledExams         ScheduledExam[]
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
 }
 
 model TenantSettings {
-  id                    String   @id @default(cuid())
-  tenantId              String   @unique
-  tenant                Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  defaultLanguage       String   @default("fr")
-  supportedLanguages    String   @default("fr,en,ar")
-  gradingScale          Float    @default(20.0)
-  passingGrade          Float    @default(10.0)
-  eliminationGrade      Float    @default(0.0)
-  compensationEnabled   Boolean  @default(true)
-  catchUpSessionEnabled Boolean  @default(true)
-  ccWeight              Float    @default(0.4)
-  examWeight            Float    @default(0.6)
-  tpWeight              Float    @default(0.0)
-  stageWeight           Float    @default(0.0)
-  creditsPerSemester    Int      @default(30)
-  creditsPerYear        Int      @default(60)
-  maxAbsencesAllowed    Int      @default(3)
-  pinLength             Int      @default(4)
-  studentAuthMode       String   @default("LOGIN_PIN")
-  emailVerification     Boolean  @default(true)
-  twoFactorEnabled      Boolean  @default(false)
-  documentAutoSign      Boolean  @default(false)
-  receiptPrefix         String   @default("REC")
-  matriculePrefix       String   @default("UNSH")
-  allowMobileMoney      Boolean  @default(true)
-  allowBankPayment      Boolean  @default(true)
-  allowCashPayment      Boolean  @default(true)
-  smsNotifications      Boolean  @default(false)
-  emailNotifications    Boolean  @default(true)
-  whatsappNotifications Boolean  @default(false)
-  pwaEnabled            Boolean  @default(false)
-  offlineMode           Boolean  @default(false)
-  pedagogicalRegistrationOpen Boolean @default(true)
-  primaryColor          String   @default("#1a2744")
-  secondaryColor        String   @default("#2d7a4f")
-  accentColor           String   @default("#c9a84c")
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  id                          String   @id @default(cuid())
+  tenantId                    String   @unique
+  tenant                      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  defaultLanguage             String   @default("fr")
+  supportedLanguages          String   @default("fr,en,ar")
+  gradingScale                Float    @default(20.0)
+  passingGrade                Float    @default(10.0)
+  eliminationGrade            Float    @default(0.0)
+  compensationEnabled         Boolean  @default(true)
+  catchUpSessionEnabled       Boolean  @default(true)
+  ccWeight                    Float    @default(0.4)
+  examWeight                  Float    @default(0.6)
+  tpWeight                    Float    @default(0.0)
+  stageWeight                 Float    @default(0.0)
+  creditsPerSemester          Int      @default(30)
+  creditsPerYear              Int      @default(60)
+  maxAbsencesAllowed          Int      @default(3)
+  pinLength                   Int      @default(4)
+  studentAuthMode             String   @default("LOGIN_PIN")
+  emailVerification           Boolean  @default(true)
+  twoFactorEnabled            Boolean  @default(false)
+  documentAutoSign            Boolean  @default(false)
+  receiptPrefix               String   @default("REC")
+  matriculePrefix             String   @default("UNSH")
+  allowMobileMoney            Boolean  @default(true)
+  allowBankPayment            Boolean  @default(true)
+  allowCashPayment            Boolean  @default(true)
+  smsNotifications            Boolean  @default(false)
+  emailNotifications          Boolean  @default(true)
+  whatsappNotifications       Boolean  @default(false)
+  pwaEnabled                  Boolean  @default(false)
+  offlineMode                 Boolean  @default(false)
+  pedagogicalRegistrationOpen Boolean  @default(true)
+  primaryColor                String   @default("#1a2744")
+  secondaryColor              String   @default("#2d7a4f")
+  accentColor                 String   @default("#c9a84c")
+  createdAt                   DateTime @default(now())
+  updatedAt                   DateTime @updatedAt
 }
 
 // ============================================
@@ -184,55 +185,57 @@ model Faculty {
 }
 
 model Institute {
-  id            String   @id @default(cuid())
-  tenantId      String
-  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  name          String
-  shortName     String?
-  directorName  String?
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id           String   @id @default(cuid())
+  tenantId     String
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name         String
+  shortName    String?
+  directorName String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 model Department {
-  id         String    @id @default(cuid())
-  tenantId   String
-  tenant     Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  facultyId  String?
-  faculty    Faculty?  @relation(fields: [facultyId], references: [id], onDelete: SetNull)
-  name       String
-  shortName  String?
-  headName   String?
-  isActive   Boolean   @default(true)
-  teachers   Teacher[]
-  managers   User[]     @relation("DepartmentManagers")
-  programs   Program[]
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  id                String            @id @default(cuid())
+  tenantId          String
+  tenant            Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  facultyId         String?
+  faculty           Faculty?          @relation(fields: [facultyId], references: [id], onDelete: SetNull)
+  name              String
+  shortName         String?
+  headName          String?
+  isActive          Boolean           @default(true)
+  teachers          Teacher[]
+  requestedServices TeachingService[] @relation("ServiceRequestDepartment")
+  homeServices      TeachingService[] @relation("ServiceHomeDepartment")
+  managers          User[]            @relation("DepartmentManagers")
+  programs          Program[]
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
 }
 
 model Domain {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   tenantId  String
-  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   name      String
   code      String?
   mentions  Mention[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 }
 
 model Mention {
-  id         String     @id @default(cuid())
-  domainId   String
-  domain     Domain     @relation(fields: [domainId], references: [id], onDelete: Cascade)
-  name       String
-  code       String?
+  id          String      @id @default(cuid())
+  domainId    String
+  domain      Domain      @relation(fields: [domainId], references: [id], onDelete: Cascade)
+  name        String
+  code        String?
   specialties Specialty[]
-  programs   Program[]
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
+  programs    Program[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
 }
 
 model Specialty {
@@ -257,40 +260,40 @@ model Track {
 }
 
 model Program {
-  id           String     @id @default(cuid())
+  id           String      @id @default(cuid())
   tenantId     String
-  tenant       Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant       Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   facultyId    String?
-  faculty      Faculty?   @relation(fields: [facultyId], references: [id], onDelete: SetNull)
+  faculty      Faculty?    @relation(fields: [facultyId], references: [id], onDelete: SetNull)
   departmentId String?
   department   Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   mentionId    String?
-  mention      Mention?   @relation(fields: [mentionId], references: [id], onDelete: SetNull)
+  mention      Mention?    @relation(fields: [mentionId], references: [id], onDelete: SetNull)
   name         String
   code         String?
-  cycle        String     @default("LICENCE")
+  cycle        String      @default("LICENCE")
   diplomaType  String?
-  duration     Int        @default(3)
-  isActive     Boolean    @default(true)
+  duration     Int         @default(3)
+  isActive     Boolean     @default(true)
   levels       Level[]
   students     Student[]
   admissions   Admission[]
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 }
 
 model Level {
-  id           String   @id @default(cuid())
-  programId    String
-  program      Program  @relation(fields: [programId], references: [id], onDelete: Cascade)
-  name         String
-  code         String?
-  orderIndex   Int      @default(0)
-  isActive     Boolean  @default(true)
-  semesters    Semester[]
-  students     Student[]
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id         String     @id @default(cuid())
+  programId  String
+  program    Program    @relation(fields: [programId], references: [id], onDelete: Cascade)
+  name       String
+  code       String?
+  orderIndex Int        @default(0)
+  isActive   Boolean    @default(true)
+  semesters  Semester[]
+  students   Student[]
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
 }
 
 model Semester {
@@ -327,23 +330,24 @@ model TeachingUnit {
 }
 
 model CourseElement {
-  id             String       @id @default(cuid())
-  teachingUnitId String
-  teachingUnit   TeachingUnit @relation(fields: [teachingUnitId], references: [id], onDelete: Cascade)
-  code           String?
-  name           String
-  coefficient    Float        @default(1.0)
-  hoursCM        Float        @default(0)
-  hoursTD        Float        @default(0)
-  hoursTP        Float        @default(0)
-  hoursStage     Float        @default(0)
-  hoursPersonal  Float        @default(0)
-  teacherId      String?
-  teacher        Teacher?     @relation(fields: [teacherId], references: [id], onDelete: SetNull)
-  orderIndex     Int          @default(0)
-  grades         Grade[]
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  id               String            @id @default(cuid())
+  teachingUnitId   String
+  teachingUnit     TeachingUnit      @relation(fields: [teachingUnitId], references: [id], onDelete: Cascade)
+  code             String?
+  name             String
+  coefficient      Float             @default(1.0)
+  hoursCM          Float             @default(0)
+  hoursTD          Float             @default(0)
+  hoursTP          Float             @default(0)
+  hoursStage       Float             @default(0)
+  hoursPersonal    Float             @default(0)
+  teacherId        String?
+  teacher          Teacher?          @relation(fields: [teacherId], references: [id], onDelete: SetNull)
+  orderIndex       Int               @default(0)
+  grades           Grade[]
+  teachingServices TeachingService[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 }
 
 // ============================================
@@ -351,19 +355,20 @@ model CourseElement {
 // ============================================
 
 model AcademicYear {
-  id              String    @id @default(cuid())
-  tenantId        String
-  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  name            String
-  startDate       DateTime
-  endDate         DateTime
-  isActive        Boolean   @default(false)
-  isCurrent       Boolean   @default(false)
-  sessions        ExamSession[]
-  admissions      Admission[]
-  registrations   AdministrativeRegistration[]
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id               String                       @id @default(cuid())
+  tenantId         String
+  tenant           Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name             String
+  startDate        DateTime
+  endDate          DateTime
+  isActive         Boolean                      @default(false)
+  isCurrent        Boolean                      @default(false)
+  sessions         ExamSession[]
+  teachingServices TeachingService[]
+  admissions       Admission[]
+  registrations    AdministrativeRegistration[]
+  createdAt        DateTime                     @default(now())
+  updatedAt        DateTime                     @updatedAt
 }
 
 model ExamSession {
@@ -384,35 +389,35 @@ model ExamSession {
 // ============================================
 
 model User {
-  id                  String    @id @default(cuid())
+  id                 String      @id @default(cuid())
   // Nullable: a SUPER_ADMIN manages the whole platform and belongs to no
   // single institution (mirrors a real multi-tenant SaaS control plane).
-  tenantId            String?
-  tenant              Tenant?   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  email               String?   @unique
-  passwordHash        String?
-  login               String?   @unique
-  pinHash             String?
-  firstName           String
-  lastName            String
-  middleName          String?
-  phone               String?
-  photo               String?
-  role                UserRole  @default(ETUDIANT)
-  facultyId           String?
-  faculty             Faculty?  @relation("FacultyManagers", fields: [facultyId], references: [id], onDelete: SetNull)
-  departmentId        String?
-  department          Department? @relation("DepartmentManagers", fields: [departmentId], references: [id], onDelete: SetNull)
-  isActive            Boolean   @default(true)
-  emailVerified       Boolean   @default(false)
-  lastLoginAt         DateTime?
-  lastLoginIp         String?
-  mustChangePassword  Boolean   @default(false)
-  teacher             Teacher?
-  student             Student?
-  auditLogs           AuditLog[]
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  tenantId           String?
+  tenant             Tenant?     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  email              String?     @unique
+  passwordHash       String?
+  login              String?     @unique
+  pinHash            String?
+  firstName          String
+  lastName           String
+  middleName         String?
+  phone              String?
+  photo              String?
+  role               UserRole    @default(ETUDIANT)
+  facultyId          String?
+  faculty            Faculty?    @relation("FacultyManagers", fields: [facultyId], references: [id], onDelete: SetNull)
+  departmentId       String?
+  department         Department? @relation("DepartmentManagers", fields: [departmentId], references: [id], onDelete: SetNull)
+  isActive           Boolean     @default(true)
+  emailVerified      Boolean     @default(false)
+  lastLoginAt        DateTime?
+  lastLoginIp        String?
+  mustChangePassword Boolean     @default(false)
+  teacher            Teacher?
+  student            Student?
+  auditLogs          AuditLog[]
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
 
   @@index([tenantId, email])
   @@index([tenantId, login])
@@ -425,27 +430,28 @@ model User {
 // ============================================
 
 model Teacher {
-  id               String          @id @default(cuid())
+  id               String               @id @default(cuid())
   tenantId         String
-  tenant           Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  userId           String?         @unique
-  user             User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+  tenant           Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId           String?              @unique
+  user             User?                @relation(fields: [userId], references: [id], onDelete: SetNull)
   departmentId     String?
-  department       Department?     @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  department       Department?          @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   employeeId       String?
   grade            String?
   specialization   String?
-  maxHoursPerWeek  Int             @default(20)
-  currentHours     Int             @default(0)
-  isActive         Boolean         @default(true)
+  maxHoursPerWeek  Int                  @default(20)
+  currentHours     Int                  @default(0)
+  isActive         Boolean              @default(true)
   responsibleUnits TeachingUnit[]
   assignedElements CourseElement[]
+  teachingServices TeachingService[]
   gradeImports     GradeImport[]
   evaluations      ClinicalEvaluation[]
   advisorProfile   Advisor?
   scheduledExams   ScheduledExam[]
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
 }
 
 // ============================================
@@ -453,56 +459,56 @@ model Teacher {
 // ============================================
 
 model Student {
-  id                   String    @id @default(cuid())
-  tenantId             String
-  tenant               Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  userId               String?   @unique
-  user                 User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
-  matricule            String?   @unique
-  enrollmentNumber     Int?
-  firstName            String
-  lastName             String
-  middleName           String?
-  dateOfBirth          DateTime?
-  placeOfBirth         String?
-  gender               String?
-  nationality          String?
-  phone                String?
-  email                String?
-  address              String?
-  photo                String?
-  guardianName         String?
-  guardianPhone        String?
-  bacSeries            String?
-  bacYear              Int?
-  bacNumber            String?
-  highSchool           String?
-  previousDiploma      String?
-  status               String    @default("PRE_INSCRIT")
-  currentLevelId       String?
-  currentLevel         Level?    @relation(fields: [currentLevelId], references: [id], onDelete: SetNull)
-  currentProgramId     String?
-  currentProgram       Program?  @relation(fields: [currentProgramId], references: [id], onDelete: SetNull)
-  totalCreditsAcquired Int       @default(0)
-  registrations        AdministrativeRegistration[]
+  id                       String                       @id @default(cuid())
+  tenantId                 String
+  tenant                   Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId                   String?                      @unique
+  user                     User?                        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  matricule                String?                      @unique
+  enrollmentNumber         Int?
+  firstName                String
+  lastName                 String
+  middleName               String?
+  dateOfBirth              DateTime?
+  placeOfBirth             String?
+  gender                   String?
+  nationality              String?
+  phone                    String?
+  email                    String?
+  address                  String?
+  photo                    String?
+  guardianName             String?
+  guardianPhone            String?
+  bacSeries                String?
+  bacYear                  Int?
+  bacNumber                String?
+  highSchool               String?
+  previousDiploma          String?
+  status                   String                       @default("PRE_INSCRIT")
+  currentLevelId           String?
+  currentLevel             Level?                       @relation(fields: [currentLevelId], references: [id], onDelete: SetNull)
+  currentProgramId         String?
+  currentProgram           Program?                     @relation(fields: [currentProgramId], references: [id], onDelete: SetNull)
+  totalCreditsAcquired     Int                          @default(0)
+  registrations            AdministrativeRegistration[]
   pedagogicalRegistrations PedagogicalRegistration[]
-  grades               Grade[]
-  absences             Absence[]
-  payments             Payment[]
-  documents            OfficialDocument[]
-  admissions           Admission[]
-  clinicalInternships  ClinicalInternship[]
-  clinicalSkills       StudentClinicalSkill[]
-  clinicalAttendances  ClinicalAttendance[]
-  guardDuties          GuardDuty[]
-  libraryLoans         LibraryLoan[]
-  transportSubscriptions TransportSubscription[]
-  advisingAppointments AdvisingAppointment[]
-  workshopEnrollments  AdvisingWorkshopEnrollment[]
-  examResults          ExamResult[]
-  examIncidents        ExamIncident[]
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @updatedAt
+  grades                   Grade[]
+  absences                 Absence[]
+  payments                 Payment[]
+  documents                OfficialDocument[]
+  admissions               Admission[]
+  clinicalInternships      ClinicalInternship[]
+  clinicalSkills           StudentClinicalSkill[]
+  clinicalAttendances      ClinicalAttendance[]
+  guardDuties              GuardDuty[]
+  libraryLoans             LibraryLoan[]
+  transportSubscriptions   TransportSubscription[]
+  advisingAppointments     AdvisingAppointment[]
+  workshopEnrollments      AdvisingWorkshopEnrollment[]
+  examResults              ExamResult[]
+  examIncidents            ExamIncident[]
+  createdAt                DateTime                     @default(now())
+  updatedAt                DateTime                     @updatedAt
 }
 
 // ============================================
@@ -510,7 +516,7 @@ model Student {
 // ============================================
 
 model AdmissionCampaign {
-  id             String     @id @default(cuid())
+  id             String      @id @default(cuid())
   tenantId       String
   name           String
   programId      String?
@@ -518,48 +524,48 @@ model AdmissionCampaign {
   academicYearId String?
   startDate      DateTime
   endDate        DateTime
-  status         String     @default("DRAFT")
+  status         String      @default("DRAFT")
   maxCandidates  Int?
   conditions     String?
   admissions     Admission[]
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
 }
 
 model Admission {
-  id                 String              @id @default(cuid())
-  tenantId           String
-  academicYearId     String
-  academicYear       AcademicYear        @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
-  studentId          String?
-  student            Student?            @relation(fields: [studentId], references: [id], onDelete: SetNull)
-  campaignId         String?
-  campaign           AdmissionCampaign?  @relation(fields: [campaignId], references: [id], onDelete: SetNull)
-  programId          String?
-  program            Program?            @relation(fields: [programId], references: [id], onDelete: SetNull)
-  levelId            String?
+  id                   String             @id @default(cuid())
+  tenantId             String
+  academicYearId       String
+  academicYear         AcademicYear       @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  studentId            String?
+  student              Student?           @relation(fields: [studentId], references: [id], onDelete: SetNull)
+  campaignId           String?
+  campaign             AdmissionCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  programId            String?
+  program              Program?           @relation(fields: [programId], references: [id], onDelete: SetNull)
+  levelId              String?
   // Denormalized level label (not a relation) - a candidature record should
   // keep the level name it was submitted for even if the Level is renamed
   // or removed later.
-  niveau             String?
-  numero             String?
-  type               String              @default("Premiere_inscription")
-  candidateFirstName String?
-  candidateLastName  String?
-  candidateEmail     String?
-  candidatePhone     String?
-  bacSeries          String?
-  bacYear            Int?
-  bacAverage         Float?
-  documents          String?
-  status             String              @default("PENDING")
-  rank               Int?
-  score              Float?
-  decisionDate       DateTime?
-  decisionComment    String?
+  niveau               String?
+  numero               String?
+  type                 String             @default("Premiere_inscription")
+  candidateFirstName   String?
+  candidateLastName    String?
+  candidateEmail       String?
+  candidatePhone       String?
+  bacSeries            String?
+  bacYear              Int?
+  bacAverage           Float?
+  documents            String?
+  status               String             @default("PENDING")
+  rank                 Int?
+  score                Float?
+  decisionDate         DateTime?
+  decisionComment      String?
   transformedToStudent Boolean            @default(false)
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
 }
 
 // ============================================
@@ -567,21 +573,21 @@ model Admission {
 // ============================================
 
 model AdministrativeRegistration {
-  id                String      @id @default(cuid())
-  tenantId          String
-  studentId         String
-  student           Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  academicYearId    String
-  academicYear      AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
-  programId         String
-  levelId           String
-  registrationDate  DateTime    @default(now())
-  status            String      @default("PRE_INSCRIT")
-  paymentStatus     String      @default("UNPAID")
+  id                 String       @id @default(cuid())
+  tenantId           String
+  studentId          String
+  student            Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  academicYearId     String
+  academicYear       AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  programId          String
+  levelId            String
+  registrationDate   DateTime     @default(now())
+  status             String       @default("PRE_INSCRIT")
+  paymentStatus      String       @default("UNPAID")
   documentsSubmitted String?
-  receiptNumber     String?
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
+  receiptNumber      String?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
 }
 
 model PedagogicalRegistration {
@@ -636,15 +642,15 @@ model CompensationRule {
 }
 
 model Grade {
-  id              String        @id @default(cuid())
+  id              String           @id @default(cuid())
   studentId       String
-  student         Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  student         Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
   teachingUnitId  String?
-  teachingUnit    TeachingUnit? @relation(fields: [teachingUnitId], references: [id], onDelete: Cascade)
+  teachingUnit    TeachingUnit?    @relation(fields: [teachingUnitId], references: [id], onDelete: Cascade)
   courseElementId String?
-  courseElement   CourseElement? @relation(fields: [courseElementId], references: [id], onDelete: Cascade)
+  courseElement   CourseElement?   @relation(fields: [courseElementId], references: [id], onDelete: Cascade)
   academicYearId  String
-  session         String        @default("NORMALE")
+  session         String           @default("NORMALE")
   ccGrade         Float?
   examGrade       Float?
   tpGrade         Float?
@@ -653,33 +659,33 @@ model Grade {
   memoireGrade    Float?
   projectGrade    Float?
   finalGrade      Float?
-  isAbsent        Boolean       @default(false)
-  isJustified     Boolean       @default(false)
-  isDefaillant    Boolean       @default(false)
-  isLocked        Boolean       @default(false)
+  isAbsent        Boolean          @default(false)
+  isJustified     Boolean          @default(false)
+  isDefaillant    Boolean          @default(false)
+  isLocked        Boolean          @default(false)
   comment         String?
   enteredBy       String?
   validatedBy     String?
   lockedBy        String?
   changeLogs      GradeChangeLog[]
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 }
 
 model GradeImport {
-  id          String   @id @default(cuid())
+  id          String            @id @default(cuid())
   tenantId    String
   teacherId   String?
-  teacher     Teacher? @relation(fields: [teacherId], references: [id], onDelete: SetNull)
+  teacher     Teacher?          @relation(fields: [teacherId], references: [id], onDelete: SetNull)
   fileName    String
-  status      String   @default("PENDING")
-  totalRows   Int      @default(0)
-  successRows Int      @default(0)
-  errorRows   Int      @default(0)
+  status      String            @default("PENDING")
+  totalRows   Int               @default(0)
+  successRows Int               @default(0)
+  errorRows   Int               @default(0)
   errors      String?
   items       GradeImportItem[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
 }
 
 model GradeImportItem {
@@ -735,18 +741,18 @@ model Deliberation {
 }
 
 model DeliberationDecision {
-  id                String       @id @default(cuid())
-  deliberationId    String
-  deliberation      Deliberation @relation(fields: [deliberationId], references: [id], onDelete: Cascade)
-  studentId         String
-  decision          String       @default("AJOURNE")
-  average           Float?
-  creditsAcquired   Int          @default(0)
-  comment           String?
-  isModified        Boolean      @default(false)
+  id                 String       @id @default(cuid())
+  deliberationId     String
+  deliberation       Deliberation @relation(fields: [deliberationId], references: [id], onDelete: Cascade)
+  studentId          String
+  decision           String       @default("AJOURNE")
+  average            Float?
+  creditsAcquired    Int          @default(0)
+  comment            String?
+  isModified         Boolean      @default(false)
   modificationReason String?
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
 }
 
 // ============================================
@@ -754,18 +760,18 @@ model DeliberationDecision {
 // ============================================
 
 model Absence {
-  id                   String   @id @default(cuid())
-  tenantId             String
-  studentId            String
-  student              Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  date                 DateTime
-  courseId             String?
-  reason               String?
-  isJustified          Boolean  @default(false)
+  id                    String   @id @default(cuid())
+  tenantId              String
+  studentId             String
+  student               Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  date                  DateTime
+  courseId              String?
+  reason                String?
+  isJustified           Boolean  @default(false)
   justificationDocument String?
-  reportedBy           String?
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  reportedBy            String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 }
 
 // ============================================
@@ -791,24 +797,24 @@ model FeeStructure {
 }
 
 model Payment {
-  id                  String   @id @default(cuid())
+  id                  String    @id @default(cuid())
   tenantId            String
   studentId           String
-  student             Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  student             Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
   academicYearId      String
   amount              Float
-  currency            String   @default("FCFA")
-  paymentMethod       String   @default("CASH")
+  currency            String    @default("FCFA")
+  paymentMethod       String    @default("CASH")
   mobileMoneyProvider String?
   transactionRef      String?
   receiptNumber       String?
   receiptDocumentId   String?
   validatedBy         String?
   validationDate      DateTime?
-  status              String   @default("PENDING")
+  status              String    @default("PENDING")
   comment             String?
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 }
 
 // ============================================
@@ -828,24 +834,24 @@ model DocumentTemplate {
 }
 
 model OfficialDocument {
-  id               String   @id @default(cuid())
+  id               String    @id @default(cuid())
   tenantId         String
   studentId        String?
-  student          Student? @relation(fields: [studentId], references: [id], onDelete: SetNull)
-  type             String   @default("RELEVE_SEMESTRIEL")
-  number           String?  @unique
+  student          Student?  @relation(fields: [studentId], references: [id], onDelete: SetNull)
+  type             String    @default("RELEVE_SEMESTRIEL")
+  number           String?   @unique
   academicYearId   String?
   content          String
   hash             String?
-  verificationCode String?  @unique
+  verificationCode String?   @unique
   qrCodeData       String?
-  status           String   @default("DRAFT")
+  status           String    @default("DRAFT")
   generatedBy      String?
   validatedBy      String?
   validatedAt      DateTime?
   filePath         String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 }
 
 // ============================================
@@ -853,19 +859,19 @@ model OfficialDocument {
 // ============================================
 
 model Hospital {
-  id          String              @id @default(cuid())
-  tenantId    String
-  tenant      Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  name        String
-  type        String              @default("CHU")
-  address     String?
-  city        String?
-  partner     Boolean             @default(true)
-  isActive    Boolean             @default(true)
-  departments ClinicalDepartment[]
+  id                  String               @id @default(cuid())
+  tenantId            String
+  tenant              Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name                String
+  type                String               @default("CHU")
+  address             String?
+  city                String?
+  partner             Boolean              @default(true)
+  isActive            Boolean              @default(true)
+  departments         ClinicalDepartment[]
   clinicalInternships ClinicalInternship[]
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
 }
 
 model ClinicalSite {
@@ -881,14 +887,14 @@ model ClinicalSite {
 }
 
 model ClinicalDepartment {
-  id          String       @id @default(cuid())
-  hospitalId  String
-  hospital    Hospital     @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
-  name        String
-  isActive    Boolean      @default(true)
+  id                  String               @id @default(cuid())
+  hospitalId          String
+  hospital            Hospital             @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  name                String
+  isActive            Boolean              @default(true)
   clinicalInternships ClinicalInternship[]
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
 }
 
 model ClinicalInternship {
@@ -915,15 +921,15 @@ model ClinicalInternship {
 }
 
 model ClinicalSkill {
-  id            String               @id @default(cuid())
+  id            String                 @id @default(cuid())
   tenantId      String
-  category      String               @default("SOINS")
+  category      String                 @default("SOINS")
   name          String
   description   String?
-  isActive      Boolean              @default(true)
+  isActive      Boolean                @default(true)
   studentSkills StudentClinicalSkill[]
-  createdAt     DateTime             @default(now())
-  updatedAt     DateTime             @updatedAt
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
 }
 
 model StudentClinicalSkill {
@@ -990,39 +996,39 @@ model GuardDuty {
 // ============================================
 
 model Room {
-  id           String             @id @default(cuid())
-  tenantId     String
-  name         String
-  type         String             @default("SALLE")
-  capacity     Int                @default(0)
-  building     String?
-  equipment    String             @default("")
-  status       String             @default("libre") // libre, occupee, maintenance
-  isActive     Boolean             @default(true)
-  reservations RoomReservation[]
+  id             String            @id @default(cuid())
+  tenantId       String
+  name           String
+  type           String            @default("SALLE")
+  capacity       Int               @default(0)
+  building       String?
+  equipment      String            @default("")
+  status         String            @default("libre") // libre, occupee, maintenance
+  isActive       Boolean           @default(true)
+  reservations   RoomReservation[]
   scheduledExams ScheduledExam[]
-  tenant       Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  createdAt    DateTime           @default(now())
-  updatedAt    DateTime           @updatedAt
+  tenant         Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
 }
 
 model ScheduledExam {
-  id             String   @id @default(cuid())
+  id             String        @id @default(cuid())
   tenantId       String
-  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant         Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   teachingUnitId String?
   teachingUnit   TeachingUnit? @relation(fields: [teachingUnitId], references: [id], onDelete: SetNull)
   examDate       DateTime
   startTime      String
   endTime        String
   roomId         String?
-  room           Room?    @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  room           Room?         @relation(fields: [roomId], references: [id], onDelete: SetNull)
   supervisorId   String?
-  supervisor     Teacher? @relation(fields: [supervisorId], references: [id], onDelete: SetNull)
-  sessionType    String   @default("NORMALE") // NORMALE, RATTRAPAGE
-  status         String   @default("PLANIFIE") // PLANIFIE, CONFIRME, EN_COURS, TERMINE, ANNULE
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  supervisor     Teacher?      @relation(fields: [supervisorId], references: [id], onDelete: SetNull)
+  sessionType    String        @default("NORMALE") // NORMALE, RATTRAPAGE
+  status         String        @default("PLANIFIE") // PLANIFIE, CONFIRME, EN_COURS, TERMINE, ANNULE
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
   @@index([tenantId])
   @@map("scheduled_exams")
@@ -1045,27 +1051,62 @@ model TimetableSlot {
   updatedAt       DateTime @updatedAt
 }
 
+// A service belongs to one academic year and one EC. Current assignments on
+// CourseElement/TeachingUnit remain legacy metadata, never approval history.
+model TeachingService {
+  id                     String        @id @default(cuid())
+  tenantId               String
+  tenant                 Tenant        @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  academicYearId         String
+  academicYear           AcademicYear  @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  courseElementId        String
+  courseElement          CourseElement @relation(fields: [courseElementId], references: [id], onDelete: Restrict)
+  teacherId              String
+  teacher                Teacher       @relation(fields: [teacherId], references: [id], onDelete: Restrict)
+  requestingDepartmentId String
+  requestingDepartment   Department    @relation("ServiceRequestDepartment", fields: [requestingDepartmentId], references: [id], onDelete: Restrict)
+  homeDepartmentId       String
+  homeDepartment         Department    @relation("ServiceHomeDepartment", fields: [homeDepartmentId], references: [id], onDelete: Restrict)
+  plannedHours           Float
+  requestReason          String
+  status                 String        @default("PENDING_HOME")
+  requestedById          String
+  homeDecidedById        String?
+  homeDecisionReason     String?
+  homeDecidedAt          DateTime?
+  centralDecidedById     String?
+  centralDecisionReason  String?
+  centralDecidedAt       DateTime?
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
+
+  @@index([tenantId, academicYearId, status])
+  @@index([tenantId, requestingDepartmentId])
+  @@index([tenantId, homeDepartmentId])
+  @@index([tenantId, teacherId, academicYearId])
+}
+
 // ============================================
 // COMMUNICATION
 // ============================================
 
 model Announcement {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   tenantId    String
-  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   title       String
   content     String
-  type        String   @default("INFO")
-  priority    String   @default("normal")
-  category    String   @default("administratif")
-  isPinned    Boolean  @default(false)
-  target      String   @default("ALL")
+  type        String    @default("INFO")
+  priority    String    @default("normal")
+  category    String    @default("administratif")
+  isPinned    Boolean   @default(false)
+  target      String    @default("ALL")
   targetId    String?
-  isPublished Boolean  @default(false)
+  isPublished Boolean   @default(false)
   publishedAt DateTime?
   publishedBy String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 // ============================================
@@ -1167,9 +1208,9 @@ model ScholarshipApplication {
 // ============================================
 
 model Alumni {
-  id              String   @id @default(cuid())
+  id              String    @id @default(cuid())
   tenantId        String
-  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   studentId       String?
   firstName       String
   lastName        String
@@ -1183,13 +1224,13 @@ model Alumni {
   sector          String?
   country         String?
   city            String?
-  status          String   @default("ACTIF")
-  isContributing  Boolean  @default(false)
-  contributionAmt Float    @default(0)
+  status          String    @default("ACTIF")
+  isContributing  Boolean   @default(false)
+  contributionAmt Float     @default(0)
   linkedIn        String?
   lastContactDate DateTime?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 }
 
 // ============================================
@@ -1197,42 +1238,42 @@ model Alumni {
 // ============================================
 
 model Report {
-  id          String   @id @default(cuid())
-  tenantId    String
-  name        String
-  type        String   // PERFORMANCE, FINANCIAL, ATTENDANCE, EXAM, PROGRESS, INSTITUTIONAL
-  format      String   @default("PDF") // PDF, EXCEL, CSV
-  status      String   @default("PENDING") // PENDING, GENERATING, COMPLETED, ERROR
-  period      String?
-  level       String?
-  program     String?
-  generatedBy String
-  fileSize    String?
-  downloadCount Int    @default(0)
-  scheduledAt DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  tenant      Tenant   @relation(fields: [tenantId], references: [id])
-  
+  id            String    @id @default(cuid())
+  tenantId      String
+  name          String
+  type          String // PERFORMANCE, FINANCIAL, ATTENDANCE, EXAM, PROGRESS, INSTITUTIONAL
+  format        String    @default("PDF") // PDF, EXCEL, CSV
+  status        String    @default("PENDING") // PENDING, GENERATING, COMPLETED, ERROR
+  period        String?
+  level         String?
+  program       String?
+  generatedBy   String
+  fileSize      String?
+  downloadCount Int       @default(0)
+  scheduledAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
   @@index([tenantId])
   @@map("reports")
 }
 
 model ScheduledReport {
-  id          String   @id @default(cuid())
-  tenantId    String
-  reportName  String
-  reportType  String
-  frequency   String   // DAILY, WEEKLY, MONTHLY, QUARTERLY
-  nextRunAt   DateTime
-  recipients  Int      @default(1)
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  tenant      Tenant   @relation(fields: [tenantId], references: [id])
-  
+  id         String   @id @default(cuid())
+  tenantId   String
+  reportName String
+  reportType String
+  frequency  String // DAILY, WEEKLY, MONTHLY, QUARTERLY
+  nextRunAt  DateTime
+  recipients Int      @default(1)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
   @@index([tenantId])
   @@map("scheduled_reports")
 }
@@ -1242,30 +1283,30 @@ model ScheduledReport {
 // ============================================
 
 model Attendance {
-  id          String   @id @default(cuid())
-  tenantId    String
-  studentId   String?
+  id              String   @id @default(cuid())
+  tenantId        String
+  studentId       String?
   courseElementId String?
-  academicYearId String?
-  teacherId   String?
-  studentName String
-  matricule   String
-  course      String
-  timeSlot    String
-  status      String   // PRESENT, ABSENT, JUSTIFIED, LATE
-  duration    String?
-  justification String?
-  program     String?
-  level       String?
-  date        DateTime @default(now())
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  tenant      Tenant   @relation(fields: [tenantId], references: [id])
-  
+  academicYearId  String?
+  teacherId       String?
+  studentName     String
+  matricule       String
+  course          String
+  timeSlot        String
+  status          String // PRESENT, ABSENT, JUSTIFIED, LATE
+  duration        String?
+  justification   String?
+  program         String?
+  level           String?
+  date            DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, studentId, courseElementId, academicYearId, date, timeSlot], map: "attendances_teacher_session_key")
   @@index([tenantId])
   @@index([tenantId, courseElementId, academicYearId])
-  @@unique([tenantId, studentId, courseElementId, academicYearId, date, timeSlot], map: "attendances_teacher_session_key")
   @@map("attendances")
 }
 
@@ -1274,25 +1315,25 @@ model Attendance {
 // ============================================
 
 model OnlineExam {
-  id          String   @id @default(cuid())
-  tenantId    String
+  id              String   @id @default(cuid())
+  tenantId        String
   courseElementId String?
-  teacherId   String?
-  name        String
-  course      String
-  examDate    DateTime
-  duration    String
-  questions   Int
-  questionIds String[] @default([]) // ordered ExamBankQuestion ids actually attached to this exam instance
-  type        String   // QCM, DISSERTATION, MIXTE
-  status      String   @default("PLANNED") // PLANNED, IN_PROGRESS, COMPLETED
-  progress    Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  teacherId       String?
+  name            String
+  course          String
+  examDate        DateTime
+  duration        String
+  questions       Int
+  questionIds     String[] @default([]) // ordered ExamBankQuestion ids actually attached to this exam instance
+  type            String // QCM, DISSERTATION, MIXTE
+  status          String   @default("PLANNED") // PLANNED, IN_PROGRESS, COMPLETED
+  progress        Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  results     ExamResult[]
-  incidents   ExamIncident[]
+  tenant    Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  results   ExamResult[]
+  incidents ExamIncident[]
 
   @@index([tenantId])
   @@index([tenantId, courseElementId])
@@ -1300,21 +1341,21 @@ model OnlineExam {
 }
 
 model ExamBankQuestion {
-  id            String   @id @default(cuid())
-  tenantId      String
+  id              String   @id @default(cuid())
+  tenantId        String
   courseElementId String?
-  teacherId     String?
-  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  text          String
-  type          String   @default("QCM") // QCM, Dissertation, Vrai-Faux
-  difficulty    String   @default("Moyen") // Facile, Moyen, Difficile
-  points        Int      @default(1)
-  course        String?
-  usageCount    Int      @default(0)
-  options       String[] @default([]) // QCM/Vrai-Faux only; empty for Dissertation
-  correctAnswer Int? // index into options; null for Dissertation (never auto-graded)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  teacherId       String?
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  text            String
+  type            String   @default("QCM") // QCM, Dissertation, Vrai-Faux
+  difficulty      String   @default("Moyen") // Facile, Moyen, Difficile
+  points          Int      @default(1)
+  course          String?
+  usageCount      Int      @default(0)
+  options         String[] @default([]) // QCM/Vrai-Faux only; empty for Dissertation
+  correctAnswer   Int? // index into options; null for Dissertation (never auto-graded)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   @@index([tenantId])
   @@index([tenantId, courseElementId])
@@ -1364,26 +1405,26 @@ model ExamIncident {
 // ============================================
 
 model Communication {
-  id          String   @id @default(cuid())
-  tenantId    String
+  id              String    @id @default(cuid())
+  tenantId        String
   courseElementId String?
-  teacherId   String?
-  subject     String
-  audience    String
-  type        String   // INFO, URGENT, ACADEMIC, ADMINISTRATIVE
-  priority    String   @default("NORMAL") // NORMAL, HIGH, CRITICAL
-  channel     String   // EMAIL, SMS, PUSH, IN_APP
-  status      String   @default("PENDING") // PENDING, SENT, FAILED
-  content     String?
-  sentDate    DateTime?
-  readRate    Float    @default(0)
-  deliveredCount Int   @default(0)
-  failedCount Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  tenant      Tenant   @relation(fields: [tenantId], references: [id])
-  
+  teacherId       String?
+  subject         String
+  audience        String
+  type            String // INFO, URGENT, ACADEMIC, ADMINISTRATIVE
+  priority        String    @default("NORMAL") // NORMAL, HIGH, CRITICAL
+  channel         String // EMAIL, SMS, PUSH, IN_APP
+  status          String    @default("PENDING") // PENDING, SENT, FAILED
+  content         String?
+  sentDate        DateTime?
+  readRate        Float     @default(0)
+  deliveredCount  Int       @default(0)
+  failedCount     Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
   @@index([tenantId])
   @@index([tenantId, teacherId])
   @@map("communications")
@@ -1394,43 +1435,43 @@ model Communication {
 // ============================================
 
 model Internship {
-  id              String   @id @default(cuid())
-  tenantId        String
-  studentName     String
-  matricule       String
-  entreprise      String
-  type            String   // PROFESSIONNEL, HOSPITALIER, RECHERCHE, FIN_ETUDES
-  period          String?
-  status          String   @default("EN_ATTENTE") // EN_ATTENTE, CONVENTION_SIGNEE, EN_COURS, TERMINE, ANNULE
-  tuteur          String?
-  startDate       DateTime?
-  endDate         DateTime?
-  evaluation      String?  // EXCELLENT, TRES_BIEN, BIEN, ASSEZ_BIEN, INSUFFISANT
-  evaluationDate  DateTime?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  tenant          Tenant   @relation(fields: [tenantId], references: [id])
-  
+  id             String    @id @default(cuid())
+  tenantId       String
+  studentName    String
+  matricule      String
+  entreprise     String
+  type           String // PROFESSIONNEL, HOSPITALIER, RECHERCHE, FIN_ETUDES
+  period         String?
+  status         String    @default("EN_ATTENTE") // EN_ATTENTE, CONVENTION_SIGNEE, EN_COURS, TERMINE, ANNULE
+  tuteur         String?
+  startDate      DateTime?
+  endDate        DateTime?
+  evaluation     String? // EXCELLENT, TRES_BIEN, BIEN, ASSEZ_BIEN, INSUFFISANT
+  evaluationDate DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
   @@index([tenantId])
   @@map("internships")
 }
 
 model InternshipPartner {
-  id              String   @id @default(cuid())
-  tenantId        String
-  name            String
-  sector          String
-  hostedStudents  Int      @default(0)
-  capacity        Int
-  rating          Float    @default(0)
-  contactEmail    String?
-  contactPhone    String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  tenant          Tenant   @relation(fields: [tenantId], references: [id])
-  
+  id             String   @id @default(cuid())
+  tenantId       String
+  name           String
+  sector         String
+  hostedStudents Int      @default(0)
+  capacity       Int
+  rating         Float    @default(0)
+  contactEmail   String?
+  contactPhone   String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
   @@index([tenantId])
   @@map("internship_partners")
 }
@@ -1440,40 +1481,40 @@ model InternshipPartner {
 // ============================================
 
 model Staff {
-  id           String        @id @default(cuid())
-  tenantId     String
-  firstName    String
-  lastName     String
-  email        String        @unique
-  phone        String?
-  department   String
-  position     String
-  contractType String        // CDI, CDD, Vacataire, Stagiaire
-  status       String        @default("actif") // actif, en_conge, suspendu, depart
-  joinDate     DateTime
+  id            String         @id @default(cuid())
+  tenantId      String
+  firstName     String
+  lastName      String
+  email         String         @unique
+  phone         String?
+  department    String
+  position      String
+  contractType  String // CDI, CDD, Vacataire, Stagiaire
+  status        String         @default("actif") // actif, en_conge, suspendu, depart
+  joinDate      DateTime
   leaveRequests LeaveRequest[]
-  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 
   @@index([tenantId])
   @@map("staff")
 }
 
 model LeaveRequest {
-  id          String   @id @default(cuid())
-  tenantId    String
-  staffId     String
-  type        String   // conge_annuel, conge_maladie, conge_maternite, permission
-  startDate   DateTime
-  endDate     DateTime
-  duration    Int      // days
-  status      String   @default("en_attente") // en_attente, approuve, refuse
-  approverId  String?
-  staff       Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade)
-  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String   @id @default(cuid())
+  tenantId   String
+  staffId    String
+  type       String // conge_annuel, conge_maladie, conge_maternite, permission
+  startDate  DateTime
+  endDate    DateTime
+  duration   Int // days
+  status     String   @default("en_attente") // en_attente, approuve, refuse
+  approverId String?
+  staff      Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   @@index([tenantId])
   @@index([staffId])
@@ -1491,7 +1532,7 @@ model RoomReservation {
   date         DateTime
   startTime    String
   endTime      String
-  purpose      String   // Cours, Conference, Reunion, Examen, Autre
+  purpose      String // Cours, Conference, Reunion, Examen, Autre
   organizer    String
   participants Int      @default(0)
   status       String   @default("en_attente") // confirmee, en_attente, annulee
@@ -1551,33 +1592,33 @@ model LibraryResource {
 }
 
 model LibraryLoan {
-  id          String          @id @default(cuid())
-  tenantId    String
-  tenant      Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  resourceId  String
-  resource    LibraryResource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
-  studentId   String
-  student     Student         @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  borrowedAt  DateTime        @default(now())
-  dueAt       DateTime
-  returnedAt  DateTime?
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  id         String          @id @default(cuid())
+  tenantId   String
+  tenant     Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  resourceId String
+  resource   LibraryResource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  studentId  String
+  student    Student         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  borrowedAt DateTime        @default(now())
+  dueAt      DateTime
+  returnedAt DateTime?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
 
   @@index([tenantId])
   @@map("library_loans")
 }
 
 model LibraryRoom {
-  id         String   @id @default(cuid())
-  tenantId   String
-  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  name       String
-  type       String   @default("lecture") // lecture, multimedia, these, periodiques, individuel
-  capacity   Int
-  occupancy  Int      @default(0)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name      String
+  type      String   @default("lecture") // lecture, multimedia, these, periodiques, individuel
+  capacity  Int
+  occupancy Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([tenantId])
   @@map("library_rooms")
@@ -1610,9 +1651,9 @@ model TransportVehicle {
 }
 
 model TransportRoute {
-  id            String                   @id @default(cuid())
+  id            String                  @id @default(cuid())
   tenantId      String
-  tenant        Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant        Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   name          String
   departure     String
   arrival       String
@@ -1623,8 +1664,8 @@ model TransportRoute {
   vehicles      TransportVehicle[]
   departures    TransportDeparture[]
   subscriptions TransportSubscription[]
-  createdAt     DateTime                 @default(now())
-  updatedAt     DateTime                 @updatedAt
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
 
   @@index([tenantId])
   @@map("transport_routes")
@@ -1700,20 +1741,20 @@ model TransportSubscription {
 // ============================================
 
 model Advisor {
-  id           String                 @id @default(cuid())
+  id           String                @id @default(cuid())
   tenantId     String
-  tenant       Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  teacherId    String?                @unique
-  teacher      Teacher?               @relation(fields: [teacherId], references: [id], onDelete: SetNull)
+  tenant       Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  teacherId    String?               @unique
+  teacher      Teacher?              @relation(fields: [teacherId], references: [id], onDelete: SetNull)
   name         String
   title        String?
   department   String?
   specialties  String[]
-  availability String                 @default("Libre") // Libre, Occupe, En RDV
+  availability String                @default("Libre") // Libre, Occupe, En RDV
   appointments AdvisingAppointment[]
   workshops    AdvisingWorkshop[]
-  createdAt    DateTime               @default(now())
-  updatedAt    DateTime               @updatedAt
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
 
   @@index([tenantId])
   @@map("advisors")
@@ -1739,19 +1780,19 @@ model AdvisingAppointment {
 }
 
 model AdvisingWorkshop {
-  id          String                        @id @default(cuid())
+  id          String                       @id @default(cuid())
   tenantId    String
-  tenant      Tenant                        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant      Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   title       String
   room        String?
   scheduledAt DateTime
   duration    String?
-  capacity    Int                           @default(30)
+  capacity    Int                          @default(30)
   advisorId   String?
-  advisor     Advisor?                      @relation(fields: [advisorId], references: [id], onDelete: SetNull)
+  advisor     Advisor?                     @relation(fields: [advisorId], references: [id], onDelete: SetNull)
   enrollments AdvisingWorkshopEnrollment[]
-  createdAt   DateTime                      @default(now())
-  updatedAt   DateTime                      @updatedAt
+  createdAt   DateTime                     @default(now())
+  updatedAt   DateTime                     @updatedAt
 
   @@index([tenantId])
   @@map("advising_workshops")

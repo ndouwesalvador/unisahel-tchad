@@ -3,7 +3,7 @@ import { NextRequest } from 'next/server'
 
 const mocks = vi.hoisted(() => ({
   scope: vi.fn(), year: vi.fn(), program: vi.fn(), programs: vi.fn(), teacher: vi.fn(), room: vi.fn(), element: vi.fn(),
-  slots: vi.fn(), findSlot: vi.fn(), create: vi.fn(), update: vi.fn(), deleteSlot: vi.fn(), audit: vi.fn(), transaction: vi.fn(),
+  slots: vi.fn(), findSlot: vi.fn(), create: vi.fn(), update: vi.fn(), deleteSlot: vi.fn(), audit: vi.fn(), transaction: vi.fn(), service: vi.fn(),
 }))
 
 vi.mock('@/lib/auth/helpers', () => ({ withTenantAuth: (handler: unknown) => handler }))
@@ -12,6 +12,7 @@ vi.mock('@/lib/db', () => ({ db: {
   academicYear: { findFirst: mocks.year }, program: { findFirst: mocks.program, findMany: mocks.programs },
   teacher: { findFirst: mocks.teacher }, room: { findFirst: mocks.room },
   courseElement: { findFirst: mocks.element },
+  teachingService: { findFirst: mocks.service },
   timetableSlot: { findMany: mocks.slots, findFirst: mocks.findSlot },
   $transaction: mocks.transaction,
 } }))
@@ -37,6 +38,7 @@ beforeEach(() => {
   mocks.teacher.mockResolvedValue({ id: 'teacher-B' })
   mocks.room.mockResolvedValue({ id: 'room-A' })
   mocks.element.mockResolvedValue({ teacherId: 'teacher-B', teachingUnit: { responsibleId: null, semester: { level: { id: 'level-A', programId: 'program-A' } } } })
+  mocks.service.mockResolvedValue({ id: 'service-A' })
   mocks.slots.mockResolvedValue([])
   mocks.create.mockResolvedValue({ id: 'slot-A' })
   mocks.update.mockResolvedValue({ id: 'slot-A' })
@@ -49,9 +51,10 @@ beforeEach(() => {
 })
 
 describe('department timetable', () => {
-  it('allows an explicitly assigned teacher from another department', async () => {
+  it('allows a teacher from another department with approved annual service', async () => {
     const response = await post(manager, 'tenant-A', request(body))
     expect(response.status).toBe(201)
+    expect(mocks.service).toHaveBeenCalledWith({ where: expect.objectContaining({ academicYearId: 'year-A', teacherId: 'teacher-B', status: 'APPROVED' }), select: { id: true } })
     expect(mocks.create).toHaveBeenCalledWith({ data: expect.objectContaining({ programId: 'program-A', teacherId: 'teacher-B', courseElementId: 'element-A' }) })
   })
 
@@ -62,10 +65,10 @@ describe('department timetable', () => {
     expect(mocks.create).not.toHaveBeenCalled()
   })
 
-  it('blocks an unassigned teacher even if the teacher belongs to this institution', async () => {
-    mocks.element.mockResolvedValue({ teacherId: 'teacher-C', teachingUnit: { responsibleId: null, semester: { level: { id: 'level-A', programId: 'program-A' } } } })
+  it('blocks a teacher with no approved annual service even when the current EC points to them', async () => {
+    mocks.service.mockResolvedValue(null)
     const response = await post(manager, 'tenant-A', request(body))
-    expect(response.status).toBe(400)
+    expect(response.status).toBe(409)
     expect(mocks.create).not.toHaveBeenCalled()
   })
 
@@ -104,11 +107,13 @@ describe('department timetable', () => {
   })
 
   it('updates a slot in its own department and audits the previous version', async () => {
-    mocks.findSlot.mockResolvedValue({ id: 'slot-A', programId: 'program-A', levelId: 'level-A', courseElementId: 'element-A', teacherId: 'teacher-B', roomId: 'room-A', dayOfWeek: 1, startTime: '10:00', endTime: '12:00' })
+    mocks.findSlot.mockResolvedValue({ id: 'slot-A', academicYearId: 'year-A', programId: 'program-A', levelId: 'level-A', courseElementId: 'element-A', teacherId: 'teacher-B', roomId: 'room-A', dayOfWeek: 1, startTime: '10:00', endTime: '12:00' })
+    mocks.service.mockResolvedValue(null)
     const response = await put(manager, 'tenant-A', new NextRequest('http://localhost/api/timetable?id=slot-A', { method: 'PUT', body: JSON.stringify(body) }))
     expect(response.status).toBe(200)
     expect(mocks.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'slot-A' } }))
     expect(mocks.audit).toHaveBeenCalledWith({ data: expect.objectContaining({ action: 'UPDATE', entityId: 'slot-A' }) })
+    expect(mocks.service).not.toHaveBeenCalled()
     expect(mocks.slots).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ id: { not: 'slot-A' } }) }))
   })
 

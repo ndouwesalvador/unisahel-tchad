@@ -12,6 +12,11 @@ describe('organization API policy', () => {
     expect(isOrganizationApiAllowed('/api/deliberation', 'PATCH')).toBe(true)
     expect(isOrganizationApiAllowed('/api/grades', 'PATCH')).toBe(false)
   })
+  it('allows scoped annual-service requests and decisions', () => {
+    expect(isOrganizationApiAllowed('/api/teaching-services', 'GET')).toBe(true)
+    expect(isOrganizationApiAllowed('/api/teaching-services', 'POST')).toBe(true)
+    expect(isOrganizationApiAllowed('/api/teaching-services', 'PATCH')).toBe(true)
+  })
   it('denies institution-wide grade and administrative operations', () => {
     expect(isOrganizationApiAllowed('/api/grades', 'GET')).toBe(false)
     expect(isOrganizationApiAllowed('/api/structure', 'POST')).toBe(false)
