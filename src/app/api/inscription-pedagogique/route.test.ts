@@ -7,9 +7,11 @@ const { authMock, dbMock } = vi.hoisted(() => ({
     $transaction: vi.fn(),
     academicYear: { findFirst: vi.fn() },
     auditLog: { create: vi.fn() },
+    grade: { count: vi.fn() },
+    payment: { groupBy: vi.fn() },
     level: { findFirst: vi.fn() },
     pedagogicalRegistration: { deleteMany: vi.fn(), upsert: vi.fn(), findMany: vi.fn() },
-    student: { findFirst: vi.fn() },
+    student: { findFirst: vi.fn(), findMany: vi.fn() },
     teachingUnit: { findMany: vi.fn() },
     tenantSettings: { findUnique: vi.fn() },
   },
@@ -36,15 +38,17 @@ beforeEach(() => {
   vi.clearAllMocks()
   authMock.mockResolvedValue({ user: { id: 'admin-A', role: 'ADMIN_INSTITUTION', tenantId } })
   dbMock.tenantSettings.findUnique.mockResolvedValue({ pedagogicalRegistrationOpen: true })
-  dbMock.student.findFirst.mockResolvedValue({ id: studentId, currentLevelId: levelId })
-  dbMock.level.findFirst.mockResolvedValue({ id: levelId })
+  dbMock.student.findFirst.mockResolvedValue({ id: studentId, currentLevelId: levelId, currentProgramId: 'program-A' })
+  dbMock.level.findFirst.mockResolvedValue({ id: levelId, programId: 'program-A' })
   dbMock.academicYear.findFirst.mockResolvedValue({ id: yearId, name: '2026-2027' })
   dbMock.teachingUnit.findMany.mockResolvedValue([
     { id: 'unit-required', type: 'FONDAMENTALE' },
     { id: 'unit-optional', type: 'COMPLEMENTAIRE' },
   ])
   dbMock.pedagogicalRegistration.findMany.mockResolvedValue([])
-  dbMock.$transaction.mockResolvedValue([])
+  dbMock.grade.count.mockResolvedValue(0)
+  dbMock.payment.groupBy.mockResolvedValue([])
+  dbMock.$transaction.mockImplementation(async (callback: (tx: typeof dbMock) => unknown) => callback(dbMock))
 })
 
 describe('pedagogical registration tenant isolation', () => {
@@ -62,7 +66,7 @@ describe('pedagogical registration tenant isolation', () => {
 
     expect(response.status).toBe(409)
     expect(dbMock.teachingUnit.findMany).not.toHaveBeenCalled()
-    expect(dbMock.$transaction).not.toHaveBeenCalled()
+    expect(dbMock.pedagogicalRegistration.deleteMany).not.toHaveBeenCalled()
   })
 
   it('refuses a level owned by another institution', async () => {
@@ -71,9 +75,9 @@ describe('pedagogical registration tenant isolation', () => {
 
     expect(response.status).toBe(409)
     expect(dbMock.level.findFirst).toHaveBeenCalledWith({
-      where: { id: levelId, program: { tenantId } }, select: { id: true },
+      where: { id: levelId, isActive: true, program: { tenantId, isActive: true } }, select: { id: true, programId: true },
     })
-    expect(dbMock.$transaction).not.toHaveBeenCalled()
+    expect(dbMock.pedagogicalRegistration.deleteMany).not.toHaveBeenCalled()
   })
 
   it('refuses a foreign UE instead of silently dropping it', async () => {
@@ -81,21 +85,21 @@ describe('pedagogical registration tenant isolation', () => {
 
     expect(response.status).toBe(400)
     expect(dbMock.teachingUnit.findMany).toHaveBeenCalledWith({
-      where: { semester: { level: { id: levelId, program: { tenantId } } } },
+      where: { semester: { level: { id: levelId, isActive: true, program: { tenantId, isActive: true } } } },
       select: { id: true, type: true },
     })
-    expect(dbMock.$transaction).not.toHaveBeenCalled()
+    expect(dbMock.pedagogicalRegistration.deleteMany).not.toHaveBeenCalled()
   })
 
   it('requires mandatory UE and saves valid selections with an audit record atomically', async () => {
     const missingRequired = await POST(request('POST', { studentId, teachingUnitIds: ['unit-optional'] }))
     expect(missingRequired.status).toBe(400)
-    expect(dbMock.$transaction).not.toHaveBeenCalled()
+    expect(dbMock.pedagogicalRegistration.upsert).not.toHaveBeenCalled()
 
     const valid = await POST(request('POST', { studentId, teachingUnitIds: ['unit-required', 'unit-optional'] }))
     expect(valid.status).toBe(200)
     expect(await valid.json()).toEqual({ ok: true, registeredCount: 2 })
-    expect(dbMock.$transaction).toHaveBeenCalledTimes(1)
+    expect(dbMock.$transaction).toHaveBeenCalledTimes(2)
     expect(dbMock.auditLog.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ tenantId, userId: 'admin-A', entity: 'PedagogicalRegistration', entityId: studentId }),
     })
@@ -108,7 +112,61 @@ describe('pedagogical registration tenant isolation', () => {
 
     expect(response.status).toBe(200)
     expect(dbMock.teachingUnit.findMany).toHaveBeenCalledWith(expect.objectContaining({
-      where: { semester: { level: { id: levelId, program: { tenantId } } } },
+      where: { semester: { level: { id: levelId, isActive: true, program: { tenantId, isActive: true } } } },
     }))
+  })
+
+  it('does not remove registrations for an old level when syncing the current level', async () => {
+    dbMock.pedagogicalRegistration.findMany.mockResolvedValue([
+      { teachingUnitId: 'unit-required' },
+    ])
+    const response = await POST(request('POST', { studentId, teachingUnitIds: ['unit-required'] }))
+    expect(response.status).toBe(200)
+    expect(dbMock.pedagogicalRegistration.findMany).toHaveBeenCalledWith({
+      where: { studentId, academicYearId: yearId, status: 'ACTIVE', teachingUnitId: { in: ['unit-required', 'unit-optional'] } },
+      select: { teachingUnitId: true },
+    })
+    expect(dbMock.pedagogicalRegistration.deleteMany).not.toHaveBeenCalled()
+  })
+
+  it('refuses to withdraw an evaluated UE', async () => {
+    dbMock.pedagogicalRegistration.findMany.mockResolvedValue([
+      { teachingUnitId: 'unit-required' }, { teachingUnitId: 'unit-optional' },
+    ])
+    dbMock.grade.count.mockResolvedValue(1)
+    const response = await POST(request('POST', { studentId, teachingUnitIds: ['unit-required'] }))
+    expect(response.status).toBe(409)
+    expect(dbMock.pedagogicalRegistration.deleteMany).not.toHaveBeenCalled()
+    expect(dbMock.auditLog.create).not.toHaveBeenCalled()
+  })
+
+  it('deletes only a current-level optional UE without grades', async () => {
+    dbMock.pedagogicalRegistration.findMany.mockResolvedValue([
+      { teachingUnitId: 'unit-required' }, { teachingUnitId: 'unit-optional' },
+    ])
+    const response = await POST(request('POST', { studentId, teachingUnitIds: ['unit-required'] }))
+    expect(response.status).toBe(200)
+    expect(dbMock.pedagogicalRegistration.deleteMany).toHaveBeenCalledWith({
+      where: { studentId, academicYearId: yearId, status: 'ACTIVE', teachingUnitId: { in: ['unit-optional'] } },
+    })
+  })
+
+  it('counts only the student’s current-level UE in the registration status', async () => {
+    dbMock.student.findMany.mockResolvedValue([{
+      id: studentId, firstName: 'A', lastName: 'B', matricule: 'M1', currentLevelId: levelId,
+      currentProgram: { name: 'Programme A' }, currentLevel: { name: 'Licence 1' },
+    }])
+    dbMock.teachingUnit.findMany.mockResolvedValue([
+      { id: 'unit-required', semester: { levelId } },
+      { id: 'unit-optional', semester: { levelId } },
+    ])
+    dbMock.pedagogicalRegistration.findMany.mockResolvedValue([
+      { studentId, teachingUnitId: 'unit-required' },
+      { studentId, teachingUnitId: 'old-level-unit' },
+    ])
+    const response = await GET(new NextRequest('http://localhost:3000/api/inscription-pedagogique'))
+    const body = await response.json()
+    expect(response.status).toBe(200)
+    expect(body.students[0]).toMatchObject({ ueInscrites: 1, totalUe: 2, statut: 'en-cours' })
   })
 })

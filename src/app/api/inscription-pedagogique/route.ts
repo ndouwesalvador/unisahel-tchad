@@ -1,12 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { Prisma } from '@prisma/client'
 import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
 const REGISTRATION_ROLES = ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'RECTORAT', 'SCOLARITE']
-
-async function resolveCurrentAcademicYearId(tenantId: string): Promise<string | null> {
-  const current = await db.academicYear.findFirst({ where: { tenantId, isCurrent: true }, select: { id: true } })
-  return current?.id ?? null
-}
 
 // GET /api/inscription-pedagogique - real registration status per student
 // Admin/scolarite tool only -- no student-facing UI calls this, so student-tier
@@ -56,7 +52,7 @@ async function handleGet(_user: SessionUser, tenantId: string, request: NextRequ
 
       const [teachingUnits, registrations] = await Promise.all([
         db.teachingUnit.findMany({
-          where: { semester: { level: { id: student.currentLevelId, program: { tenantId } } } },
+          where: { semester: { level: { id: student.currentLevelId, isActive: true, program: { tenantId, isActive: true } } } },
           include: { responsible: { include: { user: { select: { firstName: true, lastName: true } } } } },
           orderBy: { orderIndex: 'asc' },
         }),
@@ -104,10 +100,9 @@ async function handleGet(_user: SessionUser, tenantId: string, request: NextRequ
         select: { id: true, semester: { select: { levelId: true } } },
       }),
       academicYearId
-        ? db.pedagogicalRegistration.groupBy({
-            by: ['studentId'],
+        ? db.pedagogicalRegistration.findMany({
             where: { academicYearId, status: 'ACTIVE', studentId: { in: students.map((s) => s.id) } },
-            _count: { id: true },
+            select: { studentId: true, teachingUnitId: true },
           })
         : Promise.resolve([]),
       db.payment.groupBy({
@@ -118,11 +113,18 @@ async function handleGet(_user: SessionUser, tenantId: string, request: NextRequ
     ])
 
     const totalUeByLevel = new Map<string, number>()
+    const levelByUnit = new Map<string, string>()
     for (const u of unitsByLevel) {
       const levelId = u.semester.levelId
+      levelByUnit.set(u.id, levelId)
       totalUeByLevel.set(levelId, (totalUeByLevel.get(levelId) ?? 0) + 1)
     }
-    const registeredCountByStudent = new Map(registrationCounts.map((r) => [r.studentId, r._count.id]))
+    const studentLevel = new Map(students.map((student) => [student.id, student.currentLevelId]))
+    const registeredCountByStudent = new Map<string, number>()
+    for (const registration of registrationCounts) {
+      if (levelByUnit.get(registration.teachingUnitId) !== studentLevel.get(registration.studentId)) continue
+      registeredCountByStudent.set(registration.studentId, (registeredCountByStudent.get(registration.studentId) ?? 0) + 1)
+    }
     const debtByStudent = new Set(debtGroups.map((d) => d.studentId))
 
     const mapped = students.map((s) => {
@@ -158,6 +160,10 @@ async function handleGet(_user: SessionUser, tenantId: string, request: NextRequ
 }
 
 // POST /api/inscription-pedagogique - sync a student's UE registrations for the current academic year
+class RegistrationRejected extends Error {
+  constructor(message: string, public readonly status: number) { super(message) }
+}
+
 async function handlePost(user: SessionUser, tenantId: string, request: NextRequest) {
   try {
     const body = await request.json()
@@ -166,56 +172,60 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
       return NextResponse.json({ error: 'studentId and teachingUnitIds are required' }, { status: 400 })
     }
 
-    const settings = await db.tenantSettings.findUnique({ where: { tenantId }, select: { pedagogicalRegistrationOpen: true } })
-    if (settings && !settings.pedagogicalRegistrationOpen) {
-      return NextResponse.json({ error: 'La periode d\'inscription pedagogique est cloturee' }, { status: 409 })
-    }
-
-    const student = await db.student.findFirst({ where: { id: studentId, tenantId }, select: { id: true, currentLevelId: true } })
-    if (!student) {
-      return NextResponse.json({ error: 'Student not found' }, { status: 404 })
-    }
-    if (!student.currentLevelId) {
-      return NextResponse.json({ error: 'Aucun niveau courant n’est affecté à cet étudiant' }, { status: 409 })
-    }
-    const level = await db.level.findFirst({ where: { id: student.currentLevelId, program: { tenantId } }, select: { id: true } })
-    if (!level) {
-      return NextResponse.json({ error: 'Le niveau de cet étudiant n’appartient pas à cet établissement' }, { status: 409 })
-    }
-    const academicYearId = await resolveCurrentAcademicYearId(tenantId)
-    if (!academicYearId) {
-      return NextResponse.json({ error: 'No current academic year configured' }, { status: 409 })
-    }
-
-    const levelUnits = await db.teachingUnit.findMany({
-      where: { semester: { level: { id: student.currentLevelId, program: { tenantId } } } },
-      select: { id: true, type: true },
-    })
     const requestedIds = [...new Set(teachingUnitIds as string[])]
-    const availableIds = new Set(levelUnits.map((unit) => unit.id))
-    if (requestedIds.some((id) => !availableIds.has(id))) {
-      return NextResponse.json({ error: 'Une ou plusieurs UE ne font pas partie du niveau de cet étudiant' }, { status: 400 })
-    }
-    if (levelUnits.some((unit) => unit.type === 'FONDAMENTALE' && !requestedIds.includes(unit.id))) {
-      return NextResponse.json({ error: 'Toutes les UE obligatoires doivent être sélectionnées' }, { status: 400 })
-    }
-    const previousRegistrations = await db.pedagogicalRegistration.findMany({
-      where: { studentId, academicYearId, status: 'ACTIVE' },
-      select: { teachingUnitId: true },
-    })
+    await db.$transaction(async (tx) => {
+      const settings = await tx.tenantSettings.findUnique({ where: { tenantId }, select: { pedagogicalRegistrationOpen: true } })
+      if (settings && !settings.pedagogicalRegistrationOpen) throw new RegistrationRejected('La période d’inscription pédagogique est clôturée', 409)
 
-    await db.$transaction([
-      db.pedagogicalRegistration.deleteMany({
-        where: { studentId, academicYearId, teachingUnitId: { notIn: requestedIds } },
-      }),
-      ...requestedIds.map((teachingUnitId) =>
-        db.pedagogicalRegistration.upsert({
+      const student = await tx.student.findFirst({ where: { id: studentId, tenantId }, select: { id: true, currentLevelId: true, currentProgramId: true } })
+      if (!student) throw new RegistrationRejected('Étudiant introuvable', 404)
+      if (!student.currentLevelId) throw new RegistrationRejected('Aucun niveau courant n’est affecté à cet étudiant', 409)
+
+      const level = await tx.level.findFirst({
+        where: { id: student.currentLevelId, isActive: true, program: { tenantId, isActive: true } },
+        select: { id: true, programId: true },
+      })
+      if (!level || (student.currentProgramId && student.currentProgramId !== level.programId)) {
+        throw new RegistrationRejected('Le niveau et le programme de cet étudiant sont incohérents ou inactifs', 409)
+      }
+      const year = await tx.academicYear.findFirst({ where: { tenantId, isCurrent: true }, select: { id: true } })
+      if (!year) throw new RegistrationRejected('Aucune année académique courante configurée', 409)
+      const academicYearId = year.id
+
+      const levelUnits = await tx.teachingUnit.findMany({
+        where: { semester: { level: { id: level.id, isActive: true, program: { tenantId, isActive: true } } } },
+        select: { id: true, type: true },
+      })
+      const levelUnitIds = levelUnits.map((unit) => unit.id)
+      const availableIds = new Set(levelUnitIds)
+      if (requestedIds.some((id) => !availableIds.has(id))) throw new RegistrationRejected('Une ou plusieurs UE ne font pas partie du niveau de cet étudiant', 400)
+      if (levelUnits.some((unit) => unit.type === 'FONDAMENTALE' && !requestedIds.includes(unit.id))) {
+        throw new RegistrationRejected('Toutes les UE obligatoires doivent être sélectionnées', 400)
+      }
+
+      const previousRegistrations = await tx.pedagogicalRegistration.findMany({
+        where: { studentId, academicYearId, status: 'ACTIVE', teachingUnitId: { in: levelUnitIds } },
+        select: { teachingUnitId: true },
+      })
+      const removedIds = previousRegistrations.map((row) => row.teachingUnitId).filter((id) => !requestedIds.includes(id))
+      if (removedIds.length > 0) {
+        const grades = await tx.grade.count({ where: {
+          studentId, academicYearId,
+          OR: [{ teachingUnitId: { in: removedIds } }, { courseElement: { teachingUnitId: { in: removedIds } } }],
+        } })
+        if (grades > 0) throw new RegistrationRejected('Une UE évaluée ne peut pas être retirée de l’inscription pédagogique', 409)
+        await tx.pedagogicalRegistration.deleteMany({
+          where: { studentId, academicYearId, status: 'ACTIVE', teachingUnitId: { in: removedIds } },
+        })
+      }
+      for (const teachingUnitId of requestedIds) {
+        await tx.pedagogicalRegistration.upsert({
           where: { studentId_teachingUnitId_academicYearId: { studentId, teachingUnitId, academicYearId } },
           create: { studentId, teachingUnitId, academicYearId, status: 'ACTIVE' },
           update: { status: 'ACTIVE' },
         })
-      ),
-      db.auditLog.create({
+      }
+      await tx.auditLog.create({
         data: {
           tenantId,
           userId: user.id,
@@ -224,11 +234,12 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
           entityId: studentId,
           details: JSON.stringify({ academicYearId, before: previousRegistrations.map((row) => row.teachingUnitId), after: requestedIds }),
         },
-      }),
-    ])
+      })
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable })
 
     return NextResponse.json({ ok: true, registeredCount: requestedIds.length })
   } catch (error) {
+    if (error instanceof RegistrationRejected) return NextResponse.json({ error: error.message }, { status: error.status })
     console.error('Sync pedagogical registration error:', error)
     return NextResponse.json({ error: 'Failed to save registration' }, { status: 500 })
   }
