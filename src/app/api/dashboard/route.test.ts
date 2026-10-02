@@ -8,7 +8,12 @@ const mocks = vi.hoisted(() => ({
   announcementFindMany: vi.fn(),
   courseElementFindMany: vi.fn(),
   gradeCount: vi.fn(),
+  gradeFindMany: vi.fn(),
   studentCount: vi.fn(),
+  studentFindFirst: vi.fn(),
+  tenantSettingsFindUnique: vi.fn(),
+  paymentFindMany: vi.fn(),
+  examSessionFindMany: vi.fn(),
 }))
 
 vi.mock('@/lib/auth/helpers', () => ({ withTenantAuth: (handler: unknown) => handler }))
@@ -21,8 +26,11 @@ vi.mock('@/lib/db', () => ({ db: {
   teacher: { findFirst: mocks.teacherFindFirst },
   announcement: { findMany: mocks.announcementFindMany },
   courseElement: { findMany: mocks.courseElementFindMany },
-  grade: { count: mocks.gradeCount },
-  student: { count: mocks.studentCount },
+  grade: { count: mocks.gradeCount, findMany: mocks.gradeFindMany },
+  student: { count: mocks.studentCount, findFirst: mocks.studentFindFirst },
+  tenantSettings: { findUnique: mocks.tenantSettingsFindUnique },
+  payment: { findMany: mocks.paymentFindMany },
+  examSession: { findMany: mocks.examSessionFindMany },
 } }))
 
 const { GET } = await import('./route')
@@ -41,6 +49,11 @@ describe('GET /api/dashboard — role isolation', () => {
       teachingUnit: { name: 'Informatique', semester: { name: 'Semestre 1', level: { name: 'Licence 1', program: { name: 'Informatique' } } } },
     }])
     mocks.gradeCount.mockResolvedValueOnce(12).mockResolvedValueOnce(8)
+    mocks.gradeFindMany.mockResolvedValue([])
+    mocks.studentFindFirst.mockResolvedValue(null)
+    mocks.tenantSettingsFindUnique.mockResolvedValue({ passingGrade: 10 })
+    mocks.paymentFindMany.mockResolvedValue([])
+    mocks.examSessionFindMany.mockResolvedValue([])
   })
 
   it('shows a teacher only their assigned courses and grade counts scoped to tenant and year', async () => {
@@ -98,5 +111,34 @@ describe('GET /api/dashboard — role isolation', () => {
     const response = await handler({ id: 'user-A', role: 'ENSEIGNANT', tenantId: 'tenant-A' }, 'tenant-A', request('?academicYearId=year-B'))
     expect(response.status).toBe(404)
     expect(mocks.teacherFindFirst).not.toHaveBeenCalled()
+  })
+
+  it('allows an institution admin to preview only a student in their tenant', async () => {
+    mocks.studentFindFirst.mockResolvedValue({
+      id: 'student-A', firstName: 'Awa', lastName: 'Test', matricule: 'A-001', status: 'INSCRIT',
+      currentProgram: { name: 'Informatique' }, currentLevel: { name: 'Licence 1' },
+    })
+    mocks.academicYearFindFirst.mockResolvedValue({ id: 'year-A', name: '2026-2027', startDate: new Date(), endDate: new Date(), sessions: [] })
+    const response = await handler({ id: 'admin-A', role: 'ADMIN_INSTITUTION', tenantId: 'tenant-A' }, 'tenant-A', request('?studentId=student-A'))
+    expect(response.status).toBe(200)
+    expect(await response.json()).toMatchObject({ isStudentView: true, student: { matricule: 'A-001' }, stats: { moyenneGenerale: null, totalPaid: 0 } })
+    expect(mocks.studentFindFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'student-A', tenantId: 'tenant-A' } }))
+    expect(mocks.paymentFindMany).toHaveBeenCalledWith(expect.objectContaining({ where: { tenantId: 'tenant-A', studentId: 'student-A' } }))
+    expect(mocks.studentCount).not.toHaveBeenCalled()
+  })
+
+  it('rejects a student preview from another institution', async () => {
+    const response = await handler({ id: 'admin-A', role: 'ADMIN_INSTITUTION', tenantId: 'tenant-A' }, 'tenant-A', request('?studentId=student-B'))
+    expect(response.status).toBe(404)
+    expect(mocks.studentFindFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'student-B', tenantId: 'tenant-A' } }))
+    expect(mocks.paymentFindMany).not.toHaveBeenCalled()
+  })
+
+  it('rejects a student preview for staff and students', async () => {
+    for (const role of ['ENSEIGNANT', 'SCOLARITE', 'ETUDIANT']) {
+      const response = await handler({ id: 'user-A', role, tenantId: 'tenant-A' }, 'tenant-A', request('?studentId=student-A'))
+      expect(response.status).toBe(403)
+    }
+    expect(mocks.studentFindFirst).not.toHaveBeenCalled()
   })
 })

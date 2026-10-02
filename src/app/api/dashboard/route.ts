@@ -16,8 +16,8 @@ async function getStudentDashboardHandler(studentId: string, tenantId: string, a
   const now = new Date()
 
   const [student, currentAcademicYear, settings, payments, announcements, upcomingExamSessions] = await Promise.all([
-    db.student.findUnique({
-      where: { id: studentId },
+    db.student.findFirst({
+      where: { id: studentId, tenantId },
       select: {
         id: true,
         firstName: true,
@@ -34,6 +34,8 @@ async function getStudentDashboardHandler(studentId: string, tenantId: string, a
     db.announcement.findMany({ where: { tenantId, isPublished: true }, orderBy: { publishedAt: 'desc' }, take: 5 }),
     db.examSession.findMany({ where: { academicYear: { tenantId }, startDate: { gte: now } }, orderBy: { startDate: 'asc' }, take: 5 }),
   ])
+
+  if (!student) return NextResponse.json({ error: 'Étudiant introuvable' }, { status: 404 })
 
   const grades = currentAcademicYear ? await db.grade.findMany({
     where: { studentId, academicYearId: currentAcademicYear.id, session: 'NORMALE', isLocked: true, finalGrade: { not: null } },
@@ -154,6 +156,18 @@ async function getDashboardHandler(user: SessionUser, tenantId: string, request:
     const requestedYearId = request.nextUrl.searchParams.get('academicYearId')
     if (requestedYearId && !await db.academicYear.findFirst({ where: { id: requestedYearId, tenantId }, select: { id: true } })) {
       return NextResponse.json({ error: 'Année académique introuvable' }, { status: 404 })
+    }
+    const requestedStudentId = request.nextUrl.searchParams.get('studentId')
+    if (requestedStudentId) {
+      if (user.role !== 'ADMIN_INSTITUTION') {
+        return NextResponse.json({ error: 'Accès non autorisé' }, { status: 403 })
+      }
+      const student = await db.student.findFirst({
+        where: { id: requestedStudentId, tenantId },
+        select: { id: true },
+      })
+      if (!student) return NextResponse.json({ error: 'Étudiant introuvable' }, { status: 404 })
+      return getStudentDashboardHandler(student.id, tenantId, requestedYearId)
     }
     const ownStudentId = await resolveOwnStudentId(user)
     if (ownStudentId) {

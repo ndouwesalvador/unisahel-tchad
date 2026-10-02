@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAppStore } from '@/lib/store'
 import { useStudentDetail, useStudentTranscript, usePayments, useDocuments, useHealth } from '@/lib/api-hooks'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -40,11 +40,12 @@ import {
   Receipt,
   GraduationCap,
   Loader2,
+  Megaphone,
 } from 'lucide-react'
 
 const statusConfig: Record<string, { label: string; className: string }> = {
   INSCRIT: { label: 'Inscrit', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0 hover:bg-[#2d7a4f15]' },
-  PRE_INSCRIT: { label: 'Pre-inscrit', className: 'bg-[#d4a85315] text-[#d4a853] border-0 hover:bg-[#d4a85315]' },
+  PRE_INSCRIT: { label: 'Pré-inscrit', className: 'border border-amber-200 bg-amber-50 text-amber-950 hover:bg-amber-50' },
   SUSPENDU: { label: 'Suspendu', className: 'bg-[#ef6c0015] text-[#ef6c00] border-0 hover:bg-[#ef6c0015]' },
   EXCLU: { label: 'Exclu', className: 'bg-[#c6282815] text-[#c62828] border-0 hover:bg-[#c6282815]' },
   DIPLOME: { label: 'Diplome', className: 'bg-[#1a274415] text-[#1a2744] border-0 hover:bg-[#1a274415]' },
@@ -113,15 +114,79 @@ interface TranscriptSemester {
   teachingUnits: TranscriptTeachingUnit[]
 }
 
+interface StudentDashboardPreviewData {
+  isStudentView: true
+  student: { status: string; program: string | null; level: string | null } | null
+  stats: {
+    moyenneGenerale: number | null
+    passingGrade: number
+    totalPaid: number
+    pendingPaymentsCount: number
+    lastPaymentStatus: string | null
+  }
+  currentAcademicYear: { name: string } | null
+  recentActivity: { id: string; description: string; time: string }[]
+  upcomingEvents: { id: string; title: string; date: string }[]
+}
+
+function StudentDashboardPreview({ studentId, onNavigate }: { studentId: string; onNavigate: (tab: string) => void }) {
+  const academicYearId = useAppStore((state) => state.selectedAcademicYearId)
+  const { data, isPending, isError, refetch } = useQuery<StudentDashboardPreviewData>({
+    queryKey: ['studentDashboardPreview', studentId, academicYearId],
+    queryFn: async () => {
+      const params = new URLSearchParams({ studentId })
+      if (academicYearId) params.set('academicYearId', academicYearId)
+      const response = await fetch(`/api/dashboard?${params}`)
+      if (!response.ok) throw new Error('Impossible de charger le tableau de bord étudiant')
+      return response.json()
+    },
+  })
+
+  if (isPending) return <div role="status" className="flex items-center gap-2 py-10 text-sm text-slate-700"><Loader2 className="size-5 animate-spin" />Chargement du tableau de bord…</div>
+  if (isError || !data?.isStudentView || !data.student) return (
+    <Card className="border-red-200 bg-red-50"><CardContent className="flex flex-wrap items-center justify-between gap-3 p-5">
+      <p role="alert" className="text-sm font-medium text-red-900">Le tableau de bord de cet étudiant est indisponible.</p>
+      <Button type="button" variant="outline" onClick={() => refetch()}>Réessayer</Button>
+    </CardContent></Card>
+  )
+
+  const paymentStatus: Record<string, string> = {
+    VALIDATED: 'Validé', PENDING: 'En attente de validation', CANCELLED: 'Annulé', REFUNDED: 'Remboursé',
+  }
+  return <div className="space-y-4 text-slate-900">
+    <Card className="border-emerald-200 bg-emerald-50"><CardContent className="p-5">
+      <p className="text-xs font-bold uppercase tracking-wide text-emerald-900">Aperçu du tableau de bord étudiant</p>
+      <h2 className="mt-1 text-xl font-bold text-slate-950">{data.student.program ?? 'Programme non affecté'}{data.student.level ? ` · ${data.student.level}` : ''}</h2>
+      <p className="mt-1 text-sm text-slate-800">{data.currentAcademicYear ? `Année académique ${data.currentAcademicYear.name}` : 'Aucune année académique active'} · {statusConfig[data.student.status]?.label ?? data.student.status}</p>
+      <p className="mt-2 text-xs text-slate-700">Données du dossier consultables par l’administration. Les notes affichées ici sont uniquement les notes verrouillées de la session normale.</p>
+    </CardContent></Card>
+    <div className="grid gap-3 sm:grid-cols-3">
+      <Card className="border-slate-200"><CardContent className="p-5"><p className="text-sm font-semibold text-slate-700">Moyenne des notes publiées</p><p className="mt-2 text-2xl font-bold text-slate-950">{data.stats.moyenneGenerale === null ? 'Aucune note' : `${data.stats.moyenneGenerale.toFixed(2)}/20`}</p><p className="mt-1 text-xs text-slate-700">Seuil : {data.stats.passingGrade}/20</p></CardContent></Card>
+      <Card className="border-slate-200"><CardContent className="p-5"><p className="text-sm font-semibold text-slate-700">Dernier paiement</p><p className="mt-2 text-lg font-bold text-slate-950">{data.stats.lastPaymentStatus ? paymentStatus[data.stats.lastPaymentStatus] ?? data.stats.lastPaymentStatus : 'Aucun paiement enregistré'}</p><p className="mt-1 text-xs text-slate-700">{formatFCFA(data.stats.totalPaid)} validés · {data.stats.pendingPaymentsCount} en attente</p></CardContent></Card>
+      <Card className="border-slate-200"><CardContent className="p-5"><p className="text-sm font-semibold text-slate-700">Statut administratif</p><p className="mt-2 text-lg font-bold text-slate-950">{statusConfig[data.student.status]?.label ?? data.student.status}</p><p className="mt-1 text-xs text-slate-700">{data.currentAcademicYear?.name ?? 'Année non définie'}</p></CardContent></Card>
+    </div>
+    <div className="grid gap-3 sm:grid-cols-3">
+      <Button type="button" variant="outline" className="min-h-11 border-slate-300 text-slate-900" onClick={() => onNavigate('releve')}>Voir les notes</Button>
+      <Button type="button" variant="outline" className="min-h-11 border-slate-300 text-slate-900" onClick={() => onNavigate('paiements')}>Voir les paiements</Button>
+      <Button type="button" variant="outline" className="min-h-11 border-slate-300 text-slate-900" onClick={() => onNavigate('documents')}>Voir les documents</Button>
+    </div>
+    <div className="grid gap-4 lg:grid-cols-2">
+      <Card className="border-slate-200"><CardHeader><CardTitle className="flex items-center gap-2 text-base text-slate-950"><Megaphone className="size-4" />Annonces publiées</CardTitle></CardHeader><CardContent>{data.recentActivity.length ? <ul className="divide-y divide-slate-200">{data.recentActivity.map((item) => <li key={item.id} className="py-2 text-sm"><p className="font-medium text-slate-950">{item.description}</p><p className="text-slate-700">{formatDateFr(item.time)}</p></li>)}</ul> : <p className="text-sm text-slate-700">Aucune annonce publiée.</p>}</CardContent></Card>
+      <Card className="border-slate-200"><CardHeader><CardTitle className="flex items-center gap-2 text-base text-slate-950"><Calendar className="size-4" />Examens à venir</CardTitle></CardHeader><CardContent>{data.upcomingEvents.length ? <ul className="divide-y divide-slate-200">{data.upcomingEvents.map((item) => <li key={item.id} className="py-2 text-sm"><p className="font-medium text-slate-950">{item.title}</p><p className="text-slate-700">{formatDateFr(item.date)}</p></li>)}</ul> : <p className="text-sm text-slate-700">Aucun examen planifié.</p>}</CardContent></Card>
+    </div>
+  </div>
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function StudentDetail() {
-  const { goBack, selectedStudentId } = useAppStore()
+  const { goBack, selectedStudentId, user } = useAppStore()
+  const canPreviewDashboard = user?.role === 'ADMIN_INSTITUTION'
   const queryClient = useQueryClient()
-  const [activeTab, setActiveTab] = useState('informations')
+  const [activeTab, setActiveTab] = useState(canPreviewDashboard ? 'dashboard' : 'informations')
   const [isGenerating, setIsGenerating] = useState<string | null>(null)
 
-  const { data: detailData, isLoading: isLoadingDetail } = useStudentDetail(selectedStudentId || undefined)
+  const { data: detailData, isLoading: isLoadingDetail, isError: isDetailError, refetch: refetchDetail } = useStudentDetail(selectedStudentId || undefined)
   const { data: transcriptData } = useStudentTranscript(selectedStudentId || undefined)
   const { data: paymentsData } = usePayments(selectedStudentId ? { studentId: selectedStudentId, limit: 200 } : undefined)
   const { data: documentsData } = useDocuments(selectedStudentId || undefined)
@@ -180,13 +245,18 @@ export function StudentDetail() {
     )
   }
 
-  if (isLoadingDetail || !s) {
+  if (isLoadingDetail) {
     return (
       <div className="flex items-center justify-center py-20">
         <Loader2 className="size-6 animate-spin text-[#2d7a4f]" />
       </div>
     )
   }
+
+  if (isDetailError || !s) return <div className="space-y-4 py-12 text-center">
+    <p role="alert" className="text-sm font-medium text-red-900">Impossible de charger le dossier de cet étudiant.</p>
+    <div className="flex justify-center gap-2"><Button variant="outline" onClick={goBack}>Retour à la liste</Button><Button onClick={() => refetchDetail()}>Réessayer</Button></div>
+  </div>
 
   const initials = `${s.firstName[0] || ''}${s.lastName[0] || ''}`
   const summary = transcriptData?.data?.summary
@@ -258,7 +328,7 @@ export function StudentDetail() {
               </Avatar>
 
               {/* Student Info */}
-              <div className="flex-1 pt-2 sm:pb-1">
+              <div className="flex-1 pt-2 sm:pt-12 sm:pb-1">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
                   <h1 className="text-2xl font-bold text-[#1a2744]">{s.firstName} {s.lastName}</h1>
                   <Badge className={`text-xs ${statusConfig[s.status]?.className || 'bg-gray-100 text-gray-500 border-0'}`}>
@@ -316,7 +386,8 @@ export function StudentDetail() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="bg-gray-100 h-10 p-1 flex flex-wrap">
+        <TabsList className="bg-gray-100 h-auto min-h-10 p-1 flex flex-wrap justify-start gap-1">
+          {canPreviewDashboard && <TabsTrigger value="dashboard" className="text-sm data-[state=active]:bg-white data-[state=active]:text-[#1a2744]">Tableau de bord</TabsTrigger>}
           <TabsTrigger value="informations" className="text-xs data-[state=active]:bg-white data-[state=active]:text-[#1a2744]">Informations</TabsTrigger>
           <TabsTrigger value="inscriptions" className="text-xs data-[state=active]:bg-white data-[state=active]:text-[#1a2744]">Inscriptions</TabsTrigger>
           <TabsTrigger value="releve" className="text-xs data-[state=active]:bg-white data-[state=active]:text-[#1a2744]">Releve de notes</TabsTrigger>
@@ -326,6 +397,8 @@ export function StudentDetail() {
           )}
           <TabsTrigger value="documents" className="text-xs data-[state=active]:bg-white data-[state=active]:text-[#1a2744]">Documents</TabsTrigger>
         </TabsList>
+
+        {canPreviewDashboard && <TabsContent value="dashboard" className="mt-4"><StudentDashboardPreview studentId={selectedStudentId} onNavigate={setActiveTab} /></TabsContent>}
 
         {/* Informations Tab */}
         <TabsContent value="informations" className="mt-4">
@@ -509,14 +582,14 @@ export function StudentDetail() {
                     </div>
                     <div>
                       <span className="text-gray-400 text-xs block">Moyenne generale</span>
-                      <p className={`text-lg font-bold ${moyenneGenerale >= PASSING_GRADE ? 'text-[#2d7a4f]' : 'text-red-600'}`}>
-                        {moyenneGenerale.toFixed(2)}/20
+                      <p className={`text-lg font-bold ${gradeRows.length === 0 ? 'text-slate-700' : moyenneGenerale >= PASSING_GRADE ? 'text-[#2d7a4f]' : 'text-red-600'}`}>
+                        {gradeRows.length === 0 ? 'Aucune note' : `${moyenneGenerale.toFixed(2)}/20`}
                       </p>
                     </div>
                     <div>
                       <span className="text-gray-400 text-xs block">Decision indicative</span>
                       <p className="text-lg font-bold text-[#1a2744]">
-                        {moyenneGenerale >= PASSING_GRADE ? 'Admis' : 'Ajourné'}
+                        {gradeRows.length === 0 ? 'Non disponible' : moyenneGenerale >= PASSING_GRADE ? 'Admis' : 'Ajourné'}
                       </p>
                     </div>
                   </div>
@@ -568,7 +641,7 @@ export function StudentDetail() {
                       <AlertCircle className="size-5 text-[#c62828]" />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-400">Reste a payer</p>
+                      <p className="text-xs text-slate-700">Montant en attente de validation</p>
                       <p className="text-lg font-bold text-[#c62828]">{formatFCFA(totalReste)}</p>
                     </div>
                   </div>
