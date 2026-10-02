@@ -581,15 +581,15 @@ export function StudentDetail() {
                       <p className="text-lg font-bold text-[#2d7a4f]">{totalCredits}</p>
                     </div>
                     <div>
-                      <span className="text-gray-400 text-xs block">Moyenne generale</span>
+                      <span className="text-slate-600 text-xs block">Moyenne des notes affichées</span>
                       <p className={`text-lg font-bold ${gradeRows.length === 0 ? 'text-slate-700' : moyenneGenerale >= PASSING_GRADE ? 'text-[#2d7a4f]' : 'text-red-600'}`}>
                         {gradeRows.length === 0 ? 'Aucune note' : `${moyenneGenerale.toFixed(2)}/20`}
                       </p>
                     </div>
                     <div>
-                      <span className="text-gray-400 text-xs block">Decision indicative</span>
+                      <span className="text-slate-600 text-xs block">Décision du jury</span>
                       <p className="text-lg font-bold text-[#1a2744]">
-                        {gradeRows.length === 0 ? 'Non disponible' : moyenneGenerale >= PASSING_GRADE ? 'Admis' : 'Ajourné'}
+                        Non renseignée dans cet aperçu
                       </p>
                     </div>
                   </div>
