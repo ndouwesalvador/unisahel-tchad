@@ -5,6 +5,7 @@
   "scripts": {
     "postinstall": "prisma generate",
     "dev": "next dev -p 3000",
+    "prebuild": "node scripts/ensure-teacher-schema.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",

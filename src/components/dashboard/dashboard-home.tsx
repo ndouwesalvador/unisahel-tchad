@@ -343,6 +343,11 @@ function TeacherDashboardHome({ data }: { data: TeacherDashboardResponse }) {
               Votre compte n’est pas encore relié à une fiche enseignant active. Demandez à l’administration de vérifier cette affectation.
             </p>
           )}
+          {data.linked && data.assignments.length === 0 && (
+            <p role="status" className="mt-4 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm font-medium text-amber-950">
+              Aucune UE ni matière ne vous est actuellement affectée. L’administration doit renseigner votre fiche sur les matières ou les UE concernées avant toute saisie.
+            </p>
+          )}
         </CardContent>
       </Card>
 
@@ -356,12 +361,12 @@ function TeacherDashboardHome({ data }: { data: TeacherDashboardResponse }) {
         ))}
       </div>
 
-      <Card className="border-slate-200 bg-white">
+      {data.assignments.length > 0 && <Card className="border-slate-200 bg-white">
         <CardHeader><CardTitle className="text-lg text-slate-950">Actions rapides</CardTitle></CardHeader>
         <CardContent className="grid gap-3 sm:grid-cols-3">
           {links.map((link) => <Button key={link.view} variant="outline" className="h-12 justify-start border-slate-300 bg-white text-sm font-semibold text-slate-900 hover:bg-emerald-50 hover:text-slate-950" onClick={() => setView(link.view)}><link.icon className="mr-2 size-4 text-emerald-800" />{link.label}</Button>)}
         </CardContent>
-      </Card>
+      </Card>}
 
       <Card className="border-slate-200 bg-white">
         <CardHeader><CardTitle className="text-lg text-slate-950">Mes matières attribuées</CardTitle></CardHeader>
@@ -411,7 +416,7 @@ interface DashboardApiResponse {
 function getGreeting(): string {
   const hour = new Date().getHours()
   if (hour >= 5 && hour < 12) return 'Bonjour'
-  if (hour >= 12 && hour < 18) return 'Bon apres-midi'
+  if (hour >= 12 && hour < 18) return 'Bon après-midi'
   return 'Bonsoir'
 }
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
+import { getTeacherScope } from '@/lib/auth/teacher-scope'
 
 const VALID_TYPES = ['CM', 'TD', 'TP', 'EXAM']
 
@@ -15,7 +16,7 @@ async function resolveSlotNames(tenantId: string, slots: { courseElementId: stri
 
   const [courseElements, teachers, rooms] = await Promise.all([
     courseElementIds.length
-      ? db.courseElement.findMany({ where: { id: { in: courseElementIds } }, select: { id: true, name: true } })
+      ? db.courseElement.findMany({ where: { id: { in: courseElementIds }, teachingUnit: { semester: { level: { program: { tenantId } } } } }, select: { id: true, name: true } })
       : [],
     teacherIds.length
       ? db.teacher.findMany({ where: { id: { in: teacherIds }, tenantId }, select: { id: true, user: { select: { firstName: true, lastName: true } } } })
@@ -33,16 +34,24 @@ async function resolveSlotNames(tenantId: string, slots: { courseElementId: stri
 }
 
 // GET /api/timetable - list weekly timetable slots
-async function handleGet(_user: SessionUser, tenantId: string, request: NextRequest) {
+async function handleGet(user: SessionUser, tenantId: string, request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const programId = searchParams.get('programId') || undefined
     const levelId = searchParams.get('levelId') || undefined
+    const academicYearId = searchParams.get('academicYearId') || undefined
+    if (academicYearId && !await db.academicYear.findFirst({ where: { id: academicYearId, tenantId }, select: { id: true } })) {
+      return NextResponse.json({ error: 'Année académique introuvable' }, { status: 404 })
+    }
+    const teacherScope = user.role === 'ENSEIGNANT' ? await getTeacherScope(user, tenantId) : null
+    if (teacherScope && !teacherScope.linked) return NextResponse.json({ slots: [] })
 
     const where = {
       tenantId,
       ...(programId ? { programId } : {}),
       ...(levelId ? { levelId } : {}),
+      ...(academicYearId ? { academicYearId } : {}),
+      ...(teacherScope ? { courseElementId: { in: teacherScope.courseElementIds } } : {}),
     }
 
     const slots = await db.timetableSlot.findMany({
@@ -100,6 +109,20 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
     const year = await db.academicYear.findFirst({ where: { id: academicYearId, tenantId } })
     if (!year) {
       return NextResponse.json({ error: 'academicYearId not found for this tenant' }, { status: 404 })
+    }
+
+    if (courseElementId) {
+      const element = await db.courseElement.findFirst({
+        where: { id: courseElementId, teachingUnit: { semester: { level: { program: { tenantId } } } } },
+        select: { teacherId: true, teachingUnit: { select: { responsibleId: true, semester: { select: { level: { select: { id: true, programId: true } } } } } } },
+      })
+      if (!element) return NextResponse.json({ error: 'Matière introuvable' }, { status: 404 })
+      if (programId !== element.teachingUnit.semester.level.programId || levelId !== element.teachingUnit.semester.level.id) {
+        return NextResponse.json({ error: 'Programme ou niveau incohérent avec la matière' }, { status: 400 })
+      }
+      if (teacherId && teacherId !== element.teacherId && teacherId !== element.teachingUnit.responsibleId) {
+        return NextResponse.json({ error: 'Enseignant non affecté à cette matière' }, { status: 400 })
+      }
     }
 
     if (roomId || teacherId) {
@@ -160,4 +183,4 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
 }
 
 export const GET = withTenantAuth(handleGet)
-export const POST = withTenantAuth(handlePost)
+export const POST = withTenantAuth(handlePost, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE', 'FACULTE', 'DEPARTEMENT'])

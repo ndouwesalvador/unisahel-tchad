@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
+import { getTeacherScope } from '@/lib/auth/teacher-scope'
 
 // GET /api/communications - List communications/broadcasts with stats
-async function handleGet(_user: SessionUser, tenantId: string, _request: NextRequest) {
+async function handleGet(user: SessionUser, tenantId: string, _request: NextRequest) {
   try {
-    const where = { tenantId }
+    const scope = user.role === 'ENSEIGNANT' ? await getTeacherScope(user, tenantId) : null
+    const where = { tenantId, ...(scope ? { teacherId: scope.teacherId ?? '', courseElementId: { in: scope.courseElementIds } } : {}) }
 
     const [communications, total, sent, pending, failed] = await Promise.all([
       db.communication.findMany({
@@ -38,10 +40,23 @@ async function handleGet(_user: SessionUser, tenantId: string, _request: NextReq
 }
 
 // POST /api/communications - Create a new communication/broadcast
-async function handlePost(_user: SessionUser, tenantId: string, request: NextRequest) {
+async function handlePost(user: SessionUser, tenantId: string, request: NextRequest) {
   try {
     const body = await request.json()
     const { subject, audience, type, priority, channel, content } = body
+
+    if (user.role === 'ENSEIGNANT') {
+      const scope = await getTeacherScope(user, tenantId)
+      const courseElementId = typeof body.courseElementId === 'string' ? body.courseElementId : ''
+      if (!scope.linked || !scope.courseElementIds.includes(courseElementId)) return NextResponse.json({ error: 'Matière non attribuée' }, { status: 403 })
+      if (typeof subject !== 'string' || !subject.trim() || typeof content !== 'string' || !content.trim()) return NextResponse.json({ error: 'Objet et message requis' }, { status: 400 })
+      const communication = await db.communication.create({ data: {
+        tenantId, courseElementId, teacherId: scope.teacherId,
+        subject: subject.trim(), content: content.trim(), audience: 'Administration',
+        type: 'ACADEMIC', priority: 'NORMAL', channel: 'IN_APP', status: 'SENT', sentDate: new Date(),
+      } })
+      return NextResponse.json({ communication }, { status: 201 })
+    }
 
     if (!subject?.trim() || !audience?.trim() || !type || !channel || !content?.trim()) {
       return NextResponse.json(
@@ -162,5 +177,5 @@ async function handleDelete(_user: SessionUser, tenantId: string, request: NextR
 
 export const GET = withTenantAuth(handleGet)
 export const POST = withTenantAuth(handlePost)
-export const PATCH = withTenantAuth(handlePatch)
-export const DELETE = withTenantAuth(handleDelete)
+export const PATCH = withTenantAuth(handlePatch, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE'])
+export const DELETE = withTenantAuth(handleDelete, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE'])

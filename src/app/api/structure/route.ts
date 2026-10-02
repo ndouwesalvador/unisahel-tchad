@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
+import { getTeacherScope } from '@/lib/auth/teacher-scope'
 import {
   createFacultySchema,
   createDepartmentSchema,
@@ -14,8 +15,9 @@ import {
   formatZodError,
 } from '@/lib/validations/api'
 
-async function handler(_user: SessionUser, tenantId: string, _request: NextRequest) {
+async function handler(user: SessionUser, tenantId: string, _request: NextRequest) {
   try {
+    const teacherScope = user.role === 'ENSEIGNANT' ? await getTeacherScope(user, tenantId) : null
     // Get tenant info
     const tenant = await db.tenant.findUnique({
       where: { id: tenantId },
@@ -106,7 +108,29 @@ async function handler(_user: SessionUser, tenantId: string, _request: NextReque
       orderBy: { name: 'asc' },
     })
 
-    const studentCounts = await db.student.groupBy({
+    const scopedFaculties = teacherScope ? faculties.map((faculty) => ({
+      ...faculty,
+      departments: faculty.departments.map((department) => ({
+        ...department,
+        programs: department.programs.map((program) => ({
+          ...program,
+          levels: program.levels.map((level) => ({
+            ...level,
+            semesters: level.semesters.map((semester) => ({
+              ...semester,
+              teachingUnits: semester.teachingUnits
+                .filter((unit) => teacherScope.teachingUnitIds.includes(unit.id))
+                .map((unit) => ({
+                  ...unit,
+                  courseElements: unit.courseElements.filter((element) => teacherScope.courseElementIds.includes(element.id)),
+                })),
+            })).filter((semester) => semester.teachingUnits.length > 0),
+          })).filter((level) => level.semesters.length > 0),
+        })).filter((program) => program.levels.length > 0),
+      })).filter((department) => department.programs.length > 0),
+    })).filter((faculty) => faculty.departments.length > 0) : faculties
+
+    const studentCounts = teacherScope ? [] : await db.student.groupBy({
       by: ['currentProgramId'],
       where: {
         tenantId,
@@ -120,7 +144,7 @@ async function handler(_user: SessionUser, tenantId: string, _request: NextReque
         .map((row) => [row.currentProgramId as string, row._count._all])
     )
 
-    const facultiesWithCounts = faculties.map((faculty) => {
+    const facultiesWithCounts = scopedFaculties.map((faculty) => {
       const departments = faculty.departments.map((department) => {
         const programs = department.programs.map((program) => ({
           ...program,

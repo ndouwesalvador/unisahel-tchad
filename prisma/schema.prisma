@@ -1232,6 +1232,10 @@ model ScheduledReport {
 model Attendance {
   id          String   @id @default(cuid())
   tenantId    String
+  studentId   String?
+  courseElementId String?
+  academicYearId String?
+  teacherId   String?
   studentName String
   matricule   String
   course      String
@@ -1248,6 +1252,8 @@ model Attendance {
   tenant      Tenant   @relation(fields: [tenantId], references: [id])
   
   @@index([tenantId])
+  @@index([tenantId, courseElementId, academicYearId])
+  @@unique([tenantId, studentId, courseElementId, academicYearId, date, timeSlot], map: "attendances_teacher_session_key")
   @@map("attendances")
 }
 
@@ -1258,6 +1264,8 @@ model Attendance {
 model OnlineExam {
   id          String   @id @default(cuid())
   tenantId    String
+  courseElementId String?
+  teacherId   String?
   name        String
   course      String
   examDate    DateTime
@@ -1275,12 +1283,15 @@ model OnlineExam {
   incidents   ExamIncident[]
 
   @@index([tenantId])
+  @@index([tenantId, courseElementId])
   @@map("online_exams")
 }
 
 model ExamBankQuestion {
   id            String   @id @default(cuid())
   tenantId      String
+  courseElementId String?
+  teacherId     String?
   tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   text          String
   type          String   @default("QCM") // QCM, Dissertation, Vrai-Faux
@@ -1294,6 +1305,7 @@ model ExamBankQuestion {
   updatedAt     DateTime @updatedAt
 
   @@index([tenantId])
+  @@index([tenantId, courseElementId])
   @@map("exam_bank_questions")
 }
 
@@ -1342,6 +1354,8 @@ model ExamIncident {
 model Communication {
   id          String   @id @default(cuid())
   tenantId    String
+  courseElementId String?
+  teacherId   String?
   subject     String
   audience    String
   type        String   // INFO, URGENT, ACADEMIC, ADMINISTRATIVE
@@ -1359,6 +1373,7 @@ model Communication {
   tenant      Tenant   @relation(fields: [tenantId], references: [id])
   
   @@index([tenantId])
+  @@index([tenantId, teacherId])
   @@map("communications")
 }
 

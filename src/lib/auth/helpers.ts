@@ -1,5 +1,6 @@
 import { auth } from '@/lib/auth/config'
 import { NextRequest, NextResponse } from 'next/server'
+import { isTeacherApiAllowed } from '@/lib/auth/teacher-policy'
 
 export interface SessionUser {
   id: string
@@ -147,6 +148,9 @@ export function withTenantAuth(
       }
 
       const url = new URL(request.url)
+      if (sessionUser.role === 'ENSEIGNANT' && !isTeacherApiAllowed(url.pathname, request.method)) {
+        return createAuthError('FORBIDDEN')
+      }
       const tenantId = url.searchParams.get('tenantId') || sessionUser.tenantId
 
       if (!tenantId) {

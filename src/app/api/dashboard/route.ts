@@ -109,7 +109,7 @@ async function getTeacherDashboardHandler(user: SessionUser, tenantId: string, a
   const [teacher, academicYear, announcements] = await Promise.all([
     db.teacher.findFirst({ where: { userId: user.id, tenantId, isActive: true }, select: { id: true } }),
     db.academicYear.findFirst({ where: academicYearId ? { id: academicYearId, tenantId } : { tenantId, isCurrent: true }, select: { id: true, name: true } }),
-    db.announcement.findMany({ where: { tenantId, isPublished: true }, orderBy: { publishedAt: 'desc' }, take: 5, select: { id: true, title: true, publishedAt: true, createdAt: true } }),
+    db.announcement.findMany({ where: { tenantId, isPublished: true, target: 'ALL' }, orderBy: { publishedAt: 'desc' }, take: 5, select: { id: true, title: true, publishedAt: true, createdAt: true } }),
   ])
 
   if (!teacher) {

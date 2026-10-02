@@ -7,6 +7,8 @@ const NOTIFICATIONS_LIMIT = 50
 // GET /api/notifications - list the tenant's most recent notifications + unread count
 async function handleGet(user: SessionUser, _request: NextRequest) {
   try {
+    // Legacy notifications have no recipient identifier and can concern other programmes.
+    if (user.role === 'ENSEIGNANT') return NextResponse.json({ notifications: [], unreadCount: 0 })
     if (!user.tenantId) {
       return NextResponse.json({ notifications: [], unreadCount: 0 })
     }
@@ -40,6 +42,7 @@ const NOTIFICATION_ACTIONS = ['read', 'read-all'] as const
 // PUT /api/notifications - mark every unread notification for the tenant read (action: 'read-all')
 async function handlePut(user: SessionUser, request: NextRequest) {
   try {
+    if (user.role === 'ENSEIGNANT') return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
     if (!user.tenantId) {
       return NextResponse.json({ count: 0 })
     }

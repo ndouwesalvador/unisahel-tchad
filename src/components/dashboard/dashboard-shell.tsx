@@ -106,6 +106,11 @@ const StaffUsersPage = lazyView(() => import('@/components/users/staff-users-pag
 const TeachersPage = lazyView(() => import('@/components/teachers/teachers-page').then(m => m.TeachersPage))
 const TeacherDetail = lazyView(() => import('@/components/teachers/teacher-detail').then(m => m.TeacherDetail))
 const MaquettePage = lazyView(() => import('@/components/maquette/maquette-page').then(m => m.MaquettePage))
+const TeacherUnitsPage = lazyView(() => import('@/components/teacher/teacher-workspace').then(m => m.TeacherUnitsPage))
+const TeacherTimetablePage = lazyView(() => import('@/components/teacher/teacher-workspace').then(m => m.TeacherTimetablePage))
+const TeacherAttendancePage = lazyView(() => import('@/components/teacher/teacher-workspace').then(m => m.TeacherAttendancePage))
+const TeacherOnlineExamPage = lazyView(() => import('@/components/teacher/teacher-workspace').then(m => m.TeacherOnlineExamPage))
+const TeacherMessagesPage = lazyView(() => import('@/components/teacher/teacher-workspace').then(m => m.TeacherMessagesPage))
 const AnnouncementsPage = lazyView(() => import('@/components/announcements/announcements-page').then(m => m.AnnouncementsPage))
 const ImportExportPage = lazyView(() => import('@/components/import-export/import-export-page').then(m => m.ImportExportPage))
 const TimetablePage = lazyView(() => import('@/components/timetable/timetable-page').then(m => m.TimetablePage))
@@ -492,11 +497,11 @@ function SidebarContent() {
       {/* Bottom actions */}
       <div className="border-t border-white/10 p-3 space-y-1">
         <button
-          onClick={() => setView('settings')}
+          onClick={() => setView(user.role === 'ENSEIGNANT' ? 'profile' : 'settings')}
           className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors ${sidebarCollapsed ? 'justify-center' : ''}`}
         >
           <Settings className="size-[18px] shrink-0" />
-          {!sidebarCollapsed && <span>Paramètres</span>}
+          {!sidebarCollapsed && <span>{user.role === 'ENSEIGNANT' ? 'Mon profil' : 'Paramètres'}</span>}
         </button>
         <button
           onClick={handleLogout}
@@ -514,6 +519,14 @@ function SidebarContent() {
 
 function MainContent({ view }: { view: AppView }) {
   const { user } = useAppStore()
+  if (user?.role === 'ENSEIGNANT') {
+    if (view === 'maquette') return <TeacherUnitsPage />
+    if (view === 'timetable') return <TeacherTimetablePage />
+    if (view === 'attendance') return <TeacherAttendancePage />
+    if (view === 'online-exam') return <TeacherOnlineExamPage />
+    if (view === 'communication') return <TeacherMessagesPage />
+    if (!['dashboard', 'grades', 'profile'].includes(view)) return <DashboardHome />
+  }
   if (view === 'health' && !isHealthAcademicSystem(user?.tenantAcademicSystem)) {
     return <DashboardHome />
   }
@@ -623,6 +636,10 @@ export function DashboardShell() {
   const academicYears: { id: string; name: string; isCurrent?: boolean }[] = academicYearsData?.data ?? []
   const currentAcademicYearId = selectedAcademicYearId || academicYears.find((year) => year.isCurrent)?.id || academicYears[0]?.id
   const visibleNavItems = useMemo(() => getVisibleNavItems(user), [user])
+  useEffect(() => {
+    if (user?.role !== 'ENSEIGNANT') return
+    if (!['dashboard', 'maquette', 'grades', 'timetable', 'attendance', 'online-exam', 'communication', 'profile'].includes(currentView)) setView('dashboard')
+  }, [user?.role, currentView, setView])
   const searchTerm = searchQuery.trim().toLowerCase()
   const searchResults = searchTerm
     ? visibleNavItems.filter((item) => {
@@ -706,7 +723,7 @@ export function DashboardShell() {
               <nav className="flex items-center gap-1.5 text-sm">
                 <span className="text-gray-500">UniSahel</span>
                 <span className="text-gray-400">/</span>
-                <span className="font-medium text-[#1a2744]">{viewLabels[currentView]}</span>
+                <span className="font-medium text-[#1a2744]">{user.role === 'ENSEIGNANT' && currentView === 'maquette' ? 'Mes UE' : viewLabels[currentView]}</span>
               </nav>
             </div>
 
@@ -771,7 +788,7 @@ export function DashboardShell() {
               </Select>
 
               {/* Notifications */}
-              <button
+              {user.role !== 'ENSEIGNANT' && <button
                 className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors"
                 onClick={toggleNotifications}
                 aria-label="Notifications"
@@ -786,17 +803,17 @@ export function DashboardShell() {
                     {unreadCount}
                   </motion.span>
                 )}
-              </button>
+              </button>}
 
               {/* Verify */}
-              <Button
+              {user.role !== 'ENSEIGNANT' && <Button
                 variant="ghost"
                 size="sm"
                 className="hidden sm:flex text-xs text-[#2d7a4f] hover:text-[#236b40]"
                 onClick={() => setView('verify')}
               >
                 Vérifier document
-              </Button>
+              </Button>}
 
               {/* User Dropdown */}
               <DropdownMenu>
@@ -818,10 +835,10 @@ export function DashboardShell() {
                     <CircleUser className="size-4 mr-2" />
                     Mon profil
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setView('settings')}>
+                  {user.role !== 'ENSEIGNANT' && <DropdownMenuItem onClick={() => setView('settings')}>
                     <Settings className="size-4 mr-2" />
                     Paramètres
-                  </DropdownMenuItem>
+                  </DropdownMenuItem>}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout} className="text-red-600">
                     <LogOut className="size-4 mr-2" />
@@ -849,10 +866,10 @@ export function DashboardShell() {
       </motion.div>
 
       {/* Notification Panel */}
-      <NotificationPanel />
+      {user.role !== 'ENSEIGNANT' && <NotificationPanel />}
 
       {/* AI Assistant Widget */}
-      <AIAssistantWidget />
+      {user.role !== 'ENSEIGNANT' && <AIAssistantWidget />}
     </div>
   )
 }

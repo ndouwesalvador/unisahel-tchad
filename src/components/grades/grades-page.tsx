@@ -162,11 +162,14 @@ function computeMoyenne(cc: string, exam: string, tp: string, stage: string, pol
 function StaffGradesPage() {
   const queryClient = useQueryClient()
   const userRole = useAppStore((state) => state.user?.role)
+  const selectedAcademicYearId = useAppStore((state) => state.selectedAcademicYearId)
   const canLockGrades = ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE', 'RESPONSABLE_FILIERE'].includes(userRole || '')
 
   const { data: structureQuery, isLoading: structureLoading } = useStructure()
-  const { data: dashboardQuery } = useDashboardStats()
-  const academicYearId: string | undefined = dashboardQuery?.currentAcademicYear?.id
+  const { data: dashboardQuery } = useDashboardStats(selectedAcademicYearId)
+  const academicYearId: string | undefined = userRole === 'ENSEIGNANT'
+    ? dashboardQuery?.academicYear?.id
+    : dashboardQuery?.currentAcademicYear?.id
 
   const { data: policyQuery, isPending: policyPending, isError: policyError } = useQuery<{ data: GradingPolicy & { passingGrade: number } }>({
     queryKey: ['grades-policy'],
