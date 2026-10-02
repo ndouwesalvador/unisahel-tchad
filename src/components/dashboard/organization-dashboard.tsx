@@ -1,15 +1,17 @@
 'use client'
 
 import { useAppStore } from '@/lib/store'
-import { useStructure, useTimetable } from '@/lib/api-hooks'
+import { useAcademicYears, useStructure, useTimetable } from '@/lib/api-hooks'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { CalendarDays, GraduationCap, BookOpen } from 'lucide-react'
 
 export function OrganizationDashboard() {
-  const { user, setView } = useAppStore()
+  const { user, setView, selectedAcademicYearId } = useAppStore()
   const { data: structure, isLoading } = useStructure()
-  const { data: timetable } = useTimetable()
+  const { data: years } = useAcademicYears()
+  const activeYearId = selectedAcademicYearId || years?.data?.find((year: { isCurrent?: boolean }) => year.isCurrent)?.id || years?.data?.[0]?.id || ''
+  const { data: timetable } = useTimetable({ academicYearId: activeYearId }, { enabled: Boolean(activeYearId) })
   const faculties = structure?.faculties ?? []
   const departments = faculties.flatMap((faculty: { departments?: { name: string; programs?: { name: string; levels?: unknown[] }[] }[] }) => faculty.departments ?? [])
   const programs = departments.flatMap((department: { programs?: { name: string; levels?: unknown[] }[] }) => department.programs ?? [])

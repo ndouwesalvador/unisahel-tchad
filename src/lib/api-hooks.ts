@@ -199,9 +199,10 @@ export function useCandidatures() {
   return useSimpleGet('candidatures', '/api/candidature');
 }
 
-export function useTimetable(params?: { programId?: string; levelId?: string }) {
+export function useTimetable(params?: { programId?: string; levelId?: string; academicYearId?: string }, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ['timetable', params],
+    enabled: options?.enabled ?? true,
     queryFn: async () => {
       const url = new URL('/api/timetable', window.location.origin);
       if (params) {

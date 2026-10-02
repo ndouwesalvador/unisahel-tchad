@@ -4,7 +4,7 @@
 const methods: Record<string, readonly string[]> = {
   '/api/structure': ['GET'],
   '/api/teachers': ['GET'],
-  '/api/timetable': ['GET', 'POST'],
+  '/api/timetable': ['GET', 'POST', 'PUT', 'DELETE'],
   '/api/rooms': ['GET'],
   '/api/academic-years': ['GET'],
   '/api/profile': ['GET'],

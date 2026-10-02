@@ -78,7 +78,7 @@ const typeConfig: Record<CourseType, { label: string; className: string; bgClass
   EXAM: { label: 'Examen', className: 'text-white', bgClass: 'bg-[#c0392b]' },
 }
 
-const days = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi']
+const days = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
 const daysFrench: Record<string, string> = {
   Monday: 'Lundi',
   Tuesday: 'Mardi',
@@ -88,7 +88,6 @@ const daysFrench: Record<string, string> = {
   Saturday: 'Samedi',
   Sunday: 'Dimanche',
 }
-const hours = Array.from({ length: 11 }, (_, i) => i + 7) // 7h to 17h
 
 // ─── API Types & Mapping ────────────────────────────────────────────────────────
 
@@ -97,6 +96,7 @@ const hours = Array.from({ length: 11 }, (_, i) => i + 7) // 7h to 17h
 // raw FKs only useful for a future create/edit form, not for display.
 interface TimetableSlotRecord {
   id: string
+  academicYearId: string
   dayOfWeek: number
   startTime: string
   endTime: string
@@ -140,11 +140,15 @@ interface StructureFaculty {
 // this page's own Monday-first week (see `days` above).
 const dayOfWeekNames = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
 
-// This page's grid only has whole-hour rows (7h-17h), so only the hour
-// portion of the "HH:MM" API strings is used.
 function parseHour(time: string): number {
-  const hour = parseInt(time.split(':')[0] ?? '', 10)
-  return Number.isNaN(hour) ? 0 : hour
+  const [hour, minute] = time.split(':').map(Number)
+  return Number.isFinite(hour) && Number.isFinite(minute) ? hour + minute / 60 : 0
+}
+
+function formatHour(value: number): string {
+  const hour = Math.floor(value)
+  const minute = Math.round((value - hour) * 60)
+  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`
 }
 
 // TimetableSlot has no subject-area/department concept, so the UI uses one
@@ -289,23 +293,23 @@ function useCountUp(target: number, duration: number = 1400) {
 
 // ─── Time Slot Block Component ────────────────────────────────────────────────
 
-function TimeSlotBlock({ slot }: { slot: TimeSlot }) {
+function TimeSlotBlock({ slot, onClick }: { slot: TimeSlot; onClick?: () => void }) {
   const config = typeConfig[slot.type]
   const subjectConf = subjectConfig[slot.subjectArea]
-  const duration = slot.endHour - slot.startHour
-  const height = duration * 60 // 60px per hour
 
   return (
-    <motion.div
+    <motion.button
+      type="button"
+      disabled={!onClick}
+      onClick={onClick}
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.2 }}
-      className={`rounded-lg p-1.5 ${subjectConf.cardBg} ${subjectConf.cardBorder} ${subjectConf.cardText} cursor-pointer hover:shadow-md transition-shadow shadow-sm overflow-hidden`}
-      style={{ height: `${height - 4}px` }}
+      className={`w-full rounded-lg p-1.5 text-left ${subjectConf.cardBg} ${subjectConf.cardBorder} ${subjectConf.cardText} ${onClick ? 'cursor-pointer hover:shadow-md' : ''} transition-shadow shadow-sm overflow-hidden`}
     >
       <div className="flex items-center justify-between mb-0.5">
         <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${config.bgClass} text-white`}>{config.label}</span>
-        <span className="text-[8px] opacity-60">{slot.startHour}h-{slot.endHour}h</span>
+        <span className="text-[8px] opacity-60">{formatHour(slot.startHour)}–{formatHour(slot.endHour)}</span>
       </div>
       <p className="text-[11px] font-semibold leading-tight mb-0.5 truncate">{slot.course}</p>
       <div className="flex items-center gap-1 mt-0.5">
@@ -322,26 +326,29 @@ function TimeSlotBlock({ slot }: { slot: TimeSlot }) {
           <span className="text-[9px] opacity-70 truncate">{slot.group}</span>
         </div>
       )}
-    </motion.div>
+    </motion.button>
   )
 }
 
 // ─── Day View Slot Card ───────────────────────────────────────────────────────
 
-function DaySlotCard({ slot }: { slot: TimeSlot }) {
+function DaySlotCard({ slot, onClick }: { slot: TimeSlot; onClick?: () => void }) {
   const subjectConf = subjectConfig[slot.subjectArea]
   const config = typeConfig[slot.type]
 
   return (
-    <motion.div
+    <motion.button
+      type="button"
+      disabled={!onClick}
+      onClick={onClick}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25 }}
-      className={`rounded-xl p-4 ${subjectConf.cardBg} ${subjectConf.cardBorder} ${subjectConf.cardText} shadow-sm hover:shadow-md transition-shadow`}
+      className={`w-full rounded-xl p-4 text-left ${subjectConf.cardBg} ${subjectConf.cardBorder} ${subjectConf.cardText} shadow-sm ${onClick ? 'cursor-pointer hover:shadow-md' : ''} transition-shadow`}
     >
       <div className="flex items-center justify-between mb-2">
         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${config.bgClass} text-white`}>{config.label}</span>
-        <span className="text-xs opacity-60">{slot.startHour}h - {slot.endHour}h</span>
+        <span className="text-xs opacity-60">{formatHour(slot.startHour)}–{formatHour(slot.endHour)}</span>
       </div>
       <h3 className="text-sm font-bold mb-2">{slot.course}</h3>
       <div className="space-y-1.5">
@@ -360,14 +367,14 @@ function DaySlotCard({ slot }: { slot: TimeSlot }) {
             </div>
           )}
       </div>
-    </motion.div>
+    </motion.button>
   )
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function TimetablePage() {
-  const { user } = useAppStore()
+  const { user, selectedAcademicYearId } = useAppStore()
   const canManageSlots = ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE', 'FACULTE', 'DEPARTEMENT'].includes(user?.role ?? '')
   const queryClient = useQueryClient()
   const [filterProgram, setFilterProgram] = useState('all')
@@ -376,16 +383,21 @@ export function TimetablePage() {
   const [selectedDay, setSelectedDay] = useState('Lundi')
   const [currentTime, setCurrentTime] = useState(new Date())
   const [showCreateSlot, setShowCreateSlot] = useState(false)
+  const [editingSlotId, setEditingSlotId] = useState<string | null>(null)
   const [isCreatingSlot, setIsCreatingSlot] = useState(false)
+  const [isDeletingSlot, setIsDeletingSlot] = useState(false)
   const [slotForm, setSlotForm] = useState<TimetableForm>(emptyTimetableForm)
 
+  const { data: academicYearsData } = useAcademicYears()
+  const availableYears: { id: string; name: string; isCurrent?: boolean }[] = academicYearsData?.data ?? []
+  const activeYearId = selectedAcademicYearId || availableYears.find((year) => year.isCurrent)?.id || availableYears[0]?.id || ''
   const { data: timetableQuery, isLoading } = useTimetable({
     programId: filterProgram === 'all' ? undefined : filterProgram,
     levelId: filterLevel === 'all' ? undefined : filterLevel,
-  })
+    academicYearId: activeYearId,
+  }, { enabled: Boolean(activeYearId) })
   const { data: roomsQuery, isLoading: isRoomsLoading } = useRooms()
   const { data: structureData } = useStructure()
-  const { data: academicYearsData } = useAcademicYears()
   const { data: teachersData } = useTeachers({ limit: 1000 })
   const timeSlots: TimeSlot[] = (timetableQuery?.slots || []).map(mapSlot)
   const rooms: RoomInfo[] = (roomsQuery?.data || []).map(mapRoom)
@@ -435,11 +447,8 @@ export function TimetablePage() {
   const animatedSalles = useCountUp(rooms.length, 1200)
 
   useEffect(() => {
-    const currentYearId = academicYears.find((year) => year.isCurrent)?.id || academicYears[0]?.id || ''
-    if (currentYearId && !slotForm.academicYearId) {
-      setSlotForm((form) => ({ ...form, academicYearId: currentYearId }))
-    }
-  }, [academicYears, slotForm.academicYearId])
+    if (activeYearId && !editingSlotId) setSlotForm((form) => ({ ...form, academicYearId: activeYearId }))
+  }, [activeYearId, editingSlotId])
 
   useEffect(() => {
     const interval = setInterval(() => setCurrentTime(new Date()), 60000)
@@ -479,6 +488,26 @@ export function TimetablePage() {
     })
   }
 
+  const openExistingSlot = (id: string) => {
+    if (!canManageSlots) return
+    const slot = (timetableQuery?.slots as TimetableSlotRecord[] | undefined)?.find((entry) => entry.id === id)
+    if (!slot) return
+    setEditingSlotId(id)
+    setSlotForm({
+      academicYearId: slot.academicYearId,
+      dayOfWeek: String(slot.dayOfWeek),
+      startTime: slot.startTime,
+      endTime: slot.endTime,
+      type: slot.type,
+      courseElementId: slot.courseElementId || '',
+      teacherId: slot.teacherId || '',
+      roomId: slot.roomId || '',
+      programId: slot.programId || '',
+      levelId: slot.levelId || '',
+    })
+    setShowCreateSlot(true)
+  }
+
   const handleCreateSlot = async () => {
     if (!canCreateTimetableSlot) {
       toast.error('Creation impossible', {
@@ -501,8 +530,8 @@ export function TimetablePage() {
 
     setIsCreatingSlot(true)
     try {
-      const res = await fetch('/api/timetable', {
-        method: 'POST',
+      const res = await fetch(editingSlotId ? `/api/timetable?id=${encodeURIComponent(editingSlotId)}` : '/api/timetable', {
+        method: editingSlotId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           academicYearId: slotForm.academicYearId,
@@ -520,10 +549,10 @@ export function TimetablePage() {
       const json = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(json.error || 'Création impossible')
 
-      toast.success('Créneau ajouté')
+      toast.success(editingSlotId ? 'Créneau modifié' : 'Créneau ajouté')
       queryClient.invalidateQueries({ queryKey: ['timetable'] })
-      queryClient.invalidateQueries({ queryKey: ['timetable', { programId: filterProgram === 'all' ? undefined : filterProgram, levelId: filterLevel === 'all' ? undefined : filterLevel }] })
       setShowCreateSlot(false)
+      setEditingSlotId(null)
       setSlotForm((form) => ({
         ...emptyTimetableForm,
         academicYearId: form.academicYearId,
@@ -537,6 +566,24 @@ export function TimetablePage() {
     }
   }
 
+  const handleDeleteSlot = async () => {
+    if (!editingSlotId || !window.confirm('Supprimer ce créneau ? Cette action sera enregistrée dans le journal.')) return
+    setIsDeletingSlot(true)
+    try {
+      const response = await fetch(`/api/timetable?id=${encodeURIComponent(editingSlotId)}`, { method: 'DELETE' })
+      const json = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(json.error || 'Suppression impossible')
+      toast.success('Créneau supprimé')
+      queryClient.invalidateQueries({ queryKey: ['timetable'] })
+      setShowCreateSlot(false)
+      setEditingSlotId(null)
+    } catch (error) {
+      toast.error('Erreur', { description: error instanceof Error ? error.message : 'Suppression impossible' })
+    } finally {
+      setIsDeletingSlot(false)
+    }
+  }
+
   const currentHour = currentTime.getHours()
   const currentMinute = currentTime.getMinutes()
 
@@ -546,15 +593,16 @@ export function TimetablePage() {
 
   const filteredSlots = useMemo(() => timeSlots, [timeSlots])
 
-  const getSlotAtHour = (day: string, hour: number) =>
-    filteredSlots.find(s => s.day === day && s.startHour === hour)
+  const getSlotsAtHour = (day: string, hour: number) =>
+    filteredSlots.filter(s => s.day === day && Math.floor(s.startHour) === hour)
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const isSlotContinuation = (day: string, hour: number) =>
-    filteredSlots.some(s => s.day === day && s.startHour < hour && s.endHour > hour && s.startHour !== hour)
+  const gridStartHour = Math.min(7, ...filteredSlots.map((slot) => Math.floor(slot.startHour)))
+  const gridEndHour = Math.max(18, ...filteredSlots.map((slot) => Math.ceil(slot.endHour)))
+  const gridHours = Array.from({ length: gridEndHour - gridStartHour }, (_, index) => index + gridStartHour)
 
   const getRoomStatus = (roomName: string) => {
-    const now = filteredSlots.find(s => s.room === roomName && currentHour >= s.startHour && currentHour < s.endHour)
+    const nowHour = currentHour + currentMinute / 60
+    const now = filteredSlots.find(s => s.room === roomName && s.day === todayFrench && nowHour >= s.startHour && nowHour < s.endHour)
     return now ? 'occupee' : 'libre'
   }
 
@@ -566,26 +614,23 @@ export function TimetablePage() {
   // Day view data
   const daySlots = filteredSlots.filter(s => s.day === selectedDay).sort((a, b) => a.startHour - b.startHour)
 
-  // Current time line position (percentage within 7h-18h range)
-  const timeLinePosition = ((currentHour - 7) + currentMinute / 60) * 60
-
   // Quick stats
   const hoursPerDay = Math.round((totalHours / days.length) * 10) / 10
   const roomOccupancyRate = rooms.length > 0 ? Math.round((occupiedRooms / rooms.length) * 100) : 0
   const upcomingSlot = filteredSlots.find(s => {
     if (s.day !== todayFrench) return false
-    return s.startHour > currentHour || (s.startHour === currentHour && currentMinute < 30)
+    return s.startHour > currentHour + currentMinute / 60
   })
   const nextCourseText = upcomingSlot
-    ? `${upcomingSlot.course} a ${upcomingSlot.startHour}h`
+    ? `${upcomingSlot.course} à ${formatHour(upcomingSlot.startHour)}`
     : 'Aucun cours prevu'
 
   return (
     <div className="space-y-6">
-      <Dialog open={canManageSlots && showCreateSlot} onOpenChange={setShowCreateSlot}>
+      <Dialog open={canManageSlots && showCreateSlot} onOpenChange={(open) => { setShowCreateSlot(open); if (!open) setEditingSlotId(null) }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Ajouter un créneau</DialogTitle>
+            <DialogTitle>{editingSlotId ? 'Modifier le créneau' : 'Ajouter un créneau'}</DialogTitle>
           </DialogHeader>
           {!canCreateTimetableSlot && (
             <div className="rounded-lg border border-[#d4a85330] bg-[#d4a85308] p-3 text-xs text-[#1a2744]">
@@ -616,7 +661,7 @@ export function TimetablePage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {dayOfWeekNames.slice(0, 6).map((day, index) => (
+                  {dayOfWeekNames.map((day, index) => (
                     <SelectItem key={day} value={String(index)}>{day}</SelectItem>
                   ))}
                 </SelectContent>
@@ -716,9 +761,10 @@ export function TimetablePage() {
             </div>
           </div>
           <div className="flex justify-end gap-2">
+            {editingSlotId && <Button variant="destructive" className="mr-auto" disabled={isDeletingSlot || isCreatingSlot} onClick={handleDeleteSlot}>{isDeletingSlot ? 'Suppression…' : 'Supprimer'}</Button>}
             <Button variant="outline" onClick={() => setShowCreateSlot(false)}>Annuler</Button>
             <Button className="bg-[#2d7a4f] hover:bg-[#236b40] text-white" disabled={isCreatingSlot || !canCreateTimetableSlot} onClick={handleCreateSlot}>
-              {isCreatingSlot ? 'Création...' : 'Créer le créneau'}
+              {isCreatingSlot ? 'Enregistrement…' : editingSlotId ? 'Enregistrer les modifications' : 'Créer le créneau'}
             </Button>
           </div>
         </DialogContent>
@@ -763,6 +809,7 @@ export function TimetablePage() {
                       levelId: filterLevel === 'all' ? form.levelId : filterLevel,
                       courseElementId: filterProgram === 'all' && filterLevel === 'all' ? form.courseElementId : '',
                     }))
+                    setEditingSlotId(null)
                     setShowCreateSlot(true)
                   }}
                 >
@@ -1037,38 +1084,24 @@ export function TimetablePage() {
 
                         {/* Time Rows */}
                         <div className="relative">
-                          {hours.map(hour => (
+                          {gridHours.map(hour => (
                             <div key={hour} className="flex border-b border-gray-100" style={{ minHeight: '60px' }}>
                               <div className="w-16 shrink-0 p-2 text-center border-r border-gray-200 flex items-start justify-center">
                                 <span className="text-[10px] font-mono text-gray-400">{String(hour).padStart(2, '0')}:00</span>
                               </div>
                               {days.map(day => {
-                                const slot = getSlotAtHour(day, hour)
+                                const startingSlots = getSlotsAtHour(day, hour)
                                 const isToday = day === todayFrench
                                 return (
                                   <div key={`${day}-${hour}`} className={`flex-1 p-0.5 border-l border-gray-100 ${isToday ? 'bg-[#2d7a4f05]' : ''}`}>
-                                    {slot && <TimeSlotBlock slot={slot} />}
+                                    <div className="space-y-1">
+                                      {startingSlots.map((slot) => <TimeSlotBlock key={slot.id} slot={slot} onClick={canManageSlots ? () => openExistingSlot(slot.id) : undefined} />)}
+                                    </div>
                                   </div>
                                 )
                               })}
                             </div>
                           ))}
-                          {/* Animated current time indicator */}
-                          {currentHour >= 7 && currentHour < 18 && todayFrench && days.includes(todayFrench) && (
-                            <motion.div
-                              className="absolute left-16 right-0 h-0.5 bg-red-500 z-10 pointer-events-none"
-                              style={{ top: `${timeLinePosition}px` }}
-                              initial={{ opacity: 0 }}
-                              animate={{ opacity: 1 }}
-                              transition={{ duration: 0.5 }}
-                            >
-                              <motion.div
-                                className="absolute -left-1.5 -top-1 w-3 h-3 rounded-full bg-red-500"
-                                animate={{ scale: [1, 1.2, 1] }}
-                                transition={{ duration: 2, repeat: Infinity }}
-                              />
-                            </motion.div>
-                          )}
                         </div>
                       </div>
                       {timeSlots.length === 0 && (
@@ -1091,7 +1124,7 @@ export function TimetablePage() {
                       <Calendar className="size-4" />
                       Vue par jour
                     </CardTitle>
-                    <div className="flex gap-1">
+                    <div className="flex flex-wrap gap-1">
                       {days.map(day => (
                         <Button
                           key={day}
@@ -1115,7 +1148,7 @@ export function TimetablePage() {
                     <>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {daySlots.map(slot => (
-                          <DaySlotCard key={slot.id} slot={slot} />
+                          <DaySlotCard key={slot.id} slot={slot} onClick={canManageSlots ? () => openExistingSlot(slot.id) : undefined} />
                         ))}
                       </div>
                       {daySlots.length === 0 && (

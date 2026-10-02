@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { Prisma } from '@prisma/client'
 import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
 import { getTeacherScope } from '@/lib/auth/teacher-scope'
@@ -81,6 +82,7 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
       teacher: (s.teacherId && teacherMap.get(s.teacherId)) || '',
       room: (s.roomId && roomMap.get(s.roomId)) || '',
       courseElementId: s.courseElementId,
+      academicYearId: s.academicYearId,
       teacherId: s.teacherId,
       roomId: s.roomId,
       programId: s.programId,
@@ -94,9 +96,12 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
   }
 }
 
-// POST /api/timetable - create a new slot
-async function handlePost(user: SessionUser, tenantId: string, request: NextRequest) {
+// POST/PUT /api/timetable - create or revise a slot. The original and target
+// program must both belong to the manager's scope.
+async function saveSlot(user: SessionUser, tenantId: string, request: NextRequest, existingId?: string) {
   try {
+    const existing = existingId ? await db.timetableSlot.findFirst({ where: { id: existingId, tenantId } }) : null
+    if (existingId && !existing) return NextResponse.json({ error: 'Créneau introuvable' }, { status: 404 })
     const body = await request.json()
     const { academicYearId, dayOfWeek, startTime, endTime, courseElementId, teacherId, roomId, programId, levelId, type } = body
 
@@ -129,6 +134,13 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
     if (organizationScope && organizationScope.departmentIds.length === 0) {
       return NextResponse.json({ error: 'Aucun département actif ne vous est attribué.' }, { status: 403 })
     }
+    if (existing && organizationScope) {
+      const originalProgram = existing.programId ? await db.program.findFirst({
+        where: { id: existing.programId, tenantId, departmentId: { in: organizationScope.departmentIds } },
+        select: { id: true },
+      }) : null
+      if (!originalProgram) return NextResponse.json({ error: 'Créneau hors de votre périmètre' }, { status: 403 })
+    }
     const program = await db.program.findFirst({ where: { id: programId, tenantId, isActive: true }, select: { id: true, departmentId: true } })
     if (!program) return NextResponse.json({ error: 'Programme introuvable' }, { status: 404 })
     if (!program.departmentId) return NextResponse.json({ error: 'Rattachez le programme à un département avant de le planifier.' }, { status: 400 })
@@ -156,32 +168,7 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
       }
     }
 
-    if (roomId || teacherId) {
-      const conflicts = await db.timetableSlot.findMany({
-        where: {
-          tenantId,
-          academicYearId,
-          dayOfWeek: day,
-          startTime: { lt: endTime },
-          endTime: { gt: startTime },
-          OR: [
-            ...(roomId ? [{ roomId }] : []),
-            ...(teacherId ? [{ teacherId }] : []),
-            { levelId },
-          ],
-        },
-        take: 1,
-      })
-      if (conflicts.length > 0) {
-        return NextResponse.json(
-          { error: 'Conflit détecté : salle, enseignant ou niveau déjà occupé sur ce créneau.' },
-          { status: 409 }
-        )
-      }
-    }
-
-    const slot = await db.timetableSlot.create({
-      data: {
+    const slotData = {
         tenantId,
         academicYearId,
         dayOfWeek: day,
@@ -193,26 +180,85 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
         programId: programId ?? null,
         levelId: levelId ?? null,
         type: type ?? undefined,
-      },
-    })
+      }
+    let slot: Awaited<ReturnType<typeof db.timetableSlot.create>> | undefined
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        slot = await db.$transaction(async (tx) => {
+          const conflicts = await tx.timetableSlot.findMany({
+            where: {
+              tenantId, academicYearId, dayOfWeek: day,
+              startTime: { lt: endTime }, endTime: { gt: startTime },
+              ...(existingId ? { id: { not: existingId } } : {}),
+              OR: [{ roomId }, { teacherId }, { levelId }],
+            }, take: 1,
+          })
+          if (conflicts.length > 0) throw new Error('SLOT_CONFLICT')
+          const saved = existingId
+            ? await tx.timetableSlot.update({ where: { id: existingId }, data: slotData })
+            : await tx.timetableSlot.create({ data: slotData })
+          await tx.auditLog.create({ data: {
+            tenantId, userId: user.id, action: existingId ? 'UPDATE' : 'CREATE', entity: 'TimetableSlot', entityId: saved.id,
+            details: JSON.stringify({ before: existing ? { programId: existing.programId, levelId: existing.levelId, courseElementId: existing.courseElementId, teacherId: existing.teacherId, roomId: existing.roomId, dayOfWeek: existing.dayOfWeek, startTime: existing.startTime, endTime: existing.endTime } : null, after: slotData }),
+          } })
+          return saved
+        }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable })
+        break
+      } catch (error) {
+        if (error instanceof Error && error.message === 'SLOT_CONFLICT') {
+          return NextResponse.json({ error: 'Conflit détecté : salle, enseignant ou niveau déjà occupé sur ce créneau.' }, { status: 409 })
+        }
+        if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2034' && attempt < 2) continue
+        throw error
+      }
+    }
+    if (!slot) return NextResponse.json({ error: 'Conflit de planification, réessayez.' }, { status: 409 })
 
-    await db.auditLog.create({
-      data: {
-        tenantId,
-        userId: user.id,
-        action: 'CREATE',
-        entity: 'TimetableSlot',
-        entityId: slot.id,
-        details: JSON.stringify({ dayOfWeek, startTime, endTime }),
-      },
-    })
-
-    return NextResponse.json({ slot }, { status: 201 })
+    return NextResponse.json({ slot }, { status: existingId ? 200 : 201 })
   } catch (error) {
     console.error('Create timetable slot error:', error)
     return NextResponse.json({ error: 'Failed to create timetable slot' }, { status: 500 })
   }
 }
 
+async function handlePost(user: SessionUser, tenantId: string, request: NextRequest) {
+  return saveSlot(user, tenantId, request)
+}
+
+async function handlePut(user: SessionUser, tenantId: string, request: NextRequest) {
+  const id = request.nextUrl.searchParams.get('id')
+  if (!id) return NextResponse.json({ error: 'Identifiant du créneau requis' }, { status: 400 })
+  return saveSlot(user, tenantId, request, id)
+}
+
+async function handleDelete(user: SessionUser, tenantId: string, request: NextRequest) {
+  try {
+    const id = request.nextUrl.searchParams.get('id')
+    if (!id) return NextResponse.json({ error: 'Identifiant du créneau requis' }, { status: 400 })
+    const slot = await db.timetableSlot.findFirst({ where: { id, tenantId } })
+    if (!slot) return NextResponse.json({ error: 'Créneau introuvable' }, { status: 404 })
+    const scope = await getOrganizationScope(user, tenantId)
+    if (scope) {
+      const program = slot.programId ? await db.program.findFirst({
+        where: { id: slot.programId, tenantId, departmentId: { in: scope.departmentIds } }, select: { id: true },
+      }) : null
+      if (!program) return NextResponse.json({ error: 'Créneau hors de votre périmètre' }, { status: 403 })
+    }
+    await db.$transaction(async (tx) => {
+      await tx.timetableSlot.delete({ where: { id } })
+      await tx.auditLog.create({ data: {
+        tenantId, userId: user.id, action: 'DELETE', entity: 'TimetableSlot', entityId: id,
+        details: JSON.stringify({ programId: slot.programId, levelId: slot.levelId, courseElementId: slot.courseElementId, teacherId: slot.teacherId, roomId: slot.roomId, dayOfWeek: slot.dayOfWeek, startTime: slot.startTime, endTime: slot.endTime }),
+      } })
+    })
+    return NextResponse.json({ deleted: true })
+  } catch (error) {
+    console.error('Delete timetable slot error:', error)
+    return NextResponse.json({ error: 'Suppression du créneau impossible' }, { status: 500 })
+  }
+}
+
 export const GET = withTenantAuth(handleGet)
 export const POST = withTenantAuth(handlePost, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE', 'FACULTE', 'DEPARTEMENT'])
+export const PUT = withTenantAuth(handlePut, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE', 'FACULTE', 'DEPARTEMENT'])
+export const DELETE = withTenantAuth(handleDelete, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE', 'FACULTE', 'DEPARTEMENT'])
