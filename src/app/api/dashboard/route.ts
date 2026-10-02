@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { withTenantAuth } from '@/lib/auth/helpers'
-import { resolveOwnStudentId } from '@/lib/auth/student-scope'
+import { isStudentSelfRole, resolveOwnStudentId } from '@/lib/auth/student-scope'
 
 import type { SessionUser } from '@/lib/auth/helpers'
 
@@ -12,10 +12,10 @@ function round2(value: number): number {
 // A student's own dashboard: personal academic/payment status, never the
 // institution-wide admin aggregates (total revenue, every student's status, etc.)
 // that the rest of this route computes for staff roles.
-async function getStudentDashboardHandler(studentId: string, tenantId: string) {
+async function getStudentDashboardHandler(studentId: string, tenantId: string, academicYearId: string | null) {
   const now = new Date()
 
-  const [student, currentAcademicYear, settings, payments, announcements, upcomingExamSessions, grades] = await Promise.all([
+  const [student, currentAcademicYear, settings, payments, announcements, upcomingExamSessions] = await Promise.all([
     db.student.findUnique({
       where: { id: studentId },
       select: {
@@ -28,16 +28,17 @@ async function getStudentDashboardHandler(studentId: string, tenantId: string) {
         currentLevel: { select: { name: true } },
       },
     }),
-    db.academicYear.findFirst({ where: { tenantId, isCurrent: true }, include: { sessions: true } }),
+    db.academicYear.findFirst({ where: academicYearId ? { id: academicYearId, tenantId } : { tenantId, isCurrent: true }, include: { sessions: true } }),
     db.tenantSettings.findUnique({ where: { tenantId }, select: { passingGrade: true } }),
     db.payment.findMany({ where: { tenantId, studentId }, orderBy: { createdAt: 'desc' } }),
     db.announcement.findMany({ where: { tenantId, isPublished: true }, orderBy: { publishedAt: 'desc' }, take: 5 }),
     db.examSession.findMany({ where: { academicYear: { tenantId }, startDate: { gte: now } }, orderBy: { startDate: 'asc' }, take: 5 }),
-    db.grade.findMany({
-      where: { studentId, finalGrade: { not: null } },
-      select: { finalGrade: true, courseElement: { select: { coefficient: true } } },
-    }),
   ])
+
+  const grades = currentAcademicYear ? await db.grade.findMany({
+    where: { studentId, academicYearId: currentAcademicYear.id, session: 'NORMALE', isLocked: true, finalGrade: { not: null } },
+    select: { finalGrade: true, courseElement: { select: { coefficient: true } } },
+  }) : []
 
   const passingGrade = settings?.passingGrade ?? 10
   let weightedSum = 0
@@ -102,12 +103,66 @@ async function getStudentDashboardHandler(studentId: string, tenantId: string) {
   })
 }
 
-async function getDashboardHandler(user: SessionUser, tenantId: string, _request: NextRequest) {
+async function getTeacherDashboardHandler(user: SessionUser, tenantId: string, academicYearId: string | null) {
+  const [teacher, academicYear, announcements] = await Promise.all([
+    db.teacher.findFirst({ where: { userId: user.id, tenantId, isActive: true }, select: { id: true } }),
+    db.academicYear.findFirst({ where: academicYearId ? { id: academicYearId, tenantId } : { tenantId, isCurrent: true }, select: { id: true, name: true } }),
+    db.announcement.findMany({ where: { tenantId, isPublished: true }, orderBy: { publishedAt: 'desc' }, take: 5, select: { id: true, title: true, publishedAt: true, createdAt: true } }),
+  ])
+
+  if (!teacher) {
+    return NextResponse.json({ isTeacherView: true, linked: false, assignments: [], stats: { assignedCourses: 0, enteredGrades: 0, lockedGrades: 0 }, academicYear, announcements: [] })
+  }
+
+  const elements = await db.courseElement.findMany({
+    where: {
+      teachingUnit: { semester: { level: { program: { tenantId } } } },
+      OR: [{ teacherId: teacher.id }, { teachingUnit: { responsibleId: teacher.id } }],
+    },
+    select: {
+      id: true, code: true, name: true,
+      teachingUnit: { select: { code: true, name: true, semester: { select: { name: true, level: { select: { name: true, program: { select: { name: true } } } } } } } },
+    },
+  })
+  const ids = elements.map((element) => element.id)
+  const gradeWhere = { courseElementId: { in: ids }, student: { tenantId }, academicYearId: academicYear?.id ?? '', finalGrade: { not: null } }
+  const [enteredGrades, lockedGrades] = ids.length && academicYear
+    ? await Promise.all([
+      db.grade.count({ where: gradeWhere }),
+      db.grade.count({ where: { ...gradeWhere, isLocked: true } }),
+    ])
+    : [0, 0]
+
+  return NextResponse.json({
+    isTeacherView: true,
+    linked: true,
+    academicYear,
+    stats: { assignedCourses: elements.length, enteredGrades, lockedGrades },
+    assignments: elements.map((element) => ({
+      id: element.id, code: element.code, name: element.name,
+      teachingUnit: element.teachingUnit.name,
+      program: element.teachingUnit.semester.level.program.name,
+      level: element.teachingUnit.semester.level.name,
+      semester: element.teachingUnit.semester.name,
+    })),
+    announcements: announcements.map((announcement) => ({ id: announcement.id, title: announcement.title, date: announcement.publishedAt ?? announcement.createdAt })),
+  })
+}
+
+async function getDashboardHandler(user: SessionUser, tenantId: string, request: NextRequest) {
   try {
+    const requestedYearId = request.nextUrl.searchParams.get('academicYearId')
+    if (requestedYearId && !await db.academicYear.findFirst({ where: { id: requestedYearId, tenantId }, select: { id: true } })) {
+      return NextResponse.json({ error: 'Année académique introuvable' }, { status: 404 })
+    }
     const ownStudentId = await resolveOwnStudentId(user)
     if (ownStudentId) {
-      return getStudentDashboardHandler(ownStudentId, tenantId)
+      return getStudentDashboardHandler(ownStudentId, tenantId, requestedYearId)
     }
+    if (isStudentSelfRole(user.role)) {
+      return NextResponse.json({ error: 'Profil étudiant non lié à ce compte' }, { status: 403 })
+    }
+    if (user.role === 'ENSEIGNANT') return getTeacherDashboardHandler(user, tenantId, requestedYearId)
 
     const now = new Date()
 

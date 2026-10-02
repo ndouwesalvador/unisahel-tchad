@@ -45,11 +45,9 @@ import {
   Stamp,
   Award,
   BookOpen,
-  CreditCard,
   ClipboardList,
   GraduationCap,
   ScrollText,
-  Briefcase,
   Info,
   ExternalLink,
   Hash,
@@ -66,10 +64,7 @@ const documentTypeList = [
   { key: 'attestation_niveau', apiType: 'ATTESTATION_NIVEAU', label: 'Attestation de niveau', icon: Award, implemented: true, requiresStudent: true, tooltip: 'Exige une année, une délibération finale validée et tous les crédits sans dette' },
   { key: 'diplome', apiType: 'DIPLOME', label: 'Diplôme', icon: GraduationCap, implemented: true, requiresStudent: true, tooltip: 'Exige la validation de tous les niveaux du programme sans dette' },
   { key: 'certificat_scolarite', apiType: 'CERTIFICAT_SCOLARITE', label: 'Certificat de scolarite', icon: ScrollText, implemented: true, requiresStudent: true, tooltip: 'Certificat prouvant la frequentation reguliere de l\'etudiant selectionne' },
-  { key: 'pv_deliberation', apiType: 'PV_DELIBERATION', label: 'PV de deliberation', icon: ClipboardList, implemented: false, requiresStudent: false, tooltip: 'A generer depuis un jury de deliberation selectionne' },
-  { key: 'attestation_reussite', apiType: null, label: 'Attestation de reussite', icon: Award, implemented: false, requiresStudent: true, tooltip: 'Modele non configure dans ce module' },
-  { key: 'carte_etudiant', apiType: null, label: 'Carte etudiant', icon: CreditCard, implemented: false, requiresStudent: true, tooltip: 'Modele non configure dans ce module' },
-  { key: 'attestation_stage', apiType: null, label: 'Attestation de stage', icon: Briefcase, implemented: false, requiresStudent: true, tooltip: 'Modele non configure dans ce module' },
+  { key: 'pv_deliberation', apiType: 'PV_DELIBERATION', label: 'PV de délibération', icon: ClipboardList, implemented: false, requiresStudent: false, tooltip: 'À générer depuis une session de jury validée' },
 ]
 
 interface GeneratedDoc {
@@ -127,6 +122,8 @@ function useCountUp(target: number, duration: number = 1400) {
 
 export function DocumentsPage() {
   const { user, setView } = useAppStore()
+  const canManageDocuments = ['ADMIN_INSTITUTION', 'RECTORAT', 'SCOLARITE'].includes(user?.role ?? '')
+  const canOpenJury = user?.role === 'ADMIN_INSTITUTION'
   const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState('all')
@@ -144,7 +141,7 @@ export function DocumentsPage() {
   const { data: docsData } = useDocuments() as {
     data: { documents: Array<{ id: string; type: string; studentId: string | null; academicYearId: string | null; etudiant: string; matricule: string; date: string; statut: 'signe' | 'genere' | 'en_attente'; codeVerification: string }>; stats: { thisMonth: number; pending: number }; countByType: Record<string, number> } | undefined
   }
-  const { data: studentMatches } = useStudents({ search: studentSearch, limit: 6 })
+  const { data: studentMatches } = useStudents({ search: studentSearch, limit: 6 }, { enabled: canManageDocuments })
   const { data: academicYearsResponse } = useAcademicYears()
   const academicYears = useMemo(
     () => (academicYearsResponse?.data ?? []) as Array<{ id: string; name: string; isCurrent: boolean }>,
@@ -438,7 +435,7 @@ export function DocumentsPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-[#2d7a4f]">{totalSigned}</p>
-                <p className="text-[11px] text-gray-500">Documents signes</p>
+                <p className="text-[11px] text-gray-500">Documents validés</p>
               </div>
             </CardContent>
           </Card>
@@ -467,7 +464,7 @@ export function DocumentsPage() {
         </div>
 
         {/* Document Generator Card */}
-        <Card className="border-l-4 border-l-[#2d7a4f]">
+        {canManageDocuments && <Card id="document-generator" className="border-l-4 border-l-[#2d7a4f]">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-semibold text-[#1a2744] flex items-center gap-2">
               <Stamp className="size-4 text-[#2d7a4f]" />
@@ -481,10 +478,8 @@ export function DocumentsPage() {
                   <SelectValue placeholder="Type de document" />
                 </SelectTrigger>
                 <SelectContent>
-                  {documentTypeList.map(dt => (
-                    <SelectItem key={dt.key} value={dt.key} disabled={!dt.implemented}>
-                      {dt.label}{!dt.implemented ? ' (non configuré)' : ''}
-                    </SelectItem>
+                  {documentTypeList.filter((type) => type.implemented).map((type) => (
+                    <SelectItem key={type.key} value={type.key}>{type.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -569,7 +564,7 @@ export function DocumentsPage() {
               </p>
             )}
           </CardContent>
-        </Card>
+        </Card>}
 
         {/* Filters Section */}
         <Card>
@@ -719,7 +714,7 @@ export function DocumentsPage() {
         {/* Document Types Reference + Verification Info */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           {/* Document Types Reference Card */}
-          <Card className="lg:col-span-2">
+          {canManageDocuments && <Card className="lg:col-span-2">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-semibold text-[#1a2744] flex items-center gap-2">
                 <GraduationCap className="size-4 text-[#d4a853]" />
@@ -728,24 +723,33 @@ export function DocumentsPage() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {documentTypeList.map((dt) => {
+                {documentTypeList.filter((type) => type.key !== 'pv_deliberation' || canOpenJury).map((dt) => {
                   const Icon = dt.icon
                   const count = dt.apiType ? docsData?.countByType?.[dt.apiType] ?? 0 : 0
                   return (
                     <Tooltip key={dt.key}>
                       <TooltipTrigger asChild>
-                        <div
-                          className={`flex flex-col items-center gap-2 p-3 rounded-lg border border-gray-100 transition-colors ${dt.implemented ? 'hover:border-[#2d7a4f30] hover:bg-[#2d7a4f05] cursor-pointer' : 'opacity-50'}`}
-                          style={{ borderTop: `3px solid ${dt.implemented ? '#2d7a4f' : '#9ca3af'}` }}
+                        <button
+                          type="button"
+                          className="flex w-full flex-col items-center gap-2 rounded-lg border border-gray-200 p-3 transition-colors hover:border-emerald-600 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700"
+                          style={{ borderTop: '3px solid #2d7a4f' }}
+                          onClick={() => {
+                            if (dt.key === 'pv_deliberation') {
+                              setView('deliberation')
+                            } else {
+                              setSelectedType(dt.key)
+                              document.getElementById('document-generator')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                            }
+                          }}
                         >
                           <div className="w-9 h-9 rounded-lg bg-[#1a274410] flex items-center justify-center">
                             <Icon className="size-4 text-[#1a2744]" />
                           </div>
                           <div className="text-center">
                             <p className="text-[11px] font-medium text-[#1a2744] leading-tight">{dt.label}</p>
-                            <p className="text-[10px] text-gray-400 mt-0.5">{dt.implemented ? `${count} generes` : 'Non configuré'}</p>
+                            <p className="text-[10px] text-slate-600 mt-0.5">{dt.key === 'pv_deliberation' ? `${count} générés · ouvrir les jurys` : `${count} générés`}</p>
                           </div>
-                        </div>
+                        </button>
                       </TooltipTrigger>
                       <TooltipContent side="bottom" className="max-w-[220px] text-xs">
                         {dt.tooltip}
@@ -755,10 +759,10 @@ export function DocumentsPage() {
                 })}
               </div>
             </CardContent>
-          </Card>
+          </Card>}
 
           {/* Verification Info Card */}
-          <Card>
+          <Card className={canManageDocuments ? '' : 'lg:col-span-3'}>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-semibold text-[#1a2744] flex items-center gap-2">
                 <Shield className="size-4 text-[#2d7a4f]" />

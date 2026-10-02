@@ -13,11 +13,12 @@ function useSimpleGet(key: string, path: string) {
   });
 }
 
-export function useDashboardStats() {
+export function useDashboardStats(academicYearId?: string | null) {
   return useQuery({
-    queryKey: ['dashboardStats'],
+    queryKey: ['dashboardStats', academicYearId ?? null],
     queryFn: async () => {
-      const res = await fetch('/api/dashboard');
+      const path = academicYearId ? `/api/dashboard?academicYearId=${encodeURIComponent(academicYearId)}` : '/api/dashboard';
+      const res = await fetch(path);
       if (!res.ok) {
         throw new Error('Failed to fetch dashboard stats');
       }
@@ -26,9 +27,10 @@ export function useDashboardStats() {
   });
 }
 
-export function useStudents(params?: { search?: string; status?: string; programId?: string; levelId?: string; page?: number; limit?: number }) {
+export function useStudents(params?: { search?: string; status?: string; programId?: string; levelId?: string; page?: number; limit?: number }, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ['students', params],
+    enabled: options?.enabled ?? true,
     queryFn: async () => {
       const url = new URL('/api/students', window.location.origin);
       if (params) {

@@ -93,6 +93,7 @@ const alertConfig = {
 
 interface StudentDashboardResponse {
   isStudentView: true
+  isTeacherView?: false
   student: {
     firstName: string
     lastName: string
@@ -113,6 +114,16 @@ interface StudentDashboardResponse {
   currentAcademicYear: { id: string; name: string; startDate: string; endDate: string; examSessions: number } | null
 }
 
+interface TeacherDashboardResponse {
+  isTeacherView: true
+  isStudentView?: false
+  linked: boolean
+  academicYear: { id: string; name: string } | null
+  stats: { assignedCourses: number; enteredGrades: number; lockedGrades: number }
+  assignments: { id: string; code: string | null; name: string; teachingUnit: string; program: string; level: string; semester: string }[]
+  announcements: { id: string; title: string; date: string }[]
+}
+
 // ─── Quick actions for a student's own dashboard ───────────────────────────────
 
 const studentQuickActions = [
@@ -125,42 +136,40 @@ const studentQuickActions = [
 function StudentDashboardHome({ data }: { data: StudentDashboardResponse }) {
   const { user, setView } = useAppStore()
   const paymentStatusLabel: Record<string, { label: string; color: string }> = {
-    VALIDATED: { label: 'A jour', color: '#2d7a4f' },
-    PENDING: { label: 'En attente de validation', color: '#d4a853' },
+    VALIDATED: { label: 'Validé', color: '#166534' },
+    PENDING: { label: 'En attente de validation', color: '#92400e' },
     CANCELLED: { label: 'Annule', color: '#c62828' },
     REFUNDED: { label: 'Rembourse', color: '#c62828' },
   }
   const paymentStatus = data.stats.lastPaymentStatus
     ? paymentStatusLabel[data.stats.lastPaymentStatus] ?? { label: data.stats.lastPaymentStatus, color: '#9ca3af' }
-    : { label: 'Aucun paiement enregistre', color: '#9ca3af' }
+    : { label: 'Aucun paiement enregistré', color: '#475569' }
 
   return (
     <div className="space-y-6">
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-        <Card className="overflow-hidden">
-          <div
-            className="relative p-6 text-white"
-            style={{ background: 'linear-gradient(135deg, #1a2744 0%, #1f3050 50%, #2d7a4f 100%)' }}
-          >
-            <h1 className="text-2xl font-bold">
+        <Card className="overflow-hidden border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-emerald-100 bg-emerald-50 p-6 text-slate-900">
+            <p className="mb-2 text-xs font-bold uppercase tracking-widest text-emerald-800">Espace étudiant</p>
+            <h1 className="text-2xl font-bold text-slate-950">
               {getGreeting()}, {user?.firstName} {user?.lastName}
             </h1>
-            <p className="text-white/70 mt-1">
+            <p className="mt-1 text-sm text-slate-700">
               {data.student?.program ?? 'Programme non affecte'} {data.student?.level ? `- ${data.student.level}` : ''}
             </p>
             <div className="flex flex-wrap items-center gap-2 mt-3">
               {data.currentAcademicYear ? (
-                <Badge className="bg-white/20 text-white border-0 hover:bg-white/20 text-xs backdrop-blur-sm">
+                <Badge className="border border-emerald-200 bg-white text-emerald-900 hover:bg-white text-xs">
                   <Calendar className="size-3 mr-1" />
                   Annee academique {data.currentAcademicYear.name}
                 </Badge>
               ) : (
-                <Badge className="bg-white/20 text-white border-0 hover:bg-white/20 text-xs backdrop-blur-sm">
+                <Badge className="border border-amber-300 bg-amber-50 text-amber-950 hover:bg-amber-50 text-xs">
                   Aucune annee academique active
                 </Badge>
               )}
               {data.student?.matricule && (
-                <Badge className="bg-white/20 text-white border-0 hover:bg-white/20 text-xs backdrop-blur-sm">
+                <Badge className="border border-slate-200 bg-white text-slate-900 hover:bg-white text-xs">
                   Matricule {data.student.matricule}
                 </Badge>
               )}
@@ -173,13 +182,13 @@ function StudentDashboardHome({ data }: { data: StudentDashboardResponse }) {
                 <Button
                   key={action.label}
                   variant="outline"
-                  className="h-auto py-3 w-full flex flex-col items-center gap-2"
+                  className="h-auto min-h-24 py-3 w-full flex flex-col items-center gap-2 border-slate-300 bg-white text-slate-900 hover:bg-emerald-50 hover:text-slate-950 focus-visible:ring-emerald-700"
                   onClick={() => setView(action.view)}
                 >
                   <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ backgroundColor: action.bgColor }}>
                     <action.icon className="size-4" style={{ color: action.color }} />
                   </div>
-                  <span className="text-[11px] font-medium text-gray-600">{action.label}</span>
+                  <span className="text-sm font-semibold text-slate-800">{action.label}</span>
                 </Button>
               ))}
             </div>
@@ -190,26 +199,26 @@ function StudentDashboardHome({ data }: { data: StudentDashboardResponse }) {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Moyenne generale</p>
+            <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Moyenne des notes publiées</p>
             <p className="text-2xl font-bold text-[#1a2744] mt-1.5">
               {data.stats.moyenneGenerale !== null ? `${data.stats.moyenneGenerale.toFixed(2)}/20` : 'Aucune note'}
             </p>
-            <p className="text-xs text-gray-400 mt-1">Seuil de passage : {data.stats.passingGrade}/20</p>
+            <p className="text-xs text-slate-600 mt-1">Session normale · seuil : {data.stats.passingGrade}/20</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Statut des paiements</p>
+            <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Dernier paiement</p>
             <p className="text-lg font-bold mt-1.5" style={{ color: paymentStatus.color }}>{paymentStatus.label}</p>
-            <p className="text-xs text-gray-400 mt-1">{data.stats.totalPaid.toLocaleString('fr-FR')} FCFA verses au total</p>
+            <p className="text-xs text-slate-600 mt-1">{data.stats.totalPaid.toLocaleString('fr-FR')} FCFA validés au total</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Statut administratif</p>
+            <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Statut administratif</p>
             <p className="text-lg font-bold text-[#1a2744] mt-1.5">{statusLabels[data.student?.status ?? '']?.label ?? data.student?.status ?? '—'}</p>
             {data.stats.pendingPaymentsCount > 0 && (
-              <p className="text-xs text-[#d4a853] mt-1">{data.stats.pendingPaymentsCount} paiement(s) en attente de validation</p>
+              <p className="text-xs font-medium text-amber-900 mt-1">{data.stats.pendingPaymentsCount} paiement(s) en attente de validation</p>
             )}
           </CardContent>
         </Card>
@@ -274,8 +283,71 @@ function StudentDashboardHome({ data }: { data: StudentDashboardResponse }) {
   )
 }
 
+function TeacherDashboardHome({ data }: { data: TeacherDashboardResponse }) {
+  const { user, setView } = useAppStore()
+  const links = [
+    { label: 'Mes matières', view: 'maquette' as const, icon: BookOpen },
+    { label: 'Saisir les notes', view: 'grades' as const, icon: FileCheck },
+    { label: 'Emploi du temps', view: 'timetable' as const, icon: Calendar },
+  ]
+
+  return (
+    <div className="space-y-6 text-slate-900">
+      <Card className="border-slate-200 bg-white shadow-sm">
+        <CardContent className="p-6">
+          <p className="mb-2 text-xs font-bold uppercase tracking-widest text-emerald-800">Espace enseignant</p>
+          <h1 className="text-2xl font-bold text-slate-950">{getGreeting()}, {user?.firstName} {user?.lastName}</h1>
+          <p className="mt-2 text-sm text-slate-700">{data.academicYear ? `Année académique ${data.academicYear.name}` : 'Aucune année académique active'}</p>
+          {!data.linked && (
+            <p role="status" className="mt-4 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm font-medium text-amber-950">
+              Votre compte n’est pas encore relié à une fiche enseignant active. Demandez à l’administration de vérifier cette affectation.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        {[
+          ['Matières attribuées', data.stats.assignedCourses],
+          ['Notes saisies', data.stats.enteredGrades],
+          ['Notes verrouillées', data.stats.lockedGrades],
+        ].map(([label, value]) => (
+          <Card key={label} className="border-slate-200 bg-white"><CardContent className="p-5"><p className="text-sm font-semibold text-slate-600">{label}</p><p className="mt-2 text-3xl font-bold text-slate-950">{value}</p></CardContent></Card>
+        ))}
+      </div>
+
+      <Card className="border-slate-200 bg-white">
+        <CardHeader><CardTitle className="text-lg text-slate-950">Actions rapides</CardTitle></CardHeader>
+        <CardContent className="grid gap-3 sm:grid-cols-3">
+          {links.map((link) => <Button key={link.view} variant="outline" className="h-12 justify-start border-slate-300 bg-white text-sm font-semibold text-slate-900 hover:bg-emerald-50 hover:text-slate-950" onClick={() => setView(link.view)}><link.icon className="mr-2 size-4 text-emerald-800" />{link.label}</Button>)}
+        </CardContent>
+      </Card>
+
+      <Card className="border-slate-200 bg-white">
+        <CardHeader><CardTitle className="text-lg text-slate-950">Mes matières attribuées</CardTitle></CardHeader>
+        <CardContent>
+          {data.assignments.length ? <ul className="divide-y divide-slate-200">
+            {data.assignments.map((element) => <li key={element.id} className="py-3">
+              <p className="font-semibold text-slate-950">{element.code ? `${element.code} · ` : ''}{element.name}</p>
+              <p className="mt-1 text-sm text-slate-700">{element.teachingUnit} · {element.program} · {element.level} · {element.semester}</p>
+            </li>)}
+          </ul> : <p className="text-sm text-slate-700">Aucune matière attribuée. Seules les matières affectées à votre fiche enseignant apparaissent ici.</p>}
+        </CardContent>
+      </Card>
+
+      <Card className="border-slate-200 bg-white">
+        <CardHeader><CardTitle className="text-lg text-slate-950">Annonces de l’établissement</CardTitle></CardHeader>
+        <CardContent>
+          {data.announcements.length ? <ul className="divide-y divide-slate-200">{data.announcements.map((announcement) => <li key={announcement.id} className="flex flex-wrap justify-between gap-2 py-3 text-sm"><span className="font-medium text-slate-900">{announcement.title}</span><span className="text-slate-600">{formatDateShort(announcement.date)}</span></li>)}</ul> : <p className="text-sm text-slate-700">Aucune annonce publiée.</p>}
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
 interface DashboardApiResponse {
   isStudentView?: false
+  isTeacherView?: false
   statsCards: {
     totalStudents: number
     totalTeachers: number
@@ -371,13 +443,15 @@ function PulsingDot({ color = '#2d7a4f' }: { color?: string }) {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function DashboardHome() {
-  const { user, setView } = useAppStore()
-  const { data, isLoading } = useDashboardStats() as {
-    data: DashboardApiResponse | StudentDashboardResponse | undefined
+  const { user, setView, selectedAcademicYearId } = useAppStore()
+  const { data, isLoading, isError, refetch } = useDashboardStats(selectedAcademicYearId) as {
+    data: DashboardApiResponse | StudentDashboardResponse | TeacherDashboardResponse | undefined
     isLoading: boolean
+    isError: boolean
+    refetch: () => void
   }
 
-  if (isLoading || !data) {
+  if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="animate-pulse flex flex-col items-center">
@@ -388,9 +462,14 @@ export function DashboardHome() {
     )
   }
 
+  if (isError || !data) {
+    return <Card><CardContent className="flex flex-wrap items-center gap-4 p-6 text-slate-900"><p>Impossible de charger le tableau de bord.</p><Button variant="outline" onClick={() => refetch()}>Réessayer</Button></CardContent></Card>
+  }
+
   if (data.isStudentView) {
     return <StudentDashboardHome data={data} />
   }
+  if (data.isTeacherView) return <TeacherDashboardHome data={data} />
 
   const statsCards = [
     { title: 'Dossiers étudiants', value: data.statsCards.totalStudents.toLocaleString('fr-FR'), icon: Users, color: '#2d7a4f', bgColor: '#2d7a4f15' },

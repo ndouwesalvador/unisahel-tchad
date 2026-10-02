@@ -4,20 +4,34 @@ import { formatDate, formatNumber, getVerificationUrl, TenantInfo, StudentInfo }
 
 const colors = {
   primary: '#1a2744',
-  secondary: '#2d7a4f',
-  accent: '#d4a853',
-  text: '#1a1a1a',
-  muted: '#6b7280',
-  border: '#e5e7eb',
+  secondary: '#176341',
+  accent: '#a97624',
+  text: '#111827',
+  muted: '#475569',
+  border: '#cbd5e1',
 }
 
 const styles = StyleSheet.create({
   page: {
-    padding: 40,
+    paddingTop: 42,
+    paddingHorizontal: 48,
+    paddingBottom: 95,
     fontFamily: 'Helvetica',
     fontSize: 10,
     color: colors.text,
   },
+  topRule: { height: 5, backgroundColor: colors.primary, marginBottom: 14 },
+  identity: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
+  monogram: { width: 48, height: 48, borderWidth: 1.5, borderColor: colors.secondary, alignItems: 'center', justifyContent: 'center', marginRight: 13 },
+  monogramText: { fontSize: 11, fontWeight: 'bold', color: colors.secondary, textAlign: 'center' },
+  identityBody: { flex: 1 },
+  country: { fontSize: 8, fontWeight: 'bold', color: colors.primary, letterSpacing: 1.2, marginBottom: 3 },
+  ministry: { fontSize: 7.5, color: colors.muted, marginBottom: 3 },
+  reference: { maxWidth: 132, alignItems: 'flex-end', marginLeft: 10 },
+  referenceLabel: { fontSize: 7, fontWeight: 'bold', color: colors.muted, marginBottom: 3 },
+  referenceValue: { fontSize: 7.5, color: colors.primary, textAlign: 'right' },
+  contactLine: { paddingVertical: 6, borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.border, fontSize: 7.5, color: colors.muted, marginBottom: 17 },
+  eyebrow: { fontSize: 8, fontWeight: 'bold', color: colors.secondary, letterSpacing: 1.4, textAlign: 'center', marginBottom: 8 },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -34,28 +48,29 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   institutionName: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
     color: colors.primary,
   },
   institutionSub: {
-    fontSize: 9,
+    fontSize: 8,
     color: colors.muted,
     marginTop: 2,
   },
   docTitle: {
-    fontSize: 14,
+    fontSize: 17,
     fontWeight: 'bold',
     textAlign: 'center',
     color: colors.primary,
-    marginVertical: 15,
+    marginTop: 0,
+    marginBottom: 7,
     textTransform: 'uppercase',
   },
   docSubtitle: {
-    fontSize: 10,
+    fontSize: 9,
     textAlign: 'center',
     color: colors.muted,
-    marginBottom: 15,
+    marginBottom: 21,
   },
   section: {
     marginBottom: 12,
@@ -64,8 +79,8 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: 'bold',
     color: colors.primary,
-    backgroundColor: '#f3f4f6',
-    padding: '6 10',
+    backgroundColor: '#edf5f0',
+    padding: '7 10',
     marginBottom: 8,
     textTransform: 'uppercase',
   },
@@ -92,11 +107,11 @@ const styles = StyleSheet.create({
   tableHeader: {
     flexDirection: 'row',
     backgroundColor: colors.primary,
-    padding: '6 8',
+    padding: '8 8',
   },
   tableHeaderCell: {
     color: 'white',
-    fontSize: 8,
+    fontSize: 8.5,
     fontWeight: 'bold',
     textTransform: 'uppercase',
   },
@@ -104,52 +119,52 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
-    padding: '5 8',
+    padding: '6 8',
   },
   tableRowAlt: {
     backgroundColor: '#f9fafb',
   },
   tableCell: {
-    fontSize: 8,
+    fontSize: 8.5,
     color: colors.text,
   },
   tableCellRight: {
-    fontSize: 8,
+    fontSize: 8.5,
     color: colors.text,
     textAlign: 'right',
   },
   tableCellCenter: {
-    fontSize: 8,
+    fontSize: 8.5,
     color: colors.text,
     textAlign: 'center',
   },
   signature: {
-    marginTop: 30,
+    marginTop: 36,
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
   signatureBlock: {
-    width: '30%',
+    width: '42%',
     alignItems: 'center',
   },
   signatureLine: {
     width: '100%',
     borderTopWidth: 1,
     borderTopColor: colors.text,
-    marginTop: 30,
+    marginTop: 34,
     marginBottom: 4,
   },
   signatureLabel: {
-    fontSize: 8,
+    fontSize: 8.5,
     color: colors.muted,
   },
   footer: {
     position: 'absolute',
-    bottom: 20,
-    left: 40,
-    right: 40,
+    bottom: 19,
+    left: 48,
+    right: 48,
     textAlign: 'center',
-    fontSize: 7,
+    fontSize: 7.5,
     color: colors.muted,
     borderTopWidth: 1,
     borderTopColor: colors.border,
@@ -157,89 +172,99 @@ const styles = StyleSheet.create({
   },
   verificationBar: {
     position: 'absolute',
-    bottom: 50,
-    left: 40,
-    right: 40,
+    bottom: 48,
+    left: 48,
+    right: 48,
     flexDirection: 'row',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     alignItems: 'center',
-    gap: 20,
-    padding: '6 10',
-    backgroundColor: '#f0fdf4',
+    gap: 12,
+    padding: '8 10',
+    backgroundColor: '#f8fafc',
     borderWidth: 1,
-    borderColor: colors.secondary,
-    borderRadius: 4,
+    borderColor: colors.border,
   },
   verificationText: {
-    fontSize: 7,
-    color: colors.secondary,
+    fontSize: 7.5,
+    color: colors.primary,
   },
   verificationTextGroup: {
     flexDirection: 'column',
     gap: 2,
   },
   qrCode: {
-    width: 40,
-    height: 40,
-  },
-  stamp: {
-    position: 'absolute',
-    top: 200,
-    right: 60,
-    width: 100,
-    height: 100,
-    borderWidth: 3,
-    borderColor: colors.accent,
-    borderRadius: 8,
-    opacity: 0.3,
-    transform: 'rotate(-15)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  stampText: {
-    fontSize: 10,
-    color: colors.accent,
-    fontWeight: 'bold',
-    textTransform: 'uppercase',
+    width: 42,
+    height: 42,
   },
   pageNumber: {
     position: 'absolute',
-    bottom: 20,
-    right: 40,
+    bottom: 19,
+    right: 48,
     fontSize: 7,
     color: colors.muted,
   },
 })
 
-function Stamp({ text = 'VALIDE' }: { text?: string }) {
+function DocumentHeader({ tenant, docNumber }: { tenant: TenantInfo; docNumber?: string }) {
+  const shortName = tenant.shortName?.trim() || tenant.name.split(/\s+/).map((word) => word[0]).join('').slice(0, 4).toUpperCase()
+  const contact = [tenant.address, tenant.city, tenant.phone, tenant.email, tenant.website].filter(Boolean).join('  ·  ')
   return (
-    <View style={styles.stamp}>
-      <Text style={styles.stampText}>{text}</Text>
+    <View wrap={false}>
+      <View style={styles.topRule} />
+      <View style={styles.identity}>
+        <View style={styles.monogram}><Text style={styles.monogramText}>{shortName}</Text></View>
+        <View style={styles.identityBody}>
+          {tenant.country && <Text style={styles.country}>{tenant.country.toUpperCase()}</Text>}
+          {tenant.ministry && <Text style={styles.ministry}>{tenant.ministry.toUpperCase()}</Text>}
+          <Text style={styles.institutionName}>{tenant.name}</Text>
+          {tenant.motto && <Text style={styles.institutionSub}>{tenant.motto}</Text>}
+        </View>
+        {docNumber && <View style={styles.reference}>
+          <Text style={styles.referenceLabel}>RÉFÉRENCE</Text>
+          <Text style={styles.referenceValue}>{docNumber}</Text>
+        </View>}
+      </View>
+      <Text style={styles.contactLine}>{contact || 'Coordonnées de l’établissement non renseignées'}</Text>
     </View>
   )
 }
 
-function Footer({ docNumber, verificationCode, qrCodeDataUrl, isSigned = false }: { docNumber?: string; verificationCode?: string; qrCodeDataUrl?: string; isSigned?: boolean }) {
+function DocumentHeading({ title, subtitle, isSigned, eyebrow }: { title: string; subtitle?: string; isSigned: boolean; eyebrow?: string }) {
+  return <View wrap={false}>
+    <Text style={styles.eyebrow}>{eyebrow ?? (isSigned ? 'DOCUMENT VALIDÉ PAR L’ÉTABLISSEMENT' : 'APERÇU NON VALIDÉ')}</Text>
+    <Text style={styles.docTitle}>{title}</Text>
+    {subtitle && <Text style={styles.docSubtitle}>{subtitle}</Text>}
+  </View>
+}
+
+function SignatureField({ title, name }: { title: string; name?: string }) {
+  return <View style={styles.signatureBlock} wrap={false}>
+    <View style={styles.signatureLine} />
+    <Text style={styles.signatureLabel}>{title}</Text>
+    {name && <Text style={[styles.signatureLabel, { color: colors.primary, marginTop: 3 }]}>{name}</Text>}
+  </View>
+}
+
+function Footer({ tenant, docNumber, verificationCode, qrCodeDataUrl, isSigned = false }: { tenant: TenantInfo; docNumber?: string; verificationCode?: string; qrCodeDataUrl?: string; isSigned?: boolean }) {
   return (
     <>
       {verificationCode && (
-        <View style={styles.verificationBar}>
+        <View style={styles.verificationBar} wrap={false} fixed>
           {/* eslint-disable-next-line jsx-a11y/alt-text -- @react-pdf/renderer's Image, not an HTML img */}
           {qrCodeDataUrl && <Image src={qrCodeDataUrl} style={styles.qrCode} />}
           <View style={styles.verificationTextGroup}>
-            <Text style={styles.verificationText}>Code de vérification: {verificationCode}</Text>
-            <Text style={styles.verificationText}>Scannez le QR code ou vérifiez sur {getVerificationUrl(verificationCode).replace(/^https?:\/\//, '')}</Text>
+            <Text style={[styles.verificationText, { fontWeight: 'bold' }]}>{isSigned ? 'Authenticité vérifiable' : 'Document non validé'} · {verificationCode}</Text>
+            <Text style={styles.verificationText}>{getVerificationUrl(verificationCode).replace(/^https?:\/\//, '')}</Text>
           </View>
         </View>
       )}
-      <View style={styles.footer}>
+      <View style={styles.footer} wrap={false} fixed>
         <Text>
-          UniSahel — Plateforme SaaS de Gestion Universitaire Africaine
-          {docNumber ? ` | Document: ${docNumber}` : ''}
+          {tenant.name}{docNumber ? ` · ${docNumber}` : ''}
         </Text>
-        <Text>{isSigned ? 'Document validé par l’établissement - authenticité vérifiable avec le code ci-dessus' : 'Document non validé - ne constitue pas une pièce officielle'}</Text>
+        <Text>{isSigned ? 'Validation électronique vérifiable par le code ci-dessus. Aucun cachet ou signature manuscrite n’est simulé.' : 'APERÇU NON VALIDÉ - ne constitue pas une pièce officielle.'}</Text>
       </View>
-      <Text style={styles.pageNumber} render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`} />
+      <Text style={styles.pageNumber} fixed render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`} />
     </>
   )
 }
@@ -252,25 +277,19 @@ export function ReleveNotesPDF({
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <Text style={styles.institutionName}>{tenant.name}</Text>
-            <Text style={styles.institutionSub}>{tenant.address}{tenant.city ? `, ${tenant.city}` : ''}</Text>
-            {(tenant.phone || tenant.email) && <Text style={styles.institutionSub}>{[tenant.phone, tenant.email].filter(Boolean).join(' | ')}</Text>}
-          </View>
-          <View style={styles.headerRight}>
-            <Text style={{ fontSize: 8, color: colors.muted }}>N° {docNumber}</Text>
-          </View>
-        </View>
-
-        <Text style={styles.docTitle}>RELEVÉ DE NOTES</Text>
-        <Text style={styles.docSubtitle}>Année académique {academicYear} — {semester}</Text>
+        <DocumentHeader tenant={tenant} docNumber={docNumber} />
+        <DocumentHeading title="RELEVÉ DE NOTES" subtitle={`Année académique ${academicYear} · ${semester}`} isSigned={isSigned} />
 
         <View style={styles.section}>
           <View style={styles.row}><Text style={styles.label}>Étudiant</Text><Text style={styles.value}>{student.firstName} {student.lastName}</Text></View>
           <View style={styles.row}><Text style={styles.label}>Matricule</Text><Text style={styles.value}>{student.matricule}</Text></View>
           <View style={styles.row}><Text style={styles.label}>Programme</Text><Text style={styles.value}>{student.program}</Text></View>
           <View style={styles.row}><Text style={styles.label}>Niveau</Text><Text style={styles.value}>{student.level}</Text></View>
+        </View>
+
+        <View style={{ flexDirection: 'row', marginBottom: 19, borderWidth: 1, borderColor: colors.border }} wrap={false}>
+          <View style={{ flex: 1, padding: 10, borderRightWidth: 1, borderColor: colors.border }}><Text style={{ fontSize: 8, color: colors.muted }}>UNITÉS D’ENSEIGNEMENT</Text><Text style={{ fontSize: 15, fontWeight: 'bold', color: colors.primary, marginTop: 4 }}>{ueGrades.length}</Text></View>
+          <View style={{ flex: 1, padding: 10 }}><Text style={{ fontSize: 8, color: colors.muted }}>CRÉDITS INSCRITS</Text><Text style={{ fontSize: 15, fontWeight: 'bold', color: colors.primary, marginTop: 4 }}>{ueGrades.reduce((sum, ue) => sum + ue.credits, 0)}</Text></View>
         </View>
 
         {ueGrades.map((ue, i) => (
@@ -304,7 +323,7 @@ export function ReleveNotesPDF({
           </View>
         ))}
 
-        <Footer docNumber={docNumber} verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} isSigned={isSigned} />
+        <Footer tenant={tenant} docNumber={docNumber} verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} isSigned={isSigned} />
       </Page>
     </Document>
   )
@@ -318,27 +337,17 @@ export function AttestationInscriptionPDF({
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <Text style={styles.institutionName}>{tenant.name}</Text>
-            <Text style={styles.institutionSub}>{tenant.address}{tenant.city ? `, ${tenant.city}` : ''}</Text>
-          </View>
-          <View style={styles.headerRight}>
-            <Text style={{ fontSize: 8, color: colors.muted }}>N° {docNumber}</Text>
-          </View>
-        </View>
+        <DocumentHeader tenant={tenant} docNumber={docNumber} />
+        <DocumentHeading title="ATTESTATION D’INSCRIPTION" subtitle={`Année académique ${academicYear}`} isSigned={isSigned} />
 
-        <Text style={styles.docTitle}>ATTESTATION D&apos;INSCRIPTION</Text>
-        <Text style={styles.docSubtitle}>Année académique {academicYear}</Text>
-
-        <View style={{ marginVertical: 20, lineHeight: 1.6 }}>
+        <View style={{ marginVertical: 15 }}>
           <Text style={{ fontSize: 10, marginBottom: 10 }}>
-            Le <Text style={{ fontWeight: 'bold' }}>{tenant.rectorTitle || 'Recteur'}</Text> de l&apos;<Text style={{ fontWeight: 'bold' }}>{tenant.name}</Text> atteste que :
+            L’établissement <Text style={{ fontWeight: 'bold' }}>{tenant.name}</Text> atteste que :
           </Text>
-          <Text style={{ fontSize: 12, fontWeight: 'bold', textAlign: 'center', marginVertical: 15 }}>
+          <Text style={{ fontSize: 12, fontWeight: 'bold', textAlign: 'center', marginVertical: 12 }}>
             {student.firstName} {student.lastName}
           </Text>
-          <View style={{ marginLeft: 20, gap: 6 }}>
+          <View style={{ padding: 12, borderLeftWidth: 3, borderLeftColor: colors.secondary, backgroundColor: '#f8fafc', gap: 4 }}>
             {student.dateOfBirth && <Text style={{ fontSize: 10 }}>- Né(e) le {formatDate(student.dateOfBirth)}{student.placeOfBirth ? ` à ${student.placeOfBirth}` : ''}</Text>}
             {student.nationality && <Text style={{ fontSize: 10 }}>- Nationalité : {student.nationality}</Text>}
             {student.matricule && <Text style={{ fontSize: 10 }}>- Matricule : {student.matricule}</Text>}
@@ -353,18 +362,13 @@ export function AttestationInscriptionPDF({
           </Text>
         </View>
 
-        <View style={styles.signature}>
-          <View style={styles.signatureBlock}>
-            <Text style={styles.signatureLabel}>Le Chef de Scolarité</Text>
-          </View>
-          <View style={styles.signatureBlock}>
-            <Text style={[styles.signatureLine, { borderTopWidth: 0 }]} />
-            <Text style={styles.signatureLabel}>Fait à {tenant.city || '...'}, le {formatDate(new Date())}</Text>
-            <Text style={styles.signatureLabel}>{tenant.rectorTitle || 'Le Recteur'}</Text>
-          </View>
+        <View style={styles.signature} wrap={false}>
+          <SignatureField title="Service de la scolarité" />
+          <SignatureField title={tenant.rectorTitle || 'Responsable de l’établissement'} name={tenant.rectorName} />
         </View>
+        <Text style={{ fontSize: 8, color: colors.muted, marginTop: 13 }}>Émis {tenant.city ? `à ${tenant.city}, ` : ''}le {formatDate(new Date())}</Text>
 
-        <Footer docNumber={docNumber} verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} isSigned={isSigned} />
+        <Footer tenant={tenant} docNumber={docNumber} verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} isSigned={isSigned} />
       </Page>
     </Document>
   )
@@ -384,16 +388,8 @@ export function AttestationNiveauPDF({
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <Text style={styles.institutionName}>{tenant.name}</Text>
-            {(tenant.address || tenant.city) && <Text style={styles.institutionSub}>{[tenant.address, tenant.city].filter(Boolean).join(', ')}</Text>}
-          </View>
-          <View style={styles.headerRight}><Text style={{ fontSize: 8, color: colors.muted }}>N° {docNumber}</Text></View>
-        </View>
-
-        <Text style={styles.docTitle}>ATTESTATION DE VALIDATION DE NIVEAU</Text>
-        <Text style={styles.docSubtitle}>Année académique {academicYear}</Text>
+        <DocumentHeader tenant={tenant} docNumber={docNumber} />
+        <DocumentHeading title="ATTESTATION DE VALIDATION DE NIVEAU" subtitle={`Année académique ${academicYear}`} isSigned />
 
         <View style={{ marginTop: 25, marginBottom: 24 }}>
           <Text style={{ fontSize: 10, lineHeight: 1.7 }}>
@@ -401,7 +397,7 @@ export function AttestationNiveauPDF({
           </Text>
         </View>
 
-        <View style={[styles.section, { padding: 16, borderWidth: 1, borderColor: colors.border, borderRadius: 4 }]}>
+        <View style={[styles.section, { padding: 16, borderWidth: 1, borderColor: colors.border, borderLeftWidth: 3, borderLeftColor: colors.secondary }]}>
           <View style={styles.row}><Text style={styles.label}>Étudiant(e)</Text><Text style={styles.value}>{student.firstName} {student.lastName}</Text></View>
           {student.matricule && <View style={styles.row}><Text style={styles.label}>Matricule</Text><Text style={styles.value}>{student.matricule}</Text></View>}
           <View style={styles.row}><Text style={styles.label}>Programme</Text><Text style={styles.value}>{award.program}</Text></View>
@@ -414,11 +410,11 @@ export function AttestationNiveauPDF({
           Cette attestation certifie la validation de ce niveau sans dette de crédits pour l’année académique {academicYear}.
         </Text>
 
-        <View style={styles.signature}>
-          <View style={styles.signatureBlock}><Text style={styles.signatureLabel}>Le service de scolarité</Text></View>
-          <View style={styles.signatureBlock}><Text style={styles.signatureLabel}>{tenant.rectorTitle || 'Le responsable de l’établissement'}</Text></View>
+        <View style={styles.signature} wrap={false}>
+          <SignatureField title="Service de la scolarité" />
+          <SignatureField title={tenant.rectorTitle || 'Responsable de l’établissement'} name={tenant.rectorName} />
         </View>
-        <Footer docNumber={docNumber} verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} isSigned />
+        <Footer tenant={tenant} docNumber={docNumber} verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} isSigned />
       </Page>
     </Document>
   )
@@ -431,54 +427,31 @@ export function DiplomePDF({
 }) {
   return (
     <Document>
-      <Page size="A4" style={[styles.page, { paddingTop: 60 }]}>
-        <View style={{ alignItems: 'center', marginBottom: 30 }}>
-          {tenant.country && <Text style={{ fontSize: 10, color: colors.muted, letterSpacing: 3 }}>{tenant.country.toUpperCase()}</Text>}
-          {tenant.ministry && <Text style={{ fontSize: 9, color: colors.muted, marginTop: 2 }}>{tenant.ministry.toUpperCase()}</Text>}
-        </View>
+      <Page size="A4" style={styles.page}>
+        <DocumentHeader tenant={tenant} docNumber={docNumber} />
+        <DocumentHeading title="DIPLÔME" subtitle={diploma.program} isSigned={isSigned} />
 
-        <View style={[styles.header, { borderBottomColor: colors.accent }]}>
-          <View style={styles.headerLeft}>
-            <Text style={styles.institutionName}>{tenant.name}</Text>
-            <Text style={styles.institutionSub}>{tenant.address}</Text>
-          </View>
-          <View style={styles.headerRight}>
-            <Text style={{ fontSize: 8, color: colors.muted }}>N° {docNumber}</Text>
-          </View>
-        </View>
-
-        <Text style={[styles.docTitle, { fontSize: 18, marginTop: 25 }]}>DIPLÔME</Text>
-        <Text style={styles.docSubtitle}>Programme : {diploma.program}</Text>
-
-        <View style={{ marginVertical: 25, alignItems: 'center' }}>
-          <Text style={{ fontSize: 9, color: colors.muted, marginBottom: 5 }}>Décerné à</Text>
-          <Text style={{ fontSize: 16, fontWeight: 'bold', color: colors.primary, marginVertical: 8 }}>
+        <View style={{ marginVertical: 22, paddingVertical: 29, paddingHorizontal: 18, alignItems: 'center', borderWidth: 1.5, borderColor: colors.accent }} wrap={false}>
+          <Text style={{ fontSize: 9, color: colors.muted, marginBottom: 8, letterSpacing: 1 }}>DÉCERNÉ À</Text>
+          <Text style={{ fontSize: 19, fontWeight: 'bold', color: colors.primary, marginVertical: 8, textAlign: 'center' }}>
             {student.firstName} {student.lastName}
           </Text>
           {student.dateOfBirth && <Text style={{ fontSize: 9, color: colors.muted }}>Né(e) le {formatDate(student.dateOfBirth)}{student.placeOfBirth ? ` à ${student.placeOfBirth}` : ''}</Text>}
-        </View>
-
-        <View style={{ marginVertical: 15, lineHeight: 2, alignItems: 'center' }}>
-          <Text style={{ fontSize: 10 }}>A obtenu le diplôme de</Text>
-          <Text style={{ fontSize: 13, fontWeight: 'bold', color: colors.secondary, marginVertical: 5 }}>
+          <Text style={{ fontSize: 10, marginTop: 25 }}>A obtenu le diplôme de</Text>
+          <Text style={{ fontSize: 16, fontWeight: 'bold', color: colors.secondary, marginVertical: 8, textAlign: 'center' }}>
             {diploma.title}
           </Text>
-          <Text style={{ fontSize: 10 }}>Après validation des {diploma.credits} crédits requis du cursus</Text>
-          {diploma.mention && <Text style={{ fontSize: 10 }}>Avec la mention <Text style={{ fontWeight: 'bold', color: colors.accent }}>{diploma.mention}</Text></Text>}
-          <Text style={{ fontSize: 9, color: colors.muted, marginTop: 5 }}>Décision du jury du {formatDate(diploma.date)}</Text>
+          <Text style={{ fontSize: 10, textAlign: 'center' }}>Après validation des {diploma.credits} crédits requis du cursus</Text>
+          {diploma.mention && <Text style={{ fontSize: 10, marginTop: 8 }}>Mention : <Text style={{ fontWeight: 'bold', color: colors.primary }}>{diploma.mention}</Text></Text>}
+          <Text style={{ fontSize: 9, color: colors.muted, marginTop: 18 }}>Décision finale du jury du {formatDate(diploma.date)}</Text>
         </View>
 
-        <View style={styles.signature}>
-          <View style={styles.signatureBlock}>
-            <Text style={styles.signatureLabel}>Le Président du Jury</Text>
-          </View>
-          <View style={styles.signatureBlock}>
-            <Text style={styles.signatureLabel}>Le {tenant.rectorTitle || 'Recteur'}</Text>
-          </View>
+        <View style={styles.signature} wrap={false}>
+          <SignatureField title="Présidence du jury" />
+          <SignatureField title={tenant.rectorTitle || 'Responsable de l’établissement'} name={tenant.rectorName} />
         </View>
 
-        {isSigned && <Stamp text="AUTHENTIQUE" />}
-        <Footer docNumber={docNumber} verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} isSigned={isSigned} />
+        <Footer tenant={tenant} docNumber={docNumber} verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} isSigned={isSigned} />
       </Page>
     </Document>
   )
@@ -497,11 +470,11 @@ export function PVDeliberationPDF({
     exclu: students.filter(s => s.decision === 'EXCLU').length,
     rate: students.length ? Math.round(students.filter(s => ['ADMIS', 'ADMIS AVEC DETTE', 'ADMIS PAR COMPENSATION'].includes(s.decision)).length / students.length * 100) : 0,
   }
-  const firstPageCapacity = Math.max(4, 12 - members.length)
+  const firstPageCapacity = Math.max(3, 9 - members.length)
   const firstPageStudents = students.slice(0, firstPageCapacity)
   const continuationPages: typeof students[] = []
-  for (let start = firstPageCapacity; start < students.length; start += 22) {
-    continuationPages.push(students.slice(start, start + 22))
+  for (let start = firstPageCapacity; start < students.length; start += 19) {
+    continuationPages.push(students.slice(start, start + 19))
   }
   const resultTable = (rows: typeof students, offset: number) => (
     <View style={styles.table} wrap={false}>
@@ -527,27 +500,16 @@ export function PVDeliberationPDF({
   )
   const signatures = () => (
     <View style={styles.signature} wrap={false}>
-      <View style={styles.signatureBlock}><Text style={styles.signatureLabel}>Le Président du Jury</Text></View>
-      <View style={styles.signatureBlock}><Text style={styles.signatureLabel}>Le Secrétaire</Text></View>
-      <View style={styles.signatureBlock}><Text style={styles.signatureLabel}>Le {tenant.rectorTitle || 'Recteur'}</Text></View>
+      <SignatureField title="Présidence du jury" name={members.find((member) => member.role === 'President')?.name} />
+      <SignatureField title={tenant.rectorTitle || 'Responsable de l’établissement'} name={tenant.rectorName} />
     </View>
   )
 
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <Text style={styles.institutionName}>{tenant.name}</Text>
-            <Text style={styles.institutionSub}>{tenant.address}</Text>
-          </View>
-          <View style={styles.headerRight}>
-            <Text style={{ fontSize: 8, color: colors.muted }}>N° {docNumber}</Text>
-          </View>
-        </View>
-
-        <Text style={styles.docTitle}>PROCÈS-VERBAL DE DÉLIBÉRATION</Text>
-        <Text style={styles.docSubtitle}>Année académique {academicYear}</Text>
+        <DocumentHeader tenant={tenant} docNumber={docNumber} />
+        <DocumentHeading title="PROCÈS-VERBAL DE DÉLIBÉRATION" subtitle={`Année académique ${academicYear}`} isSigned={isSigned} />
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Session</Text>
@@ -596,21 +558,15 @@ export function PVDeliberationPDF({
         {resultTable(firstPageStudents, 0)}
         {continuationPages.length === 0 && signatures()}
 
-        <Footer docNumber={docNumber} verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} isSigned={isSigned} />
+        <Footer tenant={tenant} docNumber={docNumber} verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} isSigned={isSigned} />
       </Page>
       {continuationPages.map((pageStudents, pageIndex) => (
         <Page key={pageIndex} size="A4" style={styles.page}>
-          <View style={styles.header}>
-            <View style={styles.headerLeft}>
-              <Text style={styles.institutionName}>{tenant.name}</Text>
-              <Text style={styles.institutionSub}>{session.name} - {academicYear}</Text>
-            </View>
-            <View style={styles.headerRight}><Text style={{ fontSize: 8, color: colors.muted }}>N° {docNumber}</Text></View>
-          </View>
-          <Text style={styles.docTitle}>PROCÈS-VERBAL DE DÉLIBÉRATION - SUITE</Text>
-          {resultTable(pageStudents, firstPageCapacity + pageIndex * 22)}
+          <DocumentHeader tenant={tenant} docNumber={docNumber} />
+          <DocumentHeading title="PROCÈS-VERBAL · SUITE" subtitle={`${session.name} · ${academicYear}`} isSigned={isSigned} />
+          {resultTable(pageStudents, firstPageCapacity + pageIndex * 19)}
           {pageIndex === continuationPages.length - 1 && signatures()}
-          <Footer docNumber={docNumber} verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} isSigned={isSigned} />
+          <Footer tenant={tenant} docNumber={docNumber} verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} isSigned={isSigned} />
         </Page>
       ))}
     </Document>
@@ -625,28 +581,17 @@ export function CertificatScolaritePDF({
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <Text style={styles.institutionName}>{tenant.name}</Text>
-            <Text style={styles.institutionSub}>{tenant.address}</Text>
-          </View>
-          <View style={styles.headerRight}>
-            <Text style={{ fontSize: 8, color: colors.muted }}>N° {docNumber}</Text>
-          </View>
-        </View>
+        <DocumentHeader tenant={tenant} docNumber={docNumber} />
+        <DocumentHeading title="CERTIFICAT DE SCOLARITÉ" subtitle={`Année académique ${academicYear}`} isSigned={isSigned} />
 
-        <Text style={styles.docTitle}>CERTIFICAT DE SCOLARITÉ</Text>
-        <Text style={styles.docSubtitle}>Année académique {academicYear}</Text>
-
-        <View style={{ marginVertical: 20, lineHeight: 2 }}>
+        <View style={{ marginVertical: 15 }}>
           <Text style={{ fontSize: 10, marginBottom: 10 }}>
-            Je soussigné, <Text style={{ fontWeight: 'bold' }}>{tenant.rectorTitle || 'Responsable'}</Text> de <Text style={{ fontWeight: 'bold' }}>{tenant.name}</Text>,
-            certifie que :
+            L’établissement <Text style={{ fontWeight: 'bold' }}>{tenant.name}</Text> certifie que :
           </Text>
-          <Text style={{ fontSize: 12, fontWeight: 'bold', textAlign: 'center', marginVertical: 15 }}>
+          <Text style={{ fontSize: 12, fontWeight: 'bold', textAlign: 'center', marginVertical: 12 }}>
             {student.firstName} {student.lastName}
           </Text>
-          <View style={{ marginLeft: 20 }}>
+          <View style={{ padding: 12, borderLeftWidth: 3, borderLeftColor: colors.secondary, backgroundColor: '#f8fafc', gap: 4 }}>
             {student.matricule && <Text style={{ fontSize: 10 }}>- Matricule : {student.matricule}</Text>}
             {student.program && <Text style={{ fontSize: 10 }}>- Programme : {student.program}</Text>}
             {student.level && <Text style={{ fontSize: 10 }}>- Niveau d&apos;étude : {student.level}</Text>}
@@ -659,15 +604,13 @@ export function CertificatScolaritePDF({
           </Text>
         </View>
 
-        <View style={styles.signature}>
-          <View style={styles.signatureBlock}>
-            <Text style={styles.signatureLabel}>Fait à {tenant.city || '...'}, le {formatDate(new Date())}</Text>
-            <Text style={[styles.signatureLine, { borderTopWidth: 0 }]} />
-            <Text style={styles.signatureLabel}>{tenant.rectorTitle || 'Le Recteur'}</Text>
-          </View>
+        <View style={styles.signature} wrap={false}>
+          <SignatureField title="Service de la scolarité" />
+          <SignatureField title={tenant.rectorTitle || 'Responsable de l’établissement'} name={tenant.rectorName} />
         </View>
+        <Text style={{ fontSize: 8, color: colors.muted, marginTop: 13 }}>Émis {tenant.city ? `à ${tenant.city}, ` : ''}le {formatDate(new Date())}</Text>
 
-        <Footer docNumber={docNumber} verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} isSigned={isSigned} />
+        <Footer tenant={tenant} docNumber={docNumber} verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} isSigned={isSigned} />
       </Page>
     </Document>
   )
@@ -681,17 +624,8 @@ export function ListeEtudiantsPDF({
   return (
     <Document>
       <Page size="A4" style={[styles.page]} orientation="landscape">
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <Text style={styles.institutionName}>{tenant.name}</Text>
-          </View>
-        </View>
-
-        <Text style={styles.docTitle}>LISTE DES ÉTUDIANTS</Text>
-        <Text style={styles.docSubtitle}>
-          {program ? `${program} — ` : ''}{level || ''} — {academicYear}
-          <Text style={{ fontSize: 9, color: colors.muted }}> | Total: {students.length} étudiants</Text>
-        </Text>
+        <DocumentHeader tenant={tenant} />
+        <DocumentHeading title="LISTE DES ÉTUDIANTS" subtitle={`${program ? `${program} · ` : ''}${level ? `${level} · ` : ''}${academicYear} · ${students.length} étudiants`} isSigned={false} eyebrow="EXPORT ADMINISTRATIF" />
 
         <View style={styles.table}>
           <View style={styles.tableHeader}>
@@ -720,7 +654,7 @@ export function ListeEtudiantsPDF({
         </View>
 
         <View style={styles.footer}>
-          <Text>UniSahel — Plateforme SaaS de Gestion Universitaire Africaine</Text>
+          <Text>{tenant.name} · liste administrative générée le {formatDate(new Date())}</Text>
         </View>
         <Text style={styles.pageNumber} render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`} />
       </Page>
@@ -741,6 +675,4 @@ export const documentTypes = [
   { id: 'PV_DELIBERATION', label: 'Procès-verbal de délibération', prefix: 'PV' },
   { id: 'CERTIFICAT_SCOLARITE', label: 'Certificat de scolarité', prefix: 'CS' },
   { id: 'LISTE_ETUDIANTS', label: "Liste d'étudiants", prefix: 'LE' },
-  { id: 'BULLETIN', label: 'Bulletin de notes', prefix: 'BN' },
-  { id: 'RECU_PAIEMENT', label: 'Reçu de paiement', prefix: 'RP' },
 ]
