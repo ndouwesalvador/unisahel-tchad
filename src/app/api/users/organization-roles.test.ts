@@ -49,6 +49,20 @@ describe('staff scope assignment', () => {
     expect(mocks.userCreate).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ facultyId: 'cfaculty0000000000000001', departmentId: null }) }))
   })
 
+  it('requires a department for a jury account', async () => {
+    const response = await post(admin, admin.tenantId, request('POST', { ...base, role: 'JURY' }))
+    expect(response.status).toBe(400)
+    expect(mocks.userCreate).not.toHaveBeenCalled()
+  })
+
+  it('creates a jury account bound to its department', async () => {
+    const response = await post(admin, admin.tenantId, request('POST', { ...base, role: 'JURY', departmentId: 'cdepartment000000000001' }))
+    expect(response.status).toBe(201)
+    expect(mocks.userCreate).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({
+      role: 'JURY', departmentId: 'cdepartment000000000001', facultyId: null,
+    }) }))
+  })
+
   it('does not mutate a teacher through the staff module', async () => {
     mocks.userFindFirst.mockResolvedValue({ id: 'cteacher0000000000000001', role: 'ENSEIGNANT', facultyId: null, departmentId: null })
     const response = await put(admin, admin.tenantId, request('PUT', { id: 'cteacher0000000000000001', role: 'DEPARTEMENT', departmentId: 'cdepartment000000000001' }))

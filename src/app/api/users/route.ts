@@ -47,7 +47,7 @@ async function resolveStaffScope(tenantId: string, role: string, facultyId?: str
     const faculty = await db.faculty.findFirst({ where: { id: facultyId, tenantId, isActive: true }, select: { id: true } })
     return faculty ? { facultyId, departmentId: null } : { error: 'Faculté active introuvable dans cette institution.' }
   }
-  if (role === 'DEPARTEMENT') {
+  if (role === 'DEPARTEMENT' || role === 'JURY') {
     if (!departmentId || facultyId) return { error: 'Choisissez un département, sans faculté.' }
     const department = await db.department.findFirst({ where: { id: departmentId, tenantId, isActive: true }, select: { id: true, facultyId: true } })
     return department?.facultyId ? { facultyId: null, departmentId } : { error: 'Département actif sans faculté de rattachement ou introuvable.' }
