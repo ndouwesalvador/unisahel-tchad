@@ -458,9 +458,9 @@ export function DiplomePDF({
 }
 
 export function PVDeliberationPDF({
-  tenant, session, members, students, academicYear, docNumber, verificationCode, qrCodeDataUrl, isSigned = false,
+  tenant, departmentName, departmentHeadName, session, members, students, academicYear, docNumber, verificationCode, qrCodeDataUrl, isSigned = false,
 }: {
-  tenant: TenantInfo; session: { name: string; date: string; type: string }; members: Array<{ name: string; role: string }>; students: Array<{ name: string; matricule: string; moy: number; decision: string; mention?: string }>; academicYear: string; docNumber: string; verificationCode: string; qrCodeDataUrl?: string; isSigned?: boolean
+  tenant: TenantInfo; departmentName: string; departmentHeadName?: string; session: { name: string; date: string; type: string }; members: Array<{ name: string; role: string }>; students: Array<{ name: string; matricule: string; moy: number; decision: string; mention?: string }>; academicYear: string; docNumber: string; verificationCode: string; qrCodeDataUrl?: string; isSigned?: boolean
 }) {
   const stats = {
     total: students.length,
@@ -501,7 +501,7 @@ export function PVDeliberationPDF({
   const signatures = () => (
     <View style={styles.signature} wrap={false}>
       <SignatureField title="Présidence du jury" name={members.find((member) => member.role === 'President')?.name} />
-      <SignatureField title={tenant.rectorTitle || 'Responsable de l’établissement'} name={tenant.rectorName} />
+      <SignatureField title="Chef de département" name={departmentHeadName} />
     </View>
   )
 
@@ -509,10 +509,11 @@ export function PVDeliberationPDF({
     <Document>
       <Page size="A4" style={styles.page}>
         <DocumentHeader tenant={tenant} docNumber={docNumber} />
-        <DocumentHeading title="PROCÈS-VERBAL DE DÉLIBÉRATION" subtitle={`Année académique ${academicYear}`} isSigned={isSigned} />
+        <DocumentHeading title="PROCÈS-VERBAL DE DÉLIBÉRATION" subtitle={`${departmentName} · Année académique ${academicYear}`} isSigned={isSigned} />
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Session</Text>
+          <View style={styles.row}><Text style={styles.label}>Département</Text><Text style={styles.value}>{departmentName}</Text></View>
           <View style={styles.row}><Text style={styles.label}>Intitulé</Text><Text style={styles.value}>{session.name}</Text></View>
           <View style={styles.row}><Text style={styles.label}>Date</Text><Text style={styles.value}>{formatDate(session.date)}</Text></View>
           <View style={styles.row}><Text style={styles.label}>Type</Text><Text style={styles.value}>{session.type}</Text></View>
@@ -563,7 +564,7 @@ export function PVDeliberationPDF({
       {continuationPages.map((pageStudents, pageIndex) => (
         <Page key={pageIndex} size="A4" style={styles.page}>
           <DocumentHeader tenant={tenant} docNumber={docNumber} />
-          <DocumentHeading title="PROCÈS-VERBAL · SUITE" subtitle={`${session.name} · ${academicYear}`} isSigned={isSigned} />
+          <DocumentHeading title="PROCÈS-VERBAL · SUITE" subtitle={`${departmentName} · ${session.name} · ${academicYear}`} isSigned={isSigned} />
           {resultTable(pageStudents, firstPageCapacity + pageIndex * 19)}
           {pageIndex === continuationPages.length - 1 && signatures()}
           <Footer tenant={tenant} docNumber={docNumber} verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} isSigned={isSigned} />

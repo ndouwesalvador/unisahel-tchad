@@ -716,6 +716,7 @@ model Deliberation {
   id             String                 @id @default(cuid())
   tenantId       String
   academicYearId String
+  departmentId   String?
   programId      String?
   levelId        String?
   type           String                 @default("ANNUEL")
@@ -723,11 +724,14 @@ model Deliberation {
   date           DateTime
   status         String                 @default("PREPARATION")
   presidentId    String?
+  juryMembers    Json?
   decisions      DeliberationDecision[]
   isLocked       Boolean                @default(false)
   lockedBy       String?
   createdAt      DateTime               @default(now())
   updatedAt      DateTime               @updatedAt
+
+  @@index([tenantId, academicYearId, departmentId])
 }
 
 model DeliberationDecision {

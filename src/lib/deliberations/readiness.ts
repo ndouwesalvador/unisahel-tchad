@@ -22,9 +22,18 @@ function gradeKey(studentId: string, teachingUnitId: string, courseElementId?: s
   return `${studentId}:${teachingUnitId}:${courseElementId || 'UE'}`
 }
 
-export async function computeGradeReadiness(tenantId: string, academicYearId: string, session: string) {
+export async function computeGradeReadiness(tenantId: string, academicYearId: string, session: string, departmentId: string) {
+  const programs = await db.program.findMany({
+    where: { tenantId, departmentId }, select: { id: true },
+  })
+  const enrolments = await db.administrativeRegistration.findMany({
+    where: { tenantId, academicYearId, status: 'INSCRIT', programId: { in: programs.map((program) => program.id) } },
+    select: { studentId: true, student: { select: { id: true, firstName: true, lastName: true, matricule: true } } },
+  })
+  const enrolled = new Map(enrolments.map((entry) => [entry.studentId, entry.student]))
+  const studentIds = Array.from(enrolled.keys())
   const registrations = await db.pedagogicalRegistration.findMany({
-    where: { academicYearId, status: 'ACTIVE', student: { tenantId } },
+    where: { academicYearId, status: 'ACTIVE', studentId: { in: studentIds }, student: { tenantId } },
     select: {
       studentId: true,
       teachingUnitId: true,
@@ -57,7 +66,7 @@ export async function computeGradeReadiness(tenantId: string, academicYearId: st
   })
 
   const grades = await db.grade.findMany({
-    where: { student: { tenantId }, academicYearId, session },
+    where: { student: { tenantId }, studentId: { in: studentIds }, academicYearId, session },
     select: {
       studentId: true, teachingUnitId: true, courseElementId: true,
       finalGrade: true, isLocked: true, isAbsent: true, isDefaillant: true,
@@ -91,6 +100,15 @@ export async function computeGradeReadiness(tenantId: string, academicYearId: st
     missingItems: MissingGradeItem[]
   }>()
 
+  for (const student of enrolled.values()) {
+    byStudent.set(student.id, {
+      studentId: student.id,
+      name: `${student.firstName} ${student.lastName}`.trim(),
+      matricule: student.matricule || '—',
+      expected: 0, locked: 0, missing: 0, missingItems: [],
+    })
+  }
+
   for (const item of expected) {
     const existing = byStudent.get(item.studentId) || {
       studentId: item.studentId,
@@ -101,7 +119,7 @@ export async function computeGradeReadiness(tenantId: string, academicYearId: st
     existing.expected += 1
     const rows = gradesByKey.get(gradeKey(item.studentId, item.teachingUnitId, item.courseElementId)) ?? []
     const grade = rows[0]
-    if (item.courseElementId && rows.length === 1 && grade.isLocked && !grade.isAbsent && !grade.isDefaillant &&
+    if (rows.length === 1 && grade.isLocked && !grade.isAbsent && !grade.isDefaillant &&
         grade.finalGrade !== null && Number.isFinite(grade.finalGrade) && grade.finalGrade >= 0 && grade.finalGrade <= 20) {
       existing.locked += 1
     } else {
@@ -114,14 +132,15 @@ export async function computeGradeReadiness(tenantId: string, academicYearId: st
   const students = Array.from(byStudent.values()).sort((a, b) => a.name.localeCompare(b.name))
   const expectedGradeCount = students.reduce((sum, student) => sum + student.expected, 0)
   const lockedGradeCount = students.reduce((sum, student) => sum + student.locked, 0)
+  const studentsWithoutRegistration = students.filter((student) => student.expected === 0).length
   const missingGradeCount = Math.max(expectedGradeCount - lockedGradeCount, 0)
   return {
-    ready: expectedGradeCount > 0 && missingGradeCount === 0 && unexpectedGradeCount === 0,
-    expectedGradeCount, lockedGradeCount, missingGradeCount, unexpectedGradeCount,
+    ready: students.length > 0 && expectedGradeCount > 0 && studentsWithoutRegistration === 0 && missingGradeCount === 0 && unexpectedGradeCount === 0,
+    expectedGradeCount, lockedGradeCount, missingGradeCount, unexpectedGradeCount, studentsWithoutRegistration,
     studentsTotal: students.length,
     studentIds: students.map((student) => student.studentId),
     studentsReady: students.filter((student) => student.expected > 0 && student.missing === 0).length,
-    incompleteStudents: students.filter((student) => student.missing > 0)
+    incompleteStudents: students.filter((student) => student.missing > 0 || student.expected === 0)
       .map((student) => ({ ...student, missingItems: student.missingItems.slice(0, 8) })),
   }
 }

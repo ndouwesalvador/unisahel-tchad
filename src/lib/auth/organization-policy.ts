@@ -7,6 +7,8 @@ const methods: Record<string, readonly string[]> = {
   '/api/timetable': ['GET', 'POST', 'PUT', 'DELETE'],
   '/api/rooms': ['GET'],
   '/api/academic-years': ['GET'],
+  '/api/deliberation': ['GET', 'POST', 'PUT'],
+  '/api/documents/generate': ['POST'],
   '/api/profile': ['GET'],
   '/api/notifications': ['GET'],
 }

@@ -7,8 +7,10 @@ import type { SessionUser } from '@/lib/auth/helpers'
 import { isStudentSelfRole, resolveOwnStudentId } from '@/lib/auth/student-scope'
 import { AwardEligibilityError, getValidatedDiplomaAward, getValidatedLevelAward } from '@/lib/documents/eligibility'
 import { computeGradeReadiness } from '@/lib/deliberations/readiness'
+import { getOrganizationScope, isOrganizationManager } from '@/lib/auth/organization-scope'
+import { parseJuryMembers } from '@/lib/deliberations/jury'
 
-const SIGNING_ROLES = new Set(['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'RECTORAT', 'SCOLARITE', 'JURY'])
+const SIGNING_ROLES = new Set(['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'RECTORAT', 'SCOLARITE', 'JURY', 'FACULTE', 'DEPARTEMENT'])
 const GENERATING_ROLES = new Set([...SIGNING_ROLES, 'ETUDIANT', 'ETUDIANT_SANTE'])
 
 export async function POST(request: NextRequest) {
@@ -32,7 +34,8 @@ export async function POST(request: NextRequest) {
     if (sessionUser.role !== 'SUPER_ADMIN' && sessionUser.tenantId !== tenantId) {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
     }
-    if (!GENERATING_ROLES.has(sessionUser.role) || (sessionUser.role === 'JURY' && type !== 'PV_DELIBERATION')) {
+    if (!GENERATING_ROLES.has(sessionUser.role) ||
+        (['JURY', 'FACULTE', 'DEPARTEMENT'].includes(sessionUser.role) && type !== 'PV_DELIBERATION')) {
       return NextResponse.json({ error: 'Génération non autorisée pour ce rôle' }, { status: 403 })
     }
 
@@ -318,20 +321,29 @@ export async function POST(request: NextRequest) {
         if (!deliberationId) {
           return NextResponse.json({ error: 'Délibération requise pour le PV' }, { status: 400 })
         }
-        const members = data?.members
-        if (!Array.isArray(members) || members.length === 0 || members.length > 12 ||
-            members.some((member) => !member || typeof member.name !== 'string' || member.name.trim().length < 2 || member.name.trim().length > 120 || !['President', 'Membre'].includes(member.role)) ||
-            members.filter((member) => member.role === 'President').length !== 1) {
-          return NextResponse.json({ error: 'Composition du jury invalide : un président est requis' }, { status: 400 })
-        }
-        const validatedMembers = members.map((member) => ({ name: member.name.trim(), role: member.role }))
-
         const delib = await db.deliberation.findFirst({
           where: { id: deliberationId, tenantId },
           include: { decisions: true },
         })
         if (!delib) {
           return NextResponse.json({ error: 'Délibération introuvable dans cet établissement' }, { status: 404 })
+        }
+        const validatedMembers = parseJuryMembers(delib.juryMembers)
+        if (!validatedMembers) {
+          return NextResponse.json({ error: 'Composition du jury non enregistrée lors de la validation' }, { status: 409 })
+        }
+        if (!delib.departmentId) {
+          return NextResponse.json({ error: 'Ce PV historique n’est pas rattaché à un département' }, { status: 409 })
+        }
+        const department = await db.department.findFirst({
+          where: { id: delib.departmentId, tenantId }, select: { id: true, name: true, headName: true },
+        })
+        if (!department) return NextResponse.json({ error: 'Département introuvable' }, { status: 409 })
+        if (isOrganizationManager(sessionUser.role)) {
+          const scope = await getOrganizationScope(sessionUser, tenantId)
+          if (!scope?.departmentIds.includes(department.id)) {
+            return NextResponse.json({ error: 'Département inaccessible' }, { status: 403 })
+          }
         }
         if (!delib.isLocked || delib.status !== 'TERMINEE') {
           return NextResponse.json({ error: 'Le PV exige une délibération finale verrouillée' }, { status: 409 })
@@ -340,7 +352,7 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: 'Aucune décision de jury à publier' }, { status: 409 })
         }
         const readiness = await computeGradeReadiness(
-          tenantId, delib.academicYearId, delib.type === 'RATTRAPAGE' ? 'RATTRAPAGE' : 'NORMALE'
+          tenantId, delib.academicYearId, delib.type === 'RATTRAPAGE' ? 'RATTRAPAGE' : 'NORMALE', department.id
         )
         if (!readiness.ready) {
           return NextResponse.json({ error: 'Le PV officiel exige toutes les notes définitives verrouillées', readiness }, { status: 409 })
@@ -390,9 +402,10 @@ export async function POST(request: NextRequest) {
         }
 
         DocumentComponent = React.createElement(PVDeliberationPDF, {
-          tenant, session, members: validatedMembers, students, academicYear, docNumber, verificationCode, qrCodeDataUrl, isSigned: true,
+          tenant, departmentName: department.name, departmentHeadName: department.headName || undefined,
+          session, members: validatedMembers, students, academicYear, docNumber, verificationCode, qrCodeDataUrl, isSigned: true,
         })
-        documentData = { deliberationId, session, members: validatedMembers, students, academicYear }
+        documentData = { deliberationId, departmentId: department.id, departmentName: department.name, session, members: validatedMembers, students, academicYear }
         break
       }
 

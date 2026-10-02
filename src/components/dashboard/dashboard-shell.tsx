@@ -231,10 +231,12 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
   FACULTE: [
     { icon: LayoutDashboard, label: 'Tableau de bord', view: 'dashboard' },
     { icon: Calendar, label: 'Emploi du temps', view: 'timetable' },
+    { icon: CheckSquare, label: 'Délibérations', view: 'deliberation' },
   ],
   DEPARTEMENT: [
     { icon: LayoutDashboard, label: 'Tableau de bord', view: 'dashboard' },
     { icon: Calendar, label: 'Emploi du temps', view: 'timetable' },
+    { icon: CheckSquare, label: 'Délibérations', view: 'deliberation' },
   ],
   ENSEIGNANT: [
     { icon: LayoutDashboard, label: 'Tableau de bord', view: 'dashboard' },
@@ -509,6 +511,7 @@ function MainContent({ view }: { view: AppView }) {
   const { user } = useAppStore()
   if (user?.role === 'FACULTE' || user?.role === 'DEPARTEMENT') {
     if (view === 'timetable') return <TimetablePage />
+    if (view === 'deliberation') return <DeliberationPage />
     if (view === 'profile') return <ProfilePage />
     return <OrganizationDashboard />
   }
@@ -635,7 +638,7 @@ export function DashboardShell() {
   }, [user?.role, currentView, setView])
   useEffect(() => {
     if (user?.role !== 'FACULTE' && user?.role !== 'DEPARTEMENT') return
-    if (!['dashboard', 'timetable', 'profile'].includes(currentView)) setView('dashboard')
+    if (!['dashboard', 'timetable', 'deliberation', 'profile'].includes(currentView)) setView('dashboard')
   }, [user?.role, currentView, setView])
   const searchTerm = searchQuery.trim().toLowerCase()
   const searchResults = searchTerm

@@ -261,7 +261,7 @@ export function useHealth(studentId?: string) {
   });
 }
 
-export function useDeliberation(params?: { id?: string; session?: string }) {
+export function useDeliberation(params?: { id?: string; session?: string; departmentId?: string }) {
   return useQuery({
     queryKey: ['deliberation', params],
     queryFn: async () => {

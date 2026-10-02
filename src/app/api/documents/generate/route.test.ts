@@ -10,6 +10,7 @@ const { authMock, dbMock, renderPDFMock, eligibilityMock, readinessMock } = vi.h
     academicYear: { findFirst: vi.fn() },
     administrativeRegistration: { findFirst: vi.fn(), findMany: vi.fn() },
     deliberation: { findFirst: vi.fn() },
+    department: { findFirst: vi.fn() },
     grade: { findMany: vi.fn() },
     pedagogicalRegistration: { findMany: vi.fn() },
     officialDocument: { create: vi.fn() },
@@ -66,6 +67,7 @@ beforeEach(() => {
   dbMock.program.findFirst.mockResolvedValue(null)
   dbMock.level.findFirst.mockResolvedValue(null)
   dbMock.deliberation.findFirst.mockResolvedValue(null)
+  dbMock.department.findFirst.mockResolvedValue({ id: 'department-A', name: 'Génie informatique' })
   eligibilityMock.level.mockResolvedValue({
     deliberationId: 'delib-A', decisionId: 'decision-A', creditsAcquired: 60,
     juryDate: new Date('2026-09-30'),
@@ -261,17 +263,16 @@ describe('POST /api/documents/generate', () => {
     expect(JSON.parse(saved.content).ueGrades[0].moyenne).toBe(16)
   })
 
-  it('requires a validated PV with exactly one named president', async () => {
+  it('requires a validated PV and an existing deliberation', async () => {
     const unsigned = await POST(request({ type: 'PV_DELIBERATION', tenantId, deliberationId: 'delib-A' }))
     expect(unsigned.status).toBe(409)
-    const noPresident = await POST(request({ type: 'PV_DELIBERATION', tenantId, deliberationId: 'delib-A', sign: true, data: { members: [{ name: 'Membre Test', role: 'Membre' }] } }))
-    expect(noPresident.status).toBe(400)
-    expect(dbMock.deliberation.findFirst).not.toHaveBeenCalled()
+    const missing = await POST(request({ type: 'PV_DELIBERATION', tenantId, deliberationId: 'delib-A', sign: true }))
+    expect(missing.status).toBe(404)
   })
 
   it('signs a PV from stored jury decisions rather than client student data', async () => {
     dbMock.deliberation.findFirst.mockResolvedValue({
-      id: 'delib-A', isLocked: true, status: 'TERMINEE', academicYearId: 'year-A',
+      id: 'delib-A', departmentId: 'department-A', juryMembers: [{ name: 'Président enregistré', role: 'President' }], isLocked: true, status: 'TERMINEE', academicYearId: 'year-A',
       name: 'Délibération annuelle', date: new Date('2026-10-01'), type: 'ANNUEL',
       decisions: [{ studentId, average: 13.9, decision: 'ADMI_DETTE' }],
     })
@@ -285,13 +286,13 @@ describe('POST /api/documents/generate', () => {
     const saved = dbMock.officialDocument.create.mock.calls[0][0].data
     const snapshot = JSON.parse(saved.content)
     expect(saved.validatedBy).toBe('admin-A')
-    expect(snapshot.members[0].name).toBe('Président Test')
+    expect(snapshot.members[0].name).toBe('Président enregistré')
     expect(snapshot.students[0]).toMatchObject({ name: 'Awa Test', decision: 'ADMIS AVEC DETTE' })
   })
 
   it('refuses an old locked PV when grades have since become incomplete', async () => {
     dbMock.deliberation.findFirst.mockResolvedValue({
-      id: 'delib-A', isLocked: true, status: 'TERMINEE', academicYearId: 'year-A', type: 'ANNUEL',
+      id: 'delib-A', departmentId: 'department-A', juryMembers: [{ name: 'Président enregistré', role: 'President' }], isLocked: true, status: 'TERMINEE', academicYearId: 'year-A', type: 'ANNUEL',
       decisions: [{ studentId, decision: 'ADMI' }],
     })
     readinessMock.mockResolvedValue({ ready: false, studentIds: [studentId], missingGradeCount: 1 })
@@ -305,7 +306,7 @@ describe('POST /api/documents/generate', () => {
 
   it('refuses a PV whose decisions omit an enrolled student', async () => {
     dbMock.deliberation.findFirst.mockResolvedValue({
-      id: 'delib-A', isLocked: true, status: 'TERMINEE', academicYearId: 'year-A', type: 'ANNUEL',
+      id: 'delib-A', departmentId: 'department-A', juryMembers: [{ name: 'Président enregistré', role: 'President' }], isLocked: true, status: 'TERMINEE', academicYearId: 'year-A', type: 'ANNUEL',
       decisions: [{ studentId, decision: 'ADMI' }],
     })
     readinessMock.mockResolvedValue({ ready: true, studentIds: [studentId, 'student-B'], studentsTotal: 2 })

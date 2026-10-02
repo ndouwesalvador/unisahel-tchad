@@ -4,7 +4,7 @@ import { useState, useMemo, useCallback, useEffect } from 'react'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAppStore } from '@/lib/store'
-import { useDeliberation, useInstitution, useAcademicYears } from '@/lib/api-hooks'
+import { useDeliberation, useAcademicYears } from '@/lib/api-hooks'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -67,6 +67,7 @@ interface DeliberationSession {
   date: string
   statut: 'planifiee' | 'en_cours' | 'terminee'
   type?: string
+  academicYearId?: string
 }
 
 type Decision = 'ADMI' | 'AJOURNE' | 'REDOUBLANT' | 'EXCLU' | 'ADMI_DETTE' | 'COMPENSE'
@@ -106,6 +107,7 @@ interface DeliberationReadiness {
   lockedGradeCount: number
   missingGradeCount: number
   unexpectedGradeCount?: number
+  studentsWithoutRegistration?: number
   studentsTotal: number
   studentsReady: number
   incompleteStudents: IncompleteStudent[]
@@ -113,9 +115,11 @@ interface DeliberationReadiness {
 
 function describeReadinessIssue(readiness: DeliberationReadiness): string {
   const missing = `${readiness.missingGradeCount} note(s) définitive(s) manquante(s) ou incohérente(s).`
-  return readiness.unexpectedGradeCount
-    ? `${missing} ${readiness.unexpectedGradeCount} note(s) hors inscriptions actives à corriger.`
-    : missing
+  const withoutRegistration = readiness.studentsWithoutRegistration
+    ? ` ${readiness.studentsWithoutRegistration} étudiant(s) sans inscription pédagogique active.` : ''
+  const unexpected = readiness.unexpectedGradeCount
+    ? ` ${readiness.unexpectedGradeCount} note(s) hors inscriptions actives à corriger.` : ''
+  return `${missing}${withoutRegistration}${unexpected}`
 }
 
 const decisionConfig: Record<Decision, { label: string; className: string; icon: React.ElementType; tooltip: string }> = {
@@ -138,54 +142,67 @@ const sessionStatusConfig: Record<string, { label: string; className: string }> 
 export function DeliberationPage() {
   const queryClient = useQueryClient()
   const tenantId = useAppStore((s) => s.user?.tenantId)
+  const userRole = useAppStore((s) => s.user?.role)
   const setView = useAppStore((s) => s.setView)
-  const { data: institutionQuery } = useInstitution() as {
-    data: { tenant: { name: string; address: string | null; city: string | null; phone: string | null; email: string | null; rectorName: string | null; rectorTitle: string | null } } | undefined
-  }
   const { data: academicYearsQuery } = useAcademicYears() as {
     data: { data: { id: string; name: string; isCurrent: boolean }[] } | undefined
   }
   const currentYearName = (academicYearsQuery?.data || []).find((y) => y.isCurrent)?.name || ''
+  const currentYearId = (academicYearsQuery?.data || []).find((y) => y.isCurrent)?.id || ''
   const [selectedSession, setSelectedSession] = useState<string | null>(null)
+  const [selectedDepartmentId, setSelectedDepartmentId] = useState<string | null>(null)
   const [selectedSessionType, setSelectedSessionType] = useState('normale')
   const [isExportingPV, setIsExportingPV] = useState(false)
   const [isLaunching, setIsLaunching] = useState(false)
   const [isLocking, setIsLocking] = useState(false)
   const [qrCode, setQrCode] = useState<string | null>(null)
-  // Pas de modele backend pour la composition complete du jury (Deliberation
-  // ne persiste que presidentId). Cette liste alimente uniquement le PV genere
-  // pendant la session courante et ne doit donc pas afficher de faux membres.
   const [juryMembers, setJuryMembers] = useState<{ id: string; name: string; role: string }[]>([])
   const [newMemberName, setNewMemberName] = useState('')
   const [newMemberRole, setNewMemberRole] = useState('Membre')
 
   const apiSessionType = selectedSessionType === 'normale' ? 'NORMALE' : 'RATTRAPAGE'
   const { data: deliberationData, isLoading: isDeliberationLoading } = useDeliberation(
-    selectedSession ? { id: selectedSession } : { session: apiSessionType }
+    selectedSession ? { id: selectedSession, departmentId: selectedDepartmentId || undefined } :
+      { session: apiSessionType, departmentId: selectedDepartmentId || undefined }
   )
+  const departments: { id: string; name: string; shortName: string | null }[] = useMemo(
+    () => deliberationData?.departments ?? [], [deliberationData?.departments]
+  )
+  useEffect(() => {
+    if (!selectedDepartmentId && departments.length > 0) setSelectedDepartmentId(departments[0].id)
+  }, [departments, selectedDepartmentId])
+  const selectedDepartment = departments.find((department) => department.id === selectedDepartmentId)
   const deliberations: DeliberationSession[] = useMemo(
-    () => (deliberationData?.sessions ?? []).map((s: { id: string; titre: string; date: string; statut: string; type?: string }) => ({
-      id: s.id, titre: s.titre, date: s.date, statut: s.statut as DeliberationSession['statut'], type: s.type,
+    () => (deliberationData?.sessions ?? []).map((s: { id: string; titre: string; date: string; statut: string; type?: string; academicYearId?: string }) => ({
+      id: s.id, titre: s.titre, date: s.date, statut: s.statut as DeliberationSession['statut'], type: s.type, academicYearId: s.academicYearId,
     })),
     [deliberationData]
   )
 
   useEffect(() => {
     const expectedType = apiSessionType === 'RATTRAPAGE' ? 'RATTRAPAGE' : 'ANNUEL'
-    const latestSession = deliberations.find((session) => session.type === expectedType)
+    const latestSession = deliberations.find((session) => session.type === expectedType && session.academicYearId === currentYearId)
     if (!selectedSession && latestSession) {
       setSelectedSession(latestSession.id)
     }
-  }, [apiSessionType, deliberations, selectedSession])
+  }, [apiSessionType, deliberations, selectedSession, currentYearId])
 
   const deliberationStudents: DeliberationStudent[] = useMemo(() => deliberationData?.students ?? [], [deliberationData])
   const readiness: DeliberationReadiness | null = deliberationData?.readiness ?? null
   const isReadyForJury = Boolean(readiness?.ready)
   const isLocked: boolean = deliberationData?.selected?.isLocked ?? false
+  useEffect(() => {
+    const stored = deliberationData?.selected?.juryMembers
+    if (isLocked && Array.isArray(stored)) {
+      setJuryMembers(stored.map((member: { name: string; role: string }, index: number) => ({
+        id: `${selectedSession}-${index}`, name: member.name, role: member.role,
+      })))
+    }
+  }, [isLocked, deliberationData?.selected?.juryMembers, selectedSession])
   const currentSession = deliberations.find(d => d.id === selectedSession)
   const hasStudents = deliberationStudents.length > 0
   const canExportPV = Boolean(selectedSession && isLocked && hasStudents && isReadyForJury)
-  const canLock = Boolean(selectedSession && !isLocked && hasStudents && isReadyForJury)
+  const canLock = Boolean(selectedSession && !isLocked && hasStudents && isReadyForJury && juryMembers.filter((member) => member.role === 'President').length === 1)
 
   const handleLaunch = async () => {
     if (isDeliberationLoading) return
@@ -207,7 +224,7 @@ export function DeliberationPage() {
       const res = await fetch('/api/deliberation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ session: apiSessionType }),
+        body: JSON.stringify({ session: apiSessionType, departmentId: selectedDepartmentId }),
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(json.error || 'Echec du lancement')
@@ -238,7 +255,10 @@ export function DeliberationPage() {
     if (!window.confirm('Valider officiellement cette délibération ? Cette action officialise les résultats.')) return
     setIsLocking(true)
     try {
-      const res = await fetch(`/api/deliberation?id=${selectedSession}`, { method: 'PUT' })
+      const res = await fetch(`/api/deliberation?id=${selectedSession}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ juryMembers: juryMembers.map(({ name, role }) => ({ name, role })) }),
+      })
       const json = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(json.error || 'Echec de la validation')
       toast.success('Deliberation validee', { description: 'Les resultats sont officialises' })
@@ -277,28 +297,8 @@ export function DeliberationPage() {
       toast.error('PV indisponible', { description: 'Aucun étudiant ne figure dans cette délibération.' })
       return
     }
-    if (!juryMembers.some((member) => member.role === 'President')) {
-      toast.error('Président du jury requis', { description: 'Ajoutez au moins un président du jury avant de générer le PV.' })
-      return
-    }
     setIsExportingPV(true)
     try {
-      const session = {
-        name: deliberations.find(s => s.id === selectedSession)?.titre || 'Délibération',
-        date: deliberations.find(s => s.id === selectedSession)?.date || '',
-        type: selectedSessionType === 'normale' ? 'Session Normale' : 'Session de Rattrapage',
-      }
-
-      const members = juryMembers.map(m => ({ name: m.name, role: m.role }))
-      const students = deliberationStudents.map(s => ({
-        name: `${s.prenom} ${s.nom}`,
-        matricule: s.matricule,
-        moy: s.moyenne,
-        decision: s.decision === 'ADMI' ? 'ADMIS' : s.decision === 'ADMI_DETTE' ? 'ADMIS_CHANCE' : s.decision === 'COMPENSE' ? 'ADMIS' : s.decision,
-        mention: s.moyenne >= 16 ? 'Très Bien' : s.moyenne >= 14 ? 'Bien' : s.moyenne >= 12 ? 'Assez Bien' : s.moyenne >= 10 ? 'Passable' : undefined,
-      }))
-
-      const tenant = institutionQuery?.tenant
       const res = await fetch('/api/documents/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -307,14 +307,6 @@ export function DeliberationPage() {
           tenantId,
           deliberationId: selectedSession,
           sign: true,
-          data: {
-            session, members, students, academicYear: currentYearName,
-            tenant: tenant ? {
-              name: tenant.name, address: tenant.address || '', city: tenant.city || '',
-              phone: tenant.phone || '', email: tenant.email || '',
-              rectorName: tenant.rectorName || '', rectorTitle: tenant.rectorTitle || 'Recteur',
-            } : undefined,
-          },
         }),
       })
 
@@ -329,7 +321,7 @@ export function DeliberationPage() {
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `PV_Deliberation_${Date.now()}.pdf`
+      a.download = `PV_${(selectedDepartment?.shortName || selectedDepartment?.name || 'Departement').replace(/[^a-zA-Z0-9-]/g, '_')}_${Date.now()}.pdf`
       a.click()
       window.URL.revokeObjectURL(url)
 
@@ -345,7 +337,7 @@ export function DeliberationPage() {
     } finally {
       setIsExportingPV(false)
     }
-  }, [selectedSession, selectedSessionType, juryMembers, deliberations, deliberationStudents, tenantId, institutionQuery, currentYearName, isLocked, hasStudents, isReadyForJury, readiness])
+  }, [selectedSession, tenantId, isLocked, hasStudents, isReadyForJury, readiness, selectedDepartment])
 
   // ─── Computed Stats ────────────────────────────────────────────────────
   const stats = useMemo(() => {
@@ -593,17 +585,13 @@ export function DeliberationPage() {
                   )}
                 </div>
 
-                <div className="flex lg:flex-col gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-xs"
-                    onClick={() => setView('grades')}
-                  >
-                    <BookOpen className="size-3.5 mr-1.5" />
-                    Ouvrir Notes
-                  </Button>
-                </div>
+                {!['FACULTE', 'DEPARTEMENT'].includes(userRole || '') && (
+                  <div className="flex lg:flex-col gap-2">
+                    <Button variant="outline" size="sm" className="text-xs" onClick={() => setView('grades')}>
+                      <BookOpen className="size-3.5 mr-1.5" />Ouvrir Notes
+                    </Button>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -625,9 +613,23 @@ export function DeliberationPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-5">
-              {/* Session type selector -- deliberations are computed for the whole
-                  institution over the current academic year (see /api/deliberation);
-                  there is no per-filiere/niveau/semestre scoping to select. */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-gray-600">Département responsable du PV</Label>
+                {departments.length === 0 && !isDeliberationLoading && (
+                  <p className="text-xs text-[#b45f14]">Aucun département actif accessible. Vérifiez votre affectation dans Utilisateurs et la Structure.</p>
+                )}
+                <Select value={selectedDepartmentId || ''} onValueChange={(value) => {
+                  setSelectedDepartmentId(value)
+                  setSelectedSession(null)
+                  setJuryMembers([])
+                }}>
+                  <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Choisir un département" /></SelectTrigger>
+                  <SelectContent>
+                    {departments.map((department) => <SelectItem key={department.id} value={department.id}>{department.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-gray-500">Seuls les inscrits de ce département sont délibérés. Les autres départements n&apos;affectent pas son PV.</p>
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label className="text-xs font-medium text-gray-600">Session</Label>
@@ -636,6 +638,7 @@ export function DeliberationPage() {
                     onValueChange={(value) => {
                       setSelectedSessionType(value)
                       setSelectedSession(null)
+                      setJuryMembers([])
                     }}
                   >
                     <SelectTrigger className="h-9 text-sm">
@@ -649,7 +652,7 @@ export function DeliberationPage() {
                 </div>
                 <div className="flex items-end pb-2">
                   <p className="text-[11px] text-gray-400">
-                    Portee : tous les etudiants de l&apos;annee academique {currentYearName || 'en cours'}
+                    Portée : inscrits du département {selectedDepartment?.name || 'à sélectionner'} · {currentYearName || 'année en cours'}
                   </p>
                 </div>
               </div>
@@ -712,6 +715,7 @@ export function DeliberationPage() {
                           size="sm"
                           className="h-7 w-7 p-0 text-gray-600 hover:text-[#c62828] hover:bg-[#c6282810]"
                           onClick={() => removeMember(member.id)}
+                          disabled={isLocked}
                         >
                           <Trash2 className="size-3.5" />
                         </Button>
@@ -721,7 +725,7 @@ export function DeliberationPage() {
                 </div>
                 {/* Add Member */}
                 <p className="text-[11px] text-gray-400">
-                  La composition du jury est utilisée pour le PV généré dans cette session. Elle n&apos;est pas encore persistée comme entité dédiée.
+                  La composition du jury est enregistrée lors de la validation et réutilisée pour chaque réédition du PV.
                 </p>
                 <div className="flex items-center gap-2">
                   <Input
@@ -730,8 +734,9 @@ export function DeliberationPage() {
                     onChange={(e) => setNewMemberName(e.target.value)}
                     className="h-9 text-sm flex-1"
                     onKeyDown={(e) => e.key === 'Enter' && addMember()}
+                    disabled={isLocked}
                   />
-                  <Select value={newMemberRole} onValueChange={setNewMemberRole}>
+                  <Select value={newMemberRole} onValueChange={setNewMemberRole} disabled={isLocked}>
                     <SelectTrigger className="h-9 text-sm w-28">
                       <SelectValue />
                     </SelectTrigger>
@@ -744,6 +749,7 @@ export function DeliberationPage() {
                     size="sm"
                     className="h-9 bg-[#1a2744] hover:bg-[#253556] text-white text-xs"
                     onClick={addMember}
+                    disabled={isLocked}
                   >
                     <Plus className="size-3.5 mr-1" />
                     Ajouter
@@ -1247,7 +1253,7 @@ export function DeliberationPage() {
                     <TableRow
                       key={session.id}
                       className={`cursor-pointer transition-colors ${selectedSession === session.id ? 'bg-[#2d7a4f08]' : 'hover:bg-gray-50'}`}
-                      onClick={() => setSelectedSession(session.id)}
+                      onClick={() => { setSelectedSession(session.id); setJuryMembers([]) }}
                     >
                       <TableCell className="text-sm font-medium text-[#1a2744]">{session.titre}</TableCell>
                       <TableCell className="text-sm text-gray-500">{session.date}</TableCell>
@@ -1257,7 +1263,7 @@ export function DeliberationPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" className="h-7 text-xs text-[#2d7a4f]" onClick={() => { setSelectedSession(session.id); toast.success(`Session ${session.titre} sélectionnée`) }}>
+                        <Button variant="ghost" size="sm" className="h-7 text-xs text-[#2d7a4f]" onClick={(event) => { event.stopPropagation(); setSelectedSession(session.id); setJuryMembers([]); toast.success(`Session ${session.titre} sélectionnée`) }}>
                           <ChevronRight className="size-3.5 mr-1" />
                           Detail
                         </Button>
