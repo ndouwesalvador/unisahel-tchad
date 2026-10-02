@@ -164,6 +164,29 @@ async function getDashboardHandler(user: SessionUser, tenantId: string, request:
     }
     if (user.role === 'ENSEIGNANT') return getTeacherDashboardHandler(user, tenantId, requestedYearId)
 
+    // Only the institution administrator may receive institution-wide financial
+    // and academic aggregates. Other staff roles get a small, scoped home view.
+    if (user.role !== 'ADMIN_INSTITUTION') {
+      const [academicYear, announcements] = await Promise.all([
+        db.academicYear.findFirst({
+          where: requestedYearId ? { id: requestedYearId, tenantId } : { tenantId, isCurrent: true },
+          select: { id: true, name: true },
+        }),
+        db.announcement.findMany({
+          where: { tenantId, isPublished: true },
+          orderBy: { publishedAt: 'desc' },
+          take: 5,
+          select: { id: true, title: true, publishedAt: true, createdAt: true },
+        }),
+      ])
+      return NextResponse.json({
+        isRoleView: true,
+        role: user.role,
+        academicYear,
+        announcements: announcements.map((item) => ({ id: item.id, title: item.title, date: item.publishedAt ?? item.createdAt })),
+      })
+    }
+
     const now = new Date()
 
     // Parallel fetch all stats

@@ -124,6 +124,46 @@ interface TeacherDashboardResponse {
   announcements: { id: string; title: string; date: string }[]
 }
 
+interface RoleDashboardResponse {
+  isRoleView: true
+  isStudentView?: false
+  isTeacherView?: false
+  role: string
+  academicYear: { id: string; name: string } | null
+  announcements: { id: string; title: string; date: string }[]
+}
+
+const roleQuickActions: Record<string, { label: string; view: import('@/lib/store').AppView }[]> = {
+  RECTORAT: [{ label: 'Étudiants', view: 'students' }, { label: 'Rapports', view: 'reports' }, { label: 'Documents', view: 'documents' }],
+  SCOLARITE: [{ label: 'Étudiants', view: 'students' }, { label: 'Candidatures', view: 'candidature' }, { label: 'Documents', view: 'documents' }, { label: 'Paiements', view: 'payments' }],
+  FACULTE: [{ label: 'Étudiants', view: 'students' }, { label: 'Notes', view: 'grades' }, { label: 'Délibérations', view: 'deliberation' }],
+  DEPARTEMENT: [{ label: 'Étudiants', view: 'students' }, { label: 'Notes', view: 'grades' }, { label: 'Rapports', view: 'reports' }],
+  RESPONSABLE_FILIERE: [{ label: 'Maquettes', view: 'maquette' }, { label: 'Notes', view: 'grades' }, { label: 'Délibérations', view: 'deliberation' }],
+  JURY: [{ label: 'Délibérations', view: 'deliberation' }, { label: 'Étudiants', view: 'students' }],
+  CAISSE: [{ label: 'Paiements', view: 'payments' }, { label: 'Documents', view: 'documents' }, { label: 'Bourses', view: 'scholarships' }],
+  MAITRE_STAGE: [{ label: 'Stages', view: 'internships' }, { label: 'Étudiants', view: 'students' }],
+  PARENT: [{ label: 'Paiements', view: 'payments' }],
+}
+
+function RoleDashboardHome({ data }: { data: RoleDashboardResponse }) {
+  const { user, setView } = useAppStore()
+  const links = roleQuickActions[data.role] ?? []
+  return <div className="space-y-5 text-slate-900">
+    <Card className="border-emerald-200 bg-emerald-50 shadow-sm"><CardContent className="p-6">
+      <p className="text-sm font-bold uppercase tracking-wide text-emerald-900">Espace {data.role.replaceAll('_', ' ').toLocaleLowerCase('fr-FR')}</p>
+      <h1 className="mt-2 text-2xl font-bold text-slate-950">{getGreeting()}, {user?.firstName} {user?.lastName}</h1>
+      <p className="mt-2 text-sm text-slate-800">Accédez aux fonctions autorisées pour votre rôle.</p>
+      <p className="mt-3 text-sm font-semibold text-emerald-950">{data.academicYear ? `Année académique ${data.academicYear.name}` : 'Aucune année académique active'}</p>
+    </CardContent></Card>
+    <Card className="border-slate-200 bg-white"><CardHeader><CardTitle className="text-lg text-slate-950">Accès rapides</CardTitle></CardHeader><CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      {links.map((link) => <Button key={link.view} variant="outline" onClick={() => setView(link.view)} className="min-h-14 justify-start whitespace-normal border-slate-300 bg-white px-4 text-left text-sm font-semibold text-slate-900 hover:bg-emerald-50 hover:text-slate-950">{link.label}</Button>)}
+    </CardContent></Card>
+    <Card className="border-slate-200 bg-white"><CardHeader><CardTitle className="text-lg text-slate-950">Annonces publiées</CardTitle></CardHeader><CardContent>
+      {data.announcements.length ? <ul className="divide-y divide-slate-200">{data.announcements.map((item) => <li key={item.id} className="flex flex-wrap justify-between gap-2 py-3 text-sm"><span className="font-medium text-slate-950">{item.title}</span><span className="text-slate-700">{formatDateShort(item.date)}</span></li>)}</ul> : <p className="text-sm text-slate-700">Aucune annonce publiée pour le moment.</p>}
+    </CardContent></Card>
+  </div>
+}
+
 // ─── Quick actions for a student's own dashboard ───────────────────────────────
 
 const studentQuickActions = [
@@ -241,7 +281,7 @@ function StudentDashboardHome({ data }: { data: StudentDashboardResponse }) {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-[#1a2744] truncate">{activity.description}</p>
-                      <span className="text-xs text-gray-400">{formatDateShort(activity.time)}</span>
+                      <span className="text-sm text-slate-700">{formatDateShort(activity.time)}</span>
                     </div>
                   </div>
                 ))}
@@ -266,11 +306,11 @@ function StudentDashboardHome({ data }: { data: StudentDashboardResponse }) {
                   <div key={event.id} className={`flex items-start gap-3 px-6 py-3 ${i < data.upcomingEvents.length - 1 ? 'border-b border-gray-100' : ''}`}>
                     <div className="w-10 h-10 rounded-lg bg-[#1a274408] flex flex-col items-center justify-center shrink-0">
                       <Calendar className="size-3 text-[#1a2744]" />
-                      <span className="text-[9px] font-bold text-[#1a2744] mt-0.5">{formatDateShort(event.date)}</span>
+                      <span className="text-xs font-bold text-[#1a2744] mt-0.5">{formatDateShort(event.date)}</span>
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-[#1a2744] font-medium truncate">{event.title}</p>
-                      <span className="text-[10px] text-[#d4a853] font-medium">{formatCountdown(event.date)}</span>
+                      <span className="text-sm font-medium text-amber-900">{formatCountdown(event.date)}</span>
                     </div>
                   </div>
                 ))}
@@ -393,10 +433,10 @@ function formatCountdown(iso: string): string {
 function EmptyState({ label }: { label: string }) {
   return (
     <div className="flex flex-col items-center justify-center py-10 text-center">
-      <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center mb-2">
-        <Inbox className="size-5 text-gray-400" />
+      <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center mb-2">
+        <Inbox className="size-5 text-slate-700" />
       </div>
-      <p className="text-sm text-gray-400">{label}</p>
+      <p className="text-sm text-slate-700">{label}</p>
     </div>
   )
 }
@@ -445,7 +485,7 @@ function PulsingDot({ color = '#2d7a4f' }: { color?: string }) {
 export function DashboardHome() {
   const { user, setView, selectedAcademicYearId } = useAppStore()
   const { data, isLoading, isError, refetch } = useDashboardStats(selectedAcademicYearId) as {
-    data: DashboardApiResponse | StudentDashboardResponse | TeacherDashboardResponse | undefined
+    data: DashboardApiResponse | StudentDashboardResponse | TeacherDashboardResponse | RoleDashboardResponse | undefined
     isLoading: boolean
     isError: boolean
     refetch: () => void
@@ -470,6 +510,7 @@ export function DashboardHome() {
     return <StudentDashboardHome data={data} />
   }
   if (data.isTeacherView) return <TeacherDashboardHome data={data} />
+  if ('isRoleView' in data) return <RoleDashboardHome data={data} />
 
   const statsCards = [
     { title: 'Dossiers étudiants', value: data.statsCards.totalStudents.toLocaleString('fr-FR'), icon: Users, color: '#2d7a4f', bgColor: '#2d7a4f15' },
@@ -549,13 +590,13 @@ export function DashboardHome() {
   return (
     <div className="space-y-6">
       {/* ── University Branding Card + Welcome Section ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-4">
         {/* University Logo & Branding Card */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5 }}
-          className="lg:col-span-1"
+          className="hidden"
         >
           <Card className="h-full overflow-hidden">
             <div className="bg-gradient-to-br from-[#1a2744] via-[#1f3050] to-[#2d7a4f] p-4 text-white flex flex-col items-center justify-center text-center h-full min-h-[120px] relative">
@@ -584,7 +625,7 @@ export function DashboardHome() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="lg:col-span-3"
+          className="min-w-0"
         >
           <Card className="overflow-hidden">
             <div className="relative overflow-hidden">
@@ -629,8 +670,8 @@ export function DashboardHome() {
                 <h1 className="text-2xl font-bold">
                   {getGreeting()}, {user?.firstName} {user?.lastName}
                 </h1>
-                <p className="text-white/70 mt-1">
-                  Voici un apercu de votre etablissement
+                <p className="mt-1 text-sm text-white">
+                  Vue d’ensemble de votre établissement
                 </p>
                 <div className="flex flex-wrap items-center gap-2 mt-3">
                   {data.currentAcademicYear ? (
@@ -678,7 +719,7 @@ export function DashboardHome() {
             {/* Enhanced Quick Actions */}
             <CardContent className="p-4 pt-2">
               <h3 className="text-sm font-semibold text-[#1a2744] mb-3">Actions rapides</h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {quickActions.map((action) => (
                   <motion.div
                     key={action.label}
@@ -687,7 +728,7 @@ export function DashboardHome() {
                   >
                     <Button
                       variant="outline"
-                      className="h-auto py-3 w-full flex flex-col items-center gap-2 border-solid border-gray-200 hover:border-transparent transition-all duration-300 group relative overflow-hidden"
+                      className="h-auto min-h-16 w-full flex-row justify-start gap-3 whitespace-normal border-slate-300 bg-white px-4 py-3 text-left text-slate-900 hover:border-emerald-500 hover:bg-emerald-50 hover:text-slate-950 group relative overflow-hidden"
                       onClick={() => setView(action.view)}
                     >
                       {/* Gradient background on hover */}
@@ -700,7 +741,7 @@ export function DashboardHome() {
                       <div className="relative w-9 h-9 rounded-xl flex items-center justify-center transition-transform duration-300 group-hover:rotate-6" style={{ backgroundColor: action.bgColor }}>
                         <action.icon className="size-4 transition-transform duration-300 group-hover:scale-110" style={{ color: action.color }} />
                       </div>
-                      <span className="text-[11px] font-medium text-gray-600 group-hover:text-[#1a2744] relative z-10">{action.label}</span>
+                      <span className="relative z-10 text-sm font-semibold text-slate-900">{action.label}</span>
                     </Button>
                   </motion.div>
                 ))}
@@ -711,7 +752,7 @@ export function DashboardHome() {
       </div>
 
       {/* ── Stats Cards ── */}
-      <p className="text-xs text-gray-500">Indicateurs cumulés de l’institution, toutes années académiques confondues. L’année sélectionnée dans l’en-tête ne filtre pas cette synthèse.</p>
+      <p className="text-sm text-slate-700">Indicateurs cumulés de l’institution, toutes années académiques confondues. L’année sélectionnée dans l’en-tête ne filtre pas cette synthèse.</p>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {statsCards.map((stat, i) => (
           <motion.div
@@ -742,7 +783,7 @@ export function DashboardHome() {
                   <div className="flex-1">
                     <div className="flex items-center gap-1.5">
                       <PulsingDot color={stat.color} />
-                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">{stat.title}</p>
+                      <p className="text-sm font-semibold text-slate-700">{stat.title}</p>
                     </div>
                     <p className="text-2xl font-bold text-[#1a2744] mt-1.5">{stat.value}</p>
                   </div>
@@ -767,7 +808,7 @@ export function DashboardHome() {
             <CardTitle className="text-base font-semibold text-[#1a2744]">
               Repartition par filiere
             </CardTitle>
-            <p className="text-xs text-gray-400">Effectif étudiant par programme</p>
+            <p className="text-sm text-slate-700">Effectif étudiant par programme. Les noms complets figurent sous le graphique.</p>
           </CardHeader>
           <CardContent>
             <div className="h-[300px]">
@@ -777,7 +818,7 @@ export function DashboardHome() {
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={filiereData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#6b7280' }} />
+                    <XAxis dataKey="name" hide />
                     <YAxis tick={{ fontSize: 11, fill: '#6b7280' }} allowDecimals={false} />
                     <Tooltip
                       contentStyle={{
@@ -798,6 +839,7 @@ export function DashboardHome() {
                 </ResponsiveContainer>
               )}
             </div>
+            {filiereData.length > 0 && <ul className="mt-4 divide-y divide-slate-200">{filiereData.map((item) => <li key={item.name} className="flex items-start justify-between gap-3 py-2 text-sm"><span className="break-words font-medium text-slate-900">{item.name}</span><span className="shrink-0 font-bold text-slate-950">{item.etudiants}</span></li>)}</ul>}
           </CardContent>
         </Card>
 
@@ -807,7 +849,7 @@ export function DashboardHome() {
             <CardTitle className="text-base font-semibold text-[#1a2744]">
               Statut des étudiants
             </CardTitle>
-            <p className="text-xs text-gray-400">Repartition par statut administratif</p>
+            <p className="text-sm text-slate-700">Répartition par statut administratif</p>
           </CardHeader>
           <CardContent>
             <div className="h-[300px]">
@@ -824,7 +866,7 @@ export function DashboardHome() {
                       outerRadius={100}
                       paddingAngle={3}
                       dataKey="value"
-                      label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
+                      label={false}
                     >
                       {studentStatusData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
@@ -844,6 +886,7 @@ export function DashboardHome() {
                 </ResponsiveContainer>
               )}
             </div>
+            {studentStatusData.length > 0 && <ul className="mt-4 divide-y divide-slate-200">{studentStatusData.map((item) => <li key={item.name} className="flex justify-between gap-3 py-2 text-sm"><span className="font-medium text-slate-900">{item.name}</span><span className="font-bold text-slate-950">{item.value}</span></li>)}</ul>}
           </CardContent>
         </Card>
       </div>
@@ -856,7 +899,7 @@ export function DashboardHome() {
             <CardTitle className="text-base font-semibold text-[#1a2744]">
               Repartition par cycle
             </CardTitle>
-            <p className="text-xs text-gray-400">Licence, Master, Doctorat</p>
+            <p className="text-sm text-slate-700">Licence, Master, Doctorat</p>
           </CardHeader>
           <CardContent>
             <div className="h-[300px]">
@@ -873,7 +916,7 @@ export function DashboardHome() {
                       outerRadius={100}
                       paddingAngle={3}
                       dataKey="value"
-                      label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
+                      label={false}
                     >
                       {cycleData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
@@ -893,6 +936,7 @@ export function DashboardHome() {
                 </ResponsiveContainer>
               )}
             </div>
+            {cycleData.length > 0 && <ul className="mt-4 divide-y divide-slate-200">{cycleData.map((item) => <li key={item.name} className="flex justify-between gap-3 py-2 text-sm"><span className="font-medium text-slate-900">{item.name}</span><span className="font-bold text-slate-950">{item.value}</span></li>)}</ul>}
           </CardContent>
         </Card>
 
@@ -902,7 +946,7 @@ export function DashboardHome() {
             <CardTitle className="text-base font-semibold text-[#1a2744]">
               Notes au-dessus du seuil par programme
             </CardTitle>
-            <p className="text-xs text-gray-400">Part des notes saisies au-dessus du seuil de passage, par programme</p>
+            <p className="text-sm text-slate-700">Part des notes saisies au-dessus du seuil de passage, par programme. Ce n’est pas un taux de diplomation.</p>
           </CardHeader>
           <CardContent>
             <div className="h-[300px]">
@@ -913,7 +957,7 @@ export function DashboardHome() {
                   <BarChart data={reussiteData} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
                     <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11, fill: '#6b7280' }} tickFormatter={(v: number) => `${v}%`} />
-                    <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: '#6b7280' }} width={80} />
+                    <YAxis type="category" dataKey="name" hide />
                     <Tooltip
                       contentStyle={{
                         borderRadius: '8px',
@@ -933,6 +977,7 @@ export function DashboardHome() {
                 </ResponsiveContainer>
               )}
             </div>
+            {reussiteData.length > 0 && <ul className="mt-4 divide-y divide-slate-200">{reussiteData.map((item) => <li key={item.name} className="flex items-start justify-between gap-3 py-2 text-sm"><span className="break-words font-medium text-slate-900">{item.name}</span><span className="shrink-0 font-bold text-slate-950">{item.taux} %</span></li>)}</ul>}
           </CardContent>
         </Card>
       </div>
@@ -979,7 +1024,7 @@ export function DashboardHome() {
                             {alert.count}
                           </motion.span>
                         </div>
-                        <p className="text-xs text-gray-400 mt-0.5">{alert.description}</p>
+                        <p className="mt-1 text-sm text-slate-700">{alert.description}</p>
                       </div>
                     </div>
                   </CardContent>
@@ -1030,7 +1075,7 @@ export function DashboardHome() {
                 </div>
               </div>
 
-              <p className="text-[10px] text-gray-400 pt-2 border-t border-gray-100">
+              <p className="border-t border-gray-100 pt-2 text-sm text-slate-700">
                 Ces indicateurs reflètent l&apos;état au chargement de cette page.
               </p>
             </CardContent>
@@ -1066,9 +1111,9 @@ export function DashboardHome() {
                       <p className="text-sm text-[#1a2744] truncate">{activity.description}</p>
                       <div className="flex items-center gap-2 mt-1">
                         {getActivityBadge(activity.type)}
-                        <span className="text-xs text-gray-400">{activity.user}</span>
+                        <span className="text-sm text-slate-700">{activity.user}</span>
                         <span className="text-xs text-gray-300">·</span>
-                        <span className="text-xs text-gray-400">{formatDateShort(activity.time)}</span>
+                        <span className="text-sm text-slate-700">{formatDateShort(activity.time)}</span>
                       </div>
                     </div>
                   </motion.div>
@@ -1101,13 +1146,13 @@ export function DashboardHome() {
                   >
                     <div className="w-10 h-10 rounded-lg bg-[#1a274408] flex flex-col items-center justify-center shrink-0">
                       <Calendar className="size-3 text-[#1a2744]" />
-                      <span className="text-[9px] font-bold text-[#1a2744] mt-0.5">{formatDateShort(event.date)}</span>
+                          <span className="text-xs font-bold text-[#1a2744] mt-0.5">{formatDateShort(event.date)}</span>
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-[#1a2744] font-medium truncate">{event.title}</p>
                       <div className="flex items-center gap-2 mt-1">
                         {getEventBadge(event.type)}
-                        <span className="text-[10px] text-[#d4a853] font-medium flex items-center gap-0.5">
+                        <span className="flex items-center gap-1 text-sm font-medium text-amber-900">
                           <Clock className="size-2.5" />
                           {formatCountdown(event.date)}
                         </span>

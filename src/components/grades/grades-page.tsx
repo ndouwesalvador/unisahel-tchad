@@ -62,6 +62,20 @@ interface GradeEntry {
   observation: string
 }
 
+interface StoredGrade {
+  id: string
+  studentId: string
+  ccGrade: number | null
+  examGrade: number | null
+  tpGrade: number | null
+  stageGrade: number | null
+  finalGrade: number | null
+  comment: string | null
+  isLocked: boolean
+}
+
+interface GradeRosterStudent { id: string; matricule: string | null; firstName: string; lastName: string }
+
 type LocalEdit = { cc?: string; exam?: string; tp?: string; stage?: string; observation?: string }
 
 interface GradeCompletionItem {
@@ -145,7 +159,7 @@ function computeMoyenne(cc: string, exam: string, tp: string, stage: string, pol
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function GradesPage() {
+function StaffGradesPage() {
   const queryClient = useQueryClient()
   const userRole = useAppStore((state) => state.user?.role)
   const canLockGrades = ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE', 'RESPONSABLE_FILIERE'].includes(userRole || '')
@@ -184,7 +198,9 @@ export function GradesPage() {
   const [selectedUE, setSelectedUE] = useState<string>('')
   const [selectedCourseElementId, setSelectedCourseElementId] = useState<string>('')
   useEffect(() => {
-    if (ueList.length > 0 && !ueList.some((ue) => ue.teachingUnitId === selectedUE)) setSelectedUE(ueList[0].teachingUnitId)
+    if (ueList.length > 0 && !ueList.some((ue) => ue.teachingUnitId === selectedUE)) {
+      setSelectedUE((ueList.find((ue) => ue.courseElements.length > 0) ?? ueList[0]).teachingUnitId)
+    }
     if (ueList.length === 0 && selectedUE) setSelectedUE('')
   }, [ueList, selectedUE])
 
@@ -227,7 +243,7 @@ export function GradesPage() {
     setSelectedSession(session)
   }
 
-  const { data: studentsQuery, isLoading: studentsLoading, isError: rosterError } = useQuery({
+  const { data: studentsQuery, isLoading: studentsLoading, isError: rosterError } = useQuery<{ data: GradeRosterStudent[] }>({
     queryKey: ['grade-roster', selectedCourseElementId, academicYearId],
     enabled: Boolean(currentCourseElement && academicYearId),
     queryFn: async () => {
@@ -238,15 +254,24 @@ export function GradesPage() {
     },
   })
 
-  const { data: gradesQuery, isLoading: gradesLoading } = useQuery({
+  const { data: gradesQuery, isLoading: gradesLoading, isError: gradesError, refetch: retryGrades } = useQuery<{ data: StoredGrade[] }>({
     queryKey: ['grades', selectedUE, selectedCourseElementId, apiSession, academicYearId],
     queryFn: async () => {
-      const params = new URLSearchParams({ teachingUnitId: selectedUE, session: apiSession, limit: '500' })
-      params.set('courseElementId', selectedCourseElementId)
-      if (academicYearId) params.set('academicYearId', academicYearId)
-      const res = await fetch(`/api/grades?${params.toString()}`)
-      if (!res.ok) throw new Error('Failed to fetch grades')
-      return res.json()
+      const allGrades: StoredGrade[] = []
+      let page = 1
+      let hasNext = true
+      while (hasNext) {
+        const params = new URLSearchParams({ teachingUnitId: selectedUE, session: apiSession, limit: '500', page: String(page) })
+        params.set('courseElementId', selectedCourseElementId)
+        if (academicYearId) params.set('academicYearId', academicYearId)
+        const res = await fetch(`/api/grades?${params.toString()}`)
+        if (!res.ok) throw new Error('Impossible de charger les notes de cette matière')
+        const result = await res.json() as { data: StoredGrade[]; pagination?: { hasNext: boolean } }
+        allGrades.push(...result.data)
+        hasNext = Boolean(result.pagination?.hasNext)
+        page++
+      }
+      return { data: allGrades }
     },
     enabled: Boolean(selectedUE && currentCourseElement && academicYearId),
   })
@@ -270,10 +295,10 @@ export function GradesPage() {
 
   const grades: GradeEntry[] = useMemo(() => {
     const students = studentsQuery?.data || []
-    const existingByStudent = new Map<string, any>()
+    const existingByStudent = new Map<string, StoredGrade>()
     for (const g of gradesQuery?.data || []) existingByStudent.set(g.studentId, g)
 
-    return students.map((s: any) => {
+    return students.map((s: GradeRosterStudent) => {
       const existing = existingByStudent.get(s.id)
       const edit = localEdits[s.id] || {}
       const cc = edit.cc !== undefined ? edit.cc : (existing?.ccGrade != null ? String(existing.ccGrade) : '')
@@ -320,6 +345,7 @@ export function GradesPage() {
   }
 
   const buildGradePayload = (requireComplete: boolean) => {
+    if (gradesError || rosterError) throw new Error('Les données de notes ou d’inscription n’ont pas été chargées complètement')
     if (!currentUE) return
     if (!currentCourseElement) {
       throw new Error("Aucun élément constitutif (ECUE) configuré pour cette UE")
@@ -622,7 +648,7 @@ export function GradesPage() {
     if (missing.length === 0) return null
     return missing.find(item => item.teachingUnitId !== selectedUE || item.courseElementId !== selectedCourseElementId) ?? missing[0]
   }, [completion, selectedUE, selectedCourseElementId])
-  const canSave = Boolean(policy && currentCourseElement && academicYearId && hasLocalEdits && !saving && !savingAndLocking)
+  const canSave = Boolean(policy && currentCourseElement && academicYearId && !gradesError && !rosterError && hasLocalEdits && !saving && !savingAndLocking)
   const unlockedGrades = grades.filter(g => !g.isLocked)
   const allCurrentUEGradesReadyForLock = Boolean(policy && grades.length > 0 && grades.every((grade) => isGradeReadyForLock(grade, policy)))
   const canSaveAndLockCurrentUE = Boolean(
@@ -630,13 +656,15 @@ export function GradesPage() {
     currentCourseElement &&
     policy &&
     academicYearId &&
+    !gradesError &&
+    !rosterError &&
     grades.length > 0 &&
     unlockedGrades.length > 0 &&
     allCurrentUEGradesReadyForLock &&
     !saving &&
     !savingAndLocking
   )
-  const canValidateAll = canLockGrades && grades.some(g => g.gradeId && g.moyenne !== null && !g.isLocked)
+  const canValidateAll = canLockGrades && !gradesError && !rosterError && grades.some(g => g.gradeId && g.moyenne !== null && !g.isLocked)
 
   // ─── Distribution ────────────────────────────────────────────────────────
   const distribution = useMemo(() => {
@@ -702,40 +730,40 @@ export function GradesPage() {
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
+        className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
       >
         <div>
-          <h1 className="text-xl font-bold text-[#1a2744]">Gestion des notes</h1>
-          <p className="text-sm text-gray-500">Saisie, calcul et validation des notes</p>
+          <h1 className="text-2xl font-bold text-slate-950">Gestion des notes</h1>
+          <p className="mt-1 text-sm text-slate-700">Choisissez une UE et une matière, saisissez les notes puis enregistrez-les avant validation.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {canLockGrades && <Button
             variant="outline"
             size="sm"
-            className="text-xs"
+            className="text-sm"
             disabled={!nextIncompleteUE || (nextIncompleteUE.teachingUnitId === selectedUE && nextIncompleteUE.courseElementId === selectedCourseElementId)}
             onClick={() => nextIncompleteUE && changeSelection(nextIncompleteUE.teachingUnitId, nextIncompleteUE.courseElementId)}
           >
             UE suivante
           </Button>}
-          <Button variant="outline" size="sm" className="text-xs" onClick={handleImportClick}>
+          <Button variant="outline" size="sm" className="text-sm" disabled={!grades.length} onClick={handleImportClick}>
             <Upload className="size-3.5 mr-1.5" />
             Importer Excel
           </Button>
-          <Button variant="outline" size="sm" className="text-xs" onClick={handleDownloadImportTemplate}>
+          <Button variant="outline" size="sm" className="text-sm" disabled={!grades.length} onClick={handleDownloadImportTemplate}>
             Modèle notes
           </Button>
-          <Button variant="outline" size="sm" className="text-xs" onClick={handleExport}>
+          <Button variant="outline" size="sm" className="text-sm" disabled={!grades.length} onClick={handleExport}>
             <Download className="size-3.5 mr-1.5" />
             Exporter
           </Button>
-          <Button size="sm" className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs" disabled={!canSave} onClick={handleSave}>
+          <Button size="sm" className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-sm" disabled={!canSave} onClick={handleSave}>
             <Save className="size-3.5 mr-1.5" />
             {saving ? 'Enregistrement...' : 'Enregistrer'}
           </Button>
           {canLockGrades && <Button
             size="sm"
-            className="bg-[#1a2744] hover:bg-[#253556] text-white text-xs"
+            className="bg-[#1a2744] hover:bg-[#253556] text-white text-sm"
             disabled={!canSaveAndLockCurrentUE}
             onClick={handleSaveAndLockCurrentUE}
           >
@@ -765,18 +793,19 @@ export function GradesPage() {
                   </div>
                   <div>
                     <h2 className="text-sm font-semibold text-[#1a2744]">
-                      {completion?.ready ? 'Dossier de notes prêt pour délibération' : 'Dossier de notes incomplet pour la délibération'}
+                      {completion && completion.expectedGradeCount === 0 ? 'Aucune note attendue pour cette session' : completion?.ready ? 'Dossier de notes prêt pour délibération' : 'Dossier de notes incomplet pour la délibération'}
                     </h2>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Cette progression couvre toutes les UE/EC inscrites pédagogiquement pour la session {selectedSession === 'normale' ? 'normale' : 'de rattrapage'}.
-                      Les PV restent bloqués tant que toutes les notes ne sont pas verrouillées.
+                    <p className="mt-1 text-sm text-slate-700">
+                      {completion && completion.expectedGradeCount === 0
+                        ? 'Aucune inscription pédagogique active ne produit de note à saisir pour cette session.'
+                        : `Cette progression couvre toutes les UE/EC inscrites pédagogiquement pour la session ${selectedSession === 'normale' ? 'normale' : 'de rattrapage'}. Les PV restent bloqués tant que toutes les notes ne sont pas verrouillées.`}
                     </p>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+                {(!completion || completion.expectedGradeCount > 0) && <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
                   <div className="rounded-lg bg-gray-50 border border-gray-100 p-3">
-                    <p className="text-[10px] uppercase tracking-wide text-gray-400">Verrouillées</p>
+                    <p className="text-sm font-medium text-slate-700">Verrouillées</p>
                     <p className="text-lg font-bold text-[#1a2744]">
                       {completion ? `${completion.lockedGradeCount}/${completion.expectedGradeCount}` : completionLoading ? '...' : '—'}
                     </p>
@@ -786,30 +815,30 @@ export function GradesPage() {
                     />
                   </div>
                   <div className="rounded-lg bg-gray-50 border border-gray-100 p-3">
-                    <p className="text-[10px] uppercase tracking-wide text-gray-400">Saisies</p>
+                    <p className="text-sm font-medium text-slate-700">Saisies</p>
                     <p className="text-lg font-bold text-[#1a2744]">
                       {completion ? `${completion.enteredGradeCount}/${completion.expectedGradeCount}` : completionLoading ? '...' : '—'}
                     </p>
                   </div>
                   <div className="rounded-lg bg-gray-50 border border-gray-100 p-3">
-                    <p className="text-[10px] uppercase tracking-wide text-gray-400">Manquantes</p>
+                    <p className="text-sm font-medium text-slate-700">Manquantes</p>
                     <p className={`text-lg font-bold ${completion?.missingGradeCount ? 'text-[#d4a853]' : 'text-[#2d7a4f]'}`}>
                       {completion?.missingGradeCount ?? (completionLoading ? '...' : '—')}
                     </p>
                   </div>
                   <div className="rounded-lg bg-gray-50 border border-gray-100 p-3">
-                    <p className="text-[10px] uppercase tracking-wide text-gray-400">Étudiants complets</p>
+                    <p className="text-sm font-medium text-slate-700">Étudiants complets</p>
                     <p className="text-lg font-bold text-[#1a2744]">
                       {completion ? `${completion.studentsReady}/${completion.studentsTotal}` : completionLoading ? '...' : '—'}
                     </p>
                   </div>
-                </div>
+                </div>}
 
                 {completion && !completion.ready && completion.byTeachingUnit.length > 0 && (
                   <div className="rounded-lg border border-[#d4a85330] bg-[#d4a85308] p-3">
                     <div className="flex items-center justify-between mb-2">
-                      <p className="text-xs font-medium text-[#1a2744]">UE / EC à compléter</p>
-                      <Badge className="text-[10px] bg-[#d4a85315] text-[#d4a853] border-0">
+                      <p className="text-sm font-semibold text-[#1a2744]">UE / EC à compléter</p>
+                      <Badge className="border-0 bg-amber-100 text-xs font-semibold text-amber-950">
                         Cliquez pour ouvrir
                       </Badge>
                     </div>
@@ -829,15 +858,15 @@ export function GradesPage() {
                             }`}
                           >
                             <div className="flex items-center justify-between gap-2">
-                              <span className="text-xs font-semibold text-[#1a2744] truncate">
+                              <span className="truncate text-sm font-semibold text-[#1a2744]">
                                 {item.code} {item.ecCode ? `/ ${item.ecCode}` : ''}
                               </span>
-                              <Badge className="text-[10px] bg-[#c6282810] text-[#c62828] border-0">
+                              <Badge className="border-0 bg-red-100 text-xs font-semibold text-red-900">
                                 {item.missing} manque
                               </Badge>
                             </div>
-                            <p className="text-[11px] text-gray-500 mt-1 truncate">{item.name}</p>
-                            <p className="text-[10px] text-gray-400 mt-1">
+                            <p className="mt-1 truncate text-sm text-slate-800">{item.name}</p>
+                            <p className="mt-1 text-xs text-slate-700">
                               {item.locked}/{item.expected} verrouillées · {item.programName} {item.levelName}
                             </p>
                           </button>
@@ -847,7 +876,7 @@ export function GradesPage() {
                 )}
 
                 {completion && !completion.ready && completion.incompleteStudents.length > 0 && (
-                  <p className="text-[11px] text-gray-500">
+                  <p className="text-sm text-slate-700">
                     Étudiants incomplets : {completion.incompleteStudents.slice(0, 3).map((student) => `${student.name} (${student.missing})`).join(', ')}
                     {completion.incompleteStudents.length > 3 ? '…' : ''}
                   </p>
@@ -858,8 +887,25 @@ export function GradesPage() {
         </Card>
       </motion.div>}
 
-      {/* ─── Enhanced Stats Cards ──────────────────────────────────────────── */}
-      <motion.div
+      {!dataLoading && !currentCourseElement && (
+        <Card className="border-amber-300 bg-amber-50">
+          <CardContent className="p-5 text-sm text-amber-950">
+            {currentUE
+              ? 'Cette UE ne possède aucune matière (ECUE). Ajoutez-en une dans la maquette avant de saisir des notes.'
+              : 'Aucune UE avec matière n’est disponible. Configurez la structure et la maquette avant la saisie.'}
+          </CardContent>
+        </Card>
+      )}
+      {!dataLoading && currentCourseElement && grades.length === 0 && (
+        <Card className="border-slate-300 bg-slate-50">
+          <CardContent className="p-5 text-sm text-slate-800">
+            Aucun étudiant n’est inscrit pédagogiquement à cette UE pour l’année courante. Vérifiez les inscriptions pédagogiques avant de saisir des notes.
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Les indicateurs d'une matière vide ne sont pas des résultats à zéro. */}
+      {currentCourseElement && grades.length > 0 && <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: 0.05 }}
@@ -877,13 +923,13 @@ export function GradesPage() {
               </Badge>
             </div>
             <p className="text-2xl font-bold text-[#1a2744]">{notesSaisies}</p>
-            <p className="text-xs text-gray-500 mt-1">Notes saisies pour l&apos;UE</p>
+            <p className="mt-1 text-sm text-slate-700">Notes saisies pour la matière</p>
             <Progress
               value={notesAttendues > 0 ? (notesSaisies / notesAttendues) * 100 : 0}
               className="h-1.5 mt-2"
             />
-            <p className="text-[10px] text-gray-400 mt-1">
-              UE sélectionnée : {notesAttendues > 0 ? Math.round((notesSaisies / notesAttendues) * 100) : 0}% complete
+            <p className="mt-1 text-sm text-slate-700">
+              {Math.round((notesSaisies / notesAttendues) * 100)} % des étudiants inscrits
             </p>
           </CardContent>
         </Card>
@@ -896,18 +942,18 @@ export function GradesPage() {
                 <TrendingUp className="size-4 text-[#d4a853]" />
               </div>
               <Badge className={`text-[10px] border-0 ${classAverage >= passingGrade ? 'bg-[#2d7a4f10] text-[#2d7a4f]' : 'bg-[#c6282810] text-[#c62828]'}`}>
-                {classAverage >= passingGrade ? 'Au-dessus' : 'En dessous'}
+                {validGrades.length === 0 ? 'En attente' : classAverage >= passingGrade ? 'Au-dessus' : 'En dessous'}
               </Badge>
             </div>
-            <p className="text-2xl font-bold text-[#d4a853]">{classAverage.toFixed(1)}</p>
-            <p className="text-xs text-gray-500 mt-1">Moyenne UE sélectionnée</p>
+            <p className="text-2xl font-bold text-slate-950">{validGrades.length ? classAverage.toFixed(1) : '—'}</p>
+            <p className="mt-1 text-sm text-slate-700">Moyenne des notes calculables</p>
             <div className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
               <div
                 className="h-full bg-[#d4a853] rounded-full transition-all"
                 style={{ width: `${(classAverage / 20) * 100}%` }}
               />
             </div>
-            <p className="text-[10px] text-gray-400 mt-1">sur 20</p>
+            <p className="mt-1 text-sm text-slate-700">sur 20 · {validGrades.length} note(s)</p>
           </CardContent>
         </Card>
 
@@ -922,13 +968,13 @@ export function GradesPage() {
                 {validCount} etudiants
               </Badge>
             </div>
-            <p className="text-2xl font-bold text-[#2d7a4f]">{validationRate}%</p>
-            <p className="text-xs text-gray-500 mt-1">Taux de réussite UE</p>
+            <p className="text-2xl font-bold text-[#2d7a4f]">{validGrades.length ? `${validationRate} %` : '—'}</p>
+            <p className="mt-1 text-sm text-slate-700">Notes au-dessus du seuil</p>
             <Progress
               value={validationRate}
               className="h-1.5 mt-2"
             />
-            <p className="text-[10px] text-gray-400 mt-1">{validCount} / {validGrades.length} valides</p>
+            <p className="mt-1 text-sm text-slate-700">{validCount} / {validGrades.length} calculables</p>
           </CardContent>
         </Card>
 
@@ -944,15 +990,15 @@ export function GradesPage() {
               </Badge>
             </div>
             <p className="text-2xl font-bold text-[#c62828]">{pendingValidation}</p>
-            <p className="text-xs text-gray-500 mt-1">En attente de validation</p>
+            <p className="mt-1 text-sm text-slate-700">En attente de validation</p>
             <Progress
               value={notesSaisies > 0 ? ((notesSaisies - pendingValidation) / notesSaisies) * 100 : 100}
               className="h-1.5 mt-2"
             />
-            <p className="text-[10px] text-gray-400 mt-1">{notesSaisies - pendingValidation} validees</p>
+            <p className="mt-1 text-sm text-slate-700">{notesSaisies - pendingValidation} verrouillée(s)</p>
           </CardContent>
         </Card>
-      </motion.div>
+      </motion.div>}
 
       {/* ─── Grade Entry Card ──────────────────────────────────────────────── */}
       <motion.div
@@ -974,10 +1020,10 @@ export function GradesPage() {
           <CardContent className="space-y-4">
             {/* Selectors */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-gray-600">Unité d&apos;enseignement (UE)</Label>
+              <div className="min-w-0 space-y-1.5">
+                <Label className="text-sm font-semibold text-slate-700">Unité d&apos;enseignement (UE)</Label>
                 <Select value={selectedUE} onValueChange={(value) => changeSelection(value)} disabled={ueList.length === 0}>
-                  <SelectTrigger className="h-9 text-sm">
+                  <SelectTrigger className="h-10 w-full min-w-0 overflow-hidden text-left text-sm [&>span]:truncate">
                     <SelectValue placeholder={structureLoading || assignmentsPending && userRole === 'ENSEIGNANT' ? 'Chargement...' : "Unité d'enseignement"} />
                   </SelectTrigger>
                   <SelectContent>
@@ -989,10 +1035,10 @@ export function GradesPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-gray-600">Matière / ECUE</Label>
+              <div className="min-w-0 space-y-1.5">
+                <Label className="text-sm font-semibold text-slate-700">Matière / ECUE</Label>
                 <Select value={selectedCourseElementId} onValueChange={(value) => changeSelection(selectedUE, value)} disabled={!currentUE?.courseElements.length}>
-                  <SelectTrigger className="h-9 text-sm">
+                  <SelectTrigger className="h-10 w-full min-w-0 overflow-hidden text-left text-sm [&>span]:truncate">
                     <SelectValue placeholder="Matière" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1002,10 +1048,10 @@ export function GradesPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-gray-600">Session</Label>
+              <div className="min-w-0 space-y-1.5">
+                <Label className="text-sm font-semibold text-slate-700">Session</Label>
                 <Select value={selectedSession} onValueChange={(v) => changeSession(v as 'normale' | 'rattrapage')}>
-                  <SelectTrigger className="h-9 text-sm">
+                  <SelectTrigger className="h-10 w-full min-w-0 overflow-hidden text-left text-sm [&>span]:truncate">
                     <SelectValue placeholder="Session" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1030,6 +1076,12 @@ export function GradesPage() {
             )}
             {rosterError && (
               <p className="text-xs text-[#c62828]">Impossible de charger les étudiants inscrits à cette UE.</p>
+            )}
+            {gradesError && (
+              <div role="alert" className="flex flex-wrap items-center gap-2 rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-950">
+                Impossible de charger les notes existantes. La saisie est suspendue pour éviter d’écraser des données.
+                <Button variant="outline" size="sm" onClick={() => retryGrades()}>Réessayer</Button>
+              </div>
             )}
             {currentUE && !currentUE.courseElements.length && (
               <div className="p-3 bg-[#c6282808] border border-[#c6282815] rounded-lg">
@@ -1056,7 +1108,7 @@ export function GradesPage() {
       </motion.div>
 
       {/* ─── Grade Statistics Card ─────────────────────────────────────────── */}
-      <motion.div
+      {validGrades.length > 0 && <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: 0.15 }}
@@ -1153,7 +1205,7 @@ export function GradesPage() {
             </div>
           </CardContent>
         </Card>
-      </motion.div>
+      </motion.div>}
 
       {/* ─── Enhanced Grade Table ──────────────────────────────────────────── */}
       <motion.div
@@ -1171,7 +1223,7 @@ export function GradesPage() {
                 </CardTitle>
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" className="text-xs" onClick={handleExport}>
+                <Button variant="outline" size="sm" className="text-sm" disabled={!grades.length} onClick={handleExport}>
                   <Download className="size-3.5 mr-1.5" />
                   Exporter
                 </Button>
@@ -1207,13 +1259,13 @@ export function GradesPage() {
                 <TableBody>
                   {dataLoading && (
                     <TableRow>
-                      <TableCell colSpan={10} className="text-center py-8 text-sm text-gray-400">Chargement...</TableCell>
+                      <TableCell colSpan={10} className="py-8 text-center text-sm text-slate-700">Chargement des étudiants et des notes…</TableCell>
                     </TableRow>
                   )}
                   {!dataLoading && grades.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={10} className="text-center py-8 text-sm text-gray-400">
-                        Aucun étudiant inscrit pédagogiquement à cette UE pour cette année
+                      <TableCell colSpan={10} className="py-8 text-center text-sm text-slate-700">
+                        {currentCourseElement ? 'Aucun étudiant inscrit pédagogiquement à cette UE pour cette année.' : 'Sélectionnez une UE contenant une matière.'}
                       </TableCell>
                     </TableRow>
                   )}
@@ -1232,7 +1284,7 @@ export function GradesPage() {
                           step="0.5"
                           value={grade.cc}
                           onChange={(e) => handleGradeChange(grade.studentId, 'cc', e.target.value)}
-                          disabled={grade.isLocked}
+                          disabled={grade.isLocked || !policy?.ccWeight || gradesError || rosterError}
                           className="h-8 text-center text-sm w-20 mx-auto disabled:bg-gray-50"
                         />
                       </TableCell>
@@ -1244,7 +1296,7 @@ export function GradesPage() {
                           step="0.5"
                           value={grade.exam}
                           onChange={(e) => handleGradeChange(grade.studentId, 'exam', e.target.value)}
-                          disabled={grade.isLocked}
+                          disabled={grade.isLocked || !policy?.examWeight || gradesError || rosterError}
                           className="h-8 text-center text-sm w-20 mx-auto disabled:bg-gray-50"
                         />
                       </TableCell>
@@ -1256,7 +1308,7 @@ export function GradesPage() {
                           step="0.5"
                           value={grade.tp}
                           onChange={(e) => handleGradeChange(grade.studentId, 'tp', e.target.value)}
-                          disabled={grade.isLocked}
+                          disabled={grade.isLocked || !policy?.tpWeight || gradesError || rosterError}
                           placeholder="-"
                           className="h-8 text-center text-sm w-20 mx-auto disabled:bg-gray-50"
                         />
@@ -1269,7 +1321,7 @@ export function GradesPage() {
                           step="0.5"
                           value={grade.stage}
                           onChange={(e) => handleGradeChange(grade.studentId, 'stage', e.target.value)}
-                          disabled={grade.isLocked}
+                          disabled={grade.isLocked || !policy?.stageWeight || gradesError || rosterError}
                           placeholder="-"
                           className="h-8 text-center text-sm w-20 mx-auto disabled:bg-gray-50"
                         />
@@ -1320,4 +1372,77 @@ export function GradesPage() {
       </motion.div>
     </div>
   )
+}
+
+interface PublishedGrade {
+  id: string
+  finalGrade: number | null
+  session: string
+  isLocked: boolean
+  student?: { firstName: string; lastName: string; matricule: string | null }
+  teachingUnit: { code: string; name: string; semester?: { name: string } } | null
+  courseElement: { code: string | null; name: string } | null
+}
+
+function OversightGradesPage() {
+  const [page, setPage] = useState(1)
+  const { data: dashboard } = useDashboardStats()
+  const academicYearId = dashboard?.academicYear?.id
+  const { data, isLoading, isError, refetch } = useQuery<{ data: PublishedGrade[]; pagination: { total: number; hasNext: boolean; hasPrev: boolean } }>({
+    queryKey: ['oversight-grades', academicYearId, page],
+    enabled: Boolean(academicYearId),
+    queryFn: async () => {
+      const params = new URLSearchParams({ academicYearId: academicYearId!, page: String(page), limit: '50' })
+      const response = await fetch(`/api/grades?${params}`)
+      if (!response.ok) throw new Error('Impossible de charger les notes')
+      return response.json()
+    },
+  })
+  return <div className="space-y-5 text-slate-900">
+    <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm"><p className="text-sm font-semibold uppercase tracking-wide text-emerald-800">Consultation</p><h1 className="mt-1 text-2xl font-bold text-slate-950">Notes de l’établissement</h1><p className="mt-2 text-sm text-slate-700">Vue en lecture seule. La saisie et le verrouillage restent réservés aux personnes habilitées.</p></div>
+    {isError ? <Card><CardContent className="flex items-center gap-3 p-5 text-sm">Impossible de charger les notes.<Button variant="outline" onClick={() => refetch()}>Réessayer</Button></CardContent></Card>
+      : !academicYearId ? <Card><CardContent className="p-5 text-sm">Aucune année académique active.</CardContent></Card>
+      : isLoading ? <Card><CardContent className="p-5 text-sm">Chargement des notes…</CardContent></Card>
+      : !data?.data.length ? <Card><CardContent className="p-5 text-sm">Aucune note enregistrée pour cette année.</CardContent></Card>
+      : <Card className="border-slate-200 bg-white"><CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3"><CardTitle className="text-lg text-slate-950">{data.pagination.total} note(s) · page {page}</CardTitle><div className="flex gap-2"><Button variant="outline" size="sm" disabled={!data.pagination.hasPrev} onClick={() => setPage(page - 1)}>Précédent</Button><Button variant="outline" size="sm" disabled={!data.pagination.hasNext} onClick={() => setPage(page + 1)}>Suivant</Button></div></CardHeader><CardContent className="p-0"><div className="overflow-x-auto"><Table><TableHeader><TableRow className="bg-slate-50"><TableHead className="text-sm font-semibold text-slate-800">Étudiant</TableHead><TableHead className="text-sm font-semibold text-slate-800">UE / matière</TableHead><TableHead className="text-sm font-semibold text-slate-800">Session</TableHead><TableHead className="text-right text-sm font-semibold text-slate-800">Note /20</TableHead><TableHead className="text-sm font-semibold text-slate-800">État</TableHead></TableRow></TableHeader><TableBody>{data.data.map((grade) => <TableRow key={grade.id}><TableCell className="py-3 text-sm font-medium text-slate-900">{grade.student ? `${grade.student.firstName} ${grade.student.lastName}` : '—'}<p className="text-sm font-normal text-slate-700">{grade.student?.matricule}</p></TableCell><TableCell className="min-w-52 py-3 text-sm text-slate-900">{grade.courseElement?.name ?? grade.teachingUnit?.name ?? '—'}<p className="text-sm text-slate-700">{grade.teachingUnit?.code}</p></TableCell><TableCell className="text-sm text-slate-800">{grade.session === 'RATTRAPAGE' ? 'Rattrapage' : 'Normale'}</TableCell><TableCell className="text-right font-bold text-slate-950">{grade.finalGrade === null ? '—' : grade.finalGrade.toFixed(2)}</TableCell><TableCell className="text-sm text-slate-800">{grade.isLocked ? 'Verrouillée' : 'En cours'}</TableCell></TableRow>)}</TableBody></Table></div></CardContent></Card>}
+  </div>
+}
+
+function StudentGradesPage() {
+  const { data: dashboard } = useDashboardStats()
+  const academicYearId = dashboard?.currentAcademicYear?.id
+  const { data, isLoading, isError, refetch } = useQuery<{ data: PublishedGrade[] }>({
+    queryKey: ['my-published-grades', academicYearId],
+    enabled: Boolean(academicYearId),
+    queryFn: async () => {
+      const params = new URLSearchParams({ limit: '500', academicYearId: academicYearId! })
+      const response = await fetch(`/api/grades?${params}`)
+      if (!response.ok) throw new Error('Impossible de charger les notes publiées')
+      return response.json()
+    },
+  })
+  const grades = data?.data ?? []
+
+  return <div className="space-y-5 text-slate-900">
+    <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <p className="text-sm font-semibold uppercase tracking-wide text-emerald-800">Espace étudiant</p>
+      <h1 className="mt-1 text-2xl font-bold text-slate-950">Mes notes publiées</h1>
+      <p className="mt-2 text-sm text-slate-700">Seules vos notes validées apparaissent ici. Pour un document officiel, ouvrez « Mes Documents ».</p>
+      <p className="mt-2 text-sm font-medium text-slate-700">{dashboard?.currentAcademicYear ? `Année académique ${dashboard.currentAcademicYear.name}` : 'Aucune année académique active'}</p>
+    </div>
+    {isError ? <Card><CardContent className="flex flex-wrap items-center gap-3 p-5 text-sm text-slate-800">Impossible de charger vos notes.<Button variant="outline" onClick={() => refetch()}>Réessayer</Button></CardContent></Card>
+      : !academicYearId ? <Card><CardContent className="p-5 text-sm text-slate-700">Aucune année académique active n’est configurée.</CardContent></Card>
+      : isLoading ? <Card><CardContent className="p-5 text-sm text-slate-700">Chargement des notes…</CardContent></Card>
+      : grades.length === 0 ? <Card><CardContent className="p-5 text-sm text-slate-700">Aucune note validée n’a été publiée pour cette année.</CardContent></Card>
+      : <Card className="border-slate-200 bg-white"><CardHeader><CardTitle className="text-lg text-slate-950">Résultats par matière</CardTitle></CardHeader><CardContent className="p-0"><div className="overflow-x-auto"><Table><TableHeader><TableRow className="bg-slate-50"><TableHead className="text-sm font-semibold text-slate-800">UE / matière</TableHead><TableHead className="text-sm font-semibold text-slate-800">Semestre</TableHead><TableHead className="text-sm font-semibold text-slate-800">Session</TableHead><TableHead className="text-right text-sm font-semibold text-slate-800">Note /20</TableHead></TableRow></TableHeader><TableBody>{grades.map((grade) => <TableRow key={grade.id}><TableCell className="min-w-56 py-4"><p className="font-semibold text-slate-950">{grade.courseElement?.name ?? grade.teachingUnit?.name ?? 'Matière'}</p><p className="text-sm text-slate-700">{grade.teachingUnit?.code} {grade.courseElement?.code ? `· ${grade.courseElement.code}` : ''}</p></TableCell><TableCell className="text-sm text-slate-800">{grade.teachingUnit?.semester?.name ?? '—'}</TableCell><TableCell className="text-sm text-slate-800">{grade.session === 'RATTRAPAGE' ? 'Rattrapage' : 'Normale'}</TableCell><TableCell className="text-right text-base font-bold text-slate-950">{grade.finalGrade !== null ? grade.finalGrade.toFixed(2) : '—'}</TableCell></TableRow>)}</TableBody></Table></div></CardContent></Card>}
+  </div>
+}
+
+export function GradesPage() {
+  const role = useAppStore((state) => state.user?.role)
+  if (role === 'ETUDIANT' || role === 'ETUDIANT_SANTE') return <StudentGradesPage />
+  if (role === 'RECTORAT' || role === 'JURY') return <OversightGradesPage />
+  if (role === 'FACULTE' || role === 'DEPARTEMENT') return <Card className="border-slate-200 bg-white"><CardContent className="p-6 text-slate-800"><h1 className="text-2xl font-bold text-slate-950">Notes</h1><p className="mt-2 text-sm">L’accès aux notes de cette faculté ou de ce département nécessite une affectation de périmètre. Demandez à l’administration de configurer cet accès.</p></CardContent></Card>
+  if (role === 'PARENT' || role === 'MAITRE_STAGE') return <Card className="border-slate-200 bg-white"><CardContent className="p-6 text-slate-800"><h1 className="text-2xl font-bold text-slate-950">Notes</h1><p className="mt-2 text-sm">La consultation des notes n’est pas encore ouverte à ce profil. Aucun dossier étudiant ne vous est associé pour cet accès.</p></CardContent></Card>
+  return <StaffGradesPage />
 }

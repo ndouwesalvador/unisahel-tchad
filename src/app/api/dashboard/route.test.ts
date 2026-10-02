@@ -68,6 +68,19 @@ describe('GET /api/dashboard — role isolation', () => {
     expect(mocks.studentCount).not.toHaveBeenCalled()
   })
 
+  it.each(['RECTORAT', 'SCOLARITE', 'FACULTE', 'DEPARTEMENT', 'RESPONSABLE_FILIERE', 'JURY', 'CAISSE', 'MAITRE_STAGE', 'PARENT'])(
+    'returns a limited dashboard to %s without institution aggregates', async (role) => {
+      const response = await handler({ id: 'user-A', role, tenantId: 'tenant-A' }, 'tenant-A', request())
+      const body = await response.json()
+      expect(response.status).toBe(200)
+      expect(body).toMatchObject({ isRoleView: true, role, academicYear: { id: 'year-A' } })
+      expect(body.statsCards).toBeUndefined()
+      expect(mocks.studentCount).not.toHaveBeenCalled()
+      expect(mocks.gradeCount).not.toHaveBeenCalled()
+      expect(mocks.announcementFindMany).toHaveBeenCalledWith(expect.objectContaining({ where: { tenantId: 'tenant-A', isPublished: true } }))
+    },
+  )
+
   it('refuses a student without a linked profile rather than exposing admin totals', async () => {
     const response = await handler({ id: 'user-A', role: 'ETUDIANT', tenantId: 'tenant-A' }, 'tenant-A', request())
     expect(response.status).toBe(403)
