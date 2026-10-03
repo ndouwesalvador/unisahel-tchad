@@ -37,7 +37,12 @@ async function getStudentDashboardHandler(studentId: string, tenantId: string, a
 
   if (!student) return NextResponse.json({ error: 'Étudiant introuvable' }, { status: 404 })
 
-  const grades = currentAcademicYear ? await db.grade.findMany({
+  const annualRegistration = currentAcademicYear ? await db.administrativeRegistration.findFirst({
+    where: { tenantId, studentId, academicYearId: currentAcademicYear.id, status: 'INSCRIT' },
+    select: { id: true },
+  }) : null
+
+  const grades = annualRegistration && currentAcademicYear ? await db.grade.findMany({
     where: { studentId, academicYearId: currentAcademicYear.id, session: 'NORMALE', isLocked: true, finalGrade: { not: null } },
     select: { finalGrade: true, courseElement: { select: { coefficient: true } } },
   }) : []
@@ -74,6 +79,7 @@ async function getStudentDashboardHandler(studentId: string, tenantId: string, a
 
   return NextResponse.json({
     isStudentView: true,
+    isEnrolledForYear: Boolean(annualRegistration),
     student: student
       ? {
           firstName: student.firstName,

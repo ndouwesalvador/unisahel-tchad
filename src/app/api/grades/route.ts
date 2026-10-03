@@ -127,7 +127,22 @@ async function getGradesHandler(user: SessionUser, tenantId: string, request: Ne
     const skip = (page - 1) * limit
 
     const where: Prisma.GradeWhereInput = { student: { tenantId } }
-    if (isStudentSelfRole(user.role)) where.isLocked = true
+    if (isStudentSelfRole(user.role)) {
+      const yearId = await resolveAcademicYearId(tenantId, academicYearId ?? null)
+      if (academicYearId && !yearId) {
+        return NextResponse.json({ error: 'Année académique introuvable' }, { status: 404 })
+      }
+      where.isLocked = true
+      // A published grade is visible only for a year in which this student is enrolled.
+      // An absent current year must not fall back to all historical grades.
+      where.academicYearId = yearId ?? { in: [] }
+      if (yearId) {
+        where.student = {
+          tenantId,
+          registrations: { some: { tenantId, academicYearId: yearId, status: 'INSCRIT' } },
+        }
+      }
+    }
     const teacherId = await assignedTeacherId(user, tenantId)
     let teacherCourseIds: string[] | null = null
     if (user.role === 'ENSEIGNANT') {

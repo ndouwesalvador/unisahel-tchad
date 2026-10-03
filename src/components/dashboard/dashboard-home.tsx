@@ -93,6 +93,7 @@ const alertConfig = {
 
 interface StudentDashboardResponse {
   isStudentView: true
+  isEnrolledForYear: boolean
   isTeacherView?: false
   student: {
     firstName: string
@@ -187,6 +188,11 @@ function StudentDashboardHome({ data }: { data: StudentDashboardResponse }) {
 
   return (
     <div className="space-y-6">
+      {data.currentAcademicYear && !data.isEnrolledForYear && (
+        <div role="status" className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm font-medium text-amber-950">
+          L’inscription administrative pour {data.currentAcademicYear.name} n’est pas validée. Les notes et l’emploi du temps de cette année ne sont pas encore accessibles.
+        </div>
+      )}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
         <Card className="overflow-hidden border-slate-200 bg-white shadow-sm">
           <div className="border-b border-emerald-100 bg-emerald-50 p-6 text-slate-900">

@@ -116,6 +116,7 @@ interface TranscriptSemester {
 
 interface StudentDashboardPreviewData {
   isStudentView: true
+  isEnrolledForYear: boolean
   student: { status: string; program: string | null; level: string | null } | null
   stats: {
     moyenneGenerale: number | null
@@ -154,11 +155,16 @@ function StudentDashboardPreview({ studentId, onNavigate }: { studentId: string;
     VALIDATED: 'Validé', PENDING: 'En attente de validation', CANCELLED: 'Annulé', REFUNDED: 'Remboursé',
   }
   return <div className="space-y-4 text-slate-900">
+    {data.currentAcademicYear && !data.isEnrolledForYear && (
+      <div role="status" className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm font-medium text-amber-950">
+        Inscription administrative non validée pour {data.currentAcademicYear.name} : aucune moyenne ni emploi du temps annuel ne doit être affiché à cet étudiant.
+      </div>
+    )}
     <Card className="border-emerald-200 bg-emerald-50"><CardContent className="p-5">
       <p className="text-xs font-bold uppercase tracking-wide text-emerald-900">Aperçu du tableau de bord étudiant</p>
       <h2 className="mt-1 text-xl font-bold text-slate-950">{data.student.program ?? 'Programme non affecté'}{data.student.level ? ` · ${data.student.level}` : ''}</h2>
       <p className="mt-1 text-sm text-slate-800">{data.currentAcademicYear ? `Année académique ${data.currentAcademicYear.name}` : 'Aucune année académique active'} · {statusConfig[data.student.status]?.label ?? data.student.status}</p>
-      <p className="mt-2 text-xs text-slate-700">Données du dossier consultables par l’administration. Les notes affichées ici sont uniquement les notes verrouillées de la session normale.</p>
+      <p className="mt-2 text-xs text-slate-700">Données du dossier consultables par l’administration. La moyenne affichée nécessite une inscription annuelle validée et des notes publiées de la session normale.</p>
     </CardContent></Card>
     <div className="grid gap-3 sm:grid-cols-3">
       <Card className="border-slate-200"><CardContent className="p-5"><p className="text-sm font-semibold text-slate-700">Moyenne des notes publiées</p><p className="mt-2 text-2xl font-bold text-slate-950">{data.stats.moyenneGenerale === null ? 'Aucune note' : `${data.stats.moyenneGenerale.toFixed(2)}/20`}</p><p className="mt-1 text-xs text-slate-700">Seuil : {data.stats.passingGrade}/20</p></CardContent></Card>

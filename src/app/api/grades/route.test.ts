@@ -98,7 +98,18 @@ describe('legacy notes endpoint is read-only', () => {
     const response = await GET(request('/api/grades'))
     expect(response.status).toBe(200)
     expect(mocks.grades).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({
-      studentId, isLocked: true, student: { tenantId },
+      studentId, isLocked: true, academicYearId: yearId,
+      student: { tenantId, registrations: { some: { tenantId, academicYearId: yearId, status: 'INSCRIT' } } },
+    }) }))
+  })
+
+  it('does not fall back to historical student grades when there is no current year', async () => {
+    mocks.auth.mockResolvedValue({ user: { ...user, role: 'ETUDIANT' } })
+    mocks.year.mockResolvedValue(null)
+    const response = await GET(request('/api/grades'))
+    expect(response.status).toBe(200)
+    expect(mocks.grades).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({
+      studentId, academicYearId: { in: [] }, isLocked: true,
     }) }))
   })
 

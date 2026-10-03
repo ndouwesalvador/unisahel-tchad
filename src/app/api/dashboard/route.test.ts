@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
   tenantSettingsFindUnique: vi.fn(),
   paymentFindMany: vi.fn(),
   examSessionFindMany: vi.fn(),
+  annualRegistrationFindFirst: vi.fn(),
 }))
 
 vi.mock('@/lib/auth/helpers', () => ({ withTenantAuth: (handler: unknown) => handler }))
@@ -33,6 +34,7 @@ vi.mock('@/lib/db', () => ({ db: {
   tenantSettings: { findUnique: mocks.tenantSettingsFindUnique },
   payment: { findMany: mocks.paymentFindMany },
   examSession: { findMany: mocks.examSessionFindMany },
+  administrativeRegistration: { findFirst: mocks.annualRegistrationFindFirst },
 } }))
 
 const { GET } = await import('./route')
@@ -57,6 +59,7 @@ describe('GET /api/dashboard — role isolation', () => {
     mocks.tenantSettingsFindUnique.mockResolvedValue({ passingGrade: 10 })
     mocks.paymentFindMany.mockResolvedValue([])
     mocks.examSessionFindMany.mockResolvedValue([])
+    mocks.annualRegistrationFindFirst.mockResolvedValue(null)
   })
 
   it('shows a teacher only their assigned courses and grade counts scoped to tenant and year', async () => {
@@ -135,10 +138,28 @@ describe('GET /api/dashboard — role isolation', () => {
     mocks.academicYearFindFirst.mockResolvedValue({ id: 'year-A', name: '2026-2027', startDate: new Date(), endDate: new Date(), sessions: [] })
     const response = await handler({ id: 'admin-A', role: 'ADMIN_INSTITUTION', tenantId: 'tenant-A' }, 'tenant-A', request('?studentId=student-A'))
     expect(response.status).toBe(200)
-    expect(await response.json()).toMatchObject({ isStudentView: true, student: { matricule: 'A-001' }, stats: { moyenneGenerale: null, totalPaid: 0 } })
+    expect(await response.json()).toMatchObject({ isStudentView: true, isEnrolledForYear: false, student: { matricule: 'A-001' }, stats: { moyenneGenerale: null, totalPaid: 0 } })
+    expect(mocks.gradeFindMany).not.toHaveBeenCalled()
     expect(mocks.studentFindFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'student-A', tenantId: 'tenant-A' } }))
     expect(mocks.paymentFindMany).toHaveBeenCalledWith(expect.objectContaining({ where: { tenantId: 'tenant-A', studentId: 'student-A' } }))
     expect(mocks.studentCount).not.toHaveBeenCalled()
+  })
+
+  it('shows a published average only after annual administrative enrollment', async () => {
+    mocks.studentFindFirst.mockResolvedValue({
+      id: 'student-A', firstName: 'Awa', lastName: 'Test', matricule: 'A-001', status: 'INSCRIT',
+      currentProgram: { name: 'Informatique' }, currentLevel: { name: 'Licence 1' },
+    })
+    mocks.academicYearFindFirst.mockResolvedValue({ id: 'year-A', name: '2026-2027', startDate: new Date(), endDate: new Date(), sessions: [] })
+    mocks.annualRegistrationFindFirst.mockResolvedValue({ id: 'registration-A' })
+    mocks.gradeFindMany.mockResolvedValue([{ finalGrade: 15, courseElement: { coefficient: 2 } }])
+    const response = await handler({ id: 'admin-A', role: 'ADMIN_INSTITUTION', tenantId: 'tenant-A' }, 'tenant-A', request('?studentId=student-A'))
+    expect(await response.json()).toMatchObject({ isEnrolledForYear: true, stats: { moyenneGenerale: 15 } })
+    expect(mocks.annualRegistrationFindFirst).toHaveBeenCalledWith({
+      where: { tenantId: 'tenant-A', studentId: 'student-A', academicYearId: 'year-A', status: 'INSCRIT' },
+      select: { id: true },
+    })
+    expect(mocks.gradeFindMany).toHaveBeenCalledOnce()
   })
 
   it('rejects a student preview from another institution', async () => {
