@@ -1,8 +1,10 @@
 import bcrypt from 'bcryptjs'
+import { randomInt } from 'node:crypto'
 import { db } from '@/lib/db'
 
-function generatePin(): string {
-  return String(Math.floor(100000 + Math.random() * 900000))
+export async function createStudentPortalCredentials(): Promise<{ pin: string; pinHash: string }> {
+  const pin = String(randomInt(100000, 1000000))
+  return { pin, pinHash: await bcrypt.hash(pin, 12) }
 }
 
 // Provisions the "Espace Etudiant" self-service login (matricule + PIN) for a
@@ -23,8 +25,7 @@ export async function provisionStudentAccount(
   const loginTaken = await db.user.findUnique({ where: { login: matricule }, select: { id: true } })
   if (loginTaken) return null
 
-  const pin = generatePin()
-  const pinHash = await bcrypt.hash(pin, 12)
+  const { pin, pinHash } = await createStudentPortalCredentials()
 
   const account = await db.user.create({
     data: {

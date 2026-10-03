@@ -203,6 +203,7 @@ export function StudentsList() {
           placeOfBirth: form.placeOfBirth,
           currentProgramId: form.currentProgramId,
           currentLevelId: form.currentLevelId,
+          status: form.status,
           email: form.email || undefined,
           phone: form.phone || undefined,
           bacSeries: form.bacSeries || undefined,
@@ -788,7 +789,18 @@ export function StudentsList() {
                 <Input value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
               </div>
             </div>
-            <p className="text-[11px] text-gray-400">Le matricule est genere automatiquement, et un compte Espace Etudiant (matricule + code PIN) sera cree.</p>
+            <div className="space-y-1.5">
+              <Label className="text-sm">Statut initial du dossier</Label>
+              <Select value={form.status} onValueChange={(status) => setForm((f) => ({ ...f, status }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="PRE_INSCRIT">Pré-inscrit - dossier à compléter</SelectItem>
+                  <SelectItem value="INSCRIT">Inscrit - dossier vérifié</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-slate-700">L’inscription à l’année académique se valide ensuite dans le dossier, onglet Inscriptions.</p>
+            </div>
+            <p className="text-xs text-slate-700">Le matricule est généré automatiquement. Un compte étudiant (matricule et code PIN) est créé avec le dossier.</p>
             <Button className="w-full bg-[#2d7a4f] hover:bg-[#236b40] text-white" disabled={isCreating} onClick={handleCreateStudent}>
               {isCreating ? 'Enregistrement...' : "Enregistrer l'etudiant"}
             </Button>

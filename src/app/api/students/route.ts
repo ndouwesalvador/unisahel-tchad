@@ -4,7 +4,7 @@ import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
 import { isStudentSelfRole } from '@/lib/auth/student-scope'
 import { studentQuerySchema, createStudentSchema, updateStudentSchema, validateQuery, validateBody, formatZodError } from '@/lib/validations/api'
 import { Prisma } from '@prisma/client'
-import { provisionStudentAccount } from '@/lib/student-portal'
+import { createStudentPortalCredentials } from '@/lib/student-portal'
 
 async function getStudentsHandler(user: SessionUser, tenantId: string, request: NextRequest) {
   try {
@@ -88,79 +88,90 @@ async function createStudentHandler(user: SessionUser, tenantId: string, request
     const body = await request.json()
     const validatedBody = validateBody(createStudentSchema, body)
 
-    // Check if level and program belong to tenant
+    // A level must belong to the selected active program, not merely to the tenant.
     const [level, program] = await Promise.all([
-      db.level.findFirst({ where: { id: validatedBody.currentLevelId, program: { tenantId } } }),
-      db.program.findFirst({ where: { id: validatedBody.currentProgramId, tenantId } }),
+      db.level.findFirst({ where: { id: validatedBody.currentLevelId, programId: validatedBody.currentProgramId, isActive: true, program: { tenantId } } }),
+      db.program.findFirst({ where: { id: validatedBody.currentProgramId, tenantId, isActive: true } }),
     ])
 
     if (!level || !program) {
       return NextResponse.json(
-        { error: 'Invalid level or program for this tenant' },
+        { error: 'Filière ou niveau inactif, introuvable ou incohérent.' },
         { status: 400 }
       )
     }
 
-    // Generate matricule if not provided
-    let matricule = validatedBody.matricule
-    if (!matricule) {
-      const settings = await db.tenantSettings.findUnique({ where: { tenantId } })
-      const prefix = settings?.matriculePrefix || 'UNSH'
-      const year = new Date().getFullYear()
-      const levelCode = level.code
-      const count = await db.student.count({ where: { tenantId, currentLevelId: level.id } })
-      const seq = String(count + 1).padStart(6, '0')
-      matricule = `${prefix}-${year}-${levelCode}-${seq}`
-    }
+    const settings = await db.tenantSettings.findUnique({ where: { tenantId }, select: { matriculePrefix: true } })
+    const stem = `${settings?.matriculePrefix || 'UNSH'}-${new Date().getFullYear()}-${level.code || 'N'}-`
+    const credentials = await createStudentPortalCredentials()
 
-    // Check matricule uniqueness
-    const existing = await db.student.findFirst({ where: { matricule, tenantId } })
-    if (existing) {
-      return NextResponse.json(
-        { error: 'Matricule already exists' },
-        { status: 409 }
-      )
-    }
+    for (let attempt = 0; attempt < 5; attempt++) {
+      try {
+        const result = await db.$transaction(async (tx) => {
+          let matricule = validatedBody.matricule
+          if (!matricule) {
+            // Matricule and portal login are globally unique. A count scoped to
+            // one level can reuse a number already taken by another program.
+            const [students, accounts] = await Promise.all([
+              tx.student.findMany({ where: { matricule: { startsWith: stem } }, select: { matricule: true } }),
+              tx.user.findMany({ where: { login: { startsWith: stem } }, select: { login: true } }),
+            ])
+            let maximum = 0
+            for (const value of [...students.map((item) => item.matricule), ...accounts.map((item) => item.login)]) {
+              const suffix = value?.slice(stem.length) || ''
+              if (/^\d{6}$/.test(suffix)) maximum = Math.max(maximum, Number(suffix))
+            }
+            const next = maximum + 1
+            if (next > 999999) throw new Error('MATRICULE_EXHAUSTED')
+            matricule = `${stem}${String(next).padStart(6, '0')}`
+          }
 
-    // Check email uniqueness if provided
-    if (validatedBody.email) {
-      const existingEmail = await db.student.findFirst({ where: { email: validatedBody.email, tenantId } })
-      if (existingEmail) {
-        return NextResponse.json(
-          { error: 'Email already exists' },
-          { status: 409 }
-        )
+          const [takenStudent, takenLogin, takenEmail] = await Promise.all([
+            tx.student.findFirst({ where: { matricule }, select: { id: true } }),
+            tx.user.findUnique({ where: { login: matricule }, select: { id: true } }),
+            validatedBody.email ? tx.student.findFirst({ where: { tenantId, email: validatedBody.email }, select: { id: true } }) : null,
+          ])
+          if (takenStudent || takenLogin) throw new Error('MATRICULE_TAKEN')
+          if (takenEmail) throw new Error('EMAIL_TAKEN')
+
+          const student = await tx.student.create({
+            data: { ...validatedBody, matricule, tenantId, dateOfBirth: new Date(validatedBody.dateOfBirth) },
+            include: {
+              currentProgram: { select: { id: true, name: true, code: true } },
+              currentLevel: { select: { id: true, name: true, code: true } },
+            },
+          })
+          const account = await tx.user.create({ data: {
+            tenantId, login: matricule, pinHash: credentials.pinHash,
+            firstName: student.firstName, lastName: student.lastName, role: 'ETUDIANT',
+          } })
+          await tx.student.update({ where: { id: student.id }, data: { userId: account.id } })
+          await tx.auditLog.create({ data: {
+            tenantId, userId: user.id, action: 'CREATE', entity: 'Student', entityId: student.id,
+            details: JSON.stringify({ matricule }),
+          } })
+          return { student: { ...student, userId: account.id }, portalAccount: { login: matricule, pin: credentials.pin } }
+        }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable })
+        return NextResponse.json({ data: result.student, portalAccount: result.portalAccount }, { status: 201 })
+      } catch (error) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError &&
+            (error.code === 'P2034' || (error.code === 'P2002' && !validatedBody.matricule)) && attempt < 4) continue
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+          return NextResponse.json({ error: 'Matricule ou compte étudiant déjà utilisé.' }, { status: 409 })
+        }
+        if (error instanceof Error && error.message === 'MATRICULE_TAKEN') {
+          return NextResponse.json({ error: 'Ce matricule est déjà utilisé.' }, { status: 409 })
+        }
+        if (error instanceof Error && error.message === 'EMAIL_TAKEN') {
+          return NextResponse.json({ error: 'Cette adresse e-mail est déjà utilisée par un étudiant.' }, { status: 409 })
+        }
+        if (error instanceof Error && error.message === 'MATRICULE_EXHAUSTED') {
+          return NextResponse.json({ error: 'La série des matricules est épuisée.' }, { status: 409 })
+        }
+        throw error
       }
     }
-
-    const student = await db.student.create({
-      data: {
-        ...validatedBody,
-        matricule,
-        tenantId,
-        dateOfBirth: new Date(validatedBody.dateOfBirth),
-      },
-      include: {
-        currentProgram: { select: { id: true, name: true, code: true } },
-        currentLevel: { select: { id: true, name: true, code: true } },
-      },
-    })
-
-    // Audit log
-    await db.auditLog.create({
-      data: {
-        tenantId,
-        userId: user.id,
-        action: 'CREATE',
-        entity: 'Student',
-        entityId: student.id,
-        details: JSON.stringify({ matricule: student.matricule }),
-      },
-    })
-
-    const portalAccount = await provisionStudentAccount(tenantId, student.id, student.matricule, student.firstName, student.lastName)
-
-    return NextResponse.json({ data: student, portalAccount }, { status: 201 })
+    return NextResponse.json({ error: 'Conflit de création concurrente, réessayez.' }, { status: 409 })
   } catch (error) {
     console.error('Create student error:', error)
     if (error instanceof Error && error.name === 'ZodError') {
