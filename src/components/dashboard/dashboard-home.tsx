@@ -345,7 +345,7 @@ function TeacherDashboardHome({ data }: { data: TeacherDashboardResponse }) {
           )}
           {data.linked && data.assignments.length === 0 && (
             <p role="status" className="mt-4 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm font-medium text-amber-950">
-              Aucune UE ni matière ne vous est actuellement affectée. L’administration doit renseigner votre fiche sur les matières ou les UE concernées avant toute saisie.
+              Aucun service d’enseignement approuvé pour cette année. Le département doit demander votre service ; le département de rattachement et l’administration centrale valident ensuite les étapes requises.
             </p>
           )}
         </CardContent>
@@ -353,9 +353,9 @@ function TeacherDashboardHome({ data }: { data: TeacherDashboardResponse }) {
 
       <div className="grid gap-4 sm:grid-cols-3">
         {[
-          ['Matières attribuées', data.stats.assignedCourses],
-          ['Notes saisies', data.stats.enteredGrades],
-          ['Notes verrouillées', data.stats.lockedGrades],
+          ['Services approuvés', data.stats.assignedCourses],
+          ['Notes complètes', data.stats.enteredGrades],
+          ['Notes publiées', data.stats.lockedGrades],
         ].map(([label, value]) => (
           <Card key={label} className="border-slate-200 bg-white"><CardContent className="p-5"><p className="text-sm font-semibold text-slate-600">{label}</p><p className="mt-2 text-3xl font-bold text-slate-950">{value}</p></CardContent></Card>
         ))}
@@ -369,14 +369,14 @@ function TeacherDashboardHome({ data }: { data: TeacherDashboardResponse }) {
       </Card>}
 
       <Card className="border-slate-200 bg-white">
-        <CardHeader><CardTitle className="text-lg text-slate-950">Mes matières attribuées</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-lg text-slate-950">Mes services approuvés</CardTitle></CardHeader>
         <CardContent>
           {data.assignments.length ? <ul className="divide-y divide-slate-200">
             {data.assignments.map((element) => <li key={element.id} className="py-3">
               <p className="font-semibold text-slate-950">{element.code ? `${element.code} · ` : ''}{element.name}</p>
               <p className="mt-1 text-sm text-slate-700">{element.teachingUnit} · {element.program} · {element.level} · {element.semester}</p>
             </li>)}
-          </ul> : <p className="text-sm text-slate-700">Aucune matière attribuée. Seules les matières affectées à votre fiche enseignant apparaissent ici.</p>}
+          </ul> : <p className="text-sm text-slate-700">Aucun service d’enseignement approuvé pour cette année. Le département doit demander votre service, puis obtenir les accords requis.</p>}
         </CardContent>
       </Card>
 

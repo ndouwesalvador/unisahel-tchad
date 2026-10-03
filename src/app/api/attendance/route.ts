@@ -7,9 +7,9 @@ const STATUSES = ['PRESENT', 'ABSENT', 'JUSTIFIED', 'LATE']
 
 async function handleGet(user: SessionUser, tenantId: string, request: NextRequest) {
   try {
-    const scope = user.role === 'ENSEIGNANT' ? await getTeacherScope(user, tenantId) : null
     const courseElementId = request.nextUrl.searchParams.get('courseElementId')
     const academicYearId = request.nextUrl.searchParams.get('academicYearId')
+    const scope = user.role === 'ENSEIGNANT' ? await getTeacherScope(user, tenantId, academicYearId) : null
     if (scope && courseElementId && !scope.courseElementIds.includes(courseElementId)) {
       return NextResponse.json({ error: 'Matière non attribuée' }, { status: 403 })
     }
@@ -17,7 +17,7 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
       tenantId,
       ...(scope ? { teacherId: scope.teacherId ?? '', courseElementId: { in: scope.courseElementIds } } : {}),
       ...(courseElementId ? { courseElementId } : {}),
-      ...(academicYearId ? { academicYearId } : {}),
+      ...((academicYearId || scope?.academicYearId) ? { academicYearId: academicYearId || scope?.academicYearId } : {}),
     }
     const [records, present, absent, justified, late, pendingJustifications] = await Promise.all([
       db.attendance.findMany({ where, orderBy: { date: 'desc' }, take: 200 }),
@@ -44,10 +44,10 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
     if (Number.isNaN(attendanceDate.getTime())) return NextResponse.json({ error: 'Date invalide' }, { status: 400 })
 
     if (user.role === 'ENSEIGNANT') {
-      const scope = await getTeacherScope(user, tenantId)
       const courseElementId = typeof body.courseElementId === 'string' ? body.courseElementId : ''
       const studentId = typeof body.studentId === 'string' ? body.studentId : ''
       const academicYearId = typeof body.academicYearId === 'string' ? body.academicYearId : ''
+      const scope = await getTeacherScope(user, tenantId, academicYearId)
       if (!scope.linked || !scope.courseElementIds.includes(courseElementId)) return NextResponse.json({ error: 'Matière non attribuée' }, { status: 403 })
       if (!studentId || !academicYearId || !['PRESENT', 'ABSENT', 'LATE'].includes(status)) return NextResponse.json({ error: 'Étudiant, année et statut requis' }, { status: 400 })
       if (typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !timeSlot.trim() || timeSlot.length > 80) return NextResponse.json({ error: 'Date ou créneau invalide' }, { status: 400 })
@@ -111,7 +111,8 @@ async function handlePut(user: SessionUser, tenantId: string, request: NextReque
     if (!existing) return NextResponse.json({ error: 'Présence introuvable' }, { status: 404 })
     const body = await request.json()
     if (user.role === 'ENSEIGNANT') {
-      const scope = await getTeacherScope(user, tenantId)
+      if (!existing.academicYearId) return NextResponse.json({ error: 'Présence sans année académique : correction réservée à la scolarité' }, { status: 403 })
+      const scope = await getTeacherScope(user, tenantId, existing.academicYearId)
       if (!scope.linked || existing.teacherId !== scope.teacherId || !existing.courseElementId || !scope.courseElementIds.includes(existing.courseElementId)) {
         return NextResponse.json({ error: 'Présence hors de votre périmètre' }, { status: 403 })
       }

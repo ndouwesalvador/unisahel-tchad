@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   teacherFindFirst: vi.fn(),
   announcementFindMany: vi.fn(),
   courseElementFindMany: vi.fn(),
+  serviceFindMany: vi.fn(),
   gradeCount: vi.fn(),
   gradeFindMany: vi.fn(),
   studentCount: vi.fn(),
@@ -26,6 +27,7 @@ vi.mock('@/lib/db', () => ({ db: {
   teacher: { findFirst: mocks.teacherFindFirst },
   announcement: { findMany: mocks.announcementFindMany },
   courseElement: { findMany: mocks.courseElementFindMany },
+  teachingService: { findMany: mocks.serviceFindMany },
   grade: { count: mocks.gradeCount, findMany: mocks.gradeFindMany },
   student: { count: mocks.studentCount, findFirst: mocks.studentFindFirst },
   tenantSettings: { findUnique: mocks.tenantSettingsFindUnique },
@@ -48,6 +50,7 @@ describe('GET /api/dashboard — role isolation', () => {
       id: 'element-A', code: 'INFO101', name: 'Programmation',
       teachingUnit: { name: 'Informatique', semester: { name: 'Semestre 1', level: { name: 'Licence 1', program: { name: 'Informatique' } } } },
     }])
+    mocks.serviceFindMany.mockResolvedValue([{ courseElementId: 'element-A' }])
     mocks.gradeCount.mockResolvedValueOnce(12).mockResolvedValueOnce(8)
     mocks.gradeFindMany.mockResolvedValue([])
     mocks.studentFindFirst.mockResolvedValue(null)
@@ -67,8 +70,10 @@ describe('GET /api/dashboard — role isolation', () => {
     expect(mocks.teacherFindFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { userId: 'user-A', tenantId: 'tenant-A', isActive: true } }))
     expect(mocks.courseElementFindMany).toHaveBeenCalledWith(expect.objectContaining({ where: {
       teachingUnit: { semester: { level: { program: { tenantId: 'tenant-A' } } } },
-      OR: [{ teacherId: 'teacher-A' }, { teachingUnit: { responsibleId: 'teacher-A' } }],
+      id: { in: ['element-A'] },
     } }))
+    expect(mocks.serviceFindMany).toHaveBeenCalledWith({ where: { tenantId: 'tenant-A',
+      teacherId: 'teacher-A', academicYearId: 'year-A', status: 'APPROVED' }, select: { courseElementId: true } })
     expect(mocks.gradeCount).toHaveBeenCalledWith({ where: expect.objectContaining({ courseElementId: { in: ['element-A'] }, student: { tenantId: 'tenant-A' }, academicYearId: 'year-A' }) })
     expect(mocks.studentCount).not.toHaveBeenCalled()
   })
@@ -78,7 +83,16 @@ describe('GET /api/dashboard — role isolation', () => {
     const response = await handler({ id: 'user-A', role: 'ENSEIGNANT', tenantId: 'tenant-A' }, 'tenant-A', request())
     expect(await response.json()).toMatchObject({ isTeacherView: true, linked: false, assignments: [] })
     expect(mocks.courseElementFindMany).not.toHaveBeenCalled()
+    expect(mocks.serviceFindMany).not.toHaveBeenCalled()
     expect(mocks.studentCount).not.toHaveBeenCalled()
+  })
+
+  it('shows no course when the teacher has no approved annual service', async () => {
+    mocks.serviceFindMany.mockResolvedValue([])
+    mocks.courseElementFindMany.mockResolvedValue([])
+    const response = await handler({ id: 'user-A', role: 'ENSEIGNANT', tenantId: 'tenant-A' }, 'tenant-A', request())
+    expect(await response.json()).toMatchObject({ stats: { assignedCourses: 0, enteredGrades: 0, lockedGrades: 0 }, assignments: [] })
+    expect(mocks.courseElementFindMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ id: { in: [] } }) }))
   })
 
   it.each(['RECTORAT', 'SCOLARITE', 'FACULTE', 'DEPARTEMENT', 'RESPONSABLE_FILIERE', 'JURY', 'CAISSE', 'MAITRE_STAGE', 'PARENT'])(

@@ -41,6 +41,6 @@ Les comptes de direction existants sans périmètre sont bloqués jusqu'à affec
 
 ## Prochaines tranches prioritaires
 
-1. **Autres périmètres pédagogiques par année** — les notes suivent désormais le service annuel approuvé ; appliquer la même exigence aux présences, examens en ligne et « Mes UE », sans se reposer sur les affectations courantes de la structure.
+1. **Achèvement des autres périmètres pédagogiques** — tableau de bord enseignant, « Mes UE », présences, examens en ligne et messages s'appuient désormais sur les services annuels approuvés. Les examens en ligne et messages n'ont toutefois pas encore d'identifiant d'année dans leur modèle ; l'historique et la création pour une année sélectionnée restent à expliciter avant d'ouvrir ces flux plus largement.
 2. **Droits des directions locales** — n'ouvrir les notes, présences et examens aux responsables concernés que si chaque lecture et écriture est filtrée. Le PV départemental est déjà filtré ; son autonomie ne vaut pas autorisation implicite sur les notes d'autres départements.
 3. **Capacité opérationnelle** — groupes, variantes de TD/TP, capacité de salle et indisponibilités, puis vérification navigateur complète avec les rôles réels.

@@ -73,7 +73,7 @@ async function getGradeRosterHandler(user: SessionUser, tenantId: string, reques
       teachingUnit: { semester: { level: { program: { tenantId } } } },
       ...(teacherId ? { teachingServices: { some: { tenantId, teacherId, academicYearId, status: 'APPROVED' } } } : {}),
     },
-    select: { teachingUnitId: true },
+    select: { teachingUnitId: true, teachingUnit: { select: { semester: { select: { levelId: true } } } } },
   })
   if (!element) return NextResponse.json({ error: 'Enseignement inaccessible' }, { status: 403 })
 
@@ -82,7 +82,8 @@ async function getGradeRosterHandler(user: SessionUser, tenantId: string, reques
       teachingUnitId: element.teachingUnitId,
       academicYearId,
       status: 'ACTIVE',
-      student: { tenantId },
+      student: { tenantId, registrations: { some: { tenantId, academicYearId, status: 'INSCRIT',
+        levelId: element.teachingUnit.semester.levelId } } },
     },
     select: { student: { select: { id: true, matricule: true, firstName: true, lastName: true } } },
     orderBy: { student: { lastName: 'asc' } },

@@ -116,10 +116,14 @@ async function getTeacherDashboardHandler(user: SessionUser, tenantId: string, a
     return NextResponse.json({ isTeacherView: true, linked: false, assignments: [], stats: { assignedCourses: 0, enteredGrades: 0, lockedGrades: 0 }, academicYear, announcements: [] })
   }
 
+  const services = academicYear ? await db.teachingService.findMany({
+    where: { tenantId, teacherId: teacher.id, academicYearId: academicYear.id, status: 'APPROVED' },
+    select: { courseElementId: true },
+  }) : []
   const elements = await db.courseElement.findMany({
     where: {
       teachingUnit: { semester: { level: { program: { tenantId } } } },
-      OR: [{ teacherId: teacher.id }, { teachingUnit: { responsibleId: teacher.id } }],
+      id: { in: services.map((service) => service.courseElementId) },
     },
     select: {
       id: true, code: true, name: true,

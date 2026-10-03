@@ -19,9 +19,10 @@ import {
   formatZodError,
 } from '@/lib/validations/api'
 
-async function handler(user: SessionUser, tenantId: string, _request: NextRequest) {
+async function handler(user: SessionUser, tenantId: string, request: NextRequest) {
   try {
-    const teacherScope = user.role === 'ENSEIGNANT' ? await getTeacherScope(user, tenantId) : null
+    const teacherScope = user.role === 'ENSEIGNANT'
+      ? await getTeacherScope(user, tenantId, request.nextUrl.searchParams.get('academicYearId')) : null
     const organizationScope = await getOrganizationScope(user, tenantId)
     // Get tenant info
     const tenant = await db.tenant.findUnique({

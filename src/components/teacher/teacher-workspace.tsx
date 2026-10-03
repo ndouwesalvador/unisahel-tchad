@@ -34,10 +34,12 @@ async function readJson<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 function useTeacherCourses() {
+  const selectedAcademicYearId = useAppStore((state) => state.selectedAcademicYearId)
   return useQuery({
-    queryKey: ['teacher-courses'],
+    queryKey: ['teacher-courses', selectedAcademicYearId],
     queryFn: async () => {
-      const data = await readJson<StructureResponse>('/api/structure')
+      const suffix = selectedAcademicYearId ? `?academicYearId=${encodeURIComponent(selectedAcademicYearId)}` : ''
+      const data = await readJson<StructureResponse>(`/api/structure${suffix}`)
       const courses: TeacherCourse[] = []
       for (const faculty of data.faculties) for (const department of faculty.departments)
         for (const program of department.programs) for (const level of program.levels)
@@ -48,24 +50,6 @@ function useTeacherCourses() {
               program: program.name, level: level.name, semester: semester.name,
             })
       return courses.sort((a, b) => `${a.program}${a.level}${a.semester}${a.name}`.localeCompare(`${b.program}${b.level}${b.semester}${b.name}`, 'fr'))
-    },
-  })
-}
-
-function useTeacherEmptyUnits() {
-  return useQuery({
-    queryKey: ['teacher-empty-units'],
-    queryFn: async () => {
-      const data = await readJson<StructureResponse>('/api/structure')
-      const units: Array<{ id: string; label: string; name: string; code: string | null; credits: number }> = []
-      for (const faculty of data.faculties) for (const department of faculty.departments)
-        for (const program of department.programs) for (const level of program.levels)
-          for (const semester of level.semesters) for (const unit of semester.teachingUnits)
-            if (unit.courseElements.length === 0) units.push({
-              id: unit.id, label: `${program.name} · ${level.name} · ${semester.name}`,
-              name: unit.name, code: unit.code, credits: unit.credits,
-            })
-      return units
     },
   })
 }
@@ -97,7 +81,7 @@ function CourseSelect({ courses, value, onChange, id }: { courses: TeacherCourse
 
 export function TeacherUnitsPage() {
   const { data: courses = [], isLoading, isError, refetch } = useTeacherCourses()
-  const { data: emptyUnits = [], isLoading: emptyUnitsLoading, isError: emptyUnitsError } = useTeacherEmptyUnits()
+  const { academicYear } = useTeacherYear()
   const groups = useMemo(() => {
     const map = new Map<string, TeacherCourse[]>()
     for (const course of courses) {
@@ -108,8 +92,9 @@ export function TeacherUnitsPage() {
   }, [courses])
 
   return <div className="space-y-6 text-slate-900">
-    <PageHeading icon={BookOpen} title="Mes UE et matières" description="Uniquement les enseignements affectés à votre fiche dans la structure académique de l’établissement." />
-    {isLoading || emptyUnitsLoading ? <Empty>Chargement de vos affectations…</Empty> : isError || emptyUnitsError ? <Empty>Impossible de charger vos UE. <button className="font-bold underline" onClick={() => refetch()}>Réessayer</button></Empty> : groups.length === 0 && emptyUnits.length === 0 ? <Empty>Aucune UE ou matière ne vous est attribuée. Demandez à l’administration de renseigner votre affectation dans « Structure ».</Empty> :
+    <PageHeading icon={BookOpen} title="Mes UE et matières" description="Uniquement vos services d’enseignement approuvés pour l’année académique sélectionnée." />
+    {academicYear && <p className="text-sm font-semibold text-slate-700">Année académique : {academicYear.name}</p>}
+    {isLoading ? <Empty>Chargement de vos affectations…</Empty> : isError ? <Empty>Impossible de charger vos UE. <button className="font-bold underline" onClick={() => refetch()}>Réessayer</button></Empty> : groups.length === 0 ? <Empty>Aucun service d’enseignement approuvé pour cette année. Le département doit faire valider votre service avant qu’il apparaisse ici.</Empty> :
       groups.map(([label, entries]) => <section key={label} className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
         <h2 className="text-lg font-bold text-slate-950">{label}</h2>
         <div className="mt-4 space-y-3">{entries.map((course) => <div key={course.id} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
@@ -117,11 +102,6 @@ export function TeacherUnitsPage() {
           <h3 className="mt-1 font-semibold text-slate-950">{course.code ? `${course.code} · ` : ''}{course.name}</h3>
         </div>)}</div>
       </section>)}
-    {emptyUnits.map((unit) => <section key={unit.id} className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
-      <p className="text-sm font-semibold text-slate-600">{unit.label}</p>
-      <h2 className="mt-2 text-lg font-bold text-slate-950">UE {unit.code ? `${unit.code} · ` : ''}{unit.name}</h2>
-      <p className="mt-1 text-sm text-slate-700">{unit.credits} crédits · Aucune matière n’est encore créée dans cette UE.</p>
-    </section>)}
   </div>
 }
 
@@ -200,7 +180,7 @@ export function TeacherAttendancePage() {
 
   return <div className="space-y-6 text-slate-900">
     <PageHeading icon={ClipboardCheck} title="Présences de mes cours" description="Seuls les étudiants inscrits pédagogiquement à votre UE pour l’année sélectionnée peuvent figurer dans cette feuille." />
-    {coursesLoading || yearLoading ? <Empty>Chargement de vos affectations…</Empty> : courses.length === 0 ? <Empty>Aucune matière ne vous est attribuée. La feuille de présence restera vide jusqu’à l’affectation par l’administration.</Empty> : !academicYear ? <Empty>Aucune année académique active. La saisie des présences est indisponible.</Empty> : <>
+    {coursesLoading || yearLoading ? <Empty>Chargement de vos affectations…</Empty> : courses.length === 0 ? <Empty>Aucun service annuel approuvé. La feuille de présence restera vide jusqu’à la validation de votre service d’enseignement.</Empty> : !academicYear ? <Empty>Aucune année académique active. La saisie des présences est indisponible.</Empty> : <>
       <div className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-5 sm:grid-cols-3">
         <label className="grid gap-2 text-sm font-semibold text-slate-800">Matière<CourseSelect id="attendance-course" courses={courses} value={courseId} onChange={(value) => { setSelectedCourseId(value); setOverrides({}) }} /></label>
         <label className="grid gap-2 text-sm font-semibold text-slate-800">Date<input type="date" value={selectedDate} onChange={(event) => { setSelectedDate(event.target.value); setOverrides({}) }} className="min-h-11 rounded-lg border border-slate-300 bg-white px-3 text-slate-900" /></label>

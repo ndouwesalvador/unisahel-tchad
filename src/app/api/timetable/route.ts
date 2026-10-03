@@ -57,9 +57,9 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
       let studentProgramId: string | null = null
       let studentLevelId: string | null = null
       if (user.role === 'ENSEIGNANT') {
-        const scope = await getTeacherScope(user, tenantId)
-        if (!scope.linked) return NextResponse.json({ slots: [], source: 'published' })
-        teacherId = scope.teacherId
+        const teacher = await db.teacher.findFirst({ where: { userId: user.id, tenantId, isActive: true }, select: { id: true } })
+        if (!teacher) return NextResponse.json({ slots: [], source: 'published' })
+        teacherId = teacher.id
       }
       if (isStudentSelfRole(user.role)) {
         const studentId = await resolveOwnStudentId(user)

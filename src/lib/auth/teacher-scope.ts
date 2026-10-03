@@ -1,31 +1,29 @@
 import { db } from '@/lib/db'
 import type { SessionUser } from '@/lib/auth/helpers'
 
-export async function getTeacherScope(user: SessionUser, tenantId: string) {
+export async function getTeacherScope(user: SessionUser, tenantId: string, requestedAcademicYearId?: string | null) {
   const teacher = await db.teacher.findFirst({
     where: { userId: user.id, tenantId, isActive: true },
     select: { id: true },
   })
-  if (!teacher) return { linked: false as const, teacherId: null, courseElementIds: [] as string[], teachingUnitIds: [] as string[] }
+  if (!teacher) return { linked: false as const, teacherId: null, academicYearId: null,
+    courseElementIds: [] as string[], teachingUnitIds: [] as string[] }
 
-  const [elements, responsibleUnits] = await Promise.all([
-    db.courseElement.findMany({
-      where: {
-        teachingUnit: { semester: { level: { program: { tenantId, isActive: true } } } },
-        OR: [{ teacherId: teacher.id }, { teachingUnit: { responsibleId: teacher.id } }],
-      },
-      select: { id: true, teachingUnitId: true },
-    }),
-    db.teachingUnit.findMany({
-      where: { responsibleId: teacher.id, semester: { level: { program: { tenantId, isActive: true } } } },
-      select: { id: true },
-    }),
-  ])
+  const year = await db.academicYear.findFirst({ where: requestedAcademicYearId
+    ? { id: requestedAcademicYearId, tenantId } : { tenantId, isCurrent: true }, select: { id: true } })
+  if (!year) return { linked: true as const, teacherId: teacher.id, academicYearId: null,
+    courseElementIds: [] as string[], teachingUnitIds: [] as string[] }
+
+  const services = await db.teachingService.findMany({ where: {
+    tenantId, teacherId: teacher.id, academicYearId: year.id, status: 'APPROVED',
+    courseElement: { teachingUnit: { semester: { level: { program: { tenantId, isActive: true } } } } },
+  }, select: { courseElementId: true, courseElement: { select: { teachingUnitId: true } } } })
 
   return {
     linked: true as const,
     teacherId: teacher.id,
-    courseElementIds: elements.map((element) => element.id),
-    teachingUnitIds: [...new Set([...elements.map((element) => element.teachingUnitId), ...responsibleUnits.map((unit) => unit.id)])],
+    academicYearId: year.id,
+    courseElementIds: [...new Set(services.map((service) => service.courseElementId))],
+    teachingUnitIds: [...new Set(services.map((service) => service.courseElement.teachingUnitId))],
   }
 }

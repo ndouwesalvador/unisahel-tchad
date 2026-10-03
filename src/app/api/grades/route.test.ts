@@ -37,7 +37,8 @@ beforeEach(() => {
   mocks.user.mockResolvedValue({ departmentId })
   mocks.grades.mockResolvedValue([])
   mocks.count.mockResolvedValue(0)
-  mocks.course.mockResolvedValue({ teachingUnitId: 'cteachingunit0000000000001' })
+  mocks.course.mockResolvedValue({ teachingUnitId: 'cteachingunit0000000000001',
+    teachingUnit: { semester: { levelId: 'clevel000000000000000001' } } })
   mocks.registrations.mockResolvedValue([])
   mocks.settings.mockResolvedValue(null)
 })

@@ -18,9 +18,10 @@ type Course = { id: string; code: string | null; name: string; hoursTP: number; 
 type Student = { id: string; matricule: string | null; firstName: string; lastName: string; grade: Grade | null }
 type EntryData = { academicYear: { id: string; name: string }; courses: Course[]; students: Student[] }
 
-async function loadEntries(courseElementId: string, session: string): Promise<EntryData> {
+async function loadEntries(courseElementId: string, session: string, academicYearId: string | null): Promise<EntryData> {
   const params = new URLSearchParams({ session })
   if (courseElementId) params.set('courseElementId', courseElementId)
+  if (academicYearId) params.set('academicYearId', academicYearId)
   const response = await fetch(`/api/grade-entry?${params}`, { cache: 'no-store' })
   const body = await response.json().catch(() => ({}))
   if (!response.ok) throw new Error(body.error || 'Chargement des notes impossible.')
@@ -89,13 +90,16 @@ function GradeCell({ student, course, component, jury, yearId, session, refresh 
 
 export function GradeEntryPage() {
   const role = useAppStore((state) => state.user?.role)
+  const selectedAcademicYearId = useAppStore((state) => state.selectedAcademicYearId)
   const jury = role === 'JURY'
   const queryClient = useQueryClient()
   const [courseId, setCourseId] = useState('')
   const [session, setSession] = useState('NORMALE')
   const [locking, setLocking] = useState<string | null>(null)
+  useEffect(() => { setCourseId('') }, [selectedAcademicYearId])
   const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ['grade-entry', courseId, session], queryFn: () => loadEntries(courseId, session),
+    queryKey: ['grade-entry', courseId, session, selectedAcademicYearId],
+    queryFn: () => loadEntries(courseId, session, selectedAcademicYearId),
   })
   useEffect(() => {
     if (data?.courses.length && !data.courses.some((course) => course.id === courseId)) setCourseId(data.courses[0].id)

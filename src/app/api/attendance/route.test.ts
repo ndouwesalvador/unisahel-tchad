@@ -17,7 +17,7 @@ const call = (handler: typeof GET, url: string, init?: ConstructorParameters<typ
 describe('teacher attendance isolation', () => {
   beforeEach(() => {
     vi.resetAllMocks()
-    mocks.scope.mockResolvedValue({ linked: true, teacherId: 'teacher-A', courseElementIds: ['element-A'] })
+    mocks.scope.mockResolvedValue({ linked: true, teacherId: 'teacher-A', academicYearId: 'year-A', courseElementIds: ['element-A'] })
     mocks.findMany.mockResolvedValue([])
     mocks.count.mockResolvedValue(0)
     mocks.element.mockResolvedValue({ name: 'Algorithmique', teachingUnitId: 'unit-A', teachingUnit: { semester: { level: { name: 'L1', program: { name: 'Informatique' } } } } })
@@ -30,7 +30,7 @@ describe('teacher attendance isolation', () => {
   it('lists only records by this teacher in assigned matters', async () => {
     const response = await call(GET, 'http://localhost/api/attendance')
     expect(response.status).toBe(200)
-    expect(mocks.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ teacherId: 'teacher-A', courseElementId: { in: ['element-A'] } }) }))
+    expect(mocks.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ teacherId: 'teacher-A', courseElementId: { in: ['element-A'] }, academicYearId: 'year-A' }) }))
   })
 
   it('rejects an unassigned matter even if it belongs to the tenant', async () => {
@@ -46,9 +46,16 @@ describe('teacher attendance isolation', () => {
   })
 
   it('cannot edit a different teacher’s attendance record', async () => {
-    mocks.findFirst.mockResolvedValue({ id: 'record-B', tenantId: 'tenant-A', teacherId: 'teacher-B', courseElementId: 'element-A' })
+    mocks.findFirst.mockResolvedValue({ id: 'record-B', tenantId: 'tenant-A', teacherId: 'teacher-B', courseElementId: 'element-A', academicYearId: 'year-A' })
     const response = await call(PUT, 'http://localhost/api/attendance?id=record-B', { method: 'PUT', body: JSON.stringify({ action: 'updateStatus', status: 'PRESENT' }) })
     expect(response.status).toBe(403)
+  })
+
+  it('does not let a teacher edit a historic record without an academic year', async () => {
+    mocks.findFirst.mockResolvedValue({ id: 'record-old', tenantId: 'tenant-A', teacherId: 'teacher-A', courseElementId: 'element-A', academicYearId: null })
+    const response = await call(PUT, 'http://localhost/api/attendance?id=record-old', { method: 'PUT', body: JSON.stringify({ action: 'updateStatus', status: 'PRESENT' }) })
+    expect(response.status).toBe(403)
+    expect(mocks.scope).not.toHaveBeenCalled()
   })
 
   it('records an enrolled student only in the assigned matter with a normalized session date', async () => {
@@ -56,6 +63,7 @@ describe('teacher attendance isolation', () => {
     const response = await call(POST, 'http://localhost/api/attendance', { method: 'POST', body: JSON.stringify({ courseElementId: 'element-A', studentId: 'student-A', academicYearId: 'year-A', date: '2026-10-02', timeSlot: '08:00', status: 'PRESENT' }) })
     expect(response.status).toBe(201)
     expect(mocks.registration).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ teachingUnitId: 'unit-A', academicYearId: 'year-A' }) }))
+    expect(mocks.scope).toHaveBeenCalledWith(user, 'tenant-A', 'year-A')
     expect(mocks.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ teacherId: 'teacher-A', courseElementId: 'element-A', date: new Date('2026-10-02T00:00:00.000Z') }) }))
   })
 
