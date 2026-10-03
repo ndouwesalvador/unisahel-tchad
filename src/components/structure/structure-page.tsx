@@ -886,6 +886,7 @@ export function StructurePage() {
     { value: 'INGENIEUR', label: 'Ingénieur' },
     { value: 'DUT', label: 'DUT' },
     { value: 'BTS', label: 'BTS' },
+    { value: 'DU', label: 'Diplôme universitaire (DU)' },
   ]
   const UE_TYPE_OPTIONS = [
     { value: 'FONDAMENTALE', label: 'Fondamentale' },

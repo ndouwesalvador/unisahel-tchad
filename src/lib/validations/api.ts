@@ -207,7 +207,7 @@ export const createProgramSchema = z.object({
   departmentId: z.string().cuid(),
   name: z.string().min(1).max(200),
   code: z.string().max(20),
-  cycle: z.enum(['LICENCE', 'MASTER', 'DOCTORAT', 'INGENIEUR', 'DUT', 'BTS']),
+  cycle: z.enum(['LICENCE', 'MASTER', 'DOCTORAT', 'INGENIEUR', 'DUT', 'BTS', 'DU']),
   diplomaType: z.string().max(100),
   duration: z.number().int().positive(),
   creditsPerYear: z.number().int().positive().default(60),
