@@ -310,6 +310,7 @@ export function StudentDetail() {
       }
     }
   }
+  const hasTranscriptPreview = transcriptAvailable && gradeRows.length > 0
 
   const payments = paymentsData?.data ?? []
   const totalPaye = payments.filter((p: { status: string }) => p.status === 'VALIDATED').reduce((sum: number, p: { amount: number }) => sum + p.amount, 0)
@@ -554,7 +555,12 @@ export function StudentDetail() {
               Relevé indisponible : l’inscription administrative pour l’année sélectionnée n’est pas validée. Aucune ancienne note ne peut être présentée comme résultat de cette année.
             </div>
           )}
-          <Card className="overflow-hidden">
+          {transcriptAvailable && gradeRows.length === 0 && (
+            <div role="status" className="rounded-lg border border-slate-200 bg-white p-4 text-sm font-medium text-slate-800">
+              Aucune note publiée pour les UE inscrites de cette année. Aucun relevé ne peut encore être prévisualisé ou généré.
+            </div>
+          )}
+          <Card className={hasTranscriptPreview ? 'overflow-hidden' : 'hidden'}>
             <CardContent className="p-0">
               {/* Transcript Preview */}
               <div className="bg-white border border-gray-200 shadow-inner">
