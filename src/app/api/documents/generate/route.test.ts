@@ -62,7 +62,7 @@ beforeEach(() => {
   dbMock.grade.findMany.mockResolvedValue([])
   dbMock.pedagogicalRegistration.findMany.mockResolvedValue([])
   dbMock.semester.findMany.mockResolvedValue([])
-  dbMock.administrativeRegistration.findFirst.mockResolvedValue(null)
+  dbMock.administrativeRegistration.findFirst.mockResolvedValue({ id: 'registration-A', academicYear: { name: '2026-2027' } })
   dbMock.administrativeRegistration.findMany.mockResolvedValue([])
   dbMock.program.findFirst.mockResolvedValue(null)
   dbMock.level.findFirst.mockResolvedValue(null)
@@ -130,7 +130,16 @@ describe('POST /api/documents/generate', () => {
     expect(dbMock.officialDocument.create).not.toHaveBeenCalled()
   })
 
+  it('refuses even an unsigned transcript without annual enrollment', async () => {
+    dbMock.administrativeRegistration.findFirst.mockResolvedValue(null)
+    const response = await POST(request({ type: 'RELEVE_NOTES', tenantId, studentId }))
+    expect(response.status).toBe(409)
+    expect(dbMock.grade.findMany).not.toHaveBeenCalled()
+    expect(dbMock.officialDocument.create).not.toHaveBeenCalled()
+  })
+
   it('requires a validated administrative registration for an attestation', async () => {
+    dbMock.administrativeRegistration.findFirst.mockResolvedValue(null)
     const response = await POST(request({ type: 'ATTESTATION_INSCRIPTION', tenantId, studentId }))
 
     expect(response.status).toBe(409)

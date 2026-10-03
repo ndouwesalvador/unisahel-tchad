@@ -189,12 +189,13 @@ export function StudentDetail() {
   const { goBack, selectedStudentId, user } = useAppStore()
   const canPreviewDashboard = user?.role === 'ADMIN_INSTITUTION'
   const queryClient = useQueryClient()
+  const selectedAcademicYearId = useAppStore((state) => state.selectedAcademicYearId)
   const [activeTab, setActiveTab] = useState(canPreviewDashboard ? 'dashboard' : 'informations')
   const [isGenerating, setIsGenerating] = useState<string | null>(null)
   const [isRegistering, setIsRegistering] = useState(false)
 
   const { data: detailData, isLoading: isLoadingDetail, isError: isDetailError, refetch: refetchDetail } = useStudentDetail(selectedStudentId || undefined)
-  const { data: transcriptData } = useStudentTranscript(selectedStudentId || undefined)
+  const { data: transcriptData } = useStudentTranscript(selectedStudentId || undefined, selectedAcademicYearId)
   const { data: paymentsData } = usePayments(selectedStudentId ? { studentId: selectedStudentId, limit: 200 } : undefined)
   const { data: documentsData } = useDocuments(selectedStudentId || undefined)
   const { data: yearsData } = useAcademicYears()
@@ -214,7 +215,8 @@ export function StudentDetail() {
       const res = await fetch('/api/documents/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type, tenantId: s.tenantId, studentId: selectedStudentId }),
+        body: JSON.stringify({ type, tenantId: s.tenantId, studentId: selectedStudentId,
+          ...(type === 'RELEVE_NOTES' && selectedAcademicYearId ? { academicYearId: selectedAcademicYearId } : {}) }),
       })
       if (!res.ok) {
         const err = await res.json()
@@ -251,7 +253,9 @@ export function StudentDetail() {
       const body = await response.json()
       if (!response.ok) throw new Error(body.error || 'Inscription impossible')
       toast.success(`Inscription ${currentYear.name} validée`)
-      await Promise.all([refetchDetail(), queryClient.invalidateQueries({ queryKey: ['studentDashboardPreview', selectedStudentId] })])
+      await Promise.all([refetchDetail(),
+        queryClient.invalidateQueries({ queryKey: ['studentDashboardPreview', selectedStudentId] }),
+        queryClient.invalidateQueries({ queryKey: ['studentTranscript', selectedStudentId] })])
     } catch (error) { toast.error(error instanceof Error ? error.message : 'Inscription impossible') }
     finally { setIsRegistering(false) }
   }
@@ -286,6 +290,7 @@ export function StudentDetail() {
   const summary = transcriptData?.data?.summary
   const totalCredits = summary?.totalCreditsAcquired ?? 0
   const moyenneGenerale = summary?.averageFinalGrade ?? 0
+  const transcriptAvailable = Boolean(transcriptData?.data?.isEnrolledForYear)
 
   const gradeRows: Array<{ ue: string; ecue: string; credits: number; coeff: number; cc: number | null; exam: number | null; moyenne: number; mention: string }> = []
   for (const sem of (transcriptData?.data?.grades ?? []) as TranscriptSemester[]) {
@@ -378,7 +383,7 @@ export function StudentDetail() {
                 size="sm"
                 variant="outline"
                 className="text-xs border-[#2d7a4f30] hover:bg-[#2d7a4f08] text-[#2d7a4f]"
-                disabled={isGenerating === 'RELEVE_NOTES'}
+                disabled={!transcriptAvailable || gradeRows.length === 0 || isGenerating === 'RELEVE_NOTES'}
                 onClick={() => generateDocument('RELEVE_NOTES')}
               >
                 {isGenerating === 'RELEVE_NOTES' ? <Loader2 className="size-3.5 mr-1.5 animate-spin" /> : <FileText className="size-3.5 mr-1.5" />}
@@ -544,6 +549,11 @@ export function StudentDetail() {
 
         {/* Releve de Notes Tab - Academic Transcript Preview */}
         <TabsContent value="releve" className="mt-4">
+          {!transcriptAvailable && (
+            <div role="status" className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm font-medium text-amber-950">
+              Relevé indisponible : l’inscription administrative pour l’année sélectionnée n’est pas validée. Aucune ancienne note ne peut être présentée comme résultat de cette année.
+            </div>
+          )}
           <Card className="overflow-hidden">
             <CardContent className="p-0">
               {/* Transcript Preview */}
@@ -570,7 +580,7 @@ export function StudentDetail() {
 
                 {/* Grades Table */}
                 {gradeRows.length === 0 ? (
-                  <p className="text-sm text-gray-400 text-center py-8">Aucune note saisie pour le moment.</p>
+                  <p className="py-8 text-center text-sm text-slate-700">Aucune note publiée pour les UE inscrites de cette année.</p>
                 ) : (
                   <div className="overflow-x-auto">
                     <Table>
@@ -640,7 +650,7 @@ export function StudentDetail() {
                 <Button
                   size="sm"
                   className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs"
-                  disabled={isGenerating === 'RELEVE_NOTES'}
+                  disabled={!transcriptAvailable || gradeRows.length === 0 || isGenerating === 'RELEVE_NOTES'}
                   onClick={() => generateDocument('RELEVE_NOTES')}
                 >
                   {isGenerating === 'RELEVE_NOTES' ? <Loader2 className="size-3.5 mr-1.5 animate-spin" /> : <Download className="size-3.5 mr-1.5" />}
@@ -871,7 +881,7 @@ export function StudentDetail() {
                     size="sm"
                     variant="outline"
                     className="text-xs"
-                    disabled={isGenerating === type}
+                    disabled={(type === 'RELEVE_NOTES' && (!transcriptAvailable || gradeRows.length === 0)) || isGenerating === type}
                     onClick={() => generateDocument(type)}
                   >
                     {isGenerating === type ? <Loader2 className="size-3.5 mr-1.5 animate-spin" /> : <FileText className="size-3.5 mr-1.5" />}

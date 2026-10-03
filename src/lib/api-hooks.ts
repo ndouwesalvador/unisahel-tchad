@@ -59,12 +59,14 @@ export function useStudentDetail(id?: string) {
   });
 }
 
-export function useStudentTranscript(id?: string) {
+export function useStudentTranscript(id?: string, academicYearId?: string | null) {
   return useQuery({
-    queryKey: ['studentTranscript', id],
+    queryKey: ['studentTranscript', id, academicYearId],
     enabled: Boolean(id),
     queryFn: async () => {
-      const res = await fetch(`/api/students?id=${id}&transcript=true`);
+      const params = new URLSearchParams({ id: id!, transcript: 'true' });
+      if (academicYearId) params.set('academicYearId', academicYearId);
+      const res = await fetch(`/api/students?${params}`);
       if (!res.ok) throw new Error('Failed to fetch transcript');
       return res.json();
     },

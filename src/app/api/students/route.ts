@@ -421,9 +421,23 @@ async function getStudentTranscriptHandler(user: SessionUser, tenantId: string, 
       )
     }
 
-    // Get all grades grouped by semester and teaching unit
-    const grades = await db.grade.findMany({
-      where: { studentId: id, student: { tenantId } },
+    const requestedYearId = searchParams.get('academicYearId')
+    const academicYear = await db.academicYear.findFirst({
+      where: requestedYearId ? { id: requestedYearId, tenantId } : { tenantId, isCurrent: true },
+      select: { id: true, name: true },
+    })
+    if (requestedYearId && !academicYear) {
+      return NextResponse.json({ error: 'Année académique introuvable' }, { status: 404 })
+    }
+    const annualRegistration = academicYear ? await db.administrativeRegistration.findFirst({
+      where: { tenantId, studentId: id, academicYearId: academicYear.id, status: 'INSCRIT' },
+      select: { id: true },
+    }) : null
+
+    // This is an annual published-grade preview, not a dump of historical drafts.
+    const grades = annualRegistration && academicYear ? await db.grade.findMany({
+      where: { studentId: id, student: { tenantId }, academicYearId: academicYear.id, session: 'NORMALE', isLocked: true,
+        teachingUnit: { pedagogicalRegistrations: { some: { studentId: id, academicYearId: academicYear.id, status: 'ACTIVE' } } } },
       include: {
         teachingUnit: {
           select: {
@@ -476,7 +490,7 @@ async function getStudentTranscriptHandler(user: SessionUser, tenantId: string, 
         { teachingUnit: { orderIndex: 'asc' } },
         { courseElement: { orderIndex: 'asc' } },
       ],
-    })
+    }) : []
 
     // Group by semester and teaching unit
     const groupedGrades: Record<string, { semester: any; teachingUnits: Record<string, { teachingUnit: any; grades: any[] }> }> = {}
@@ -549,11 +563,11 @@ async function getStudentTranscriptHandler(user: SessionUser, tenantId: string, 
       validatedGrades,
       failedGrades: totalGrades - validatedGrades,
       averageFinalGrade: Math.round(averageFinalGrade * 100) / 100,
-      totalCreditsAcquired: student.totalCreditsAcquired,
+      totalCreditsAcquired: annualRegistration ? student.totalCreditsAcquired : 0,
     }
 
     return NextResponse.json({
-      data: { student, grades: structuredGrades, summary },
+      data: { student, grades: structuredGrades, summary, academicYear, isEnrolledForYear: Boolean(annualRegistration) },
     })
   } catch (error) {
     console.error('Get student transcript error:', error)

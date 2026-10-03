@@ -137,6 +137,13 @@ export async function POST(request: NextRequest) {
         if (!acYearId) {
           return NextResponse.json({ error: 'Année académique requise pour le relevé' }, { status: 409 })
         }
+        const registration = await db.administrativeRegistration.findFirst({
+          where: { tenantId, studentId, academicYearId: acYearId, status: 'INSCRIT' },
+          select: { id: true },
+        })
+        if (!registration) {
+          return NextResponse.json({ error: 'Inscription administrative annuelle non validée : relevé indisponible' }, { status: 409 })
+        }
         const academicYear = requestedYear?.name || ''
         let semester = ''
         let ueGrades: Array<{ ue: string; code: string; credits: number; notes: Array<{ ec: string; coef: number; cc?: number; exam?: number; final?: number }>; moyenne?: number }> = []

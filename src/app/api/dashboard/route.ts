@@ -43,7 +43,8 @@ async function getStudentDashboardHandler(studentId: string, tenantId: string, a
   }) : null
 
   const grades = annualRegistration && currentAcademicYear ? await db.grade.findMany({
-    where: { studentId, academicYearId: currentAcademicYear.id, session: 'NORMALE', isLocked: true, finalGrade: { not: null } },
+    where: { studentId, academicYearId: currentAcademicYear.id, session: 'NORMALE', isLocked: true, finalGrade: { not: null },
+      teachingUnit: { pedagogicalRegistrations: { some: { studentId, academicYearId: currentAcademicYear.id, status: 'ACTIVE' } } } },
     select: { finalGrade: true, courseElement: { select: { coefficient: true } } },
   }) : []
 

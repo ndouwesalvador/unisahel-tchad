@@ -159,7 +159,9 @@ describe('GET /api/dashboard — role isolation', () => {
       where: { tenantId: 'tenant-A', studentId: 'student-A', academicYearId: 'year-A', status: 'INSCRIT' },
       select: { id: true },
     })
-    expect(mocks.gradeFindMany).toHaveBeenCalledOnce()
+    expect(mocks.gradeFindMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({
+      teachingUnit: { pedagogicalRegistrations: { some: { studentId: 'student-A', academicYearId: 'year-A', status: 'ACTIVE' } } },
+    }) }))
   })
 
   it('rejects a student preview from another institution', async () => {

@@ -141,6 +141,9 @@ async function getGradesHandler(user: SessionUser, tenantId: string, request: Ne
           tenantId,
           registrations: { some: { tenantId, academicYearId: yearId, status: 'INSCRIT' } },
         }
+        where.teachingUnit = { pedagogicalRegistrations: { some: {
+          studentId: ownStudentId!, academicYearId: yearId, status: 'ACTIVE',
+        } } }
       }
     }
     const teacherId = await assignedTeacherId(user, tenantId)
