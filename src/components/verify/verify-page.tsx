@@ -401,8 +401,8 @@ export function VerifyPage() {
                         <ShieldCheck className="size-4 text-[#1a2744]" />
                       </div>
                       <div>
-                        <p className="text-xs font-medium text-[#1a2744]">Empreinte numérique</p>
-                        <p className="text-[11px] text-gray-500">Un code absent ou révoqué est refusé automatiquement.</p>
+                        <p className="text-xs font-medium text-[#1a2744]">Intégrité des nouveaux PDF</p>
+                        <p className="text-[11px] text-gray-500">Le fichier présenté peut être comparé à son empreinte enregistrée lors de l’émission.</p>
                       </div>
                     </div>
                   </div>
@@ -453,8 +453,8 @@ export function VerifyPage() {
                       3
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-[#1a2744]">Vérifiez l&apos;authenticité</p>
-                      <p className="text-xs text-gray-400">Le système confirme si le document est authentique</p>
+                      <p className="text-sm font-medium text-[#1a2744]">Contrôlez la référence et le fichier</p>
+                      <p className="text-xs text-gray-400">Le code seul ne prouve pas qu’un PDF n’a pas été modifié.</p>
                     </div>
                   </div>
                 </div>
