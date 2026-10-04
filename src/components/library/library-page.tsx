@@ -131,12 +131,12 @@ interface LibraryStats {
 // pointing at each service's real public URL.
 
 const digitalResources: DigitalResource[] = [
-  { id: '1', name: 'Cairn.info', description: 'Revues scientifiques francophones', href: 'https://www.cairn.info', icon: Database, color: '#1a2744' },
-  { id: '2', name: 'JSTOR Africa', description: "Archives academiques, acces initiative Afrique", href: 'https://about.jstor.org/africa/', icon: Library, color: '#2d7a4f' },
-  { id: '3', name: 'Google Scholar', description: 'Moteur de recherche academique', href: 'https://scholar.google.com', icon: Search, color: '#d4a853' },
-  { id: '4', name: 'UNESCO Digital Library', description: 'Publications internationales', href: 'https://unesdoc.unesco.org', icon: Globe, color: '#1a2744' },
-  { id: '5', name: 'African Journals Online', description: 'Revues academiques africaines', href: 'https://www.ajol.info', icon: BookOpen, color: '#2d7a4f' },
-  { id: '6', name: 'OpenEdition', description: 'Livres et revues en acces ouvert', href: 'https://www.openedition.org', icon: ExternalLink, color: '#d4a853' },
+  { id: '1', name: 'Cairn.info', description: 'Revues scientifiques francophones', href: 'https://www.cairn.info', icon: Database, color: 'var(--institution-primary)' },
+  { id: '2', name: 'JSTOR Africa', description: "Archives academiques, acces initiative Afrique", href: 'https://about.jstor.org/africa/', icon: Library, color: 'var(--institution-secondary)' },
+  { id: '3', name: 'Google Scholar', description: 'Moteur de recherche academique', href: 'https://scholar.google.com', icon: Search, color: 'var(--institution-accent)' },
+  { id: '4', name: 'UNESCO Digital Library', description: 'Publications internationales', href: 'https://unesdoc.unesco.org', icon: Globe, color: 'var(--institution-primary)' },
+  { id: '5', name: 'African Journals Online', description: 'Revues academiques africaines', href: 'https://www.ajol.info', icon: BookOpen, color: 'var(--institution-secondary)' },
+  { id: '6', name: 'OpenEdition', description: 'Livres et revues en acces ouvert', href: 'https://www.openedition.org', icon: ExternalLink, color: 'var(--institution-accent)' },
 ]
 
 // ─── Weekly opening hours ────────────────────────────────────────────────────
@@ -274,32 +274,32 @@ function defaultDueDate() {
 // ─── Config Maps ──────────────────────────────────────────────────────────────
 
 const typeConfig: Record<string, { label: string; className: string }> = {
-  livre: { label: 'Livre', className: 'bg-[#1a274415] text-[#1a2744] border-0' },
-  revue: { label: 'Revue', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0' },
+  livre: { label: 'Livre', className: 'bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0' },
+  revue: { label: 'Revue', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0' },
   these: { label: 'These', className: 'bg-[#8b5cf615] text-[#8b5cf6] border-0' },
   memoire: { label: 'Memoire', className: 'bg-[#0891b215] text-[#0891b2] border-0' },
-  rapport: { label: 'Rapport', className: 'bg-[#d4a85315] text-[#d4a853] border-0' },
+  rapport: { label: 'Rapport', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0' },
   ebook: { label: 'E-book', className: 'bg-[#ea580c15] text-[#ea580c] border-0' },
 }
 
 const categoryConfig: Record<string, { label: string; className: string; color: string }> = {
-  sciences: { label: 'Sciences', className: 'bg-blue-50 text-blue-700 border-0', color: '#1a2744' },
-  droit: { label: 'Droit', className: 'bg-purple-50 text-purple-700 border-0', color: '#2d7a4f' },
-  lettres: { label: 'Lettres', className: 'bg-amber-50 text-amber-700 border-0', color: '#d4a853' },
+  sciences: { label: 'Sciences', className: 'bg-blue-50 text-blue-700 border-0', color: 'var(--institution-primary)' },
+  droit: { label: 'Droit', className: 'bg-purple-50 text-purple-700 border-0', color: 'var(--institution-secondary)' },
+  lettres: { label: 'Lettres', className: 'bg-amber-50 text-amber-700 border-0', color: 'var(--institution-accent)' },
   medecine: { label: 'Medecine', className: 'bg-red-50 text-red-700 border-0', color: '#c62828' },
   economie: { label: 'Economie', className: 'bg-emerald-50 text-emerald-700 border-0', color: '#0891b2' },
 }
 
 const statusConfig: Record<string, { label: string; className: string; icon: React.ElementType }> = {
-  disponible: { label: 'Disponible', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0', icon: CheckCircle2 },
-  emprunte: { label: 'Emprunte', className: 'bg-[#d4a85315] text-[#d4a853] border-0', icon: Clock },
+  disponible: { label: 'Disponible', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0', icon: CheckCircle2 },
+  emprunte: { label: 'Emprunte', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0', icon: Clock },
   en_reservation: { label: 'En reservation', className: 'bg-[#3b82f615] text-[#3b82f6] border-0', icon: Bookmark },
   perdu: { label: 'Perdu', className: 'bg-[#c6282815] text-[#c62828] border-0', icon: XCircle },
 }
 
 const borrowStatusConfig: Record<string, { label: string; className: string }> = {
   en_retard: { label: 'En retard', className: 'bg-[#c6282815] text-[#c62828] border-0' },
-  a_l_heure: { label: "A l'heure", className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0' },
+  a_l_heure: { label: "A l'heure", className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0' },
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -500,13 +500,13 @@ export function LibraryPage() {
       {/* ── Header ────────────────────────────────────────────────────────────── */}
       <motion.div variants={itemVariants} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-[#1a2744]">Bibliotheque &amp; Ressources</h1>
+          <h1 className="text-xl font-bold text-[var(--institution-primary)]">Bibliotheque &amp; Ressources</h1>
           <p className="text-sm text-gray-500">Gestion du patrimoine documentaire et des ressources academiques</p>
         </div>
         <div className="flex gap-2 flex-wrap">
           <Dialog open={showAddBook} onOpenChange={setShowAddBook}>
             <DialogTrigger asChild>
-              <Button size="sm" className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs">
+              <Button size="sm" className="bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white text-xs">
                 <Plus className="size-3.5 mr-1.5" />
                 Nouveau document
               </Button>
@@ -578,7 +578,7 @@ export function LibraryPage() {
                 </div>
                 <div className="flex gap-2 pt-2">
                   <Button
-                    className="flex-1 bg-[#2d7a4f] hover:bg-[#236b40] text-white"
+                    className="flex-1 bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white"
                     disabled={addingBook}
                     onClick={handleAddBook}
                   >
@@ -592,11 +592,11 @@ export function LibraryPage() {
               </div>
             </DialogContent>
           </Dialog>
-          <Button size="sm" variant="outline" className="text-xs border-[#1a274430] text-[#1a2744] hover:bg-[#1a274408]">
+          <Button size="sm" variant="outline" className="text-xs border-[var(--institution-primary-30)] text-[var(--institution-primary)] hover:bg-[var(--institution-primary-08)]">
             <FileSearch className="size-3.5 mr-1.5" />
             Recherche avancee
           </Button>
-          <Button size="sm" variant="outline" className="text-xs border-[#1a274430] text-[#1a2744] hover:bg-[#1a274408]" onClick={() => exportToExcel(filteredCatalog, 'export_library')}>
+          <Button size="sm" variant="outline" className="text-xs border-[var(--institution-primary-30)] text-[var(--institution-primary)] hover:bg-[var(--institution-primary-08)]" onClick={() => exportToExcel(filteredCatalog, 'export_library')}>
             <Download className="size-3.5 mr-1.5" />
             Exporter le catalogue
           </Button>
@@ -606,78 +606,78 @@ export function LibraryPage() {
       {/* ── Stats Cards ──────────────────────────────────────────────────────── */}
       <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Ouvrages */}
-        <Card className="overflow-hidden relative border-l-4 border-l-[#1a2744] hover:shadow-md transition-shadow">
-          <div className="absolute inset-0 bg-gradient-to-br from-[#1a274408] to-[#1a274400] pointer-events-none" />
+        <Card className="overflow-hidden relative border-l-4 border-l-[var(--institution-primary)] hover:shadow-md transition-shadow">
+          <div className="absolute inset-0 bg-gradient-to-br from-[var(--institution-primary-08)] to-[var(--institution-primary-00)] pointer-events-none" />
           <CardContent className="p-4 relative">
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Ouvrages</p>
-                <p className="text-xl font-bold text-[#1a2744] mt-1">{(stats?.totalResources ?? 0).toLocaleString('fr-FR')}</p>
+                <p className="text-xl font-bold text-[var(--institution-primary)] mt-1">{(stats?.totalResources ?? 0).toLocaleString('fr-FR')}</p>
                 <p className="text-xs text-gray-400 mt-1">{(stats?.totalCopies ?? 0).toLocaleString('fr-FR')} exemplaires au total</p>
               </div>
-              <div className="w-10 h-10 rounded-xl bg-[#1a274415] flex items-center justify-center">
-                <BookOpen className="size-5 text-[#1a2744]" />
+              <div className="w-10 h-10 rounded-xl bg-[var(--institution-primary-15)] flex items-center justify-center">
+                <BookOpen className="size-5 text-[var(--institution-primary)]" />
               </div>
             </div>
             <div className="mt-3">
-              <Progress value={stats && stats.totalCopies > 0 ? Math.round((stats.availableCopies / stats.totalCopies) * 100) : 0} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#1a2744]" />
+              <Progress value={stats && stats.totalCopies > 0 ? Math.round((stats.availableCopies / stats.totalCopies) * 100) : 0} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[var(--institution-primary)]" />
             </div>
           </CardContent>
         </Card>
 
         {/* Emprunts actifs */}
-        <Card className="overflow-hidden relative border-l-4 border-l-[#2d7a4f] hover:shadow-md transition-shadow">
-          <div className="absolute inset-0 bg-gradient-to-br from-[#2d7a4f08] to-[#2d7a4f00] pointer-events-none" />
+        <Card className="overflow-hidden relative border-l-4 border-l-[var(--institution-secondary)] hover:shadow-md transition-shadow">
+          <div className="absolute inset-0 bg-gradient-to-br from-[var(--institution-secondary-08)] to-[var(--institution-secondary-00)] pointer-events-none" />
           <CardContent className="p-4 relative">
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Emprunts actifs</p>
-                <p className="text-xl font-bold text-[#2d7a4f] mt-1">{stats?.activeLoans ?? 0}</p>
+                <p className="text-xl font-bold text-[var(--institution-secondary)] mt-1">{stats?.activeLoans ?? 0}</p>
                 <p className="text-xs text-gray-400 mt-1">{stats?.overdueLoans ?? 0} en retard</p>
               </div>
-              <div className="w-10 h-10 rounded-xl bg-[#2d7a4f15] flex items-center justify-center">
-                <BookMarked className="size-5 text-[#2d7a4f]" />
+              <div className="w-10 h-10 rounded-xl bg-[var(--institution-secondary-15)] flex items-center justify-center">
+                <BookMarked className="size-5 text-[var(--institution-secondary)]" />
               </div>
             </div>
             <div className="mt-3">
-              <Progress value={stats && stats.activeLoans > 0 ? Math.round((stats.overdueLoans / stats.activeLoans) * 100) : 0} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#2d7a4f]" />
+              <Progress value={stats && stats.activeLoans > 0 ? Math.round((stats.overdueLoans / stats.activeLoans) * 100) : 0} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[var(--institution-secondary)]" />
             </div>
           </CardContent>
         </Card>
 
         {/* Ressources numeriques */}
-        <Card className="overflow-hidden relative border-l-4 border-l-[#d4a853] hover:shadow-md transition-shadow">
-          <div className="absolute inset-0 bg-gradient-to-br from-[#d4a85308] to-[#d4a85300] pointer-events-none" />
+        <Card className="overflow-hidden relative border-l-4 border-l-[var(--institution-accent)] hover:shadow-md transition-shadow">
+          <div className="absolute inset-0 bg-gradient-to-br from-[var(--institution-accent-08)] to-[var(--institution-accent-00)] pointer-events-none" />
           <CardContent className="p-4 relative">
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Ressources numeriques</p>
-                <p className="text-xl font-bold text-[#d4a853] mt-1">{digitalResources.length}</p>
+                <p className="text-xl font-bold text-[var(--institution-accent)] mt-1">{digitalResources.length}</p>
                 <p className="text-xs text-gray-400 mt-1">bases documentaires partenaires</p>
               </div>
-              <div className="w-10 h-10 rounded-xl bg-[#d4a85315] flex items-center justify-center">
-                <Monitor className="size-5 text-[#d4a853]" />
+              <div className="w-10 h-10 rounded-xl bg-[var(--institution-accent-15)] flex items-center justify-center">
+                <Monitor className="size-5 text-[var(--institution-accent)]" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Places assises */}
-        <Card className="overflow-hidden relative border-l-4 border-l-[#1a2744] hover:shadow-md transition-shadow">
-          <div className="absolute inset-0 bg-gradient-to-br from-[#1a274408] to-[#1a274400] pointer-events-none" />
+        <Card className="overflow-hidden relative border-l-4 border-l-[var(--institution-primary)] hover:shadow-md transition-shadow">
+          <div className="absolute inset-0 bg-gradient-to-br from-[var(--institution-primary-08)] to-[var(--institution-primary-00)] pointer-events-none" />
           <CardContent className="p-4 relative">
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Places assises</p>
-                <p className="text-xl font-bold text-[#1a2744] mt-1">{stats?.totalRoomCapacity ?? 0}</p>
+                <p className="text-xl font-bold text-[var(--institution-primary)] mt-1">{stats?.totalRoomCapacity ?? 0}</p>
                 <p className="text-xs text-gray-400 mt-1">{stats?.avgOccupancyPercent ?? 0}% occupees</p>
               </div>
-              <div className="w-10 h-10 rounded-xl bg-[#1a274415] flex items-center justify-center">
-                <Armchair className="size-5 text-[#1a2744]" />
+              <div className="w-10 h-10 rounded-xl bg-[var(--institution-primary-15)] flex items-center justify-center">
+                <Armchair className="size-5 text-[var(--institution-primary)]" />
               </div>
             </div>
             <div className="mt-3">
-              <Progress value={stats?.avgOccupancyPercent ?? 0} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-gradient-to-r [&>[data-slot=progress-indicator]]:from-[#2d7a4f] [&>[data-slot=progress-indicator]]:to-[#d4a853]" />
+              <Progress value={stats?.avgOccupancyPercent ?? 0} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-gradient-to-r [&>[data-slot=progress-indicator]]:from-[var(--institution-secondary)] [&>[data-slot=progress-indicator]]:to-[var(--institution-accent)]" />
             </div>
           </CardContent>
         </Card>
@@ -774,7 +774,7 @@ export function LibraryPage() {
         <Card>
           <CardHeader className="pb-3">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-              <CardTitle className="text-sm font-semibold text-[#1a2744]">Catalogue documentaire</CardTitle>
+              <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Catalogue documentaire</CardTitle>
               <p className="text-xs text-gray-400">{filteredCatalog.length} ouvrages trouves</p>
             </div>
           </CardHeader>
@@ -802,13 +802,13 @@ export function LibraryPage() {
                     return (
                       <TableRow
                         key={item.id}
-                        className="hover:bg-[#2d7a4f05] transition-colors"
+                        className="hover:bg-[var(--institution-secondary-05)] transition-colors"
                       >
                         <TableCell className="py-2.5">
                           <div>
-                            <p className="text-sm font-medium text-[#1a2744]">{item.title}</p>
+                            <p className="text-sm font-medium text-[var(--institution-primary)]">{item.title}</p>
                             {item.returnDate && (
-                              <p className="text-[10px] text-[#d4a853] mt-0.5">Retour prevu: {item.returnDate}</p>
+                              <p className="text-[10px] text-[var(--institution-accent)] mt-0.5">Retour prevu: {item.returnDate}</p>
                             )}
                           </div>
                         </TableCell>
@@ -835,7 +835,7 @@ export function LibraryPage() {
                           ) : null}
                         </TableCell>
                         <TableCell className="text-center py-2.5">
-                          <span className="text-sm font-semibold text-[#1a2744]">{item.borrowCount}</span>
+                          <span className="text-sm font-semibold text-[var(--institution-primary)]">{item.borrowCount}</span>
                         </TableCell>
                         <TableCell className="py-2.5">
                           <div className="flex items-center gap-1.5">
@@ -859,7 +859,7 @@ export function LibraryPage() {
                             <Button
                               size="sm"
                               variant="outline"
-                              className="h-7 px-2 text-[10px] border-[#2d7a4f30] text-[#2d7a4f] hover:bg-[#2d7a4f10] disabled:opacity-40"
+                              className="h-7 px-2 text-[10px] border-[var(--institution-secondary-30)] text-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-10)] disabled:opacity-40"
                               disabled={!canBorrow}
                               onClick={() => openBorrowDialog(item)}
                             >
@@ -930,7 +930,7 @@ export function LibraryPage() {
             </div>
             <div className="flex gap-2 pt-2">
               <Button
-                className="flex-1 bg-[#2d7a4f] hover:bg-[#236b40] text-white"
+                className="flex-1 bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white"
                 disabled={!selectedStudentId || borrowing}
                 onClick={handleBorrow}
               >
@@ -947,13 +947,13 @@ export function LibraryPage() {
 
       {/* ── Emprunts & Retours Card ─────────────────────────────────────────── */}
       <motion.div variants={itemVariants}>
-        <Card className="border-l-4 border-l-[#2d7a4f]">
+        <Card className="border-l-4 border-l-[var(--institution-secondary)]">
           <CardHeader className="pb-3">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div className="flex items-center gap-2">
-                <BookMarked className="size-4 text-[#2d7a4f]" />
-                <CardTitle className="text-sm font-semibold text-[#1a2744]">Emprunts en cours</CardTitle>
-                <Badge className="text-[10px] bg-[#2d7a4f15] text-[#2d7a4f] border-0">{borrows.length}</Badge>
+                <BookMarked className="size-4 text-[var(--institution-secondary)]" />
+                <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Emprunts en cours</CardTitle>
+                <Badge className="text-[10px] bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0">{borrows.length}</Badge>
               </div>
               <div className="relative w-full sm:w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
@@ -987,11 +987,11 @@ export function LibraryPage() {
                     return (
                       <TableRow
                         key={borrow.id}
-                        className={`transition-colors ${isOverdue ? 'bg-red-50/50 hover:bg-red-50' : 'hover:bg-[#2d7a4f05]'}`}
+                        className={`transition-colors ${isOverdue ? 'bg-red-50/50 hover:bg-red-50' : 'hover:bg-[var(--institution-secondary-05)]'}`}
                       >
                         <TableCell className="py-2.5">
                           <div>
-                            <p className="text-sm font-medium text-[#1a2744]">{borrow.studentName}</p>
+                            <p className="text-sm font-medium text-[var(--institution-primary)]">{borrow.studentName}</p>
                             <p className="text-[10px] text-gray-400 font-mono">{borrow.matricule}</p>
                           </div>
                         </TableCell>
@@ -1010,7 +1010,7 @@ export function LibraryPage() {
                           <Button
                             size="sm"
                             variant="outline"
-                            className="h-7 text-[10px] border-[#2d7a4f30] text-[#2d7a4f] hover:bg-[#2d7a4f10]"
+                            className="h-7 text-[10px] border-[var(--institution-secondary-30)] text-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-10)]"
                             disabled={isReturning}
                             onClick={() => handleReturn(borrow.id)}
                           >
@@ -1051,11 +1051,11 @@ export function LibraryPage() {
 
       {/* ── Ressources Numeriques Card ──────────────────────────────────────── */}
       <motion.div variants={itemVariants}>
-        <Card className="border-l-4 border-l-[#d4a853]">
+        <Card className="border-l-4 border-l-[var(--institution-accent)]">
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
-              <Monitor className="size-4 text-[#d4a853]" />
-              <CardTitle className="text-sm font-semibold text-[#1a2744]">Ressources numeriques</CardTitle>
+              <Monitor className="size-4 text-[var(--institution-accent)]" />
+              <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Ressources numeriques</CardTitle>
             </div>
           </CardHeader>
           <CardContent>
@@ -1076,7 +1076,7 @@ export function LibraryPage() {
                         <ResourceIcon className="size-5" style={{ color: resource.color }} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-[#1a2744] truncate">{resource.name}</p>
+                        <p className="text-sm font-semibold text-[var(--institution-primary)] truncate">{resource.name}</p>
                         <p className="text-xs text-gray-500">{resource.description}</p>
                       </div>
                     </div>
@@ -1084,7 +1084,7 @@ export function LibraryPage() {
                       asChild
                       size="sm"
                       variant="outline"
-                      className="w-full mt-3 h-8 text-[10px] border-gray-200 text-[#1a2744] hover:bg-[#1a274408]"
+                      className="w-full mt-3 h-8 text-[10px] border-gray-200 text-[var(--institution-primary)] hover:bg-[var(--institution-primary-08)]"
                     >
                       <a href={resource.href} target="_blank" rel="noopener noreferrer">
                         <ExternalLink className="size-3 mr-1.5" />
@@ -1101,17 +1101,17 @@ export function LibraryPage() {
 
       {/* ── Horaires & Espaces Card ─────────────────────────────────────────── */}
       <motion.div variants={itemVariants}>
-        <Card className="border-l-4 border-l-[#1a2744]">
+        <Card className="border-l-4 border-l-[var(--institution-primary)]">
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
-              <Calendar className="size-4 text-[#1a2744]" />
-              <CardTitle className="text-sm font-semibold text-[#1a2744]">Horaires &amp; Espaces</CardTitle>
+              <Calendar className="size-4 text-[var(--institution-primary)]" />
+              <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Horaires &amp; Espaces</CardTitle>
             </div>
           </CardHeader>
           <CardContent className="space-y-5">
             {/* Weekly Schedule */}
             <div>
-              <p className="text-xs font-semibold text-[#1a2744] mb-3 uppercase tracking-wide">Horaires d&apos;ouverture</p>
+              <p className="text-xs font-semibold text-[var(--institution-primary)] mb-3 uppercase tracking-wide">Horaires d&apos;ouverture</p>
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
@@ -1123,8 +1123,8 @@ export function LibraryPage() {
                   </TableHeader>
                   <TableBody>
                     {weeklySchedule.map((row) => (
-                      <TableRow key={row.day} className="hover:bg-[#2d7a4f05] transition-colors">
-                        <TableCell className="text-sm font-medium text-[#1a2744] py-2">{row.day}</TableCell>
+                      <TableRow key={row.day} className="hover:bg-[var(--institution-secondary-05)] transition-colors">
+                        <TableCell className="text-sm font-medium text-[var(--institution-primary)] py-2">{row.day}</TableCell>
                         <TableCell className="text-xs text-gray-600 py-2 text-center">{row.open}</TableCell>
                         <TableCell className="text-xs text-gray-600 py-2 text-center">{row.close}</TableCell>
                       </TableRow>
@@ -1136,7 +1136,7 @@ export function LibraryPage() {
 
             {/* Room Allocation */}
             <div>
-              <p className="text-xs font-semibold text-[#1a2744] mb-3 uppercase tracking-wide">Allocation des espaces</p>
+              <p className="text-xs font-semibold text-[var(--institution-primary)] mb-3 uppercase tracking-wide">Allocation des espaces</p>
               {isLoading && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
                   {Array.from({ length: 5 }).map((_, i) => (
@@ -1157,7 +1157,7 @@ export function LibraryPage() {
                       <div key={room.id} className="p-3 rounded-lg border border-gray-100 bg-white hover:shadow-sm transition-shadow">
                         <div className="flex items-center gap-2 mb-2">
                           <div className={`w-2.5 h-2.5 rounded-full ${getOccupancyColor(occPercent)}`} />
-                          <span className="text-xs font-semibold text-[#1a2744]">{room.name}</span>
+                          <span className="text-xs font-semibold text-[var(--institution-primary)]">{room.name}</span>
                         </div>
                         <p className="text-[10px] text-gray-400 mb-2">{room.capacity} places</p>
                         <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
@@ -1215,26 +1215,26 @@ export function LibraryPage() {
 
       {/* ── Statistiques d'Utilisation Card ─────────────────────────────────── */}
       <motion.div variants={itemVariants}>
-        <Card className="border-l-4 border-l-[#2d7a4f]">
+        <Card className="border-l-4 border-l-[var(--institution-secondary)]">
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
-              <BarChart3 className="size-4 text-[#2d7a4f]" />
-              <CardTitle className="text-sm font-semibold text-[#1a2744]">Statistiques d&apos;utilisation</CardTitle>
+              <BarChart3 className="size-4 text-[var(--institution-secondary)]" />
+              <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Statistiques d&apos;utilisation</CardTitle>
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Monthly Borrows Bar Chart */}
             <div>
-              <p className="text-xs font-semibold text-[#1a2744] mb-3 uppercase tracking-wide">Emprunts mensuels (6 derniers mois)</p>
+              <p className="text-xs font-semibold text-[var(--institution-primary)] mb-3 uppercase tracking-wide">Emprunts mensuels (6 derniers mois)</p>
               <div className="flex items-end gap-3 h-40">
                 {monthlyBorrows.map((month, index) => {
                   const heightPercent = maxBorrow > 0 ? (month.count / maxBorrow) * 100 : 0
                   return (
                     <div key={`${month.month}-${index}`} className="flex-1 flex flex-col items-center gap-1">
-                      <span className="text-[10px] font-semibold text-[#1a2744]">{month.count}</span>
+                      <span className="text-[10px] font-semibold text-[var(--institution-primary)]">{month.count}</span>
                       <div className="w-full bg-gray-100 rounded-t-sm relative" style={{ height: '120px' }}>
                         <motion.div
-                          className="absolute bottom-0 w-full rounded-t-sm bg-gradient-to-t from-[#1a2744] to-[#2d7a4f]"
+                          className="absolute bottom-0 w-full rounded-t-sm bg-gradient-to-t from-[var(--institution-primary)] to-[var(--institution-secondary)]"
                           initial={{ height: 0 }}
                           animate={{ height: `${heightPercent}%` }}
                           transition={{ duration: 0.6, delay: 0.1 * index, ease: 'easeOut' }}
@@ -1251,7 +1251,7 @@ export function LibraryPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Top Categories */}
               <div>
-                <p className="text-xs font-semibold text-[#1a2744] mb-3 uppercase tracking-wide">Categories les plus empruntees</p>
+                <p className="text-xs font-semibold text-[var(--institution-primary)] mb-3 uppercase tracking-wide">Categories les plus empruntees</p>
                 {topCategories.length === 0 ? (
                   <p className="text-xs text-gray-400 py-6 text-center">Aucun emprunt enregistre pour le moment</p>
                 ) : (
@@ -1266,11 +1266,11 @@ export function LibraryPage() {
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
-                              <span className="text-xs font-medium text-[#1a2744]">{label}</span>
+                              <span className="text-xs font-medium text-[var(--institution-primary)]">{label}</span>
                             </div>
                             <div className="flex items-center gap-2">
                               <span className="text-[10px] text-gray-400">{cat.count.toLocaleString('fr-FR')}</span>
-                              <span className="text-xs font-semibold text-[#1a2744]">{percent}%</span>
+                              <span className="text-xs font-semibold text-[var(--institution-primary)]">{percent}%</span>
                             </div>
                           </div>
                           <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
@@ -1291,27 +1291,27 @@ export function LibraryPage() {
 
               {/* Key Metrics */}
               <div className="space-y-4">
-                <p className="text-xs font-semibold text-[#1a2744] mb-3 uppercase tracking-wide">Indicateurs cles</p>
+                <p className="text-xs font-semibold text-[var(--institution-primary)] mb-3 uppercase tracking-wide">Indicateurs cles</p>
                 {/* Active borrowers */}
-                <div className="p-3 rounded-lg bg-[#1a274408] border border-[#1a274410]">
+                <div className="p-3 rounded-lg bg-[var(--institution-primary-08)] border border-[var(--institution-primary-10)]">
                   <div className="flex items-center gap-2 mb-2">
-                    <Users className="size-4 text-[#1a2744]" />
-                    <span className="text-sm font-semibold text-[#1a2744]">Emprunteurs actifs</span>
+                    <Users className="size-4 text-[var(--institution-primary)]" />
+                    <span className="text-sm font-semibold text-[var(--institution-primary)]">Emprunteurs actifs</span>
                   </div>
-                  <p className="text-2xl font-bold text-[#1a2744]">{stats?.activeBorrowersCount ?? 0}</p>
+                  <p className="text-2xl font-bold text-[var(--institution-primary)]">{stats?.activeBorrowersCount ?? 0}</p>
                   <p className="text-[10px] text-gray-400 mt-1">sur {stats?.totalStudents ?? 0} étudiants inscrits</p>
-                  <Progress value={stats && stats.totalStudents > 0 ? Math.round((stats.activeBorrowersCount / stats.totalStudents) * 100) : 0} className="h-1.5 bg-gray-200 mt-2 [&>[data-slot=progress-indicator]]:bg-[#1a2744]" />
+                  <Progress value={stats && stats.totalStudents > 0 ? Math.round((stats.activeBorrowersCount / stats.totalStudents) * 100) : 0} className="h-1.5 bg-gray-200 mt-2 [&>[data-slot=progress-indicator]]:bg-[var(--institution-primary)]" />
                 </div>
 
                 {/* Average borrow duration */}
-                <div className="p-3 rounded-lg bg-[#2d7a4f08] border border-[#2d7a4f10]">
+                <div className="p-3 rounded-lg bg-[var(--institution-secondary-08)] border border-[var(--institution-secondary-10)]">
                   <div className="flex items-center gap-2 mb-2">
-                    <Clock className="size-4 text-[#2d7a4f]" />
-                    <span className="text-sm font-semibold text-[#1a2744]">Duree moyenne d&apos;emprunt</span>
+                    <Clock className="size-4 text-[var(--institution-secondary)]" />
+                    <span className="text-sm font-semibold text-[var(--institution-primary)]">Duree moyenne d&apos;emprunt</span>
                   </div>
                   {stats?.avgBorrowDurationDays != null ? (
                     <>
-                      <p className="text-2xl font-bold text-[#2d7a4f]">{stats.avgBorrowDurationDays} <span className="text-sm font-normal text-gray-500">jours</span></p>
+                      <p className="text-2xl font-bold text-[var(--institution-secondary)]">{stats.avgBorrowDurationDays} <span className="text-sm font-normal text-gray-500">jours</span></p>
                       <p className="text-[10px] text-gray-400 mt-1">Calculee sur les emprunts deja rendus</p>
                     </>
                   ) : (
@@ -1320,15 +1320,15 @@ export function LibraryPage() {
                 </div>
 
                 {/* Retour rate */}
-                <div className="p-3 rounded-lg bg-[#d4a85308] border border-[#d4a85310]">
+                <div className="p-3 rounded-lg bg-[var(--institution-accent-08)] border border-[var(--institution-accent-10)]">
                   <div className="flex items-center gap-2 mb-2">
-                    <CheckCircle2 className="size-4 text-[#d4a853]" />
-                    <span className="text-sm font-semibold text-[#1a2744]">Taux de retour a temps</span>
+                    <CheckCircle2 className="size-4 text-[var(--institution-accent)]" />
+                    <span className="text-sm font-semibold text-[var(--institution-primary)]">Taux de retour a temps</span>
                   </div>
                   {stats?.onTimeReturnRatePercent != null ? (
                     <>
-                      <p className="text-2xl font-bold text-[#d4a853]">{stats.onTimeReturnRatePercent}<span className="text-sm font-normal text-gray-500">%</span></p>
-                      <Progress value={stats.onTimeReturnRatePercent} className="h-1.5 bg-gray-200 mt-2 [&>[data-slot=progress-indicator]]:bg-[#d4a853]" />
+                      <p className="text-2xl font-bold text-[var(--institution-accent)]">{stats.onTimeReturnRatePercent}<span className="text-sm font-normal text-gray-500">%</span></p>
+                      <Progress value={stats.onTimeReturnRatePercent} className="h-1.5 bg-gray-200 mt-2 [&>[data-slot=progress-indicator]]:bg-[var(--institution-accent)]" />
                       <p className="text-[10px] text-gray-400 mt-1">{100 - stats.onTimeReturnRatePercent}% de retards constates</p>
                     </>
                   ) : (

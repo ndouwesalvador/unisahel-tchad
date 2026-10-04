@@ -38,7 +38,11 @@ import {
   Crown,
   Rocket,
   Stethoscope,
+  ArrowUp,
+  ArrowDown,
+  Trash2,
 } from 'lucide-react'
+import { parseHeaderLines, validBrandColor } from '@/lib/institution-branding'
 
 // ─── Custom useCountUp Hook ────────────────────────────────────────────────────
 
@@ -123,6 +127,8 @@ interface TenantData {
   arabicCountry: string | null
   arabicName: string | null
   arabicMinistry: string | null
+  headerLinesFr: string | null
+  headerLinesAr: string | null
   subscriptionPlan: string
   subscriptionEnd: string | null
   settings: TenantSettingsData | null
@@ -193,7 +199,7 @@ function InstitutionHeader() {
     <div className="space-y-6">
       {/* Gradient Header Banner */}
       <div className="relative overflow-hidden rounded-xl">
-        <div className="absolute inset-0 bg-gradient-to-r from-[#1a2744] via-[#1f3050] to-[#2d7a4f]" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[var(--institution-primary)] via-[var(--institution-primary-light)] to-[var(--institution-secondary)]" />
         <svg className="absolute inset-0 w-full h-full opacity-[0.07]" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <pattern id="institution-pattern" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
@@ -250,19 +256,19 @@ function InstitutionHeader() {
       <div className="flex items-center gap-4">
         <div className="flex-1">
           <div className="flex items-center justify-between mb-1.5">
-            <span className="text-xs font-medium text-[#1a2744]">Configuration de l&apos;universite</span>
-            <span className="text-xs font-semibold text-[#2d7a4f]">72%</span>
+            <span className="text-xs font-medium text-[var(--institution-primary)]">Configuration de l&apos;universite</span>
+            <span className="text-xs font-semibold text-[var(--institution-secondary)]">72%</span>
           </div>
           <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
             <motion.div
-              className="h-full rounded-full bg-gradient-to-r from-[#1a2744] via-[#2d7a4f] to-[#3da66a]"
+              className="h-full rounded-full bg-gradient-to-r from-[var(--institution-primary)] via-[var(--institution-secondary)] to-[var(--institution-secondary-bright)]"
               initial={{ width: 0 }}
               animate={{ width: '72%' }}
               transition={{ duration: 1.2, ease: 'easeOut' }}
             />
           </div>
         </div>
-        <Button className="bg-[#2d7a4f] hover:bg-[#236b40] text-white shrink-0">
+        <Button className="bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white shrink-0">
           <Save className="size-4 mr-2" />
           Enregistrer
         </Button>
@@ -305,6 +311,8 @@ function InformationsTab() {
     arabicCountry: '',
     arabicName: '',
     arabicMinistry: '',
+    headerLinesFr: [] as string[],
+    headerLinesAr: [] as string[],
   })
   const [initialized, setInitialized] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -339,6 +347,8 @@ function InformationsTab() {
         arabicCountry: t.arabicCountry || '',
         arabicName: t.arabicName || '',
         arabicMinistry: t.arabicMinistry || '',
+        headerLinesFr: parseHeaderLines(t.headerLinesFr) ?? [t.country, t.ministry, t.name].filter((line): line is string => Boolean(line)),
+        headerLinesAr: parseHeaderLines(t.headerLinesAr) ?? [t.arabicCountry, t.arabicMinistry, t.arabicName].filter((line): line is string => Boolean(line)),
       })
       setInitialized(true)
     }
@@ -346,6 +356,19 @@ function InformationsTab() {
 
   const handleChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const editHeaderLine = (side: 'headerLinesFr' | 'headerLinesAr', index: number, value: string) => {
+    setFormData((prev) => ({ ...prev, [side]: prev[side].map((line, position) => position === index ? value : line) }))
+  }
+  const moveHeaderLine = (side: 'headerLinesFr' | 'headerLinesAr', index: number, direction: -1 | 1) => {
+    setFormData((prev) => {
+      const lines = [...prev[side]]
+      const next = index + direction
+      if (next < 0 || next >= lines.length) return prev
+      ;[lines[index], lines[next]] = [lines[next], lines[index]]
+      return { ...prev, [side]: lines }
+    })
   }
 
   const handleAssetUpload = async (kind: 'logo' | 'stamp' | 'signature' | 'secondarySignature' | 'thirdSignature', file?: File) => {
@@ -369,8 +392,16 @@ function InformationsTab() {
   }
 
   const handleSave = async () => {
-    if (formData.headerLanguageMode === 'FR_AR' && (!formData.arabicCountry.trim() || !formData.arabicName.trim())) {
-      toast.error('Renseignez le pays et le nom officiel en arabe avant d’activer l’en-tête bilingue.')
+    if (!formData.headerLinesFr.some((line) => line.trim())) {
+      toast.error('Ajoutez au moins une ligne française à l’en-tête officiel.')
+      return
+    }
+    if (formData.headerLanguageMode === 'FR_AR' && !formData.headerLinesAr.some((line) => line.trim())) {
+      toast.error('Ajoutez au moins une ligne rédigée en arabe avant d’activer l’en-tête bilingue.')
+      return
+    }
+    if ([...formData.headerLinesFr, ...formData.headerLinesAr].some((line) => !line.trim() || line.length > 130)) {
+      toast.error('Chaque ligne d’en-tête doit contenir de 1 à 130 caractères.')
       return
     }
     setIsSaving(true)
@@ -399,6 +430,8 @@ function InformationsTab() {
           arabicCountry: formData.arabicCountry,
           arabicName: formData.arabicName,
           arabicMinistry: formData.arabicMinistry,
+          headerLinesFr: formData.headerLinesFr,
+          headerLinesAr: formData.headerLinesAr,
         }),
       })
       const data = await res.json().catch(() => ({}))
@@ -427,7 +460,7 @@ function InformationsTab() {
         <div className="space-y-6">
           {/* Logo upload */}
           <motion.div whileHover={{ scale: 1.01 }} transition={{ duration: 0.2 }}>
-          <Card className="border-l-4 border-l-[#2d7a4f]">
+          <Card className="border-l-4 border-l-[var(--institution-secondary)]">
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Logo de l&apos;etablissement</CardTitle>
               <CardDescription>Logo officiel utilise sur les documents</CardDescription>
@@ -450,7 +483,7 @@ function InformationsTab() {
           </motion.div>
 
           <motion.div whileHover={{ scale: 1.01 }} transition={{ duration: 0.2 }}>
-          <Card className="border-l-4 border-l-[#d4a853]">
+          <Card className="border-l-4 border-l-[var(--institution-accent)]">
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Cachet officiel</CardTitle>
               <CardDescription>Cachet appose sur les documents</CardDescription>
@@ -470,7 +503,7 @@ function InformationsTab() {
             </CardContent>
           </Card>
           </motion.div>
-          <Card className="border-l-4 border-l-[#1a2744]">
+          <Card className="border-l-4 border-l-[var(--institution-primary)]">
             <CardHeader className="pb-3"><CardTitle className="text-base">Signataire de droite</CardTitle><CardDescription>Signature du responsable, accompagnée du cachet officiel. Ce visuel ne vaut pas signature cryptographique.</CardDescription></CardHeader>
             <CardContent className="space-y-3">
               {formData.signature && <div className="h-20 border rounded-lg bg-white p-2">
@@ -504,7 +537,7 @@ function InformationsTab() {
 
         {/* Right column: Form fields */}
         <div className="lg:col-span-2">
-          <Card className="border-l-4 border-l-[#1a2744]">
+          <Card className="border-l-4 border-l-[var(--institution-primary)]">
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Informations generales</CardTitle>
               <CardDescription>Renseignez les informations officielles de l&apos;etablissement</CardDescription>
@@ -555,11 +588,19 @@ function InformationsTab() {
                   </Select>
                   <p className="text-xs text-gray-500 mt-1">L’arabe est facultatif et rédigé par votre institution, jamais ajouté automatiquement.</p>
                 </div>
-                {formData.headerLanguageMode === 'FR_AR' && <>
-                  <div><Label htmlFor="arabicCountry">Pays / autorité en arabe</Label><Input id="arabicCountry" dir="rtl" value={formData.arabicCountry} onChange={(event) => handleChange('arabicCountry', event.target.value)} className="mt-1.5" /></div>
-                  <div><Label htmlFor="arabicMinistry">Ministère de tutelle en arabe</Label><Input id="arabicMinistry" dir="rtl" value={formData.arabicMinistry} onChange={(event) => handleChange('arabicMinistry', event.target.value)} className="mt-1.5" /></div>
-                  <div className="sm:col-span-2"><Label htmlFor="arabicName">Nom officiel de l’institution en arabe</Label><Input id="arabicName" dir="rtl" value={formData.arabicName} onChange={(event) => handleChange('arabicName', event.target.value)} className="mt-1.5" /></div>
-                </>}
+                <div className="sm:col-span-2 grid gap-5 sm:grid-cols-2">
+                  {(['headerLinesFr', ...(formData.headerLanguageMode === 'FR_AR' ? ['headerLinesAr'] : [])] as Array<'headerLinesFr' | 'headerLinesAr'>).map((side) => <div key={side} className="rounded-lg border p-3 space-y-2">
+                    <Label>{side === 'headerLinesFr' ? 'Colonne française, à gauche' : 'Colonne arabe, à droite'}</Label>
+                    <p className="text-xs text-gray-500">Ajoutez, retirez et réordonnez jusqu’à 10 lignes officielles.</p>
+                    {formData[side].map((line, index) => <div key={`${side}-${index}`} className="flex items-center gap-1">
+                      <Input aria-label={`Ligne ${index + 1} ${side === 'headerLinesFr' ? 'française' : 'arabe'}`} dir={side === 'headerLinesAr' ? 'rtl' : 'ltr'} value={line} maxLength={130} onChange={(event) => editHeaderLine(side, index, event.target.value)} />
+                      <Button type="button" variant="ghost" size="icon" aria-label="Monter la ligne" disabled={index === 0} onClick={() => moveHeaderLine(side, index, -1)}><ArrowUp className="size-4" /></Button>
+                      <Button type="button" variant="ghost" size="icon" aria-label="Descendre la ligne" disabled={index === formData[side].length - 1} onClick={() => moveHeaderLine(side, index, 1)}><ArrowDown className="size-4" /></Button>
+                      <Button type="button" variant="ghost" size="icon" aria-label="Supprimer la ligne" onClick={() => setFormData((prev) => ({ ...prev, [side]: prev[side].filter((_, position) => position !== index) }))}><Trash2 className="size-4" /></Button>
+                    </div>)}
+                    <Button type="button" variant="outline" size="sm" disabled={formData[side].length >= 10} onClick={() => setFormData((prev) => ({ ...prev, [side]: [...prev[side], ''] }))}><Plus className="size-4 mr-1" />Ajouter une ligne</Button>
+                  </div>)}
+                </div>
                 <div>
                   <Label htmlFor="pays">Pays</Label>
                   <Select value={formData.pays} onValueChange={(v) => handleChange('pays', v)}>
@@ -666,7 +707,7 @@ function InformationsTab() {
               </div>
               <div className="mt-6 flex justify-end">
                 <Button
-                  className="bg-[#2d7a4f] hover:bg-[#236b40] text-white"
+                  className="bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white"
                   onClick={handleSave}
                   disabled={isSaving}
                 >
@@ -761,7 +802,7 @@ function StructureTab() {
     0
   )
 
-  const facultyColors = ['#2d7a4f', '#1a2744', '#d4a853']
+  const facultyColors = ['var(--institution-secondary)', 'var(--institution-primary)', 'var(--institution-accent)']
 
   if (isLoading) {
     return (
@@ -777,19 +818,19 @@ function StructureTab() {
       <div className="grid grid-cols-3 gap-4">
         <Card>
           <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-[#2d7a4f]">{faculties.length}</div>
+            <div className="text-2xl font-bold text-[var(--institution-secondary)]">{faculties.length}</div>
             <div className="text-xs text-gray-500 mt-1">Facultes</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-[#1a2744]">{totalDepartments}</div>
+            <div className="text-2xl font-bold text-[var(--institution-primary)]">{totalDepartments}</div>
             <div className="text-xs text-gray-500 mt-1">Departements</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-[#d4a853]">{totalPrograms}</div>
+            <div className="text-2xl font-bold text-[var(--institution-accent)]">{totalPrograms}</div>
             <div className="text-xs text-gray-500 mt-1">Filieres</div>
           </CardContent>
         </Card>
@@ -816,7 +857,7 @@ function StructureTab() {
                     style={{ backgroundColor: facultyColors[fi % facultyColors.length] }}
                   />
                   <div>
-                    <h3 className="font-semibold text-[#1a2744]">{faculty.name}</h3>
+                    <h3 className="font-semibold text-[var(--institution-primary)]">{faculty.name}</h3>
                     <p className="text-xs text-gray-500">
                       {faculty.departments.length} departements, {faculty.departments.reduce((a, d) => a + d.programs.length, 0)} filieres
                     </p>
@@ -850,7 +891,7 @@ function StructureTab() {
                           <BookOpen className="size-3 text-gray-500" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm text-[#1a2744]">{dept.name}</p>
+                          <p className="font-medium text-sm text-[var(--institution-primary)]">{dept.name}</p>
                           <div className="flex flex-wrap gap-1.5 mt-2">
                             {dept.programs.map((prog) => (
                               <Badge key={prog} variant="outline" className="text-xs font-normal">
@@ -871,13 +912,13 @@ function StructureTab() {
 
       {/* Action buttons */}
       <div className="flex flex-col sm:flex-row gap-3">
-        <Button variant="outline" className="border-[#2d7a4f30] text-[#2d7a4f]" onClick={() => setShowAddFaculty(true)}>
+        <Button variant="outline" className="border-[var(--institution-secondary-30)] text-[var(--institution-secondary)]" onClick={() => setShowAddFaculty(true)}>
           <Plus className="size-4 mr-2" />
           Ajouter faculte
         </Button>
         <Button
           variant="outline"
-          className="border-[#1a274430] text-[#1a2744]"
+          className="border-[var(--institution-primary-30)] text-[var(--institution-primary)]"
           disabled={rawFaculties.length === 0}
           onClick={() => setShowAddDepartment(true)}
         >
@@ -905,7 +946,7 @@ function StructureTab() {
               <Label className="text-sm">Doyen (optionnel)</Label>
               <Input value={facultyForm.deanName} onChange={(e) => setFacultyForm((f) => ({ ...f, deanName: e.target.value }))} />
             </div>
-            <Button className="w-full bg-[#2d7a4f] hover:bg-[#236b40] text-white" disabled={isSavingFaculty} onClick={handleAddFaculty}>
+            <Button className="w-full bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white" disabled={isSavingFaculty} onClick={handleAddFaculty}>
               {isSavingFaculty ? 'Creation...' : 'Creer la faculte'}
             </Button>
           </div>
@@ -942,7 +983,7 @@ function StructureTab() {
               <Label className="text-sm">Chef de departement (optionnel)</Label>
               <Input value={departmentForm.headName} onChange={(e) => setDepartmentForm((f) => ({ ...f, headName: e.target.value }))} />
             </div>
-            <Button className="w-full bg-[#2d7a4f] hover:bg-[#236b40] text-white" disabled={isSavingDepartment} onClick={handleAddDepartment}>
+            <Button className="w-full bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white" disabled={isSavingDepartment} onClick={handleAddDepartment}>
               {isSavingDepartment ? 'Creation...' : 'Creer le departement'}
             </Button>
           </div>
@@ -1098,22 +1139,22 @@ function AcademiqueTab() {
                 onClick={() => setSystem(sys.value)}
                 className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
                   system === sys.value
-                    ? 'border-[#2d7a4f] bg-[#2d7a4f08] shadow-sm'
+                    ? 'border-[var(--institution-secondary)] bg-[var(--institution-secondary-08)] shadow-sm'
                     : 'border-gray-100 bg-white hover:border-gray-200'
                 }`}
               >
                 <div
                   className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                    system === sys.value ? 'bg-[#2d7a4f15]' : 'bg-gray-100'
+                    system === sys.value ? 'bg-[var(--institution-secondary-15)]' : 'bg-gray-100'
                   }`}
                 >
                   <sys.icon
-                    className={`size-5 ${system === sys.value ? 'text-[#2d7a4f]' : 'text-gray-400'}`}
+                    className={`size-5 ${system === sys.value ? 'text-[var(--institution-secondary)]' : 'text-gray-400'}`}
                   />
                 </div>
                 <span
                   className={`text-sm font-semibold ${
-                    system === sys.value ? 'text-[#2d7a4f]' : 'text-gray-700'
+                    system === sys.value ? 'text-[var(--institution-secondary)]' : 'text-gray-700'
                   }`}
                 >
                   {sys.label}
@@ -1149,14 +1190,14 @@ function AcademiqueTab() {
                   key={year.id}
                   className={`flex items-center justify-between p-3 rounded-lg border ${
                     year.isCurrent
-                      ? 'border-[#2d7a4f30] bg-[#2d7a4f08]'
+                      ? 'border-[var(--institution-secondary-30)] bg-[var(--institution-secondary-08)]'
                       : 'border-gray-100 bg-white'
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <Calendar className={`size-4 ${year.isCurrent ? 'text-[#2d7a4f]' : 'text-gray-400'}`} />
+                    <Calendar className={`size-4 ${year.isCurrent ? 'text-[var(--institution-secondary)]' : 'text-gray-400'}`} />
                     <div>
-                      <p className={`font-medium text-sm ${year.isCurrent ? 'text-[#2d7a4f]' : 'text-[#1a2744]'}`}>
+                      <p className={`font-medium text-sm ${year.isCurrent ? 'text-[var(--institution-secondary)]' : 'text-[var(--institution-primary)]'}`}>
                         {year.name}
                       </p>
                       <p className="text-xs text-gray-400">
@@ -1165,7 +1206,7 @@ function AcademiqueTab() {
                     </div>
                   </div>
                   {year.isCurrent ? (
-                    <Badge className="bg-[#2d7a4f] text-white text-xs">En cours</Badge>
+                    <Badge className="bg-[var(--institution-secondary)] text-white text-xs">En cours</Badge>
                   ) : (
                     <Button
                       variant="ghost"
@@ -1204,7 +1245,7 @@ function AcademiqueTab() {
                 <Input type="date" value={newYearEnd} onChange={(e) => setNewYearEnd(e.target.value)} />
               </div>
             </div>
-            <Button className="w-full bg-[#2d7a4f] hover:bg-[#236b40] text-white" disabled={isSavingYear} onClick={handleAddYear}>
+            <Button className="w-full bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white" disabled={isSavingYear} onClick={handleAddYear}>
               {isSavingYear ? 'Creation...' : "Creer l'annee academique"}
             </Button>
           </div>
@@ -1253,7 +1294,7 @@ function AcademiqueTab() {
               <div className="mt-1.5 space-y-1.5">
                 {['Session normale', 'Session de rattrapage', 'Session exceptionnelle'].map((s) => (
                   <div key={s} className="flex items-center gap-2 p-2 rounded bg-gray-50 text-sm text-gray-700">
-                    <CheckCircle2 className="size-3.5 text-[#2d7a4f]" />
+                    <CheckCircle2 className="size-3.5 text-[var(--institution-secondary)]" />
                     {s}
                   </div>
                 ))}
@@ -1299,7 +1340,7 @@ function AcademiqueTab() {
               <div className="relative h-4 bg-gray-100 rounded-full overflow-hidden">
                 <div className="absolute left-0 top-0 bottom-0 bg-red-400 rounded-l-full" style={{ width: '25%' }} />
                 <div className="absolute top-0 bottom-0 bg-yellow-400" style={{ left: '25%', width: '25%' }} />
-                <div className="absolute top-0 bottom-0 bg-[#2d7a4f] rounded-r-full" style={{ left: '50%', width: '50%' }} />
+                <div className="absolute top-0 bottom-0 bg-[var(--institution-secondary)] rounded-r-full" style={{ left: '50%', width: '50%' }} />
               </div>
               <div className="flex justify-between text-xs text-gray-400 mt-1">
                 <span>Elimine</span>
@@ -1313,7 +1354,7 @@ function AcademiqueTab() {
 
       <div className="flex justify-end">
         <Button
-          className="bg-[#2d7a4f] hover:bg-[#236b40] text-white"
+          className="bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white"
           onClick={handleSave}
           disabled={isSaving}
         >
@@ -1362,8 +1403,8 @@ function DocumentsTab() {
                 key={doc}
                 className="flex flex-col items-center gap-2 p-3 rounded-lg border border-gray-100 bg-white"
               >
-                <div className="w-10 h-10 rounded-lg bg-[#1a274408] flex items-center justify-center">
-                  <FileText className="size-5 text-[#1a2744]/60" />
+                <div className="w-10 h-10 rounded-lg bg-[var(--institution-primary-08)] flex items-center justify-center">
+                  <FileText className="size-5 text-[var(--institution-primary)]/60" />
                 </div>
                 <span className="text-xs font-medium text-gray-700 text-center">{doc}</span>
               </div>
@@ -1384,8 +1425,8 @@ function DocumentsTab() {
               { place: 'Gauche', name: tenant?.secondarySignerName, title: tenant?.secondarySignerTitle, signed: Boolean(tenant?.secondarySignature) },
               { place: 'Centre', name: tenant?.thirdSignerName, title: tenant?.thirdSignerTitle, signed: Boolean(tenant?.thirdSignature) },
               { place: 'Droite + cachet', name: tenant?.rectorName, title: tenant?.rectorTitle, signed: Boolean(tenant?.signature && tenant?.stamp) },
-            ] as const).map((signer) => <div key={signer.place} className="flex items-center justify-between gap-2 rounded-lg border border-[#d4a85355] bg-[#d4a85308] p-2 text-xs">
-              <div><p className="font-semibold text-[#1a2744]">{signer.place} · {signer.name || 'Nom à renseigner'}</p><p className="text-gray-600">{signer.title || 'Fonction à renseigner'}</p></div>
+            ] as const).map((signer) => <div key={signer.place} className="flex items-center justify-between gap-2 rounded-lg border border-[var(--institution-accent-55)] bg-[var(--institution-accent-08)] p-2 text-xs">
+              <div><p className="font-semibold text-[var(--institution-primary)]">{signer.place} · {signer.name || 'Nom à renseigner'}</p><p className="text-gray-600">{signer.title || 'Fonction à renseigner'}</p></div>
               <span className={signer.name && signer.signed ? 'text-[#176341]' : 'text-amber-800'}>{signer.name && signer.signed ? 'Complet' : 'Incomplet'}</span>
             </div>)}
           </CardContent>
@@ -1398,12 +1439,12 @@ function DocumentsTab() {
             <CardDescription>Référence et intégrité du PDF sont deux vérifications distinctes.</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-3 p-3 rounded-lg bg-[#2d7a4f08] border border-[#2d7a4f20]">
-              <div className="w-9 h-9 rounded-lg bg-[#2d7a4f15] flex items-center justify-center shrink-0">
-                <QrCode className="size-4 text-[#2d7a4f]" />
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-[var(--institution-secondary-08)] border border-[var(--institution-secondary-20)]">
+              <div className="w-9 h-9 rounded-lg bg-[var(--institution-secondary-15)] flex items-center justify-center shrink-0">
+                <QrCode className="size-4 text-[var(--institution-secondary)]" />
               </div>
               <p className="text-xs text-gray-600">
-                Le QR vérifie la référence et sa validation. Pour les nouveaux PDF validés, le fichier peut aussi être comparé à l’original conservé sur <span className="font-mono text-[#2d7a4f]">/verify</span>. Une image de signature ou de cachet ne remplace pas un certificat numérique.
+                Le QR vérifie la référence et sa validation. Pour les nouveaux PDF validés, le fichier peut aussi être comparé à l’original conservé sur <span className="font-mono text-[var(--institution-secondary)]">/verify</span>. Une image de signature ou de cachet ne remplace pas un certificat numérique.
               </p>
             </div>
           </CardContent>
@@ -1418,7 +1459,7 @@ function DocumentsTab() {
         </CardHeader>
         <CardContent>
           <div className="p-3 rounded-lg border border-gray-200 bg-gray-50 max-w-md text-xs text-gray-500 space-y-1">
-            <div className="flex items-center gap-2 font-semibold text-[#1a2744] text-sm">
+            <div className="flex items-center gap-2 font-semibold text-[var(--institution-primary)] text-sm">
               <Building2 className="size-3.5" />
               <span>{tenant?.name || 'Nom de l’institution'}</span>
             </div>
@@ -1437,6 +1478,7 @@ function DocumentsTab() {
 
 // ─── Apparence Tab ───────────────────────────────────────────────────────────
 function ApparenceTab() {
+  const queryClient = useQueryClient()
   const { data: institutionQuery, isLoading, refetch } = useInstitution() as {
     data: InstitutionResponse | undefined
     isLoading: boolean
@@ -1471,6 +1513,7 @@ function ApparenceTab() {
       if (!res.ok) throw new Error(data.error || "Echec de l'enregistrement")
       toast.success('Couleurs enregistrees')
       refetch()
+      void queryClient.invalidateQueries({ queryKey: ['institution-theme'] })
     } catch (error) {
       toast.error('Erreur', { description: error instanceof Error ? error.message : "Echec de l'enregistrement" })
     } finally {
@@ -1497,7 +1540,7 @@ function ApparenceTab() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <Label>Couleur primaire (Bleu nuit)</Label>
+              <Label>Couleur primaire (navigation et titres)</Label>
               <div className="flex items-center gap-3 mt-1.5">
                 <div className="relative">
                   <input
@@ -1515,7 +1558,7 @@ function ApparenceTab() {
               </div>
             </div>
             <div>
-              <Label>Couleur secondaire (Vert institutionnel)</Label>
+              <Label>Couleur secondaire (actions et repères)</Label>
               <div className="flex items-center gap-3 mt-1.5">
                 <div className="relative">
                   <input
@@ -1533,7 +1576,7 @@ function ApparenceTab() {
               </div>
             </div>
             <div>
-              <Label>Couleur d&apos;accent (Dore)</Label>
+              <Label>Couleur d&apos;accent (détails et surlignages)</Label>
               <div className="flex items-center gap-3 mt-1.5">
                 <div className="relative">
                   <input
@@ -1551,10 +1594,11 @@ function ApparenceTab() {
               </div>
             </div>
             <div className="pt-2">
-              <Button className="bg-[#2d7a4f] hover:bg-[#236b40] text-white" onClick={handleSave} disabled={isSaving}>
+              <Button className="bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white" onClick={handleSave} disabled={isSaving || ![primaryColor, secondaryColor, accentColor].every(validBrandColor)}>
                 <Save className="size-4 mr-2" />
                 {isSaving ? 'Enregistrement...' : 'Enregistrer les couleurs'}
               </Button>
+              <p className="text-xs text-gray-500 mt-2">Les teintes trop claires sont foncées automatiquement sur les boutons et menus pour préserver la lisibilité.</p>
             </div>
           </CardContent>
         </Card>
@@ -1712,15 +1756,15 @@ function AbonnementTab() {
   return (
     <div className="space-y-6">
       {/* Current plan */}
-      <Card className="border-[#2d7a4f30] bg-gradient-to-r from-[#2d7a4f08] to-transparent">
+      <Card className="border-[var(--institution-secondary-30)] bg-gradient-to-r from-[var(--institution-secondary-08)] to-transparent">
         <CardContent className="p-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <Badge className="bg-[#2d7a4f] text-white">{PLAN_LABELS[tenant?.subscriptionPlan || 'STARTER']}</Badge>
+                <Badge className="bg-[var(--institution-secondary)] text-white">{PLAN_LABELS[tenant?.subscriptionPlan || 'STARTER']}</Badge>
                 <span className="text-sm text-gray-500">Plan actuel</span>
               </div>
-              <h3 className="text-xl font-bold text-[#1a2744]">
+              <h3 className="text-xl font-bold text-[var(--institution-primary)]">
                 Plan {PLAN_LABELS[tenant?.subscriptionPlan || 'STARTER']}
               </h3>
               {tenant?.subscriptionEnd && (
@@ -1750,7 +1794,7 @@ function AbonnementTab() {
           <Card key={stat.label}>
             <CardContent className="p-4">
               <p className="text-xs text-gray-500 mb-1">{stat.label}</p>
-              <p className="text-lg font-bold text-[#1a2744]">{stat.value.toLocaleString('fr-FR')}</p>
+              <p className="text-lg font-bold text-[var(--institution-primary)]">{stat.value.toLocaleString('fr-FR')}</p>
             </CardContent>
           </Card>
         ))}
@@ -1761,11 +1805,11 @@ function AbonnementTab() {
         {plans.map((plan) => {
           const isCurrent = (tenant?.subscriptionPlan || 'STARTER') === plan.id
           return (
-            <Card key={plan.id} className={isCurrent ? 'border-[#2d7a4f] shadow-md' : 'border-gray-100'}>
+            <Card key={plan.id} className={isCurrent ? 'border-[var(--institution-secondary)] shadow-md' : 'border-gray-100'}>
               <CardHeader className="pb-2">
                 <div className="flex items-center gap-2 mb-2">
-                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${isCurrent ? 'bg-[#2d7a4f15]' : 'bg-gray-100'}`}>
-                    <plan.icon className={`size-5 ${isCurrent ? 'text-[#2d7a4f]' : 'text-gray-400'}`} />
+                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${isCurrent ? 'bg-[var(--institution-secondary-15)]' : 'bg-gray-100'}`}>
+                    <plan.icon className={`size-5 ${isCurrent ? 'text-[var(--institution-secondary)]' : 'text-gray-400'}`} />
                   </div>
                   <CardTitle className="text-lg">{PLAN_LABELS[plan.id]}</CardTitle>
                 </div>
@@ -1775,7 +1819,7 @@ function AbonnementTab() {
                 <div className="space-y-2">
                   {plan.features.map((feature) => (
                     <div key={feature} className="flex items-start gap-2">
-                      <CheckCircle2 className={`size-4 shrink-0 mt-0.5 ${isCurrent ? 'text-[#2d7a4f]' : 'text-gray-300'}`} />
+                      <CheckCircle2 className={`size-4 shrink-0 mt-0.5 ${isCurrent ? 'text-[var(--institution-secondary)]' : 'text-gray-300'}`} />
                       <span className="text-xs text-gray-600">{feature}</span>
                     </div>
                   ))}
@@ -1801,27 +1845,27 @@ export function InstitutionPage() {
 
         <Tabs defaultValue="informations" className="space-y-6">
           <TabsList className="bg-white border border-gray-100 shadow-sm p-1 h-auto flex-wrap gap-1">
-            <TabsTrigger value="informations" className="text-xs sm:text-sm data-[state=active]:bg-[#1a2744] data-[state=active]:text-white">
+            <TabsTrigger value="informations" className="text-xs sm:text-sm data-[state=active]:bg-[var(--institution-primary)] data-[state=active]:text-white">
               <Building2 className="size-3.5 mr-1.5" />
               Informations
             </TabsTrigger>
-            <TabsTrigger value="structure" className="text-xs sm:text-sm data-[state=active]:bg-[#1a2744] data-[state=active]:text-white">
+            <TabsTrigger value="structure" className="text-xs sm:text-sm data-[state=active]:bg-[var(--institution-primary)] data-[state=active]:text-white">
               <GraduationCap className="size-3.5 mr-1.5" />
               Structure
             </TabsTrigger>
-            <TabsTrigger value="academique" className="text-xs sm:text-sm data-[state=active]:bg-[#1a2744] data-[state=active]:text-white">
+            <TabsTrigger value="academique" className="text-xs sm:text-sm data-[state=active]:bg-[var(--institution-primary)] data-[state=active]:text-white">
               <BookOpen className="size-3.5 mr-1.5" />
               Academique
             </TabsTrigger>
-            <TabsTrigger value="documents" className="text-xs sm:text-sm data-[state=active]:bg-[#1a2744] data-[state=active]:text-white">
+            <TabsTrigger value="documents" className="text-xs sm:text-sm data-[state=active]:bg-[var(--institution-primary)] data-[state=active]:text-white">
               <FileText className="size-3.5 mr-1.5" />
               Documents
             </TabsTrigger>
-            <TabsTrigger value="apparence" className="text-xs sm:text-sm data-[state=active]:bg-[#1a2744] data-[state=active]:text-white">
+            <TabsTrigger value="apparence" className="text-xs sm:text-sm data-[state=active]:bg-[var(--institution-primary)] data-[state=active]:text-white">
               <Palette className="size-3.5 mr-1.5" />
               Apparence
             </TabsTrigger>
-            <TabsTrigger value="abonnement" className="text-xs sm:text-sm data-[state=active]:bg-[#1a2744] data-[state=active]:text-white">
+            <TabsTrigger value="abonnement" className="text-xs sm:text-sm data-[state=active]:bg-[var(--institution-primary)] data-[state=active]:text-white">
               <CreditCard className="size-3.5 mr-1.5" />
               Abonnement
             </TabsTrigger>

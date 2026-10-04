@@ -74,8 +74,8 @@ const subjectConfig: Record<SubjectArea, { label: string; cardBg: string; cardBo
 }
 
 const typeConfig: Record<CourseType, { label: string; className: string; bgClass: string }> = {
-  CM: { label: 'CM', className: 'text-white', bgClass: 'bg-[#1a2744]' },
-  TD: { label: 'TD', className: 'text-white', bgClass: 'bg-[#2d7a4f]' },
+  CM: { label: 'CM', className: 'text-white', bgClass: 'bg-[var(--institution-primary)]' },
+  TD: { label: 'TD', className: 'text-white', bgClass: 'bg-[var(--institution-secondary)]' },
   TP: { label: 'TP', className: 'text-white', bgClass: 'bg-[#e65100]' },
   EXAM: { label: 'Examen', className: 'text-white', bgClass: 'bg-[#c0392b]' },
 }
@@ -650,7 +650,7 @@ export function TimetablePage() {
             <DialogTitle>{editingSlotId ? 'Modifier le créneau' : 'Ajouter un créneau'}</DialogTitle>
           </DialogHeader>
           {!canCreateTimetableSlot && (
-            <div className="rounded-lg border border-[#d4a85330] bg-[#d4a85308] p-3 text-xs text-[#1a2744]">
+            <div className="rounded-lg border border-[var(--institution-accent-30)] bg-[var(--institution-accent-08)] p-3 text-xs text-[var(--institution-primary)]">
               <p className="font-semibold">Pré-requis manquants</p>
               <p className="mt-1 text-gray-600">
                 Créez d&apos;abord {timetablePrerequisites.join(', ')} pour pouvoir planifier un créneau fiable.
@@ -781,7 +781,7 @@ export function TimetablePage() {
           <div className="flex justify-end gap-2">
             {editingSlotId && <Button variant="destructive" className="mr-auto" disabled={isDeletingSlot || isCreatingSlot} onClick={handleDeleteSlot}>{isDeletingSlot ? 'Suppression…' : 'Supprimer'}</Button>}
             <Button variant="outline" onClick={() => setShowCreateSlot(false)}>Annuler</Button>
-            <Button className="bg-[#2d7a4f] hover:bg-[#236b40] text-white" disabled={isCreatingSlot || !canCreateTimetableSlot} onClick={handleCreateSlot}>
+            <Button className="bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white" disabled={isCreatingSlot || !canCreateTimetableSlot} onClick={handleCreateSlot}>
               {isCreatingSlot ? 'Enregistrement…' : editingSlotId ? 'Enregistrer les modifications' : 'Créer le créneau'}
             </Button>
           </div>
@@ -790,7 +790,7 @@ export function TimetablePage() {
 
       {/* Gradient Header Section */}
       <Card className="overflow-hidden">
-        <div className="bg-gradient-to-r from-[#1a2744] via-[#1f3050] to-[#2d7a4f] p-6 text-white relative">
+        <div className="bg-gradient-to-r from-[var(--institution-primary)] via-[var(--institution-primary-light)] to-[var(--institution-secondary)] p-6 text-white relative">
           <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PHBhdGggZD0iTTM2IDE0YzAtMi4yMS0xLjc5LTQtNC00cy00IDEuNzktNCA0IDEuNzkgNCA0IDQgNC0xLjc5IDQtNHptLTQgMmMtMS4xIDAtMi0uOS0yLTJzLjktMiAyLTIgMiAuOSAyIDItLjkgMi0yIDJ6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-50" />
           <div className="relative">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-5">
@@ -819,7 +819,7 @@ export function TimetablePage() {
                 </Button>
                 {canManageSlots && <Button
                   size="sm"
-                  className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs border border-white/20"
+                  className="bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white text-xs border border-white/20"
                   onClick={() => {
                     setSlotForm((form) => ({
                       ...form,
@@ -874,29 +874,29 @@ export function TimetablePage() {
           <CardContent className="p-4">
             <div className="grid grid-cols-3 gap-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#1a274415] flex items-center justify-center shrink-0">
-                  <Clock className="size-5 text-[#1a2744]" />
+                <div className="w-10 h-10 rounded-xl bg-[var(--institution-primary-15)] flex items-center justify-center shrink-0">
+                  <Clock className="size-5 text-[var(--institution-primary)]" />
                 </div>
                 <div>
-                  <p className="text-lg font-bold text-[#1a2744]">{hoursPerDay}h</p>
+                  <p className="text-lg font-bold text-[var(--institution-primary)]">{hoursPerDay}h</p>
                   <p className="text-[11px] text-gray-500">Heures de cours / jour</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#2d7a4f15] flex items-center justify-center shrink-0">
-                  <TrendingUp className="size-5 text-[#2d7a4f]" />
+                <div className="w-10 h-10 rounded-xl bg-[var(--institution-secondary-15)] flex items-center justify-center shrink-0">
+                  <TrendingUp className="size-5 text-[var(--institution-secondary)]" />
                 </div>
                 <div>
-                  <p className="text-lg font-bold text-[#2d7a4f]">{roomOccupancyRate}%</p>
+                  <p className="text-lg font-bold text-[var(--institution-secondary)]">{roomOccupancyRate}%</p>
                   <p className="text-[11px] text-gray-500">Taux d&apos;occupation salles</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#d4a85315] flex items-center justify-center shrink-0">
-                  <Zap className="size-5 text-[#d4a853]" />
+                <div className="w-10 h-10 rounded-xl bg-[var(--institution-accent-15)] flex items-center justify-center shrink-0">
+                  <Zap className="size-5 text-[var(--institution-accent)]" />
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-[#d4a853] leading-tight">{nextCourseText}</p>
+                  <p className="text-sm font-bold text-[var(--institution-accent)] leading-tight">{nextCourseText}</p>
                   <p className="text-[11px] text-gray-500">Prochain cours</p>
                 </div>
               </div>
@@ -908,45 +908,45 @@ export function TimetablePage() {
       {/* Quick Stats Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0 }}>
-          <Card className="border-l-4 border-l-[#1a2744]">
+          <Card className="border-l-4 border-l-[var(--institution-primary)]">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-[10px] text-gray-500 uppercase font-medium">Cours cette semaine</p>
-                  <p className="text-2xl font-bold text-[#1a2744]">{totalSlots}</p>
+                  <p className="text-2xl font-bold text-[var(--institution-primary)]">{totalSlots}</p>
                 </div>
-                <div className="w-10 h-10 rounded-xl bg-[#1a274415] flex items-center justify-center">
-                  <Calendar className="size-5 text-[#1a2744]" />
+                <div className="w-10 h-10 rounded-xl bg-[var(--institution-primary-15)] flex items-center justify-center">
+                  <Calendar className="size-5 text-[var(--institution-primary)]" />
                 </div>
               </div>
             </CardContent>
           </Card>
         </motion.div>
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
-          <Card className="border-l-4 border-l-[#2d7a4f]">
+          <Card className="border-l-4 border-l-[var(--institution-secondary)]">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-[10px] text-gray-500 uppercase font-medium">Heures totales</p>
-                  <p className="text-2xl font-bold text-[#2d7a4f]">{totalHours}h</p>
+                  <p className="text-2xl font-bold text-[var(--institution-secondary)]">{totalHours}h</p>
                 </div>
-                <div className="w-10 h-10 rounded-xl bg-[#2d7a4f15] flex items-center justify-center">
-                  <Clock className="size-5 text-[#2d7a4f]" />
+                <div className="w-10 h-10 rounded-xl bg-[var(--institution-secondary-15)] flex items-center justify-center">
+                  <Clock className="size-5 text-[var(--institution-secondary)]" />
                 </div>
               </div>
             </CardContent>
           </Card>
         </motion.div>
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-          <Card className="border-l-4 border-l-[#d4a853]">
+          <Card className="border-l-4 border-l-[var(--institution-accent)]">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-[10px] text-gray-500 uppercase font-medium">Salles occupees</p>
-                  <p className="text-2xl font-bold text-[#d4a853]">{occupiedRooms}/{rooms.length}</p>
+                  <p className="text-2xl font-bold text-[var(--institution-accent)]">{occupiedRooms}/{rooms.length}</p>
                 </div>
-                <div className="w-10 h-10 rounded-xl bg-[#d4a85315] flex items-center justify-center">
-                  <DoorOpen className="size-5 text-[#d4a853]" />
+                <div className="w-10 h-10 rounded-xl bg-[var(--institution-accent-15)] flex items-center justify-center">
+                  <DoorOpen className="size-5 text-[var(--institution-accent)]" />
                 </div>
               </div>
             </CardContent>
@@ -971,12 +971,12 @@ export function TimetablePage() {
 
       {/* Filter Controls - with gradient border-left */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-        <Card className="shadow-sm border-l-4 border-l-[#1a2744]">
+        <Card className="shadow-sm border-l-4 border-l-[var(--institution-primary)]">
           <CardContent className="p-4">
             <div className="flex flex-wrap items-center gap-4">
               <div className="flex items-center gap-1.5">
-                <Filter className="size-3.5 text-[#1a2744]" />
-                <span className="text-xs font-medium text-[#1a2744]">Filtres :</span>
+                <Filter className="size-3.5 text-[var(--institution-primary)]" />
+                <span className="text-xs font-medium text-[var(--institution-primary)]">Filtres :</span>
               </div>
               <Select value={filterProgram} onValueChange={(value) => {
                 setFilterProgram(value)
@@ -1007,7 +1007,7 @@ export function TimetablePage() {
               </Select>
               <div className="flex items-center gap-2 ml-auto">
                 {/* Semaine en cours indicator */}
-                <Badge className="text-[10px] bg-[#2d7a4f15] text-[#2d7a4f] border-0">
+                <Badge className="text-[10px] bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0">
                   <Zap className="size-3 mr-1" />
                   Semaine en cours
                 </Badge>
@@ -1015,7 +1015,7 @@ export function TimetablePage() {
                   <Button
                     variant={viewMode === 'week' ? 'default' : 'ghost'}
                     size="sm"
-                    className={`h-7 text-[10px] px-3 ${viewMode === 'week' ? 'bg-[#1a2744] text-white' : 'text-gray-500'}`}
+                    className={`h-7 text-[10px] px-3 ${viewMode === 'week' ? 'bg-[var(--institution-primary)] text-white' : 'text-gray-500'}`}
                     onClick={() => setViewMode('week')}
                   >
                     <LayoutGrid className="size-3 mr-1" />
@@ -1024,7 +1024,7 @@ export function TimetablePage() {
                   <Button
                     variant={viewMode === 'day' ? 'default' : 'ghost'}
                     size="sm"
-                    className={`h-7 text-[10px] px-3 ${viewMode === 'day' ? 'bg-[#1a2744] text-white' : 'text-gray-500'}`}
+                    className={`h-7 text-[10px] px-3 ${viewMode === 'day' ? 'bg-[var(--institution-primary)] text-white' : 'text-gray-500'}`}
                     onClick={() => setViewMode('day')}
                   >
                     <List className="size-3 mr-1" />
@@ -1063,7 +1063,7 @@ export function TimetablePage() {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
               <Card className="shadow-sm">
                 <CardHeader className="pb-2 pt-4 px-4">
-                  <CardTitle className="text-sm font-semibold text-[#1a2744] flex items-center gap-2">
+                  <CardTitle className="text-sm font-semibold text-[var(--institution-primary)] flex items-center gap-2">
                     <Calendar className="size-4" />
                     Semaine en cours
                   </CardTitle>
@@ -1077,20 +1077,20 @@ export function TimetablePage() {
                     <div className="overflow-x-auto">
                       <div className="min-w-[900px]">
                         {/* Header Row - with today highlight */}
-                        <div className="flex border-b border-gray-200 bg-[#1a2744]/5">
+                        <div className="flex border-b border-gray-200 bg-[var(--institution-primary)]/5">
                           <div className="w-16 shrink-0 p-2 text-center">
                             <span className="text-[10px] font-semibold text-gray-400">Heure</span>
                           </div>
                           {days.map(day => {
                             const isToday = day === todayFrench
                             return (
-                              <div key={day} className={`flex-1 p-2 text-center border-l border-gray-200 ${isToday ? 'bg-[#2d7a4f10]' : ''}`}>
-                                <span className={`text-xs font-semibold ${isToday ? 'text-[#2d7a4f]' : 'text-[#1a2744]'}`}>
+                              <div key={day} className={`flex-1 p-2 text-center border-l border-gray-200 ${isToday ? 'bg-[var(--institution-secondary-10)]' : ''}`}>
+                                <span className={`text-xs font-semibold ${isToday ? 'text-[var(--institution-secondary)]' : 'text-[var(--institution-primary)]'}`}>
                                   {day}
                                 </span>
                                 {isToday && (
                                   <div className="mt-0.5">
-                                    <Badge className="text-[8px] px-1.5 py-0 bg-[#2d7a4f15] text-[#2d7a4f] border-0">
+                                    <Badge className="text-[8px] px-1.5 py-0 bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0">
                                       Aujourd&apos;hui
                                     </Badge>
                                   </div>
@@ -1111,7 +1111,7 @@ export function TimetablePage() {
                                 const startingSlots = getSlotsAtHour(day, hour)
                                 const isToday = day === todayFrench
                                 return (
-                                  <div key={`${day}-${hour}`} className={`flex-1 p-0.5 border-l border-gray-100 ${isToday ? 'bg-[#2d7a4f05]' : ''}`}>
+                                  <div key={`${day}-${hour}`} className={`flex-1 p-0.5 border-l border-gray-100 ${isToday ? 'bg-[var(--institution-secondary-05)]' : ''}`}>
                                     <div className="space-y-1">
                                       {startingSlots.map((slot) => <TimeSlotBlock key={slot.id} slot={slot} onClick={canManageSlots ? () => openExistingSlot(slot.id) : undefined} />)}
                                     </div>
@@ -1138,7 +1138,7 @@ export function TimetablePage() {
               <Card className="shadow-sm">
                 <CardHeader className="pb-2 pt-4 px-4">
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-sm font-semibold text-[#1a2744] flex items-center gap-2">
+                    <CardTitle className="text-sm font-semibold text-[var(--institution-primary)] flex items-center gap-2">
                       <Calendar className="size-4" />
                       Vue par jour
                     </CardTitle>
@@ -1148,7 +1148,7 @@ export function TimetablePage() {
                           key={day}
                           variant={selectedDay === day ? 'default' : 'outline'}
                           size="sm"
-                          className={`h-7 text-[10px] px-3 ${selectedDay === day ? 'bg-[#1a2744] text-white' : 'border-[#1a2744]/20 text-[#1a2744]'} ${day === todayFrench ? 'ring-2 ring-[#2d7a4f40]' : ''}`}
+                          className={`h-7 text-[10px] px-3 ${selectedDay === day ? 'bg-[var(--institution-primary)] text-white' : 'border-[var(--institution-primary)]/20 text-[var(--institution-primary)]'} ${day === todayFrench ? 'ring-2 ring-[var(--institution-secondary-40)]' : ''}`}
                           onClick={() => setSelectedDay(day)}
                         >
                           {day.substring(0, 3)}
@@ -1187,7 +1187,7 @@ export function TimetablePage() {
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 }}>
             <Card className="shadow-sm">
               <CardHeader className="pb-2 pt-4 px-4">
-                <CardTitle className="text-sm font-semibold text-[#1a2744] flex items-center gap-2">
+                <CardTitle className="text-sm font-semibold text-[var(--institution-primary)] flex items-center gap-2">
                   <Monitor className="size-4" />
                   Etat des salles
                 </CardTitle>
@@ -1219,7 +1219,7 @@ export function TimetablePage() {
                         }`}
                       >
                         <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs font-semibold text-[#1a2744]">{room.name}</span>
+                          <span className="text-xs font-semibold text-[var(--institution-primary)]">{room.name}</span>
                           <Badge className={`text-[9px] ${
                             isOccupied
                               ? 'bg-red-100 text-red-700 border-0'

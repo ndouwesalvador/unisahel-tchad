@@ -82,8 +82,8 @@ interface GeneratedDoc {
 
 // ASCII keys for status config - NO accented characters
 const statusConfig: Record<string, { label: string; className: string; icon: React.ElementType }> = {
-  signe: { label: 'Valide', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0', icon: CheckCircle2 },
-  genere: { label: 'Genere', className: 'bg-[#d4a85315] text-[#d4a853] border-0', icon: Clock },
+  signe: { label: 'Valide', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0', icon: CheckCircle2 },
+  genere: { label: 'Genere', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0', icon: Clock },
   en_attente: { label: 'En attente', className: 'bg-gray-100 text-gray-500 border-0', icon: Clock },
 }
 
@@ -313,7 +313,7 @@ export function DocumentsPage() {
       <div className="space-y-5">
         {/* Gradient Hero Section */}
         <Card className="overflow-hidden">
-          <div className="bg-gradient-to-r from-[#1a2744] via-[#1f3050] to-[#2d7a4f] p-6 text-white relative">
+          <div className="bg-gradient-to-r from-[var(--institution-primary)] via-[var(--institution-primary-light)] to-[var(--institution-secondary)] p-6 text-white relative">
             <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PHBhdGggZD0iTTM2IDE0YzAtMi4yMS0xLjc5LTQtNC00cy00IDEuNzktNCA0IDEuNzkgNCA0IDQgNC0xLjc5IDQtNHptLTQgMmMtMS4xIDAtMi0uOS0yLTJzLjktMiAyLTIgMiAuOSAyIDItLjkgMi0yIDJ6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-50" />
             <div className="relative">
               <motion.div
@@ -367,21 +367,21 @@ export function DocumentsPage() {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-3">
-                <p className="text-sm font-medium text-[#1a2744]">Pipeline de generation</p>
-                <Badge className="text-[10px] bg-[#2d7a4f15] text-[#2d7a4f] border-0">
+                <p className="text-sm font-medium text-[var(--institution-primary)]">Pipeline de generation</p>
+                <Badge className="text-[10px] bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0">
                   <Zap className="size-3 mr-1" />
                   En temps reel
                 </Badge>
               </div>
               <div className="flex h-3 rounded-full overflow-hidden bg-gray-100">
                 <motion.div
-                  className="bg-[#2d7a4f]"
+                  className="bg-[var(--institution-secondary)]"
                   initial={{ width: 0 }}
                   animate={{ width: `${signedPercent}%` }}
                   transition={{ duration: 1, ease: 'easeOut', delay: 0.5 }}
                 />
                 <motion.div
-                  className="bg-[#d4a853]"
+                  className="bg-[var(--institution-accent)]"
                   initial={{ width: 0 }}
                   animate={{ width: `${generatedPercent}%` }}
                   transition={{ duration: 1, ease: 'easeOut', delay: 0.7 }}
@@ -395,11 +395,11 @@ export function DocumentsPage() {
               </div>
               <div className="flex items-center gap-4 mt-2">
                 <div className="flex items-center gap-1.5">
-                  <div className="w-2.5 h-2.5 rounded-full bg-[#2d7a4f]" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-[var(--institution-secondary)]" />
                   <span className="text-[10px] text-gray-500">Signes ({pipelineSigned})</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <div className="w-2.5 h-2.5 rounded-full bg-[#d4a853]" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-[var(--institution-accent)]" />
                   <span className="text-[10px] text-gray-500">Generes ({pipelineGenerated})</span>
                 </div>
                 <div className="flex items-center gap-1.5">
@@ -417,11 +417,11 @@ export function DocumentsPage() {
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.4, delay: 0.4 }}
         >
-          <Card className="border-l-4 border-l-[#2d7a4f]">
+          <Card className="border-l-4 border-l-[var(--institution-secondary)]">
             <CardContent className="p-3">
               <div className="flex items-center gap-2 mb-2">
-                <div className="w-2 h-2 rounded-full bg-[#2d7a4f] animate-pulse" />
-                <span className="text-[11px] font-medium text-[#1a2744]">Documents recents</span>
+                <div className="w-2 h-2 rounded-full bg-[var(--institution-secondary)] animate-pulse" />
+                <span className="text-[11px] font-medium text-[var(--institution-primary)]">Documents recents</span>
               </div>
               <div className="flex flex-col sm:flex-row gap-2">
                 {recentDocs.map((doc, i) => {
@@ -435,12 +435,12 @@ export function DocumentsPage() {
                       transition={{ duration: 0.3, delay: 0.5 + i * 0.1 }}
                       className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 flex-1"
                     >
-                      <FileText className="size-3.5 text-[#1a2744] shrink-0" />
+                      <FileText className="size-3.5 text-[var(--institution-primary)] shrink-0" />
                       <div className="min-w-0 flex-1">
-                        <p className="text-[11px] font-medium text-[#1a2744] truncate">{doc.type}</p>
+                        <p className="text-[11px] font-medium text-[var(--institution-primary)] truncate">{doc.type}</p>
                         <p className="text-[9px] text-gray-400">{doc.etudiant} - {doc.date}</p>
                       </div>
-                      <StatusIcon className="size-3 shrink-0" style={{ color: doc.statut === 'signe' ? '#2d7a4f' : '#d4a853' }} />
+                      <StatusIcon className="size-3 shrink-0" style={{ color: doc.statut === 'signe' ? 'var(--institution-secondary)' : 'var(--institution-accent)' }} />
                     </motion.div>
                   )
                 })}
@@ -453,22 +453,22 @@ export function DocumentsPage() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <Card>
             <CardContent className="p-4 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-[#1a274415] flex items-center justify-center shrink-0">
-                <FileText className="size-5 text-[#1a2744]" />
+              <div className="w-10 h-10 rounded-lg bg-[var(--institution-primary-15)] flex items-center justify-center shrink-0">
+                <FileText className="size-5 text-[var(--institution-primary)]" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-[#1a2744]">{totalGenerated}</p>
+                <p className="text-2xl font-bold text-[var(--institution-primary)]">{totalGenerated}</p>
                 <p className="text-[11px] text-gray-500">Documents generes</p>
               </div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-[#2d7a4f15] flex items-center justify-center shrink-0">
-                <CheckCircle2 className="size-5 text-[#2d7a4f]" />
+              <div className="w-10 h-10 rounded-lg bg-[var(--institution-secondary-15)] flex items-center justify-center shrink-0">
+                <CheckCircle2 className="size-5 text-[var(--institution-secondary)]" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-[#2d7a4f]">{totalSigned}</p>
+                <p className="text-2xl font-bold text-[var(--institution-secondary)]">{totalSigned}</p>
                 <p className="text-[11px] text-gray-500">Documents validés</p>
               </div>
             </CardContent>
@@ -486,11 +486,11 @@ export function DocumentsPage() {
           </Card>
           <Card>
             <CardContent className="p-4 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-[#d4a85315] flex items-center justify-center shrink-0">
-                <QrCode className="size-5 text-[#d4a853]" />
+              <div className="w-10 h-10 rounded-lg bg-[var(--institution-accent-15)] flex items-center justify-center shrink-0">
+                <QrCode className="size-5 text-[var(--institution-accent)]" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-[#d4a853]">{totalQRCodes}</p>
+                <p className="text-2xl font-bold text-[var(--institution-accent)]">{totalQRCodes}</p>
                 <p className="text-[11px] text-gray-500">Codes de verification</p>
               </div>
             </CardContent>
@@ -498,10 +498,10 @@ export function DocumentsPage() {
         </div>
 
         {/* Document Generator Card */}
-        {canManageDocuments && <Card id="document-generator" className="border-l-4 border-l-[#2d7a4f]">
+        {canManageDocuments && <Card id="document-generator" className="border-l-4 border-l-[var(--institution-secondary)]">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold text-[#1a2744] flex items-center gap-2">
-              <Stamp className="size-4 text-[#2d7a4f]" />
+            <CardTitle className="text-sm font-semibold text-[var(--institution-primary)] flex items-center gap-2">
+              <Stamp className="size-4 text-[var(--institution-secondary)]" />
               Generer un document
             </CardTitle>
           </CardHeader>
@@ -526,7 +526,7 @@ export function DocumentsPage() {
               {selectedStudentId ? (
                 <div className="flex items-center justify-between rounded-md border px-3 h-9 text-sm">
                   <span className="truncate">{selectedStudentLabel}</span>
-                  <button type="button" className="text-xs text-[#2d7a4f] hover:underline shrink-0 ml-2" onClick={() => { setSelectedStudentId(''); setSelectedStudentLabel('') }}>
+                  <button type="button" className="text-xs text-[var(--institution-secondary)] hover:underline shrink-0 ml-2" onClick={() => { setSelectedStudentId(''); setSelectedStudentLabel('') }}>
                     Changer
                   </button>
                 </div>
@@ -578,7 +578,7 @@ export function DocumentsPage() {
               </div>
               <Button
                 size="sm"
-                className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs h-9"
+                className="bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white text-xs h-9"
                 disabled={!canGenerateSelectedDocument || !selectedYearId || isGeneratingSigned}
                 onClick={() => generateDoc(true)}
               >
@@ -594,7 +594,7 @@ export function DocumentsPage() {
             {signedOnlyDocument && <p className="text-xs text-gray-500 mt-2">Ce document exige une délibération finale validée, les crédits complets sans dette et une validation par un responsable.</p>}
             <p className="text-xs text-gray-500 mt-2">Le logo et les signatures sont figés lors de l’émission. Après une modification de l’identité visuelle, générez un nouveau document pour l’utiliser ; les pièces déjà délivrées restent inchangées.</p>
             {selectedDocumentType && !selectedDocumentType.implemented && (
-              <p className="text-xs text-[#d4a853] mt-2">
+              <p className="text-xs text-[var(--institution-accent)] mt-2">
                 Ce type n’est pas générable depuis cet écran : {selectedDocumentType.tooltip}.
               </p>
             )}
@@ -644,10 +644,10 @@ export function DocumentsPage() {
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-semibold text-[#1a2744]">
+              <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">
                 Documents generes ({filteredDocs.length})
               </CardTitle>
-              <Badge className="text-[10px] bg-[#2d7a4f15] text-[#2d7a4f] border-0">
+              <Badge className="text-[10px] bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0">
                 <Shield className="size-3 mr-1" />
                 Codes de verification
               </Badge>
@@ -674,15 +674,15 @@ export function DocumentsPage() {
                       <TableRow key={doc.id} className="hover:bg-gray-50/50">
                         <TableCell className="py-2.5">
                           <div className="flex items-center gap-2">
-                            <div className="w-7 h-7 rounded bg-[#1a274410] flex items-center justify-center shrink-0">
-                              <FileText className="size-3.5 text-[#1a2744]" />
+                            <div className="w-7 h-7 rounded bg-[var(--institution-primary-10)] flex items-center justify-center shrink-0">
+                              <FileText className="size-3.5 text-[var(--institution-primary)]" />
                             </div>
-                            <span className="text-sm font-medium text-[#1a2744] whitespace-nowrap">{doc.type}</span>
+                            <span className="text-sm font-medium text-[var(--institution-primary)] whitespace-nowrap">{doc.type}</span>
                           </div>
                         </TableCell>
                         <TableCell className="py-2.5">
                           <div>
-                            <p className="text-sm text-[#1a2744] font-medium">{doc.etudiant}</p>
+                            <p className="text-sm text-[var(--institution-primary)] font-medium">{doc.etudiant}</p>
                             <p className="text-[10px] text-gray-400 font-mono">{doc.matricule}</p>
                           </div>
                         </TableCell>
@@ -696,7 +696,7 @@ export function DocumentsPage() {
                         <TableCell className="py-2.5">
                           {doc.codeVerification ? (
                             <div className="flex items-center gap-1.5">
-                              <QrCode className="size-3.5 text-[#2d7a4f]" />
+                              <QrCode className="size-3.5 text-[var(--institution-secondary)]" />
                               <span className="text-[10px] font-mono text-gray-500">{doc.codeVerification}</span>
                             </div>
                           ) : (
@@ -750,8 +750,8 @@ export function DocumentsPage() {
           {/* Document Types Reference Card */}
           {canManageDocuments && <Card className="lg:col-span-2">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold text-[#1a2744] flex items-center gap-2">
-                <GraduationCap className="size-4 text-[#d4a853]" />
+              <CardTitle className="text-sm font-semibold text-[var(--institution-primary)] flex items-center gap-2">
+                <GraduationCap className="size-4 text-[var(--institution-accent)]" />
                 Types de documents
               </CardTitle>
             </CardHeader>
@@ -766,7 +766,7 @@ export function DocumentsPage() {
                         <button
                           type="button"
                           className="flex w-full flex-col items-center gap-2 rounded-lg border border-gray-200 p-3 transition-colors hover:border-emerald-600 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700"
-                          style={{ borderTop: '3px solid #2d7a4f' }}
+                          style={{ borderTop: '3px solid var(--institution-secondary)' }}
                           onClick={() => {
                             if (dt.key === 'pv_deliberation') {
                               setView('deliberation')
@@ -776,11 +776,11 @@ export function DocumentsPage() {
                             }
                           }}
                         >
-                          <div className="w-9 h-9 rounded-lg bg-[#1a274410] flex items-center justify-center">
-                            <Icon className="size-4 text-[#1a2744]" />
+                          <div className="w-9 h-9 rounded-lg bg-[var(--institution-primary-10)] flex items-center justify-center">
+                            <Icon className="size-4 text-[var(--institution-primary)]" />
                           </div>
                           <div className="text-center">
-                            <p className="text-[11px] font-medium text-[#1a2744] leading-tight">{dt.label}</p>
+                            <p className="text-[11px] font-medium text-[var(--institution-primary)] leading-tight">{dt.label}</p>
                             <p className="text-[10px] text-slate-600 mt-0.5">{dt.key === 'pv_deliberation' ? `${count} générés · ouvrir les jurys` : `${count} générés`}</p>
                           </div>
                         </button>
@@ -798,16 +798,16 @@ export function DocumentsPage() {
           {/* Verification Info Card */}
           <Card className={canManageDocuments ? '' : 'lg:col-span-3'}>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold text-[#1a2744] flex items-center gap-2">
-                <Shield className="size-4 text-[#2d7a4f]" />
+              <CardTitle className="text-sm font-semibold text-[var(--institution-primary)] flex items-center gap-2">
+                <Shield className="size-4 text-[var(--institution-secondary)]" />
                 Verification QR Code
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-start gap-3 p-3 rounded-lg bg-[#2d7a4f08] border border-[#2d7a4f15]">
-                <Info className="size-5 text-[#2d7a4f] shrink-0 mt-0.5" />
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-[var(--institution-secondary-08)] border border-[var(--institution-secondary-15)]">
+                <Info className="size-5 text-[var(--institution-secondary)] shrink-0 mt-0.5" />
                 <div className="space-y-1.5">
-                  <p className="text-xs text-[#1a2744] font-medium">Verification par code unique</p>
+                  <p className="text-xs text-[var(--institution-primary)] font-medium">Verification par code unique</p>
                   <p className="text-[11px] text-gray-500 leading-relaxed">
                     Chaque document officiel est muni d un code QR unique permettant sa verification instantanee. 
                     Scannez le code ou saisissez le code de verification pour confirmer l authenticite.
@@ -816,23 +816,23 @@ export function DocumentsPage() {
               </div>
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-xs text-gray-600">
-                  <Hash className="size-3.5 text-[#2d7a4f]" />
+                  <Hash className="size-3.5 text-[var(--institution-secondary)]" />
                   <span>Code unique par document</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-gray-600">
-                  <QrCode className="size-3.5 text-[#2d7a4f]" />
+                  <QrCode className="size-3.5 text-[var(--institution-secondary)]" />
                   <span>QR code pointant vers la page de verification</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-gray-600">
-                  <CheckCircle2 className="size-3.5 text-[#2d7a4f]" />
+                  <CheckCircle2 className="size-3.5 text-[var(--institution-secondary)]" />
                   <span>Verification en temps reel</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-gray-600">
-                  <Shield className="size-3.5 text-[#2d7a4f]" />
+                  <Shield className="size-3.5 text-[var(--institution-secondary)]" />
                   <span>Validation institutionnelle enregistrée en base</span>
                 </div>
               </div>
-              <Button variant="outline" className="w-full text-xs h-8 text-[#2d7a4f] border-[#2d7a4f30] hover:bg-[#2d7a4f10]" onClick={() => setView('verify')}>
+              <Button variant="outline" className="w-full text-xs h-8 text-[var(--institution-secondary)] border-[var(--institution-secondary-30)] hover:bg-[var(--institution-secondary-10)]" onClick={() => setView('verify')}>
                 <ExternalLink className="size-3.5 mr-1.5" />
                 Page de verification
               </Button>
@@ -858,15 +858,15 @@ export function DocumentsPage() {
               className="bg-white rounded-2xl p-6 shadow-2xl max-w-xs w-full mx-4 text-center"
               onClick={(e) => e.stopPropagation()}
             >
-              <QrCode className="size-8 text-[#2d7a4f] mx-auto mb-3" />
-              <h3 className="text-lg font-semibold text-[#1a2744] mb-1">Document généré</h3>
+              <QrCode className="size-8 text-[var(--institution-secondary)] mx-auto mb-3" />
+              <h3 className="text-lg font-semibold text-[var(--institution-primary)] mb-1">Document généré</h3>
               <p className="text-xs text-gray-400 mb-4">Scannez ce code pour vérifier l&apos;authenticité</p>
 
               <div className="flex justify-center mb-4">
                 <QrDisplay value={`${typeof window !== 'undefined' ? window.location.origin : ''}/verify?code=${qrCode}`} size={160} />
               </div>
 
-              <p className="text-xs font-mono font-bold text-[#1a2744] mb-4">{qrCode}</p>
+              <p className="text-xs font-mono font-bold text-[var(--institution-primary)] mb-4">{qrCode}</p>
 
               <div className="flex gap-2">
                 <Button
@@ -882,7 +882,7 @@ export function DocumentsPage() {
                 </Button>
                 <Button
                   size="sm"
-                  className="flex-1 text-xs bg-gradient-to-r from-[#2d7a4f] to-[#3da66a]"
+                  className="flex-1 text-xs bg-gradient-to-r from-[var(--institution-secondary)] to-[var(--institution-secondary-bright)]"
                   onClick={() => setQrCode(null)}
                 >
                   Fermer

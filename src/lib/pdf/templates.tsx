@@ -212,17 +212,18 @@ function DocumentHeader({ tenant, docNumber, compact = false, subtle = false }: 
   const shortName = tenant.shortName?.trim() || tenant.name.split(/\s+/).map((word) => word[0]).join('').slice(0, 4).toUpperCase()
   const contact = [tenant.address, tenant.city, tenant.phone, tenant.email, tenant.website].filter(Boolean).join('  ·  ')
   const isChad = /tchad|chad/i.test(tenant.country || '')
+  const frenchLines = tenant.headerLinesFr ?? [isChad ? 'RÉPUBLIQUE DU TCHAD' : (tenant.country || ''), tenant.ministry || '', tenant.name]
+  const primary = tenant.primaryColor || colors.primary
+  const accent = tenant.accentColor || '#c7a44b'
   return (
     <View wrap={false}>
-      <View style={subtle ? { ...styles.topRule, height: 2, backgroundColor: '#c7a44b' } : styles.topRule} />
+      <View style={{ ...styles.topRule, height: subtle ? 2 : 5, backgroundColor: subtle ? accent : primary }} />
       <View style={{ flexDirection: 'row', height: compact ? 72 : 90, alignItems: 'center', justifyContent: 'space-between' }}>
-        <View style={{ width: '37%', height: compact ? 66 : 76, alignItems: 'center', paddingRight: 5, justifyContent: 'space-between' }}>
-          <Text style={{ fontSize: 7.2, fontWeight: 'bold', textAlign: 'center', color: colors.primary }}>{isChad ? 'RÉPUBLIQUE DU TCHAD' : (tenant.country || '').toUpperCase()}</Text>
-          <Text style={{ fontSize: 6.6, textAlign: 'center' }}>{tenant.ministry?.toUpperCase() || ' '}</Text>
-          <Text style={{ fontSize: 7.4, textAlign: 'center', fontWeight: 'bold', color: colors.primary }}>{tenant.name.toUpperCase()}</Text>
+        <View style={{ width: '37%', height: compact ? 66 : 76, alignItems: 'center', paddingRight: 5, justifyContent: 'space-around' }}>
+          {frenchLines.filter(Boolean).slice(0, 10).map((line, index) => <Text key={`${index}-${line}`} style={{ fontSize: Math.max(4.2, Math.min(frenchLines.length > 6 ? 5.2 : frenchLines.length > 4 ? 6 : 7, 330 / line.length)), fontWeight: index === 0 || index === frenchLines.length - 1 ? 'bold' : 'normal', textAlign: 'center', color: primary }}>{line.toUpperCase()}</Text>)}
         </View>
         <View style={{ width: '26%', alignItems: 'center', justifyContent: 'center' }}>
-          <Text style={{ fontSize: 7, fontWeight: 'bold', color: colors.primary, textAlign: 'center' }}>{tenant.motto?.toUpperCase() || (isChad ? 'UNITÉ · TRAVAIL · PROGRÈS' : '')}</Text>
+          <Text style={{ fontSize: 7, fontWeight: 'bold', color: primary, textAlign: 'center' }}>{tenant.motto?.toUpperCase() || (isChad ? 'UNITÉ · TRAVAIL · PROGRÈS' : '')}</Text>
           {tenant.logo?.startsWith('data:image/') ? <Image src={tenant.logo} style={{ width: compact ? 62 : 76, height: compact ? 52 : 66, objectFit: 'contain', marginTop: 3 }} />
             : <View style={{ width: compact ? 52 : 62, height: compact ? 52 : 62, marginTop: 3, borderWidth: 1, borderColor: colors.secondary, borderRadius: 31, justifyContent: 'center' }}><Text style={{ fontSize: 9, color: colors.secondary, textAlign: 'center' }}>{shortName}</Text></View>}
         </View>

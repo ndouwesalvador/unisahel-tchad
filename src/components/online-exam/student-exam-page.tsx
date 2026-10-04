@@ -172,16 +172,16 @@ export function StudentExamPage() {
 
     return (
       <div className="p-4 md:p-6 space-y-4 max-w-3xl mx-auto">
-        <Card className="border-l-4 border-l-[#2d7a4f]">
+        <Card className="border-l-4 border-l-[var(--institution-secondary)]">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-sm font-semibold text-[#1a2744]">{session.exam.name}</CardTitle>
+                <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">{session.exam.name}</CardTitle>
                 <p className="text-xs text-gray-400 mt-0.5">{session.exam.course}</p>
               </div>
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#1a274410] border border-[#1a274420]">
-                <Clock className="size-4 text-[#1a2744]" />
-                <span className={`text-sm font-bold font-mono ${remainingSeconds < 300 ? 'text-[#c62828]' : 'text-[#1a2744]'}`}>{timerDisplay}</span>
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--institution-primary-10)] border border-[var(--institution-primary-20)]">
+                <Clock className="size-4 text-[var(--institution-primary)]" />
+                <span className={`text-sm font-bold font-mono ${remainingSeconds < 300 ? 'text-[#c62828]' : 'text-[var(--institution-primary)]'}`}>{timerDisplay}</span>
               </div>
             </div>
           </CardHeader>
@@ -189,24 +189,24 @@ export function StudentExamPage() {
             <div className="mb-4">
               <div className="flex items-center justify-between mb-1">
                 <span className="text-xs text-gray-500">Progression</span>
-                <span className="text-xs font-semibold text-[#2d7a4f]">{answeredCount}/{session.questions.length} repondues</span>
+                <span className="text-xs font-semibold text-[var(--institution-secondary)]">{answeredCount}/{session.questions.length} repondues</span>
               </div>
               <Progress value={(answeredCount / session.questions.length) * 100} className="h-2" />
             </div>
 
             {question ? (
               <div className="p-4 rounded-lg border border-gray-200 bg-white">
-                <span className="text-xs font-semibold text-[#1a2744] bg-[#1a274410] px-2 py-1 rounded">
+                <span className="text-xs font-semibold text-[var(--institution-primary)] bg-[var(--institution-primary-10)] px-2 py-1 rounded">
                   Question {currentIndex + 1} / {session.questions.length}
                 </span>
-                <p className="text-sm text-[#1a2744] font-medium my-4 leading-relaxed">{question.text}</p>
+                <p className="text-sm text-[var(--institution-primary)] font-medium my-4 leading-relaxed">{question.text}</p>
                 {question.options.length > 0 ? (
                   <div className="space-y-2">
                     {question.options.map((option, idx) => (
                       <label
                         key={idx}
                         className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
-                          answers[question.id] === idx ? 'border-[#2d7a4f] bg-[#2d7a4f08]' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                          answers[question.id] === idx ? 'border-[var(--institution-secondary)] bg-[var(--institution-secondary-08)]' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                         }`}
                       >
                         <input
@@ -214,7 +214,7 @@ export function StudentExamPage() {
                           name={`q-${question.id}`}
                           checked={answers[question.id] === idx}
                           onChange={() => selectAnswer(question.id, idx)}
-                          className="accent-[#2d7a4f]"
+                          className="accent-[var(--institution-secondary)]"
                         />
                         <span className="text-sm text-gray-700">{option}</span>
                       </label>
@@ -233,11 +233,11 @@ export function StudentExamPage() {
                 <ChevronLeft className="size-3.5 mr-1" /> Precedente
               </Button>
               {currentIndex < session.questions.length - 1 ? (
-                <Button size="sm" className="bg-[#1a2744] hover:bg-[#1a2744]/90 text-white" onClick={() => setCurrentIndex((p) => Math.min(session.questions.length - 1, p + 1))}>
+                <Button size="sm" className="bg-[var(--institution-primary)] hover:bg-[var(--institution-primary)]/90 text-white" onClick={() => setCurrentIndex((p) => Math.min(session.questions.length - 1, p + 1))}>
                   Suivante <ChevronRight className="size-3.5 ml-1" />
                 </Button>
               ) : (
-                <Button size="sm" className="bg-[#2d7a4f] hover:bg-[#236b40] text-white" onClick={() => setShowConfirm(true)}>
+                <Button size="sm" className="bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white" onClick={() => setShowConfirm(true)}>
                   <Send className="size-3.5 mr-1.5" /> Soumettre l&apos;examen
                 </Button>
               )}
@@ -249,10 +249,10 @@ export function StudentExamPage() {
           <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowConfirm(false)}>
             <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-2xl" onClick={(e) => e.stopPropagation()}>
               <div className="text-center">
-                <div className="w-14 h-14 rounded-full bg-[#d4a85315] flex items-center justify-center mx-auto mb-3">
-                  <AlertTriangle className="size-7 text-[#d4a853]" />
+                <div className="w-14 h-14 rounded-full bg-[var(--institution-accent-15)] flex items-center justify-center mx-auto mb-3">
+                  <AlertTriangle className="size-7 text-[var(--institution-accent)]" />
                 </div>
-                <h3 className="text-lg font-bold text-[#1a2744] mb-2">Confirmer la soumission</h3>
+                <h3 className="text-lg font-bold text-[var(--institution-primary)] mb-2">Confirmer la soumission</h3>
                 <p className="text-sm text-gray-600 mb-4">
                   Vous avez repondu a {answeredCount} question(s) sur {session.questions.length}.
                   {answeredCount < session.questions.length && (
@@ -261,7 +261,7 @@ export function StudentExamPage() {
                 </p>
                 <div className="flex gap-2">
                   <Button variant="outline" className="flex-1 text-xs" onClick={() => setShowConfirm(false)}>Continuer l&apos;examen</Button>
-                  <Button className="flex-1 text-xs bg-[#2d7a4f] hover:bg-[#236b40] text-white" onClick={submitExam} disabled={isSubmitting}>
+                  <Button className="flex-1 text-xs bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white" onClick={submitExam} disabled={isSubmitting}>
                     {isSubmitting ? 'Envoi...' : 'Confirmer'}
                   </Button>
                 </div>
@@ -277,7 +277,7 @@ export function StudentExamPage() {
   return (
     <div className="p-4 md:p-6 space-y-4">
       <div>
-        <h1 className="text-xl font-bold text-[#1a2744] flex items-center gap-2">
+        <h1 className="text-xl font-bold text-[var(--institution-primary)] flex items-center gap-2">
           <Monitor className="size-6" /> Mes examens en ligne
         </h1>
         <p className="text-sm text-gray-500 mt-1">Consultez et passez vos examens programmes</p>
@@ -290,21 +290,21 @@ export function StudentExamPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {exams.map((exam) => (
-            <Card key={exam.id} className="border-l-4 border-l-[#1a2744]">
+            <Card key={exam.id} className="border-l-4 border-l-[var(--institution-primary)]">
               <CardContent className="p-4">
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <div>
-                    <p className="text-sm font-semibold text-[#1a2744]">{exam.name}</p>
+                    <p className="text-sm font-semibold text-[var(--institution-primary)]">{exam.name}</p>
                     <p className="text-xs text-gray-400">{exam.course}</p>
                   </div>
                   {exam.submitted ? (
-                    <Badge className="text-[10px] bg-[#2d7a4f15] text-[#2d7a4f] border-0">
+                    <Badge className="text-[10px] bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0">
                       <CheckCircle2 className="size-3 mr-1" /> Termine
                     </Badge>
                   ) : exam.inProgress ? (
-                    <Badge className="text-[10px] bg-[#d4a85315] text-[#d4a853] border-0">En cours</Badge>
+                    <Badge className="text-[10px] bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0">En cours</Badge>
                   ) : (
-                    <Badge className="text-[10px] bg-[#1a274410] text-[#1a2744] border-0">A passer</Badge>
+                    <Badge className="text-[10px] bg-[var(--institution-primary-10)] text-[var(--institution-primary)] border-0">A passer</Badge>
                   )}
                 </div>
                 <div className="flex items-center gap-3 text-xs text-gray-500 mb-3">
@@ -313,13 +313,13 @@ export function StudentExamPage() {
                   <span>{exam.questionCount} question(s)</span>
                 </div>
                 {exam.submitted ? (
-                  <p className="text-xs font-semibold text-[#1a2744]">
+                  <p className="text-xs font-semibold text-[var(--institution-primary)]">
                     {exam.score !== null ? `Note: ${exam.score}/${exam.maxScore}` : 'En cours de correction'}
                   </p>
                 ) : (
                   <Button
                     size="sm"
-                    className="w-full text-xs bg-[#2d7a4f] hover:bg-[#236b40] text-white"
+                    className="w-full text-xs bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white"
                     onClick={() => startExam(exam.id)}
                     disabled={exam.questionCount === 0}
                   >

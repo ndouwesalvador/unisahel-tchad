@@ -48,9 +48,9 @@ import {
 type ActivityType = 'login' | 'edit' | 'create' | 'delete'
 
 const activityConfig: Record<ActivityType, { icon: React.ElementType; color: string; bg: string; label: string }> = {
-  login: { icon: LogIn, color: 'text-[#2d7a4f]', bg: 'bg-[#2d7a4f10]', label: 'Connexion' },
-  edit: { icon: Pencil, color: 'text-[#d4a853]', bg: 'bg-[#d4a85310]', label: 'Modification' },
-  create: { icon: Edit3, color: 'text-[#2d7a4f]', bg: 'bg-[#2d7a4f10]', label: 'Creation' },
+  login: { icon: LogIn, color: 'text-[var(--institution-secondary)]', bg: 'bg-[var(--institution-secondary-10)]', label: 'Connexion' },
+  edit: { icon: Pencil, color: 'text-[var(--institution-accent)]', bg: 'bg-[var(--institution-accent-10)]', label: 'Modification' },
+  create: { icon: Edit3, color: 'text-[var(--institution-secondary)]', bg: 'bg-[var(--institution-secondary-10)]', label: 'Creation' },
   delete: { icon: Trash2, color: 'text-red-500', bg: 'bg-red-50', label: 'Suppression' },
 }
 
@@ -191,12 +191,12 @@ export function ProfilePage() {
     <div className="space-y-6">
       {/* Profile Header Banner */}
       <div className="relative overflow-hidden rounded-xl">
-        <div className="bg-gradient-to-r from-[#1a2744] to-[#2d7a4f] h-40 sm:h-48 relative">
+        <div className="bg-gradient-to-r from-[var(--institution-primary)] to-[var(--institution-secondary)] h-40 sm:h-48 relative">
           {/* Decorative circles */}
           <div className="absolute top-[-30px] right-[-30px] w-40 h-40 rounded-full bg-white/5" />
           <div className="absolute top-10 right-20 w-24 h-24 rounded-full bg-white/5" />
           <div className="absolute bottom-[-20px] left-[30%] w-32 h-32 rounded-full bg-white/5" />
-          <div className="absolute top-5 left-10 w-16 h-16 rounded-full bg-[#d4a853]/10" />
+          <div className="absolute top-5 left-10 w-16 h-16 rounded-full bg-[var(--institution-accent)]/10" />
           <div className="absolute bottom-5 right-[40%] w-12 h-12 rounded-full bg-white/5" />
         </div>
         <div className="bg-white border border-gray-200 border-t-0 rounded-b-xl px-4 sm:px-6 pb-5 pt-14 sm:pt-16 relative">
@@ -204,12 +204,12 @@ export function ProfilePage() {
           <div className="absolute -top-12 sm:-top-14 left-4 sm:left-6">
             <div className="relative">
               <Avatar className="size-20 sm:size-24 border-4 border-white shadow-lg">
-                <AvatarFallback className="bg-[#2d7a4f] text-white text-xl sm:text-2xl font-bold">
+                <AvatarFallback className="bg-[var(--institution-secondary)] text-white text-xl sm:text-2xl font-bold">
                   {initials}
                 </AvatarFallback>
               </Avatar>
               <button
-                className="absolute bottom-0 right-0 p-1.5 bg-[#d4a853] rounded-full text-white shadow-md hover:bg-[#c49943] transition-colors"
+                className="absolute bottom-0 right-0 p-1.5 bg-[var(--institution-accent)] rounded-full text-white shadow-md hover:bg-[#c49943] transition-colors"
                 aria-label="Modifier la photo"
               >
                 <Camera className="size-3.5" />
@@ -220,9 +220,9 @@ export function ProfilePage() {
           {/* User info */}
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mt-1">
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-[#1a2744]">{fullName}</h1>
+              <h1 className="text-xl sm:text-2xl font-bold text-[var(--institution-primary)]">{fullName}</h1>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
-                <Badge className="bg-[#2d7a4f] text-white border-0 text-xs font-medium">
+                <Badge className="bg-[var(--institution-secondary)] text-white border-0 text-xs font-medium">
                   {roleLabels[user.role] || user.role}
                 </Badge>
                 <span className="text-sm text-gray-500">{user.email || 'Non renseigne'}</span>
@@ -232,7 +232,7 @@ export function ProfilePage() {
             <Button
               variant="outline"
               size="sm"
-              className="border-[#1a2744] text-[#1a2744] hover:bg-[#1a2744] hover:text-white transition-colors w-fit"
+              className="border-[var(--institution-primary)] text-[var(--institution-primary)] hover:bg-[var(--institution-primary)] hover:text-white transition-colors w-fit"
             >
               <Camera className="size-4 mr-2" />
               Modifier la photo
@@ -272,15 +272,15 @@ export function ProfilePage() {
                 <Card>
                   <CardHeader className="pb-4">
                     <div className="flex items-center justify-between">
-                      <CardTitle className="text-base font-semibold text-[#1a2744] flex items-center gap-2">
-                        <User className="size-4 text-[#2d7a4f]" />
+                      <CardTitle className="text-base font-semibold text-[var(--institution-primary)] flex items-center gap-2">
+                        <User className="size-4 text-[var(--institution-secondary)]" />
                         Informations personnelles
                       </CardTitle>
                       {!isEditing && (
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="text-[#2d7a4f] hover:text-[#236b40] h-8"
+                          className="text-[var(--institution-secondary)] hover:text-[var(--institution-secondary-dark)] h-8"
                           onClick={() => setIsEditing(true)}
                         >
                           <Pencil className="size-3.5 mr-1" />
@@ -300,7 +300,7 @@ export function ProfilePage() {
                             className="h-9"
                           />
                         ) : (
-                          <p className="text-sm font-medium text-[#1a2744]">{user.lastName}</p>
+                          <p className="text-sm font-medium text-[var(--institution-primary)]">{user.lastName}</p>
                         )}
                       </div>
                       <div className="space-y-1.5">
@@ -312,7 +312,7 @@ export function ProfilePage() {
                             className="h-9"
                           />
                         ) : (
-                          <p className="text-sm font-medium text-[#1a2744]">{user.firstName}</p>
+                          <p className="text-sm font-medium text-[var(--institution-primary)]">{user.firstName}</p>
                         )}
                       </div>
                     </div>
@@ -326,7 +326,7 @@ export function ProfilePage() {
                           className="h-9"
                         />
                       ) : (
-                        <p className="text-sm font-medium text-[#1a2744]">{user.email || 'Non renseigne'}</p>
+                        <p className="text-sm font-medium text-[var(--institution-primary)]">{user.email || 'Non renseigne'}</p>
                       )}
                     </div>
                     <div className="space-y-1.5">
@@ -338,14 +338,14 @@ export function ProfilePage() {
                           className="h-9"
                         />
                       ) : (
-                        <p className="text-sm font-medium text-[#1a2744]">{formData.phone || 'Non renseigne'}</p>
+                        <p className="text-sm font-medium text-[var(--institution-primary)]">{formData.phone || 'Non renseigne'}</p>
                       )}
                     </div>
                     {isEditing && (
                       <div className="flex items-center gap-2 pt-2">
                         <Button
                           size="sm"
-                          className="bg-[#2d7a4f] hover:bg-[#236b40] text-white"
+                          className="bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white"
                           disabled={isSavingProfile}
                           onClick={handleSaveProfile}
                         >
@@ -368,8 +368,8 @@ export function ProfilePage() {
                 {/* Professional Info */}
                 <Card>
                   <CardHeader className="pb-4">
-                    <CardTitle className="text-base font-semibold text-[#1a2744] flex items-center gap-2">
-                      <Shield className="size-4 text-[#d4a853]" />
+                    <CardTitle className="text-base font-semibold text-[var(--institution-primary)] flex items-center gap-2">
+                      <Shield className="size-4 text-[var(--institution-accent)]" />
                       Informations professionnelles
                     </CardTitle>
                   </CardHeader>
@@ -377,27 +377,27 @@ export function ProfilePage() {
                     <div className="space-y-1.5">
                       <Label className="text-xs text-gray-500">Role</Label>
                       <div className="flex items-center gap-2">
-                        <Badge className="bg-[#2d7a4f] text-white border-0 text-xs">
+                        <Badge className="bg-[var(--institution-secondary)] text-white border-0 text-xs">
                           {roleLabels[user.role] || user.role}
                         </Badge>
                       </div>
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-xs text-gray-500">Institution</Label>
-                      <p className="text-sm font-medium text-[#1a2744]">{user.tenantName || 'Universite Abdou Moumouni de Niamey'}</p>
+                      <p className="text-sm font-medium text-[var(--institution-primary)]">{user.tenantName || 'Universite Abdou Moumouni de Niamey'}</p>
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-xs text-gray-500">Departement</Label>
-                      <p className="text-sm font-medium text-[#1a2744]">Informatique et Mathematiques</p>
+                      <p className="text-sm font-medium text-[var(--institution-primary)]">Informatique et Mathematiques</p>
                     </div>
                     <Separator />
                     <div className="space-y-1.5">
                       <Label className="text-xs text-gray-500">Date de creation du compte</Label>
-                      <p className="text-sm text-[#1a2744]">15 Janvier 2024</p>
+                      <p className="text-sm text-[var(--institution-primary)]">15 Janvier 2024</p>
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-xs text-gray-500">Derniere mise a jour</Label>
-                      <p className="text-sm text-[#1a2744]">28 Fevrier 2026</p>
+                      <p className="text-sm text-[var(--institution-primary)]">28 Fevrier 2026</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -409,8 +409,8 @@ export function ProfilePage() {
               {/* Change Password */}
               <Card>
                 <CardHeader className="pb-4">
-                  <CardTitle className="text-base font-semibold text-[#1a2744] flex items-center gap-2">
-                    <Lock className="size-4 text-[#2d7a4f]" />
+                  <CardTitle className="text-base font-semibold text-[var(--institution-primary)] flex items-center gap-2">
+                    <Lock className="size-4 text-[var(--institution-secondary)]" />
                     Changer le mot de passe
                   </CardTitle>
                 </CardHeader>
@@ -449,7 +449,7 @@ export function ProfilePage() {
                   </div>
                   <Button
                     size="sm"
-                    className="bg-[#2d7a4f] hover:bg-[#236b40] text-white"
+                    className="bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white"
                     disabled={isChangingPassword}
                     onClick={handleChangePassword}
                   >
@@ -462,15 +462,15 @@ export function ProfilePage() {
               {/* Two-Factor Auth */}
               <Card>
                 <CardHeader className="pb-4">
-                  <CardTitle className="text-base font-semibold text-[#1a2744] flex items-center gap-2">
-                    <Shield className="size-4 text-[#d4a853]" />
+                  <CardTitle className="text-base font-semibold text-[var(--institution-primary)] flex items-center gap-2">
+                    <Shield className="size-4 text-[var(--institution-accent)]" />
                     Authentification a deux facteurs
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center justify-between">
                     <div className="space-y-1">
-                      <p className="text-sm font-medium text-[#1a2744]">Verification en deux etapes</p>
+                      <p className="text-sm font-medium text-[var(--institution-primary)]">Verification en deux etapes</p>
                       <p className="text-xs text-gray-500">Ajoutez une couche de securite supplementaire a votre compte en requiring un code lors de la connexion.</p>
                     </div>
                     <Switch
@@ -484,8 +484,8 @@ export function ProfilePage() {
               {/* Login History */}
               <Card>
                 <CardHeader className="pb-4">
-                  <CardTitle className="text-base font-semibold text-[#1a2744] flex items-center gap-2">
-                    <Clock className="size-4 text-[#1a2744]" />
+                  <CardTitle className="text-base font-semibold text-[var(--institution-primary)] flex items-center gap-2">
+                    <Clock className="size-4 text-[var(--institution-primary)]" />
                     Historique des connexions
                   </CardTitle>
                 </CardHeader>
@@ -523,8 +523,8 @@ export function ProfilePage() {
               {/* Current Session */}
               <Card>
                 <CardHeader className="pb-4">
-                  <CardTitle className="text-base font-semibold text-[#1a2744] flex items-center gap-2">
-                    <Smartphone className="size-4 text-[#2d7a4f]" />
+                  <CardTitle className="text-base font-semibold text-[var(--institution-primary)] flex items-center gap-2">
+                    <Smartphone className="size-4 text-[var(--institution-secondary)]" />
                     Session actuelle
                   </CardTitle>
                 </CardHeader>
@@ -533,12 +533,12 @@ export function ProfilePage() {
                     <div className="flex items-center justify-between p-3 rounded-lg border border-gray-100 bg-gray-50/50">
                       <div className="flex items-center gap-3">
                         <div className="p-2 rounded-lg bg-white border border-gray-200">
-                          <Smartphone className="size-4 text-[#1a2744]" />
+                          <Smartphone className="size-4 text-[var(--institution-primary)]" />
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <p className="text-sm font-medium text-[#1a2744]">{profileQuery.currentSession.device}</p>
-                            <Badge className="bg-[#2d7a4f] text-white border-0 text-[10px] px-1.5 py-0">
+                            <p className="text-sm font-medium text-[var(--institution-primary)]">{profileQuery.currentSession.device}</p>
+                            <Badge className="bg-[var(--institution-secondary)] text-white border-0 text-[10px] px-1.5 py-0">
                               Actif
                             </Badge>
                           </div>
@@ -558,8 +558,8 @@ export function ProfilePage() {
               {/* Language */}
               <Card>
                 <CardHeader className="pb-4">
-                  <CardTitle className="text-base font-semibold text-[#1a2744] flex items-center gap-2">
-                    <Globe className="size-4 text-[#2d7a4f]" />
+                  <CardTitle className="text-base font-semibold text-[var(--institution-primary)] flex items-center gap-2">
+                    <Globe className="size-4 text-[var(--institution-secondary)]" />
                     Langue
                   </CardTitle>
                 </CardHeader>
@@ -583,8 +583,8 @@ export function ProfilePage() {
               {/* Theme */}
               <Card>
                 <CardHeader className="pb-4">
-                  <CardTitle className="text-base font-semibold text-[#1a2744] flex items-center gap-2">
-                    <ToggleLeft className="size-4 text-[#d4a853]" />
+                  <CardTitle className="text-base font-semibold text-[var(--institution-primary)] flex items-center gap-2">
+                    <ToggleLeft className="size-4 text-[var(--institution-accent)]" />
                     Theme
                   </CardTitle>
                 </CardHeader>
@@ -608,15 +608,15 @@ export function ProfilePage() {
               {/* Notification Preferences */}
               <Card>
                 <CardHeader className="pb-4">
-                  <CardTitle className="text-base font-semibold text-[#1a2744] flex items-center gap-2">
-                    <Bell className="size-4 text-[#2d7a4f]" />
+                  <CardTitle className="text-base font-semibold text-[var(--institution-primary)] flex items-center gap-2">
+                    <Bell className="size-4 text-[var(--institution-secondary)]" />
                     Notifications
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
-                      <p className="text-sm font-medium text-[#1a2744]">Notifications par email</p>
+                      <p className="text-sm font-medium text-[var(--institution-primary)]">Notifications par email</p>
                       <p className="text-xs text-gray-500">Recevez des alertes importantes par email</p>
                     </div>
                     <Switch checked={emailNotif} onCheckedChange={setEmailNotif} />
@@ -624,7 +624,7 @@ export function ProfilePage() {
                   <Separator />
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
-                      <p className="text-sm font-medium text-[#1a2744]">Notifications push</p>
+                      <p className="text-sm font-medium text-[var(--institution-primary)]">Notifications push</p>
                       <p className="text-xs text-gray-500">Recevez des notifications dans votre navigateur</p>
                     </div>
                     <Switch checked={pushNotif} onCheckedChange={setPushNotif} />
@@ -632,7 +632,7 @@ export function ProfilePage() {
                   <Separator />
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
-                      <p className="text-sm font-medium text-[#1a2744]">Alertes SMS</p>
+                      <p className="text-sm font-medium text-[var(--institution-primary)]">Alertes SMS</p>
                       <p className="text-xs text-gray-500">Recevez des alertes urgentes par SMS</p>
                     </div>
                     <Switch checked={smsNotif} onCheckedChange={setSmsNotif} />
@@ -643,8 +643,8 @@ export function ProfilePage() {
               {/* Academic Preferences */}
               <Card>
                 <CardHeader className="pb-4">
-                  <CardTitle className="text-base font-semibold text-[#1a2744] flex items-center gap-2">
-                    <Settings className="size-4 text-[#1a2744]" />
+                  <CardTitle className="text-base font-semibold text-[var(--institution-primary)] flex items-center gap-2">
+                    <Settings className="size-4 text-[var(--institution-primary)]" />
                     Preferences academiques
                   </CardTitle>
                 </CardHeader>
@@ -684,8 +684,8 @@ export function ProfilePage() {
             <TabsContent value="activite" className="mt-4">
               <Card>
                 <CardHeader className="pb-4">
-                  <CardTitle className="text-base font-semibold text-[#1a2744] flex items-center gap-2">
-                    <Activity className="size-4 text-[#2d7a4f]" />
+                  <CardTitle className="text-base font-semibold text-[var(--institution-primary)] flex items-center gap-2">
+                    <Activity className="size-4 text-[var(--institution-secondary)]" />
                     Activite recente
                   </CardTitle>
                 </CardHeader>
@@ -711,7 +711,7 @@ export function ProfilePage() {
                             <div className="flex-1 min-w-0 pt-0.5">
                               <div className="flex items-start justify-between gap-2">
                                 <div>
-                                  <p className="text-sm text-[#1a2744]">{entry.description}</p>
+                                  <p className="text-sm text-[var(--institution-primary)]">{entry.description}</p>
                                   <div className="flex items-center gap-2 mt-0.5">
                                     <Badge variant="outline" className={`text-[10px] px-1.5 py-0 border-0 ${config.bg} ${config.color}`}>
                                       {config.label}
@@ -736,46 +736,46 @@ export function ProfilePage() {
         <div className="lg:col-span-1 space-y-4">
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold text-[#1a2744]">Statistiques</CardTitle>
+              <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Statistiques</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-[#2d7a4f08] border border-[#2d7a4f15]">
-                <div className="p-2 rounded-lg bg-[#2d7a4f10]">
-                  <Clock className="size-4 text-[#2d7a4f]" />
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-[var(--institution-secondary-08)] border border-[var(--institution-secondary-15)]">
+                <div className="p-2 rounded-lg bg-[var(--institution-secondary-10)]">
+                  <Clock className="size-4 text-[var(--institution-secondary)]" />
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">Derniere connexion</p>
-                  <p className="text-sm font-semibold text-[#1a2744]">Aujourd&apos;hui, 08:23</p>
+                  <p className="text-sm font-semibold text-[var(--institution-primary)]">Aujourd&apos;hui, 08:23</p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-[#d4a85308] border border-[#d4a85315]">
-                <div className="p-2 rounded-lg bg-[#d4a85310]">
-                  <LogIn className="size-4 text-[#d4a853]" />
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-[var(--institution-accent-08)] border border-[var(--institution-accent-15)]">
+                <div className="p-2 rounded-lg bg-[var(--institution-accent-10)]">
+                  <LogIn className="size-4 text-[var(--institution-accent)]" />
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">Connexions ce mois</p>
-                  <p className="text-sm font-semibold text-[#1a2744]">24</p>
+                  <p className="text-sm font-semibold text-[var(--institution-primary)]">24</p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-[#1a274408] border border-[#1a274415]">
-                <div className="p-2 rounded-lg bg-[#1a274410]">
-                  <Download className="size-4 text-[#1a2744]" />
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-[var(--institution-primary-08)] border border-[var(--institution-primary-15)]">
+                <div className="p-2 rounded-lg bg-[var(--institution-primary-10)]">
+                  <Download className="size-4 text-[var(--institution-primary)]" />
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">Fichiers telecharges</p>
-                  <p className="text-sm font-semibold text-[#1a2744]">18</p>
+                  <p className="text-sm font-semibold text-[var(--institution-primary)]">18</p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-[#2d7a4f08] border border-[#2d7a4f15]">
-                <div className="p-2 rounded-lg bg-[#2d7a4f10]">
-                  <Activity className="size-4 text-[#2d7a4f]" />
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-[var(--institution-secondary-08)] border border-[var(--institution-secondary-15)]">
+                <div className="p-2 rounded-lg bg-[var(--institution-secondary-10)]">
+                  <Activity className="size-4 text-[var(--institution-secondary)]" />
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">Actions ce mois</p>
-                  <p className="text-sm font-semibold text-[#1a2744]">156</p>
+                  <p className="text-sm font-semibold text-[var(--institution-primary)]">156</p>
                 </div>
               </div>
             </CardContent>
@@ -784,19 +784,19 @@ export function ProfilePage() {
           {/* Quick Account Info */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold text-[#1a2744]">Compte</CardTitle>
+              <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Compte</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-gray-500">Statut</span>
-                <Badge className="bg-[#2d7a4f] text-white border-0 text-[10px] px-1.5 py-0.5">
+                <Badge className="bg-[var(--institution-secondary)] text-white border-0 text-[10px] px-1.5 py-0.5">
                   Actif
                 </Badge>
               </div>
               <Separator />
               <div className="flex items-center justify-between">
                 <span className="text-xs text-gray-500">Membre depuis</span>
-                <span className="text-xs font-medium text-[#1a2744]">Jan 2024</span>
+                <span className="text-xs font-medium text-[var(--institution-primary)]">Jan 2024</span>
               </div>
               <Separator />
               <div className="flex items-center justify-between">

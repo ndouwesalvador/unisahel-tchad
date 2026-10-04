@@ -138,16 +138,16 @@ interface Teacher {
 }
 
 const gradeConfig: Record<GradeType, { label: string; className: string }> = {
-  'Professeur': { label: 'Professeur', className: 'bg-[#1a274415] text-[#1a2744] border-0' },
-  'MCF': { label: 'MCF', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0' },
-  'MA': { label: 'MA', className: 'bg-[#d4a85315] text-[#d4a853] border-0' },
+  'Professeur': { label: 'Professeur', className: 'bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0' },
+  'MCF': { label: 'MCF', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0' },
+  'MA': { label: 'MA', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0' },
   'Assistant': { label: 'Ass.', className: 'bg-[#8b5cf615] text-[#8b5cf6] border-0' },
   'Vacataire': { label: 'Vac.', className: 'bg-[#ea580c15] text-[#ea580c] border-0' },
   'Non renseigné': { label: 'Non renseigné', className: 'bg-slate-100 text-slate-700 border-0' },
 }
 
 const statutConfig: Record<StatutType, { label: string; className: string; dotColor: string }> = {
-  'Actif': { label: 'Actif', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0', dotColor: '#2d7a4f' },
+  'Actif': { label: 'Actif', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0', dotColor: 'var(--institution-secondary)' },
   'Inactif': { label: 'Inactif', className: 'bg-slate-100 text-slate-700 border-0', dotColor: '#64748b' },
 }
 
@@ -338,7 +338,7 @@ export function TeachersPage() {
     >
       {/* ─── Gradient Header Banner ─────────────────────────────────────────── */}
       <motion.div variants={itemVariants} className="relative overflow-hidden rounded-xl">
-        <div className="absolute inset-0 bg-gradient-to-r from-[#1a2744] via-[#1f3050] to-[#2d7a4f]" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[var(--institution-primary)] via-[var(--institution-primary-light)] to-[var(--institution-secondary)]" />
         <svg className="absolute inset-0 w-full h-full opacity-[0.07]" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <pattern id="teachers-grid" width="40" height="40" patternUnits="userSpaceOnUse">
@@ -383,16 +383,16 @@ export function TeachersPage() {
       {/* ─── 4 Stats Cards ──────────────────────────────────────────────────── */}
       <motion.div variants={itemVariants} className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
-          <Card className="overflow-hidden border-l-4 border-l-[#1a2744]">
-            <div className="h-1 bg-gradient-to-r from-[#1a2744] to-[#2d4a6f]" />
+          <Card className="overflow-hidden border-l-4 border-l-[var(--institution-primary)]">
+            <div className="h-1 bg-gradient-to-r from-[var(--institution-primary)] to-[#2d4a6f]" />
             <CardContent className="p-4">
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Enseignants actifs</p>
-                  <p className="text-xl font-bold text-[#1a2744] mt-1">{countTotal}</p>
+                  <p className="text-xl font-bold text-[var(--institution-primary)] mt-1">{countTotal}</p>
                 </div>
-                <div className="w-10 h-10 rounded-xl bg-[#1a274415] flex items-center justify-center">
-                  <Users className="size-5 text-[#1a2744]" />
+                <div className="w-10 h-10 rounded-xl bg-[var(--institution-primary-15)] flex items-center justify-center">
+                  <Users className="size-5 text-[var(--institution-primary)]" />
                 </div>
               </div>
             </CardContent>
@@ -400,17 +400,17 @@ export function TeachersPage() {
         </motion.div>
 
         <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
-          <Card className="overflow-hidden border-l-4 border-l-[#2d7a4f]">
-            <div className="h-1 bg-gradient-to-r from-[#2d7a4f] to-[#3da66a]" />
+          <Card className="overflow-hidden border-l-4 border-l-[var(--institution-secondary)]">
+            <div className="h-1 bg-gradient-to-r from-[var(--institution-secondary)] to-[var(--institution-secondary-bright)]" />
             <CardContent className="p-4">
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Professeurs</p>
-                  <p className="text-xl font-bold text-[#2d7a4f] mt-1">{countProfs}</p>
+                  <p className="text-xl font-bold text-[var(--institution-secondary)] mt-1">{countProfs}</p>
                   <p className="text-[10px] text-gray-400 mt-1">titulaires</p>
                 </div>
-                <div className="w-10 h-10 rounded-xl bg-[#2d7a4f15] flex items-center justify-center">
-                  <GraduationCap className="size-5 text-[#2d7a4f]" />
+                <div className="w-10 h-10 rounded-xl bg-[var(--institution-secondary-15)] flex items-center justify-center">
+                  <GraduationCap className="size-5 text-[var(--institution-secondary)]" />
                 </div>
               </div>
             </CardContent>
@@ -418,17 +418,17 @@ export function TeachersPage() {
         </motion.div>
 
         <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
-          <Card className="overflow-hidden border-l-4 border-l-[#d4a853]">
-            <div className="h-1 bg-gradient-to-r from-[#d4a853] to-[#e6c477]" />
+          <Card className="overflow-hidden border-l-4 border-l-[var(--institution-accent)]">
+            <div className="h-1 bg-gradient-to-r from-[var(--institution-accent)] to-[var(--institution-accent-light)]" />
             <CardContent className="p-4">
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Charge déclarée (h/sem)</p>
-                  <p className="text-xl font-bold text-[#d4a853] mt-1">{countHeures}h</p>
+                  <p className="text-xl font-bold text-[var(--institution-accent)] mt-1">{countHeures}h</p>
                   <p className="text-[10px] text-gray-600 mt-1">somme des charges enregistrées</p>
                 </div>
-                <div className="w-10 h-10 rounded-xl bg-[#d4a85315] flex items-center justify-center">
-                  <Clock className="size-5 text-[#d4a853]" />
+                <div className="w-10 h-10 rounded-xl bg-[var(--institution-accent-15)] flex items-center justify-center">
+                  <Clock className="size-5 text-[var(--institution-accent)]" />
                 </div>
               </div>
             </CardContent>
@@ -455,8 +455,8 @@ export function TeachersPage() {
 
       {/* ─── Grade Breakdown Card ──────────────────────────────────────────────── */}
       <motion.div variants={itemVariants}>
-        <Card className="border-l-4 border-l-[#1a2744]">
-          <div className="h-1 bg-gradient-to-r from-[#1a2744] via-[#2d7a4f] to-[#d4a853]" />
+        <Card className="border-l-4 border-l-[var(--institution-primary)]">
+          <div className="h-1 bg-gradient-to-r from-[var(--institution-primary)] via-[var(--institution-secondary)] to-[var(--institution-accent)]" />
           <CardContent className="p-4">
             <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">Repartition par grade</p>
             <div className="flex flex-wrap gap-2">
@@ -472,7 +472,7 @@ export function TeachersPage() {
                     <Badge className={`text-[10px] ${config.className}`}>
                       {config.label}
                     </Badge>
-                    <span className="text-sm font-semibold text-[#1a2744]">{count}</span>
+                    <span className="text-sm font-semibold text-[var(--institution-primary)]">{count}</span>
                   </motion.div>
                 )
               })}
@@ -483,7 +483,7 @@ export function TeachersPage() {
 
       {/* ─── Search & Filters ──────────────────────────────────────────────────── */}
       <motion.div variants={itemVariants}>
-        <Card className="border-l-4 border-l-[#2d7a4f]">
+        <Card className="border-l-4 border-l-[var(--institution-secondary)]">
           <CardContent className="p-4">
             <div className="flex flex-col sm:flex-row gap-3">
               <div className="relative flex-1">
@@ -516,19 +516,19 @@ export function TeachersPage() {
                 </SelectContent>
               </Select>
               <div className="flex gap-2 flex-wrap">
-                <Button variant="outline" size="sm" className="text-xs h-9 border-[#1a274430] text-[#1a2744] hover:bg-[#1a274408]" onClick={() => setView('import-export')}>
+                <Button variant="outline" size="sm" className="text-xs h-9 border-[var(--institution-primary-30)] text-[var(--institution-primary)] hover:bg-[var(--institution-primary-08)]" onClick={() => setView('import-export')}>
                   <Upload className="size-3.5 mr-1.5" />
                   Importer
                 </Button>
-                <Button variant="outline" size="sm" className="text-xs h-9 border-[#1a274430] text-[#1a2744] hover:bg-[#1a274408]" onClick={handleExportExcel}>
+                <Button variant="outline" size="sm" className="text-xs h-9 border-[var(--institution-primary-30)] text-[var(--institution-primary)] hover:bg-[var(--institution-primary-08)]" onClick={handleExportExcel}>
                   <FileSpreadsheet className="size-3.5 mr-1.5" />
                   Excel
                 </Button>
-                <Button variant="outline" size="sm" className="text-xs h-9 border-[#1a274430] text-[#1a2744] hover:bg-[#1a274408]" onClick={handleExportPDF}>
+                <Button variant="outline" size="sm" className="text-xs h-9 border-[var(--institution-primary-30)] text-[var(--institution-primary)] hover:bg-[var(--institution-primary-08)]" onClick={handleExportPDF}>
                   <FileText className="size-3.5 mr-1.5" />
                   PDF
                 </Button>
-                <Button size="sm" className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs h-9" onClick={() => setShowNewTeacher(true)}>
+                <Button size="sm" className="bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white text-xs h-9" onClick={() => setShowNewTeacher(true)}>
                   <Plus className="size-3.5 mr-1.5" />
                   Nouvel enseignant
                 </Button>
@@ -540,11 +540,11 @@ export function TeachersPage() {
 
       {/* ─── Teachers Table ────────────────────────────────────────────────────── */}
       <motion.div variants={itemVariants}>
-        <Card style={{ borderTop: '3px solid #2d7a4f' }}>
+        <Card style={{ borderTop: '3px solid var(--institution-secondary)' }}>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-semibold text-[#1a2744]">Repertoire des enseignants</CardTitle>
-              <Badge className="text-[10px] bg-[#2d7a4f15] text-[#2d7a4f] border-0">{filteredTeachers.length} resultats</Badge>
+              <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Repertoire des enseignants</CardTitle>
+              <Badge className="text-[10px] bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0">{filteredTeachers.length} resultats</Badge>
             </div>
           </CardHeader>
           <CardContent className="p-0">
@@ -569,7 +569,7 @@ export function TeachersPage() {
                       return (
                         <motion.tr
                           key={teacher.id}
-                          className={`hover:bg-[#2d7a4f05] transition-colors ${idx % 2 === 1 ? 'bg-gray-50/50' : ''}`}
+                          className={`hover:bg-[var(--institution-secondary-05)] transition-colors ${idx % 2 === 1 ? 'bg-gray-50/50' : ''}`}
                           initial={{ opacity: 0, x: -8 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: idx * 0.03, duration: 0.25 }}
@@ -579,7 +579,7 @@ export function TeachersPage() {
                           </TableCell>
                           <TableCell className="py-2.5">
                             <div>
-                              <p className="text-sm font-medium text-[#1a2744]">{teacher.nom} {teacher.prenom}</p>
+                              <p className="text-sm font-medium text-[var(--institution-primary)]">{teacher.nom} {teacher.prenom}</p>
                               <div className="flex items-center gap-2 mt-0.5">
                                 {teacher.email && (
                                   <span className="text-[10px] text-gray-400 flex items-center gap-0.5">
@@ -604,7 +604,7 @@ export function TeachersPage() {
                             <span className="text-xs text-gray-500">{teacher.specialisation}</span>
                           </TableCell>
                           <TableCell className="py-2.5 text-center">
-                            <span className="text-sm font-semibold text-[#1a2744]">{teacher.heuresSem}</span>
+                            <span className="text-sm font-semibold text-[var(--institution-primary)]">{teacher.heuresSem}</span>
                           </TableCell>
                           <TableCell className="py-2.5">
                             {sConfig ? (
@@ -674,41 +674,41 @@ export function TeachersPage() {
 
       {/* ─── Quick Stats Row ────────────────────────────────────────────────────── */}
       <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="border-l-4 border-l-[#d4a853]">
+        <Card className="border-l-4 border-l-[var(--institution-accent)]">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-[#d4a85315] flex items-center justify-center">
-                <Award className="size-4 text-[#d4a853]" />
+              <div className="w-9 h-9 rounded-lg bg-[var(--institution-accent-15)] flex items-center justify-center">
+                <Award className="size-4 text-[var(--institution-accent)]" />
               </div>
               <div>
                 <p className="text-xs text-gray-500">Moyenne heures/enseignant</p>
-                <p className="text-lg font-bold text-[#1a2744]">{totalEnseignants > 0 ? (totalHeures / totalEnseignants).toFixed(1) : 0}h</p>
+                <p className="text-lg font-bold text-[var(--institution-primary)]">{totalEnseignants > 0 ? (totalHeures / totalEnseignants).toFixed(1) : 0}h</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-l-[#2d7a4f]">
+        <Card className="border-l-4 border-l-[var(--institution-secondary)]">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-[#2d7a4f15] flex items-center justify-center">
-                <UserCheck className="size-4 text-[#2d7a4f]" />
+              <div className="w-9 h-9 rounded-lg bg-[var(--institution-secondary-15)] flex items-center justify-center">
+                <UserCheck className="size-4 text-[var(--institution-secondary)]" />
               </div>
               <div>
                 <p className="text-xs text-gray-500">Taux d&apos;occupation</p>
-                <p className="text-lg font-bold text-[#1a2744]">87%</p>
+                <p className="text-lg font-bold text-[var(--institution-primary)]">87%</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-l-[#1a2744]">
+        <Card className="border-l-4 border-l-[var(--institution-primary)]">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-[#1a274415] flex items-center justify-center">
-                <Building2 className="size-4 text-[#1a2744]" />
+              <div className="w-9 h-9 rounded-lg bg-[var(--institution-primary-15)] flex items-center justify-center">
+                <Building2 className="size-4 text-[var(--institution-primary)]" />
               </div>
               <div>
                 <p className="text-xs text-gray-500">Departements couverts</p>
-                <p className="text-lg font-bold text-[#1a2744]">{departements.length - 1}</p>
+                <p className="text-lg font-bold text-[var(--institution-primary)]">{departements.length - 1}</p>
               </div>
             </div>
           </CardContent>
@@ -719,7 +719,7 @@ export function TeachersPage() {
       <Dialog open={showNewTeacher} onOpenChange={(open) => { setShowNewTeacher(open); if (!open) setNewTeacherForm(emptyNewTeacherForm) }}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle className="text-[#1a2744]">Ajouter un enseignant</DialogTitle>
+            <DialogTitle className="text-[var(--institution-primary)]">Ajouter un enseignant</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-1">
             <div className="grid grid-cols-2 gap-4">
@@ -779,7 +779,7 @@ export function TeachersPage() {
               </div>
             </div>
             <p className="text-[11px] text-gray-400">Un compte de connexion sera cree avec un mot de passe temporaire, affiche une seule fois.</p>
-            <Button className="w-full bg-[#2d7a4f] hover:bg-[#236b40] text-white" disabled={isCreating} onClick={handleCreateTeacher}>
+            <Button className="w-full bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white" disabled={isCreating} onClick={handleCreateTeacher}>
               {isCreating ? 'Creation...' : "Enregistrer l'enseignant"}
             </Button>
           </div>
@@ -795,25 +795,25 @@ export function TeachersPage() {
           {createdCredentials && (
             <div className="space-y-4 py-2">
               <p className="text-sm text-gray-600">
-                Le compte de <span className="font-semibold text-[#1a2744]">{createdCredentials.name}</span> est pret.
+                Le compte de <span className="font-semibold text-[var(--institution-primary)]">{createdCredentials.name}</span> est pret.
                 Transmettez ces identifiants — ce mot de passe ne sera plus jamais affiche.
               </p>
               <div className="rounded-lg border bg-gray-50 p-3 space-y-2">
                 <div>
                   <p className="text-[10px] text-gray-400">Email</p>
-                  <p className="text-sm font-mono text-[#1a2744]">{createdCredentials.email}</p>
+                  <p className="text-sm font-mono text-[var(--institution-primary)]">{createdCredentials.email}</p>
                 </div>
                 <div>
                   <p className="text-[10px] text-gray-400">Mot de passe temporaire</p>
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-mono font-semibold text-[#2d7a4f]">{createdCredentials.tempPassword}</p>
+                    <p className="text-sm font-mono font-semibold text-[var(--institution-secondary)]">{createdCredentials.tempPassword}</p>
                     <Button variant="ghost" size="sm" className="h-6 px-1.5" onClick={copyPassword}>
                       <Copy className="size-3.5" />
                     </Button>
                   </div>
                 </div>
               </div>
-              <p className="text-[11px] text-[#d4a853]">Un changement de mot de passe sera demande a la premiere connexion.</p>
+              <p className="text-[11px] text-[var(--institution-accent)]">Un changement de mot de passe sera demande a la premiere connexion.</p>
               <Button className="w-full" variant="outline" onClick={() => setCreatedCredentials(null)}>Fermer</Button>
             </div>
           )}

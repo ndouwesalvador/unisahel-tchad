@@ -44,6 +44,8 @@ model Tenant {
   arabicCountry          String?
   arabicName             String?
   arabicMinistry         String?
+  headerLinesFr          String?
+  headerLinesAr          String?
   motto                  String?
   address                String?
   city                   String?

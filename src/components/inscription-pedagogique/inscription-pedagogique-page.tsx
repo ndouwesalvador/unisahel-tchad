@@ -117,10 +117,10 @@ const itemVariants = {
 
 function StatusBadge({ statut }: { statut: StudentRegistration['statut'] }) {
   const config: Record<StudentRegistration['statut'], { label: string; className: string }> = {
-    complete: { label: 'Complète', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-[#2d7a4f30]' },
-    'en-cours': { label: 'En cours', className: 'bg-[#d4a85315] text-[#b8922e] border-[#d4a85330]' },
+    complete: { label: 'Complète', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-[var(--institution-secondary-30)]' },
+    'en-cours': { label: 'En cours', className: 'bg-[var(--institution-accent-15)] text-[#b8922e] border-[var(--institution-accent-30)]' },
     'non-commencee': { label: 'Non commencée', className: 'bg-gray-100 text-gray-500 border-gray-200' },
-    'en-attente': { label: 'En attente de validation', className: 'bg-[#1a274410] text-[#1a2744] border-[#1a274420]' },
+    'en-attente': { label: 'En attente de validation', className: 'bg-[var(--institution-primary-10)] text-[var(--institution-primary)] border-[var(--institution-primary-20)]' },
   }
   const c = config[statut]
   return (
@@ -284,14 +284,14 @@ export function InscriptionPedagogiquePage() {
       title: 'Inscriptions completes',
       value: String(stats?.completes ?? 0),
       icon: CheckSquare,
-      gradient: 'from-[#2d7a4f] to-[#1a5a38]',
+      gradient: 'from-[var(--institution-secondary)] to-[#1a5a38]',
       iconBg: 'bg-white/20',
     },
     {
       title: 'En cours',
       value: String(stats?.enCours ?? 0),
       icon: Clock,
-      gradient: 'from-[#d4a853] to-[#b8922e]',
+      gradient: 'from-[var(--institution-accent)] to-[#b8922e]',
       iconBg: 'bg-white/20',
     },
     {
@@ -305,7 +305,7 @@ export function InscriptionPedagogiquePage() {
       title: 'Taux de completion',
       value: `${stats?.completionRate ?? 0}%`,
       icon: TrendingUp,
-      gradient: 'from-[#1a2744] to-[#2d3e5e]',
+      gradient: 'from-[var(--institution-primary)] to-[#2d3e5e]',
       iconBg: 'bg-white/20',
       hasProgress: true,
       progressValue: stats?.completionRate ?? 0,
@@ -323,8 +323,8 @@ export function InscriptionPedagogiquePage() {
         {/* ─── Page Header ─────────────────────────────────────────────────── */}
         <motion.div variants={itemVariants} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-[#1a2744] flex items-center gap-2">
-              <BookOpenCheck className="size-6 text-[#2d7a4f]" />
+            <h1 className="text-2xl font-bold text-[var(--institution-primary)] flex items-center gap-2">
+              <BookOpenCheck className="size-6 text-[var(--institution-secondary)]" />
               Inscription pedagogique
             </h1>
             <p className="text-sm text-gray-500 mt-1">
@@ -332,7 +332,7 @@ export function InscriptionPedagogiquePage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-xs border-[#2d7a4f] text-[#2d7a4f] bg-[#2d7a4f08]">
+            <Badge variant="outline" className="text-xs border-[var(--institution-secondary)] text-[var(--institution-secondary)] bg-[var(--institution-secondary-08)]">
               {academicYearName}
             </Badge>
           </div>
@@ -370,21 +370,21 @@ export function InscriptionPedagogiquePage() {
 
         {/* ─── Registration Period Card ─────────────────────────────────────── */}
         <motion.div variants={itemVariants}>
-          <Card className="border-l-4 border-l-[#2d7a4f] shadow-sm">
+          <Card className="border-l-4 border-l-[var(--institution-secondary)] shadow-sm">
             <CardHeader className="pb-3">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-[#2d7a4f10]">
-                    <Calendar className="size-5 text-[#2d7a4f]" />
+                  <div className="p-2 rounded-lg bg-[var(--institution-secondary-10)]">
+                    <Calendar className="size-5 text-[var(--institution-secondary)]" />
                   </div>
                   <div>
-                    <CardTitle className="text-base text-[#1a2744]">Periode d&apos;inscription</CardTitle>
+                    <CardTitle className="text-base text-[var(--institution-primary)]">Periode d&apos;inscription</CardTitle>
                     <p className="text-sm text-gray-500 mt-0.5">Année académique : {academicYearName}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   {registrationOpen ? (
-                    <Badge className="bg-[#2d7a4f] text-white border-0 text-xs">En cours</Badge>
+                    <Badge className="bg-[var(--institution-secondary)] text-white border-0 text-xs">En cours</Badge>
                   ) : (
                     <Badge className="bg-gray-500 text-white border-0 text-xs">Cloturee</Badge>
                   )}
@@ -396,7 +396,7 @@ export function InscriptionPedagogiquePage() {
                 {registrationOpen ? (
                   <Button
                     size="sm"
-                    className="bg-[#d4a853] hover:bg-[#c49a48] text-white text-xs"
+                    className="bg-[var(--institution-accent)] hover:bg-[#c49a48] text-white text-xs"
                     onClick={() => handleTogglePeriod(false)}
                     disabled={isTogglingPeriod}
                   >
@@ -405,7 +405,7 @@ export function InscriptionPedagogiquePage() {
                 ) : (
                   <Button
                     size="sm"
-                    className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs"
+                    className="bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white text-xs"
                     onClick={() => handleTogglePeriod(true)}
                     disabled={isTogglingPeriod}
                   >
@@ -423,8 +423,8 @@ export function InscriptionPedagogiquePage() {
             <CardHeader className="pb-3">
               <div className="flex flex-col gap-4">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-base text-[#1a2744] flex items-center gap-2">
-                    <Users className="size-5 text-[#2d7a4f]" />
+                  <CardTitle className="text-base text-[var(--institution-primary)] flex items-center gap-2">
+                    <Users className="size-5 text-[var(--institution-secondary)]" />
                     Statut des inscriptions
                   </CardTitle>
                   <Badge variant="outline" className="text-xs text-gray-500">
@@ -485,13 +485,13 @@ export function InscriptionPedagogiquePage() {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-gray-50/80">
-                      <TableHead className="text-xs font-semibold text-[#1a2744]">Étudiant</TableHead>
-                      <TableHead className="text-xs font-semibold text-[#1a2744]">Matricule</TableHead>
-                      <TableHead className="text-xs font-semibold text-[#1a2744] hidden md:table-cell">Filiere</TableHead>
-                      <TableHead className="text-xs font-semibold text-[#1a2744] hidden sm:table-cell">Niveau</TableHead>
-                      <TableHead className="text-xs font-semibold text-[#1a2744]">UE inscrites</TableHead>
-                      <TableHead className="text-xs font-semibold text-[#1a2744]">Statut</TableHead>
-                      <TableHead className="text-xs font-semibold text-[#1a2744] text-right">Actions</TableHead>
+                      <TableHead className="text-xs font-semibold text-[var(--institution-primary)]">Étudiant</TableHead>
+                      <TableHead className="text-xs font-semibold text-[var(--institution-primary)]">Matricule</TableHead>
+                      <TableHead className="text-xs font-semibold text-[var(--institution-primary)] hidden md:table-cell">Filiere</TableHead>
+                      <TableHead className="text-xs font-semibold text-[var(--institution-primary)] hidden sm:table-cell">Niveau</TableHead>
+                      <TableHead className="text-xs font-semibold text-[var(--institution-primary)]">UE inscrites</TableHead>
+                      <TableHead className="text-xs font-semibold text-[var(--institution-primary)]">Statut</TableHead>
+                      <TableHead className="text-xs font-semibold text-[var(--institution-primary)] text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -510,11 +510,11 @@ export function InscriptionPedagogiquePage() {
                       >
                         <TableCell className="py-2.5">
                           <div className="flex items-center gap-2">
-                            <div className="size-8 rounded-full bg-gradient-to-br from-[#1a2744] to-[#2d3e5e] flex items-center justify-center text-white text-xs font-semibold shrink-0">
+                            <div className="size-8 rounded-full bg-gradient-to-br from-[var(--institution-primary)] to-[#2d3e5e] flex items-center justify-center text-white text-xs font-semibold shrink-0">
                               {student.name.split(' ').map((n) => n[0]).join('')}
                             </div>
                             <div className="min-w-0">
-                              <p className="text-sm font-medium text-[#1a2744] truncate">{student.name}</p>
+                              <p className="text-sm font-medium text-[var(--institution-primary)] truncate">{student.name}</p>
                               {student.outsideLevelRegistrations > 0 && (
                                 <p className="flex items-center gap-1 text-[11px] font-medium text-amber-800">
                                   <AlertTriangle className="size-3 shrink-0" />
@@ -523,8 +523,8 @@ export function InscriptionPedagogiquePage() {
                               )}
                               {student.hasDebt && (
                                 <div className="flex items-center gap-1">
-                                  <AlertTriangle className="size-3 text-[#d4a853]" />
-                                  <span className="text-[10px] text-[#d4a853]">Paiement en attente</span>
+                                  <AlertTriangle className="size-3 text-[var(--institution-accent)]" />
+                                  <span className="text-[10px] text-[var(--institution-accent)]">Paiement en attente</span>
                                 </div>
                               )}
                             </div>
@@ -539,7 +539,7 @@ export function InscriptionPedagogiquePage() {
                           <div className="flex items-center gap-1.5">
                             <div className="w-12 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                               <div
-                                className="h-full bg-[#2d7a4f] rounded-full transition-all"
+                                className="h-full bg-[var(--institution-secondary)] rounded-full transition-all"
                                 style={{ width: `${(student.ueInscrites / Math.max(student.totalUe, 1)) * 100}%` }}
                               />
                             </div>
@@ -558,7 +558,7 @@ export function InscriptionPedagogiquePage() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-44">
                               <DropdownMenuItem className="text-xs cursor-pointer" onClick={() => prepareRegistration(student.id)}>
-                                <Pencil className="size-3.5 mr-2 text-[#2d7a4f]" />
+                                <Pencil className="size-3.5 mr-2 text-[var(--institution-secondary)]" />
                                 Inscrire / modifier les UE
                               </DropdownMenuItem>
                             </DropdownMenuContent>
@@ -587,14 +587,14 @@ export function InscriptionPedagogiquePage() {
             <Card className="shadow-sm" id="ue-registration-card">
               <CardHeader className="pb-3">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                  <CardTitle className="text-base text-[#1a2744] flex items-center gap-2">
-                    <GraduationCap className="size-5 text-[#2d7a4f]" />
+                  <CardTitle className="text-base text-[var(--institution-primary)] flex items-center gap-2">
+                    <GraduationCap className="size-5 text-[var(--institution-secondary)]" />
                     Inscription aux UE
                   </CardTitle>
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="text-xs text-gray-500 hover:text-[#1a2744]"
+                    className="text-xs text-gray-500 hover:text-[var(--institution-primary)]"
                     onClick={() => setUeSectionExpanded(!ueSectionExpanded)}
                   >
                     {ueSectionExpanded ? 'Reduire' : 'Etendre'}
@@ -637,13 +637,13 @@ export function InscriptionPedagogiquePage() {
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
-                    className="bg-[#2d7a4f08] border border-[#2d7a4f20] rounded-lg p-3 flex flex-col sm:flex-row sm:items-center gap-2 text-sm"
+                    className="bg-[var(--institution-secondary-08)] border border-[var(--institution-secondary-20)] rounded-lg p-3 flex flex-col sm:flex-row sm:items-center gap-2 text-sm"
                   >
                     <div className="flex items-center gap-2">
-                      <div className="size-7 rounded-full bg-[#1a2744] flex items-center justify-center text-white text-[10px] font-semibold">
+                      <div className="size-7 rounded-full bg-[var(--institution-primary)] flex items-center justify-center text-white text-[10px] font-semibold">
                         {students.find((s) => s.id === selectedStudent)?.name.split(' ').map((n) => n[0]).join('')}
                       </div>
-                      <span className="font-medium text-[#1a2744]">
+                      <span className="font-medium text-[var(--institution-primary)]">
                         {students.find((s) => s.id === selectedStudent)?.name}
                       </span>
                     </div>
@@ -671,9 +671,9 @@ export function InscriptionPedagogiquePage() {
                           whileHover={{ scale: 1.01 }}
                           className={`relative border rounded-lg p-3 transition-all cursor-pointer ${
                             isSelected
-                              ? 'border-[#2d7a4f] bg-[#2d7a4f08] shadow-sm'
+                              ? 'border-[var(--institution-secondary)] bg-[var(--institution-secondary-08)] shadow-sm'
                               : 'border-gray-200 bg-white hover:border-gray-300'
-                          } ${isObligatoire ? 'ring-1 ring-[#2d7a4f10]' : ''}`}
+                          } ${isObligatoire ? 'ring-1 ring-[var(--institution-secondary-10)]' : ''}`}
                           onClick={() => handleUeToggle(ue.id, ue.type)}
                         >
                           <div className="flex items-start gap-2.5">
@@ -682,20 +682,20 @@ export function InscriptionPedagogiquePage() {
                                 checked={isSelected}
                                 disabled={isObligatoire}
                                 onCheckedChange={() => handleUeToggle(ue.id, ue.type)}
-                                className={isObligatoire ? 'data-[state=checked]:bg-[#2d7a4f] data-[state=checked]:border-[#2d7a4f]' : ''}
+                                className={isObligatoire ? 'data-[state=checked]:bg-[var(--institution-secondary)] data-[state=checked]:border-[var(--institution-secondary)]' : ''}
                               />
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
-                                <span className="text-xs font-mono font-semibold text-[#1a2744] bg-[#1a274410] px-1.5 py-0.5 rounded">
+                                <span className="text-xs font-mono font-semibold text-[var(--institution-primary)] bg-[var(--institution-primary-10)] px-1.5 py-0.5 rounded">
                                   {ue.code}
                                 </span>
                                 {isObligatoire ? (
-                                  <Badge className="text-[9px] px-1.5 py-0 bg-[#2d7a4f] text-white border-0">
+                                  <Badge className="text-[9px] px-1.5 py-0 bg-[var(--institution-secondary)] text-white border-0">
                                     Obligatoire
                                   </Badge>
                                 ) : (
-                                  <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-[#d4a853] text-[#b8922e] bg-[#d4a85308]">
+                                  <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-[var(--institution-accent)] text-[#b8922e] bg-[var(--institution-accent-08)]">
                                     Optionnelle
                                   </Badge>
                                 )}
@@ -715,7 +715,7 @@ export function InscriptionPedagogiquePage() {
                             {isObligatoire && (
                               <Tooltip>
                                 <TooltipTrigger>
-                                  <Lock className="size-3.5 text-[#2d7a4f] shrink-0" />
+                                  <Lock className="size-3.5 text-[var(--institution-secondary)] shrink-0" />
                                 </TooltipTrigger>
                                 <TooltipContent>
                                   <p className="text-xs">UE obligatoire - selection automatique</p>
@@ -732,10 +732,10 @@ export function InscriptionPedagogiquePage() {
                 {/* Summary Panel */}
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-semibold text-[#1a2744]">Resume de l&apos;inscription</span>
+                    <span className="text-sm font-semibold text-[var(--institution-primary)]">Resume de l&apos;inscription</span>
                     <div className="flex items-center gap-1">
-                      <Award className="size-4 text-[#2d7a4f]" />
-                      <span className={`text-lg font-bold ${selectedCredits >= minCredits && selectedCredits <= maxCredits ? 'text-[#2d7a4f]' : 'text-[#d4a853]'}`}>
+                      <Award className="size-4 text-[var(--institution-secondary)]" />
+                      <span className={`text-lg font-bold ${selectedCredits >= minCredits && selectedCredits <= maxCredits ? 'text-[var(--institution-secondary)]' : 'text-[var(--institution-accent)]'}`}>
                         {selectedCredits} credits
                       </span>
                     </div>
@@ -743,11 +743,11 @@ export function InscriptionPedagogiquePage() {
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
                     <div className="bg-white rounded-lg p-2 border border-gray-100">
                       <p className="text-[10px] text-gray-400 mb-0.5">Obligatoires</p>
-                      <p className="text-sm font-bold text-[#2d7a4f]">{compulsoryCredits}</p>
+                      <p className="text-sm font-bold text-[var(--institution-secondary)]">{compulsoryCredits}</p>
                     </div>
                     <div className="bg-white rounded-lg p-2 border border-gray-100">
                       <p className="text-[10px] text-gray-400 mb-0.5">Optionnelles</p>
-                      <p className="text-sm font-bold text-[#d4a853]">{optionalCreditsSelected}</p>
+                      <p className="text-sm font-bold text-[var(--institution-accent)]">{optionalCreditsSelected}</p>
                     </div>
                     <div className="bg-white rounded-lg p-2 border border-gray-100">
                       <p className="text-[10px] text-gray-400 mb-0.5">Minimum requis</p>
@@ -761,7 +761,7 @@ export function InscriptionPedagogiquePage() {
                   {/* Warnings */}
                   <div className="space-y-1.5">
                     {creditsRemaining > 0 && (
-                      <div className="flex items-center gap-2 text-xs bg-[#d4a85310] border border-[#d4a85330] text-[#b8922e] rounded-md px-3 py-2">
+                      <div className="flex items-center gap-2 text-xs bg-[var(--institution-accent-10)] border border-[var(--institution-accent-30)] text-[#b8922e] rounded-md px-3 py-2">
                         <AlertTriangle className="size-3.5 shrink-0" />
                         <span>Il manque {creditsRemaining} credits pour atteindre le minimum de {minCredits} credits</span>
                       </div>
@@ -773,7 +773,7 @@ export function InscriptionPedagogiquePage() {
                       </div>
                     )}
                     {selectedCredits >= minCredits && selectedCredits <= maxCredits && (
-                      <div className="flex items-center gap-2 text-xs bg-[#2d7a4f10] border border-[#2d7a4f30] text-[#2d7a4f] rounded-md px-3 py-2">
+                      <div className="flex items-center gap-2 text-xs bg-[var(--institution-secondary-10)] border border-[var(--institution-secondary-30)] text-[var(--institution-secondary)] rounded-md px-3 py-2">
                         <CheckCircle2 className="size-3.5 shrink-0" />
                   <span>Nombre de credits conforme aux regles de l&apos;institution</span>
                       </div>
@@ -782,7 +782,7 @@ export function InscriptionPedagogiquePage() {
                   {/* Validate Button */}
                   <div className="flex justify-end pt-1">
                     <Button
-                      className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-sm"
+                      className="bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white text-sm"
                       disabled={!selectedStudent || selectedCredits < minCredits || selectedCredits > maxCredits || isSubmittingRegistration || !registrationOpen}
                       onClick={handleValidateRegistration}
                     >
@@ -797,10 +797,10 @@ export function InscriptionPedagogiquePage() {
 
           {/* Credit Rules Card (1 col) */}
           <div className="space-y-4">
-            <Card className="shadow-sm border-l-4 border-l-[#1a2744]">
+            <Card className="shadow-sm border-l-4 border-l-[var(--institution-primary)]">
               <CardHeader className="pb-3">
-                <CardTitle className="text-base text-[#1a2744] flex items-center gap-2">
-                  <Award className="size-5 text-[#d4a853]" />
+                <CardTitle className="text-base text-[var(--institution-primary)] flex items-center gap-2">
+                  <Award className="size-5 text-[var(--institution-accent)]" />
                   Regles de crédits
                 </CardTitle>
               </CardHeader>
@@ -809,11 +809,11 @@ export function InscriptionPedagogiquePage() {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-gray-500">Credits minimum / semestre</span>
-                    <span className="text-sm font-bold text-[#2d7a4f]">{minCredits}</span>
+                    <span className="text-sm font-bold text-[var(--institution-secondary)]">{minCredits}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-gray-500">Credits maximum / semestre</span>
-                    <span className="text-sm font-bold text-[#1a2744]">{maxCredits}</span>
+                    <span className="text-sm font-bold text-[var(--institution-primary)]">{maxCredits}</span>
                   </div>
                 </div>
 
@@ -823,25 +823,25 @@ export function InscriptionPedagogiquePage() {
                   <div className="relative h-8 bg-gray-100 rounded-lg overflow-hidden">
                     <div className="absolute inset-0 flex">
                       <div className="w-[7/14] bg-gradient-to-r from-red-100 to-red-50 border-r border-red-200" style={{ width: `${(minCredits / creditScale) * 100}%` }} />
-                      <div className="bg-gradient-to-r from-[#2d7a4f20] to-[#2d7a4f30]" style={{ width: `${((maxCredits - minCredits) / creditScale) * 100}%` }} />
+                      <div className="bg-gradient-to-r from-[var(--institution-secondary-20)] to-[var(--institution-secondary-30)]" style={{ width: `${((maxCredits - minCredits) / creditScale) * 100}%` }} />
                       <div className="flex-1 bg-gradient-to-r from-red-50 to-red-100" />
                     </div>
                     {/* Indicator for current selection */}
                     <motion.div
-                      className="absolute top-0 bottom-0 w-1 bg-[#1a2744] rounded-full shadow-md"
+                      className="absolute top-0 bottom-0 w-1 bg-[var(--institution-primary)] rounded-full shadow-md"
                       animate={{ left: `${Math.min(100, (selectedCredits / creditScale) * 100)}%` }}
                       transition={{ type: 'spring', stiffness: 200, damping: 20 }}
                     />
                     <div className="absolute inset-0 flex items-center justify-between px-2 text-[9px] font-medium text-gray-500">
                       <span>0</span>
-                      <span className="text-[#2d7a4f]">{minCredits}</span>
-                      <span className="text-[#1a2744]">{maxCredits}</span>
+                      <span className="text-[var(--institution-secondary)]">{minCredits}</span>
+                      <span className="text-[var(--institution-primary)]">{maxCredits}</span>
                       <span>{creditScale}</span>
                     </div>
                   </div>
                   <div className="flex justify-between text-[9px] text-gray-400">
                     <span>Insuffisant</span>
-                    <span className="text-[#2d7a4f]">Zone conforme</span>
+                    <span className="text-[var(--institution-secondary)]">Zone conforme</span>
                     <span>Exces</span>
                   </div>
                 </div>
@@ -849,36 +849,36 @@ export function InscriptionPedagogiquePage() {
                 {/* Compensation rules */}
                 <div className="space-y-2 pt-2 border-t border-gray-100">
                   <span className="text-xs font-medium text-gray-600 flex items-center gap-1.5">
-                    <Info className="size-3.5 text-[#1a2744]" />
+                    <Info className="size-3.5 text-[var(--institution-primary)]" />
                     Regles de compensation
                   </span>
                   <ul className="space-y-1.5 text-xs text-gray-500">
                     <li className="flex items-start gap-2">
-                      <CheckCircle2 className="size-3.5 text-[#2d7a4f] shrink-0 mt-0.5" />
+                      <CheckCircle2 className="size-3.5 text-[var(--institution-secondary)] shrink-0 mt-0.5" />
                     <span>Compensation {rules.compensationEnabled ? 'active' : 'desactivee'} dans les parametres de l&apos;institution</span>
                     </li>
                     <li className="flex items-start gap-2">
-                      <CheckCircle2 className="size-3.5 text-[#2d7a4f] shrink-0 mt-0.5" />
+                      <CheckCircle2 className="size-3.5 text-[var(--institution-secondary)] shrink-0 mt-0.5" />
                     <span>Seuil de validation : {rules.passingGrade}/20</span>
                     </li>
                     <li className="flex items-start gap-2">
-                      <CheckCircle2 className="size-3.5 text-[#2d7a4f] shrink-0 mt-0.5" />
+                      <CheckCircle2 className="size-3.5 text-[var(--institution-secondary)] shrink-0 mt-0.5" />
                     <span>Note eliminatoire : {rules.eliminationGrade}/20</span>
                     </li>
                   </ul>
                 </div>
 
                 {/* Pending payments warning */}
-                <div className="bg-[#d4a85310] border border-[#d4a85330] rounded-lg p-3 space-y-1.5">
+                <div className="bg-[var(--institution-accent-10)] border border-[var(--institution-accent-30)] rounded-lg p-3 space-y-1.5">
                   <div className="flex items-center gap-2">
-                    <AlertTriangle className="size-4 text-[#d4a853]" />
+                    <AlertTriangle className="size-4 text-[var(--institution-accent)]" />
                     <span className="text-xs font-semibold text-[#b8922e]">Paiements en attente</span>
                   </div>
                   <p className="text-[11px] text-[#b8922e] leading-relaxed">
                     Les étudiants avec un paiement en attente restent visibles, mais leur dossier doit être régularisé avant validation administrative finale.
                   </p>
                   <div className="flex items-center gap-2 pt-1">
-                    <Badge variant="outline" className="text-[10px] border-[#d4a853] text-[#b8922e] bg-[#d4a85308]">
+                    <Badge variant="outline" className="text-[10px] border-[var(--institution-accent)] text-[#b8922e] bg-[var(--institution-accent-08)]">
                       {stats?.pendingPayments ?? 0} étudiant(s) concerné(s)
                     </Badge>
                   </div>
@@ -891,16 +891,16 @@ export function InscriptionPedagogiquePage() {
                     <div>
                       <div className="flex justify-between text-[11px] mb-1">
                         <span className="text-gray-500">UE Obligatoires</span>
-                        <span className="font-medium text-[#2d7a4f]">{compulsoryCredits} credits</span>
+                        <span className="font-medium text-[var(--institution-secondary)]">{compulsoryCredits} credits</span>
                       </div>
-                      <Progress value={maxCredits > 0 ? (compulsoryCredits / maxCredits) * 100 : 0} className="h-1.5 [&>div]:bg-[#2d7a4f]" />
+                      <Progress value={maxCredits > 0 ? (compulsoryCredits / maxCredits) * 100 : 0} className="h-1.5 [&>div]:bg-[var(--institution-secondary)]" />
                     </div>
                     <div>
                       <div className="flex justify-between text-[11px] mb-1">
                         <span className="text-gray-500">UE Optionnelles</span>
-                        <span className="font-medium text-[#d4a853]">{optionalCreditsSelected} credits</span>
+                        <span className="font-medium text-[var(--institution-accent)]">{optionalCreditsSelected} credits</span>
                       </div>
-                      <Progress value={Math.max(0, maxCredits - compulsoryCredits) > 0 ? (optionalCreditsSelected / (maxCredits - compulsoryCredits)) * 100 : 0} className="h-1.5 [&>div]:bg-[#d4a853]" />
+                      <Progress value={Math.max(0, maxCredits - compulsoryCredits) > 0 ? (optionalCreditsSelected / (maxCredits - compulsoryCredits)) * 100 : 0} className="h-1.5 [&>div]:bg-[var(--institution-accent)]" />
                     </div>
                   </div>
                 </div>

@@ -116,7 +116,7 @@ export function ReportsPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-[#1a2744]">Rapports et analyses</h1>
+          <h1 className="text-2xl font-bold text-[var(--institution-primary)]">Rapports et analyses</h1>
           <p className="text-sm text-gray-600">Synthèse calculée depuis les données de l’institution, toutes années confondues.</p>
           <p className="text-xs text-gray-500">Le taux ci-dessous mesure les notes saisies au-dessus du seuil, pas la réussite définitive d’un jury.</p>
         </div>
@@ -129,7 +129,7 @@ export function ReportsPage() {
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {cards.map(([label, value]) => (
-          <Card key={label}><CardContent className="p-5"><p className="text-sm text-gray-600">{label}</p><p className="mt-2 text-2xl font-bold text-[#1a2744]">{value}</p></CardContent></Card>
+          <Card key={label}><CardContent className="p-5"><p className="text-sm text-gray-600">{label}</p><p className="mt-2 text-2xl font-bold text-[var(--institution-primary)]">{value}</p></CardContent></Card>
         ))}
       </div>
 

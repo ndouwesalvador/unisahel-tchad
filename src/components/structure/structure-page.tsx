@@ -206,9 +206,9 @@ const AUDIT_REFERENCE_LABELS: Record<string, string> = {
 
 const FACULTY_ICONS: React.ElementType[] = [Scale, FlaskConical, PenTool, Stethoscope, TrendingUp, Building2, Landmark, Globe]
 const FACULTY_GRADIENTS: [string, string][] = [
-  ['#1a2744', '#2d4a7a'],
-  ['#2d7a4f', '#3da66a'],
-  ['#d4a853', '#e8c97a'],
+  ['var(--institution-primary)', '#2d4a7a'],
+  ['var(--institution-secondary)', 'var(--institution-secondary-bright)'],
+  ['var(--institution-accent)', '#e8c97a'],
   ['#5b8c5a', '#7ab87a'],
   ['#8b5e3c', '#b87a50'],
 ]
@@ -285,7 +285,7 @@ function buildOrgTree(faculties: Faculty[], institutionName: string): OrgNode {
     name: institutionName,
     type: 'institution',
     icon: Building2,
-    color: '#1a2744',
+    color: 'var(--institution-primary)',
     count: faculties.length,
     children: faculties.map(f => ({
       id: f.id,
@@ -301,7 +301,7 @@ function buildOrgTree(faculties: Faculty[], institutionName: string): OrgNode {
         type: 'departement',
         apiType: 'department' as const,
         icon: d.icon,
-        color: '#2d7a4f',
+        color: 'var(--institution-secondary)',
         count: d.programs.length,
         children: d.programs.map(p => ({
           id: p.id,
@@ -309,7 +309,7 @@ function buildOrgTree(faculties: Faculty[], institutionName: string): OrgNode {
           type: 'filiere',
           apiType: 'program' as const,
           icon: GraduationCap,
-          color: '#d4a853',
+          color: 'var(--institution-accent)',
         })),
       })),
     })),
@@ -384,7 +384,7 @@ function NodeActions({ apiType, id, name }: { apiType: 'faculty' | 'department' 
         </DialogTrigger>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-[#1a2744]">Renommer</DialogTitle>
+            <DialogTitle className="text-[var(--institution-primary)]">Renommer</DialogTitle>
             <DialogDescription>Modifier le nom de {API_TYPE_LABEL[apiType]}.</DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-2">
@@ -393,7 +393,7 @@ function NodeActions({ apiType, id, name }: { apiType: 'faculty' | 'department' 
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditOpen(false)} className="text-xs" disabled={busy}>Annuler</Button>
-            <Button className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs" onClick={doEdit} disabled={busy}>
+            <Button className="bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white text-xs" onClick={doEdit} disabled={busy}>
               {busy ? 'Enregistrement…' : 'Enregistrer'}
             </Button>
           </DialogFooter>
@@ -408,7 +408,7 @@ function NodeActions({ apiType, id, name }: { apiType: 'faculty' | 'department' 
         </DialogTrigger>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-[#1a2744]">Supprimer {API_TYPE_LABEL[apiType]}</DialogTitle>
+            <DialogTitle className="text-[var(--institution-primary)]">Supprimer {API_TYPE_LABEL[apiType]}</DialogTitle>
             <DialogDescription>
               « {name} » sera supprimé définitivement uniquement s’il ne possède aucun sous-élément ni rattachement académique. Cette action est irréversible. Continuer ?
             </DialogDescription>
@@ -460,7 +460,7 @@ function OrgNodeComponent({ node, depth = 0 }: { node: OrgNode; depth?: number }
 
         {/* Name */}
         <div className="flex-1 min-w-0">
-          <span className={`text-sm ${depth === 0 ? 'font-bold' : 'font-medium'} text-[#1a2744] truncate`}>
+          <span className={`text-sm ${depth === 0 ? 'font-bold' : 'font-medium'} text-[var(--institution-primary)] truncate`}>
             {node.name}
           </span>
         </div>
@@ -549,7 +549,7 @@ function FacultyCard({ faculty, index }: { faculty: Faculty; index: number }) {
               <Icon className="size-6" style={{ color: faculty.gradientFrom }} />
             </div>
             <div className="flex-1 min-w-0">
-              <CardTitle className="text-sm font-bold text-[#1a2744] leading-tight">
+              <CardTitle className="text-sm font-bold text-[var(--institution-primary)] leading-tight">
                 {faculty.name}
               </CardTitle>
               <p className="text-xs text-gray-400 mt-0.5">Doyen : {faculty.dean}</p>
@@ -570,15 +570,15 @@ function FacultyCard({ faculty, index }: { faculty: Faculty; index: number }) {
           {/* Stats Row */}
           <div className="grid grid-cols-4 gap-2 mb-3">
             <div className="text-center p-2 rounded-lg bg-gray-50">
-              <p className="text-lg font-bold text-[#1a2744]">{faculty.departments.length}</p>
+              <p className="text-lg font-bold text-[var(--institution-primary)]">{faculty.departments.length}</p>
               <p className="text-[10px] text-gray-400">Départements</p>
             </div>
             <div className="text-center p-2 rounded-lg bg-gray-50">
-              <p className="text-lg font-bold text-[#2d7a4f]">{totalPrograms}</p>
+              <p className="text-lg font-bold text-[var(--institution-secondary)]">{totalPrograms}</p>
               <p className="text-[10px] text-gray-400">Programmes</p>
             </div>
             <div className="text-center p-2 rounded-lg bg-gray-50">
-              <p className="text-lg font-bold text-[#d4a853]">{faculty.students}</p>
+              <p className="text-lg font-bold text-[var(--institution-accent)]">{faculty.students}</p>
               <p className="text-[10px] text-gray-400">Étudiants</p>
             </div>
             <div className="text-center p-2 rounded-lg bg-gray-50">
@@ -598,7 +598,7 @@ function FacultyCard({ faculty, index }: { faculty: Faculty; index: number }) {
                 className="overflow-hidden"
               >
                 <div className="border-t border-gray-100 pt-3 space-y-2">
-                  <p className="text-xs font-semibold text-[#1a2744] mb-2">Départements</p>
+                  <p className="text-xs font-semibold text-[var(--institution-primary)] mb-2">Départements</p>
                   {faculty.departments.map(dept => {
                     const DeptIcon = dept.icon
                     return (
@@ -613,7 +613,7 @@ function FacultyCard({ faculty, index }: { faculty: Faculty; index: number }) {
                           <DeptIcon className="size-3.5" style={{ color: faculty.gradientFrom }} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium text-[#1a2744] truncate">{dept.name}</p>
+                          <p className="text-xs font-medium text-[var(--institution-primary)] truncate">{dept.name}</p>
                           <div className="flex items-center gap-2 mt-0.5">
                             <span className="text-[10px] text-gray-400">
                               {dept.programs.length} filière{dept.programs.length > 1 ? 's' : ''}
@@ -736,7 +736,7 @@ function AddEntityDialog({
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-[#1a2744]">{title}</DialogTitle>
+          <DialogTitle className="text-[var(--institution-primary)]">{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
@@ -771,7 +771,7 @@ function AddEntityDialog({
             Annuler
           </Button>
           <Button
-            className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs"
+            className="bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white text-xs"
             onClick={handleSubmit}
             disabled={submitting}
           >
@@ -842,9 +842,9 @@ export function StructurePage() {
   )
 
   const headerStats = [
-    { label: 'Facultés', value: faculties.length, icon: Building2, color: '#1a2744' },
-    { label: 'Départements', value: totalDepartments, icon: BookOpen, color: '#2d7a4f' },
-    { label: 'Programmes', value: totalPrograms, icon: GraduationCap, color: '#d4a853' },
+    { label: 'Facultés', value: faculties.length, icon: Building2, color: 'var(--institution-primary)' },
+    { label: 'Départements', value: totalDepartments, icon: BookOpen, color: 'var(--institution-secondary)' },
+    { label: 'Programmes', value: totalPrograms, icon: GraduationCap, color: 'var(--institution-accent)' },
   ]
 
   // Flat option lists (each carrying the parent ids it needs) built from the
@@ -908,7 +908,7 @@ export function StructurePage() {
         className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
       >
         <div>
-          <h1 className="text-2xl font-bold text-[#1a2744]">Structure académique</h1>
+          <h1 className="text-2xl font-bold text-[var(--institution-primary)]">Structure académique</h1>
           <p className="text-sm text-gray-500 mt-0.5">
             Organisation de l&apos;établissement : Facultés, Départements, Filières
           </p>
@@ -1129,7 +1129,7 @@ export function StructurePage() {
                   <stat.icon className="size-6" style={{ color: stat.color }} />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-[#1a2744]">{stat.value}</p>
+                  <p className="text-2xl font-bold text-[var(--institution-primary)]">{stat.value}</p>
                   <p className="text-xs text-gray-500">{stat.label}</p>
                 </div>
               </div>
@@ -1149,7 +1149,7 @@ export function StructurePage() {
           <Button
             variant={viewMode === 'cards' ? 'default' : 'ghost'}
             size="sm"
-            className={`text-xs h-8 ${viewMode === 'cards' ? 'bg-white shadow-sm text-[#1a2744]' : 'text-gray-500'}`}
+            className={`text-xs h-8 ${viewMode === 'cards' ? 'bg-white shadow-sm text-[var(--institution-primary)]' : 'text-gray-500'}`}
             onClick={() => setViewMode('cards')}
           >
             <LayoutGrid className="size-3.5 mr-1" />
@@ -1158,7 +1158,7 @@ export function StructurePage() {
           <Button
             variant={viewMode === 'tree' ? 'default' : 'ghost'}
             size="sm"
-            className={`text-xs h-8 ${viewMode === 'tree' ? 'bg-white shadow-sm text-[#1a2744]' : 'text-gray-500'}`}
+            className={`text-xs h-8 ${viewMode === 'tree' ? 'bg-white shadow-sm text-[var(--institution-primary)]' : 'text-gray-500'}`}
             onClick={() => setViewMode('tree')}
           >
             <List className="size-3.5 mr-1" />
@@ -1208,15 +1208,15 @@ export function StructurePage() {
               transition={{ duration: 0.3, delay: 0.3 }}
               className="mt-6"
             >
-              <Card className="bg-[#1a274408] border-[#1a274420]">
+              <Card className="bg-[var(--institution-primary-08)] border-[var(--institution-primary-20)]">
                 <CardContent className="p-5">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-[#1a274415] flex items-center justify-center">
-                        <Building2 className="size-5 text-[#1a2744]" />
+                      <div className="w-10 h-10 rounded-lg bg-[var(--institution-primary-15)] flex items-center justify-center">
+                        <Building2 className="size-5 text-[var(--institution-primary)]" />
                       </div>
                       <div>
-                        <p className="text-sm font-semibold text-[#1a2744]">Résumé de la structure</p>
+                        <p className="text-sm font-semibold text-[var(--institution-primary)]">Résumé de la structure</p>
                         <p className="text-xs text-gray-500">
                           {faculties.length} facultés, {totalDepartments} départements, {totalPrograms} programmes
                         </p>
@@ -1224,21 +1224,21 @@ export function StructurePage() {
                     </div>
                     <div className="flex items-center gap-4">
                       <div className="text-center">
-                        <p className="text-lg font-bold text-[#1a2744]">
+                        <p className="text-lg font-bold text-[var(--institution-primary)]">
                           {structureQuery?.stats?.students ?? faculties.reduce((acc, f) => acc + f.students, 0)}
                         </p>
                         <p className="text-[10px] text-gray-400">Étudiants</p>
                       </div>
                       <div className="w-px h-8 bg-gray-200" />
                       <div className="text-center">
-                        <p className="text-lg font-bold text-[#2d7a4f]">
+                        <p className="text-lg font-bold text-[var(--institution-secondary)]">
                           {faculties.reduce((acc, f) => acc + f.teachers, 0)}
                         </p>
                         <p className="text-[10px] text-gray-400">Enseignants</p>
                       </div>
                       <div className="w-px h-8 bg-gray-200" />
                       <div className="text-center">
-                        <p className="text-lg font-bold text-[#d4a853]">{academicSystem}</p>
+                        <p className="text-lg font-bold text-[var(--institution-accent)]">{academicSystem}</p>
                         <p className="text-[10px] text-gray-400">Système</p>
                       </div>
                     </div>
@@ -1260,14 +1260,14 @@ export function StructurePage() {
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-[#1a274415] flex items-center justify-center">
-                      <Building2 className="size-4 text-[#1a2744]" />
+                    <div className="w-8 h-8 rounded-lg bg-[var(--institution-primary-15)] flex items-center justify-center">
+                      <Building2 className="size-4 text-[var(--institution-primary)]" />
                     </div>
-                    <CardTitle className="text-sm font-semibold text-[#1a2744]">
+                    <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">
                       Organigramme académique
                     </CardTitle>
                   </div>
-                  <Badge className="text-[10px] bg-[#2d7a4f15] text-[#2d7a4f] border-0">
+                  <Badge className="text-[10px] bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0">
                     Système {academicSystem}
                   </Badge>
                 </div>

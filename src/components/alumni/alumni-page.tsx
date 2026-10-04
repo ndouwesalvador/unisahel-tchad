@@ -39,7 +39,7 @@ interface AlumniRecord {
 }
 
 const statusConfig: Record<AlumniStatus, { label: string; className: string }> = {
-  ACTIF: { label: 'Actif', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0' },
+  ACTIF: { label: 'Actif', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0' },
   INACTIF: { label: 'Inactif', className: 'bg-amber-50 text-amber-700 border-0' },
   INJOIGNABLE: { label: 'Injoignable', className: 'bg-red-50 text-red-700 border-0' },
 }
@@ -203,7 +203,7 @@ export function AlumniPage() {
   return (
     <div className="space-y-6">
       <Card className="overflow-hidden">
-        <div className="bg-gradient-to-r from-[#1a2744] via-[#1f3050] to-[#2d7a4f] p-6 text-white">
+        <div className="bg-gradient-to-r from-[var(--institution-primary)] via-[var(--institution-primary-light)] to-[var(--institution-secondary)] p-6 text-white">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
               <h1 className="text-2xl font-bold">Alumni & anciens étudiants</h1>
@@ -212,7 +212,7 @@ export function AlumniPage() {
             <div className="flex flex-wrap gap-2">
               <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button className="bg-[#2d7a4f] hover:bg-[#236b40] text-white">
+                  <Button className="bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white">
                     <Plus className="mr-2 size-4" />
                     Ajouter un alumni
                   </Button>
@@ -283,7 +283,7 @@ export function AlumniPage() {
                   </div>
                   <div className="flex justify-end gap-2">
                     <Button variant="outline" onClick={() => setDialogOpen(false)}>Annuler</Button>
-                    <Button className="bg-[#2d7a4f] hover:bg-[#236b40] text-white" disabled={isSubmitting} onClick={createAlumnus}>
+                    <Button className="bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white" disabled={isSubmitting} onClick={createAlumnus}>
                       {isSubmitting ? 'Enregistrement...' : 'Enregistrer'}
                     </Button>
                   </div>
@@ -299,11 +299,11 @@ export function AlumniPage() {
       </Card>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-        <Card><CardContent className="p-4"><GraduationCap className="mb-2 size-5 text-[#1a2744]" /><p className="text-xs text-gray-500">Total</p><p className="text-2xl font-bold text-[#1a2744]">{stats.total}</p></CardContent></Card>
-        <Card><CardContent className="p-4"><Users className="mb-2 size-5 text-[#2d7a4f]" /><p className="text-xs text-gray-500">Actifs</p><p className="text-2xl font-bold text-[#2d7a4f]">{stats.active}</p></CardContent></Card>
-        <Card><CardContent className="p-4"><Briefcase className="mb-2 size-5 text-[#d4a853]" /><p className="text-xs text-gray-500">En emploi</p><p className="text-2xl font-bold text-[#d4a853]">{stats.employed}</p></CardContent></Card>
-        <Card><CardContent className="p-4"><p className="text-xs text-gray-500">Taux emploi</p><p className="text-2xl font-bold text-[#1a2744]">{stats.employmentRate}%</p></CardContent></Card>
-        <Card><CardContent className="p-4"><MapPin className="mb-2 size-5 text-[#2d7a4f]" /><p className="text-xs text-gray-500">Pays</p><p className="text-2xl font-bold text-[#2d7a4f]">{stats.countries}</p></CardContent></Card>
+        <Card><CardContent className="p-4"><GraduationCap className="mb-2 size-5 text-[var(--institution-primary)]" /><p className="text-xs text-gray-500">Total</p><p className="text-2xl font-bold text-[var(--institution-primary)]">{stats.total}</p></CardContent></Card>
+        <Card><CardContent className="p-4"><Users className="mb-2 size-5 text-[var(--institution-secondary)]" /><p className="text-xs text-gray-500">Actifs</p><p className="text-2xl font-bold text-[var(--institution-secondary)]">{stats.active}</p></CardContent></Card>
+        <Card><CardContent className="p-4"><Briefcase className="mb-2 size-5 text-[var(--institution-accent)]" /><p className="text-xs text-gray-500">En emploi</p><p className="text-2xl font-bold text-[var(--institution-accent)]">{stats.employed}</p></CardContent></Card>
+        <Card><CardContent className="p-4"><p className="text-xs text-gray-500">Taux emploi</p><p className="text-2xl font-bold text-[var(--institution-primary)]">{stats.employmentRate}%</p></CardContent></Card>
+        <Card><CardContent className="p-4"><MapPin className="mb-2 size-5 text-[var(--institution-secondary)]" /><p className="text-xs text-gray-500">Pays</p><p className="text-2xl font-bold text-[var(--institution-secondary)]">{stats.countries}</p></CardContent></Card>
       </div>
 
       <Card>
@@ -328,7 +328,7 @@ export function AlumniPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-[#1a2744]">Répertoire des alumni</CardTitle>
+          <CardTitle className="text-[var(--institution-primary)]">Répertoire des alumni</CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -336,7 +336,7 @@ export function AlumniPage() {
           ) : filteredAlumni.length === 0 ? (
             <div className="py-12 text-center">
               <GraduationCap className="mx-auto mb-3 size-10 text-gray-300" />
-              <p className="text-sm font-medium text-[#1a2744]">Aucun alumni enregistré</p>
+              <p className="text-sm font-medium text-[var(--institution-primary)]">Aucun alumni enregistré</p>
               <p className="mt-1 text-xs text-gray-500">Ajoutez un alumni pour alimenter cet onglet avec de vraies données.</p>
             </div>
           ) : (
@@ -355,7 +355,7 @@ export function AlumniPage() {
               <TableBody>
                 {filteredAlumni.map((item) => (
                   <TableRow key={item.id}>
-                    <TableCell className="font-medium text-[#1a2744]">{item.lastName.toUpperCase()} {item.firstName}</TableCell>
+                    <TableCell className="font-medium text-[var(--institution-primary)]">{item.lastName.toUpperCase()} {item.firstName}</TableCell>
                     <TableCell>{[item.diploma, item.program, item.graduationYear].filter(Boolean).join(' — ')}</TableCell>
                     <TableCell>{[item.currentPosition, item.company].filter(Boolean).join(' — ') || '—'}</TableCell>
                     <TableCell>{[item.city, item.country].filter(Boolean).join(', ') || '—'}</TableCell>
@@ -375,7 +375,7 @@ export function AlumniPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-8 px-2 text-xs text-[#2d7a4f]"
+                          className="h-8 px-2 text-xs text-[var(--institution-secondary)]"
                           disabled={busyId === item.id}
                           onClick={() => updateAlumnus(item.id, { markContacted: true })}
                         >
@@ -386,7 +386,7 @@ export function AlumniPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-8 px-2 text-xs text-[#2d7a4f]"
+                            className="h-8 px-2 text-xs text-[var(--institution-secondary)]"
                             disabled={busyId === item.id}
                             onClick={() => updateAlumnus(item.id, { status: 'ACTIF' })}
                           >

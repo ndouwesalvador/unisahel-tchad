@@ -139,10 +139,10 @@ export function PlatformInstitutionsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-[#1a2744]">Institutions de la plateforme</h1>
+          <h1 className="text-2xl font-bold text-[var(--institution-primary)]">Institutions de la plateforme</h1>
           <p className="text-sm text-gray-500 mt-1">Cree et gere les etablissements abonnes a UniSahel</p>
         </div>
-        <Button className="bg-[#2d7a4f] hover:bg-[#236b40] text-white" onClick={() => setShowCreate(true)}>
+        <Button className="bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white" onClick={() => setShowCreate(true)}>
           <Plus className="size-4 mr-1.5" />
           Creer une institution
         </Button>
@@ -151,33 +151,33 @@ export function PlatformInstitutionsPage() {
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-[#1a274415] flex items-center justify-center shrink-0">
-              <Building2 className="size-5 text-[#1a2744]" />
+            <div className="w-10 h-10 rounded-lg bg-[var(--institution-primary-15)] flex items-center justify-center shrink-0">
+              <Building2 className="size-5 text-[var(--institution-primary)]" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-[#1a2744]">{stats?.total ?? 0}</p>
+              <p className="text-2xl font-bold text-[var(--institution-primary)]">{stats?.total ?? 0}</p>
               <p className="text-[11px] text-gray-500">Institutions</p>
             </div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-[#2d7a4f15] flex items-center justify-center shrink-0">
-              <CheckCircle2 className="size-5 text-[#2d7a4f]" />
+            <div className="w-10 h-10 rounded-lg bg-[var(--institution-secondary-15)] flex items-center justify-center shrink-0">
+              <CheckCircle2 className="size-5 text-[var(--institution-secondary)]" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-[#2d7a4f]">{stats?.active ?? 0}</p>
+              <p className="text-2xl font-bold text-[var(--institution-secondary)]">{stats?.active ?? 0}</p>
               <p className="text-[11px] text-gray-500">Actives</p>
             </div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-[#d4a85315] flex items-center justify-center shrink-0">
-              <Users className="size-5 text-[#d4a853]" />
+            <div className="w-10 h-10 rounded-lg bg-[var(--institution-accent-15)] flex items-center justify-center shrink-0">
+              <Users className="size-5 text-[var(--institution-accent)]" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-[#1a2744]">{stats?.totalStudents ?? 0}</p>
+              <p className="text-2xl font-bold text-[var(--institution-primary)]">{stats?.totalStudents ?? 0}</p>
               <p className="text-[11px] text-gray-500">Etudiants (toutes institutions)</p>
             </div>
           </CardContent>
@@ -188,7 +188,7 @@ export function PlatformInstitutionsPage() {
               <GraduationCap className="size-5 text-[#5b8c5a]" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-[#1a2744]">{stats?.totalTeachers ?? 0}</p>
+              <p className="text-2xl font-bold text-[var(--institution-primary)]">{stats?.totalTeachers ?? 0}</p>
               <p className="text-[11px] text-gray-500">Enseignants (toutes institutions)</p>
             </div>
           </CardContent>
@@ -197,12 +197,12 @@ export function PlatformInstitutionsPage() {
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold text-[#1a2744]">Liste des institutions</CardTitle>
+          <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Liste des institutions</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="size-6 animate-spin text-[#2d7a4f]" />
+              <Loader2 className="size-6 animate-spin text-[var(--institution-secondary)]" />
             </div>
           ) : tenants.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-10">Aucune institution creee pour le moment.</p>
@@ -225,7 +225,7 @@ export function PlatformInstitutionsPage() {
                 <TableBody>
                   {tenants.map((t) => (
                     <TableRow key={t.id}>
-                      <TableCell className="text-sm font-medium text-[#1a2744]">{t.name}</TableCell>
+                      <TableCell className="text-sm font-medium text-[var(--institution-primary)]">{t.name}</TableCell>
                       <TableCell className="text-sm text-gray-500">{[t.city, t.country].filter(Boolean).join(', ') || '—'}</TableCell>
                       <TableCell className="text-sm text-gray-600">
                         {t.admin ? (
@@ -236,12 +236,12 @@ export function PlatformInstitutionsPage() {
                         ) : '—'}
                       </TableCell>
                       <TableCell>
-                        <Badge className="text-[10px] bg-[#1a274415] text-[#1a2744] border-0">{planLabels[t.subscriptionPlan] || t.subscriptionPlan}</Badge>
+                        <Badge className="text-[10px] bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0">{planLabels[t.subscriptionPlan] || t.subscriptionPlan}</Badge>
                       </TableCell>
                       <TableCell className="text-sm text-center">{t.totalStudents}</TableCell>
                       <TableCell className="text-sm text-center">{t.totalTeachers}</TableCell>
                       <TableCell>
-                        <Badge className={`text-[10px] border-0 ${t.isActive ? 'bg-[#2d7a4f15] text-[#2d7a4f]' : 'bg-[#c6282815] text-[#c62828]'}`}>
+                        <Badge className={`text-[10px] border-0 ${t.isActive ? 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)]' : 'bg-[#c6282815] text-[#c62828]'}`}>
                           {t.isActive ? 'Active' : 'Suspendue'}
                         </Badge>
                       </TableCell>
@@ -250,7 +250,7 @@ export function PlatformInstitutionsPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className={`h-7 text-xs ${t.isActive ? 'text-red-500 hover:text-red-700' : 'text-[#2d7a4f]'}`}
+                          className={`h-7 text-xs ${t.isActive ? 'text-red-500 hover:text-red-700' : 'text-[var(--institution-secondary)]'}`}
                           disabled={togglingId === t.id}
                           onClick={() => handleToggleActive(t)}
                         >
@@ -308,7 +308,7 @@ export function PlatformInstitutionsPage() {
               </Select>
             </div>
             <div className="border-t pt-4 space-y-3">
-              <p className="text-xs font-semibold text-[#1a2744]">Compte administrateur de l&apos;institution</p>
+              <p className="text-xs font-semibold text-[var(--institution-primary)]">Compte administrateur de l&apos;institution</p>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <Label className="text-sm">Prenom</Label>
@@ -325,7 +325,7 @@ export function PlatformInstitutionsPage() {
               </div>
               <p className="text-[11px] text-gray-400">Un mot de passe temporaire sera genere et affiche une seule fois apres la creation.</p>
             </div>
-            <Button className="w-full bg-[#2d7a4f] hover:bg-[#236b40] text-white" disabled={isCreating} onClick={handleCreate}>
+            <Button className="w-full bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white" disabled={isCreating} onClick={handleCreate}>
               {isCreating ? 'Creation...' : "Creer l'institution"}
             </Button>
           </div>
@@ -341,25 +341,25 @@ export function PlatformInstitutionsPage() {
           {createdCredentials && (
             <div className="space-y-4 py-2">
               <p className="text-sm text-gray-600">
-                Le compte administrateur de <span className="font-semibold text-[#1a2744]">{createdCredentials.institutionName}</span> est pret.
+                Le compte administrateur de <span className="font-semibold text-[var(--institution-primary)]">{createdCredentials.institutionName}</span> est pret.
                 Transmettez ces identifiants a l&apos;administrateur — ce mot de passe ne sera plus jamais affiche.
               </p>
               <div className="rounded-lg border bg-gray-50 p-3 space-y-2">
                 <div>
                   <p className="text-[10px] text-gray-400">Email</p>
-                  <p className="text-sm font-mono text-[#1a2744]">{createdCredentials.email}</p>
+                  <p className="text-sm font-mono text-[var(--institution-primary)]">{createdCredentials.email}</p>
                 </div>
                 <div>
                   <p className="text-[10px] text-gray-400">Mot de passe temporaire</p>
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-mono font-semibold text-[#2d7a4f]">{createdCredentials.tempPassword}</p>
+                    <p className="text-sm font-mono font-semibold text-[var(--institution-secondary)]">{createdCredentials.tempPassword}</p>
                     <Button variant="ghost" size="sm" className="h-6 px-1.5" onClick={copyPassword}>
                       <Copy className="size-3.5" />
                     </Button>
                   </div>
                 </div>
               </div>
-              <p className="text-[11px] text-[#d4a853]">Un changement de mot de passe sera demande a la premiere connexion.</p>
+              <p className="text-[11px] text-[var(--institution-accent)]">Un changement de mot de passe sera demande a la premiere connexion.</p>
               <Button className="w-full" variant="outline" onClick={() => setCreatedCredentials(null)}>Fermer</Button>
             </div>
           )}

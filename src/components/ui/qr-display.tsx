@@ -20,7 +20,7 @@ export function QrDisplay({ value, size = 120, className = '' }: QrDisplayProps)
         const url = await QRCode.toDataURL(value, {
           width: size,
           margin: 2,
-          color: { dark: '#1a2744', light: '#ffffff' },
+          color: { dark: 'var(--institution-primary)', light: '#ffffff' },
         })
         if (mounted.current) setSrc(url)
       } catch {

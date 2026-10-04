@@ -86,10 +86,10 @@ interface Announcement {
 }
 
 const typeConfig: Record<AnnouncementType, { label: string; className: string; icon: React.ElementType }> = {
-  INFO: { label: 'Info', className: 'bg-[#1a274415] text-[#1a2744] border-0', icon: Info },
+  INFO: { label: 'Info', className: 'bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0', icon: Info },
   URGENT: { label: 'Urgent', className: 'bg-[#c6282815] text-[#c62828] border-0', icon: AlertTriangle },
-  PAYMENT: { label: 'Paiement', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0', icon: CreditCard },
-  RESULT: { label: 'Résultat', className: 'bg-[#d4a85315] text-[#d4a853] border-0', icon: FileCheck },
+  PAYMENT: { label: 'Paiement', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0', icon: CreditCard },
+  RESULT: { label: 'Résultat', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0', icon: FileCheck },
   EXAM: { label: 'Examen', className: 'bg-[#6a1b9a15] text-[#6a1b9a] border-0', icon: BookOpen },
   STAGE: { label: 'Stage', className: 'bg-[#e6510015] text-[#e65100] border-0', icon: Briefcase },
 }
@@ -103,8 +103,8 @@ const priorityConfig: Record<Priority, { label: string; borderClass: string; dot
   },
   important: {
     label: 'Important',
-    borderClass: 'border-l-4 border-l-[#d4a853]',
-    dotClass: 'bg-[#d4a853]',
+    borderClass: 'border-l-4 border-l-[var(--institution-accent)]',
+    dotClass: 'bg-[var(--institution-accent)]',
     badgeClass: 'bg-amber-100 text-amber-700 border-0',
   },
   normal: {
@@ -124,9 +124,9 @@ const categoryConfig: Record<Category, { label: string; icon: React.ElementType;
 
 const targetConfig: Record<TargetAudience, { label: string; className: string }> = {
   Tous: { label: 'Tous', className: 'bg-gray-100 text-gray-600 border-0' },
-  Étudiants: { label: 'Étudiants', className: 'bg-[#2d7a4f10] text-[#2d7a4f] border-0' },
-  Enseignants: { label: 'Enseignants', className: 'bg-[#1a274410] text-[#1a2744] border-0' },
-  Scolarité: { label: 'Scolarité', className: 'bg-[#d4a85310] text-[#d4a853] border-0' },
+  Étudiants: { label: 'Étudiants', className: 'bg-[var(--institution-secondary-10)] text-[var(--institution-secondary)] border-0' },
+  Enseignants: { label: 'Enseignants', className: 'bg-[var(--institution-primary-10)] text-[var(--institution-primary)] border-0' },
+  Scolarité: { label: 'Scolarité', className: 'bg-[var(--institution-accent-10)] text-[var(--institution-accent)] border-0' },
 }
 
 const categoryTabs: { value: string; label: string; icon: React.ElementType; filter: Category | null }[] = [
@@ -210,15 +210,15 @@ function AnnouncementCard({ announcement, index, onDelete, deletingId }: { annou
       whileHover={{ scale: 1.01 }}
       transition={{ delay: index * 0.04, duration: 0.3 }}
     >
-      <Card className={`overflow-hidden hover:shadow-md transition-shadow ${prioConf.borderClass} ${!announcement.isRead ? 'ring-1 ring-[#1a2744]/10' : ''}`}>
-        <div className="h-1 bg-gradient-to-r from-[#d4a853] to-[#e6c477]" />
+      <Card className={`overflow-hidden hover:shadow-md transition-shadow ${prioConf.borderClass} ${!announcement.isRead ? 'ring-1 ring-[var(--institution-primary)]/10' : ''}`}>
+        <div className="h-1 bg-gradient-to-r from-[var(--institution-accent)] to-[var(--institution-accent-light)]" />
         <CardContent className="p-4">
           <div className="flex flex-col gap-3">
             {/* Top row: pin + badges */}
             <div className="flex items-start justify-between gap-2">
               <div className="flex items-center gap-2 flex-wrap">
                 {announcement.isPinned && (
-                  <Pin className="size-3.5 text-[#1a2744] shrink-0 fill-[#1a2744]" />
+                  <Pin className="size-3.5 text-[var(--institution-primary)] shrink-0 fill-[var(--institution-primary)]" />
                 )}
                 <Badge className={`text-[9px] ${catConf.className}`}>
                   <CatIcon className="size-2.5 mr-0.5" />
@@ -232,7 +232,7 @@ function AnnouncementCard({ announcement, index, onDelete, deletingId }: { annou
                   {prioConf.label}
                 </Badge>
                 {!announcement.isRead && (
-                  <span className="w-2 h-2 rounded-full bg-[#1a2744] shrink-0" />
+                  <span className="w-2 h-2 rounded-full bg-[var(--institution-primary)] shrink-0" />
                 )}
               </div>
               <Badge className={`text-[9px] ${targetConf.className}`}>
@@ -242,7 +242,7 @@ function AnnouncementCard({ announcement, index, onDelete, deletingId }: { annou
             </div>
 
             {/* Title */}
-            <h3 className={`text-sm font-semibold ${announcement.isRead ? 'text-[#1a2744]' : 'text-[#1a2744]'} leading-snug`}>
+            <h3 className={`text-sm font-semibold ${announcement.isRead ? 'text-[var(--institution-primary)]' : 'text-[var(--institution-primary)]'} leading-snug`}>
               {announcement.title}
             </h3>
 
@@ -396,7 +396,7 @@ export function AnnouncementsPage() {
       transition={{ duration: 0.5 }}
     >
       {/* Gradient Header Banner */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-[#1a2744] via-[#1f3050] to-[#2d7a4f] p-6 md:p-8 rounded-xl">
+      <div className="relative overflow-hidden bg-gradient-to-r from-[var(--institution-primary)] via-[var(--institution-primary-light)] to-[var(--institution-secondary)] p-6 md:p-8 rounded-xl">
         {/* SVG pattern overlay */}
         <div className="absolute inset-0 opacity-20" style={{backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.15) 1px, transparent 1px)', backgroundSize: '24px 24px'}} />
         <div className="relative z-10">
@@ -425,48 +425,48 @@ export function AnnouncementsPage() {
       {/* Statistics Card */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0 }}>
-          <Card className="border-l-4 border-l-[#1a2744]">
-            <div className="h-1 bg-gradient-to-r from-[#1a2744] to-[#2d3e5e]" />
+          <Card className="border-l-4 border-l-[var(--institution-primary)]">
+            <div className="h-1 bg-gradient-to-r from-[var(--institution-primary)] to-[#2d3e5e]" />
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-[10px] text-gray-500 uppercase font-medium">Annonces ce mois</p>
-                  <p className="text-2xl font-bold text-[#1a2744]">{annoncesCeMois}</p>
+                  <p className="text-2xl font-bold text-[var(--institution-primary)]">{annoncesCeMois}</p>
                 </div>
-                <div className="w-10 h-10 rounded-xl bg-[#1a274415] flex items-center justify-center">
-                  <Megaphone className="size-5 text-[#1a2744]" />
+                <div className="w-10 h-10 rounded-xl bg-[var(--institution-primary-15)] flex items-center justify-center">
+                  <Megaphone className="size-5 text-[var(--institution-primary)]" />
                 </div>
               </div>
             </CardContent>
           </Card>
         </motion.div>
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
-          <Card className="border-l-4 border-l-[#2d7a4f]">
-            <div className="h-1 bg-gradient-to-r from-[#2d7a4f] to-[#3da66a]" />
+          <Card className="border-l-4 border-l-[var(--institution-secondary)]">
+            <div className="h-1 bg-gradient-to-r from-[var(--institution-secondary)] to-[var(--institution-secondary-bright)]" />
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-[10px] text-gray-500 uppercase font-medium">Total annonces</p>
-                  <p className="text-2xl font-bold text-[#2d7a4f]">{announcements.length}</p>
+                  <p className="text-2xl font-bold text-[var(--institution-secondary)]">{announcements.length}</p>
                 </div>
-                <div className="w-10 h-10 rounded-xl bg-[#2d7a4f15] flex items-center justify-center">
-                  <BarChart3 className="size-5 text-[#2d7a4f]" />
+                <div className="w-10 h-10 rounded-xl bg-[var(--institution-secondary-15)] flex items-center justify-center">
+                  <BarChart3 className="size-5 text-[var(--institution-secondary)]" />
                 </div>
               </div>
             </CardContent>
           </Card>
         </motion.div>
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-          <Card className="border-l-4 border-l-[#d4a853]">
-            <div className="h-1 bg-gradient-to-r from-[#d4a853] to-[#e6c477]" />
+          <Card className="border-l-4 border-l-[var(--institution-accent)]">
+            <div className="h-1 bg-gradient-to-r from-[var(--institution-accent)] to-[var(--institution-accent-light)]" />
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-[10px] text-gray-500 uppercase font-medium">Epinglees</p>
-                  <p className="text-2xl font-bold text-[#d4a853]">{totalEpinglees}</p>
+                  <p className="text-2xl font-bold text-[var(--institution-accent)]">{totalEpinglees}</p>
                 </div>
-                <div className="w-10 h-10 rounded-xl bg-[#d4a85315] flex items-center justify-center">
-                  <Eye className="size-5 text-[#d4a853]" />
+                <div className="w-10 h-10 rounded-xl bg-[var(--institution-accent-15)] flex items-center justify-center">
+                  <Eye className="size-5 text-[var(--institution-accent)]" />
                 </div>
               </div>
             </CardContent>
@@ -513,7 +513,7 @@ export function AnnouncementsPage() {
                 <TabsTrigger key={tab.value} value={tab.value} className="text-xs gap-1.5 data-[state=active]:bg-white data-[state=active]:shadow-sm">
                   <tab.icon className="size-3" />
                   {tab.label}
-                  <Badge className="text-[8px] h-4 min-w-[16px] flex items-center justify-center bg-[#1a274415] text-[#1a2744] border-0 ml-0.5">
+                  <Badge className="text-[8px] h-4 min-w-[16px] flex items-center justify-center bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0 ml-0.5">
                     {getCategoryCount(tab.filter)}
                   </Badge>
                 </TabsTrigger>
@@ -534,8 +534,8 @@ export function AnnouncementsPage() {
                     {sortedAnnouncements.some(a => a.isPinned) && (
                       <div className="mb-2">
                         <div className="flex items-center gap-1.5 mb-2">
-                          <Pin className="size-3 text-[#1a2744]" />
-                          <span className="text-[10px] font-semibold text-[#1a2744] uppercase">Epingles</span>
+                          <Pin className="size-3 text-[var(--institution-primary)]" />
+                          <span className="text-[10px] font-semibold text-[var(--institution-primary)] uppercase">Epingles</span>
                         </div>
                         <div className="space-y-3">
                           {sortedAnnouncements.filter(a => a.isPinned).map((announcement, idx) => (
@@ -578,9 +578,9 @@ export function AnnouncementsPage() {
         <div className="lg:col-span-1">
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }}>
             <Card className="shadow-sm sticky top-4">
-              <div className="h-1 bg-gradient-to-r from-[#d4a853] to-[#e6c477]" />
+              <div className="h-1 bg-gradient-to-r from-[var(--institution-accent)] to-[var(--institution-accent-light)]" />
               <CardHeader className="pb-3 pt-4 px-4">
-                <CardTitle className="text-sm font-semibold text-[#1a2744] flex items-center gap-2">
+                <CardTitle className="text-sm font-semibold text-[var(--institution-primary)] flex items-center gap-2">
                   <Plus className="size-4" />
                   Nouvelle annonce
                 </CardTitle>
@@ -651,7 +651,7 @@ export function AnnouncementsPage() {
                     <Switch
                       checked={scheduleMode}
                       onCheckedChange={setScheduleMode}
-                      className="data-[state=checked]:bg-[#2d7a4f]"
+                      className="data-[state=checked]:bg-[var(--institution-secondary)]"
                     />
                     <Label className="text-xs text-gray-600 flex items-center gap-1">
                       <CalendarClock className="size-3" />
@@ -663,7 +663,7 @@ export function AnnouncementsPage() {
                   <Input type="datetime-local" className="h-9 text-xs" />
                 )}
                 <Button
-                  className="w-full bg-[#2d7a4f] hover:bg-[#236b40] text-white h-9 text-xs"
+                  className="w-full bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white h-9 text-xs"
                   onClick={handleCreateAnnouncement}
                   disabled={isSubmitting}
                 >

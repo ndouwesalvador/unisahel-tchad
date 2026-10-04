@@ -69,24 +69,24 @@ function TypingIndicator() {
   return (
     <div className="flex items-start gap-2.5 px-4 py-2">
       <Avatar className="size-7 shrink-0">
-        <AvatarFallback className="bg-gradient-to-br from-[#1a2744] to-[#2d7a4f] text-white text-[10px]">
+        <AvatarFallback className="bg-gradient-to-br from-[var(--institution-primary)] to-[var(--institution-secondary)] text-white text-[10px]">
           <Bot className="size-3.5" />
         </AvatarFallback>
       </Avatar>
       <div className="bg-white border border-gray-100 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm">
         <div className="flex items-center gap-1.5">
           <motion.span
-            className="size-2 rounded-full bg-[#2d7a4f]"
+            className="size-2 rounded-full bg-[var(--institution-secondary)]"
             animate={{ y: [0, -6, 0] }}
             transition={{ duration: 0.6, repeat: Infinity, delay: 0 }}
           />
           <motion.span
-            className="size-2 rounded-full bg-[#2d7a4f]"
+            className="size-2 rounded-full bg-[var(--institution-secondary)]"
             animate={{ y: [0, -6, 0] }}
             transition={{ duration: 0.6, repeat: Infinity, delay: 0.15 }}
           />
           <motion.span
-            className="size-2 rounded-full bg-[#2d7a4f]"
+            className="size-2 rounded-full bg-[var(--institution-secondary)]"
             animate={{ y: [0, -6, 0] }}
             transition={{ duration: 0.6, repeat: Infinity, delay: 0.3 }}
           />
@@ -115,7 +115,7 @@ function ChatMessage({
     return (
       <div className="flex justify-end px-4 py-1.5">
         <div className="max-w-[80%]">
-          <div className="bg-[#1a2744] text-white rounded-2xl rounded-tr-sm px-4 py-2.5 shadow-sm">
+          <div className="bg-[var(--institution-primary)] text-white rounded-2xl rounded-tr-sm px-4 py-2.5 shadow-sm">
             <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.content}</p>
           </div>
           <p className="text-[10px] text-gray-400 mt-1 text-right">{timeStr}</p>
@@ -127,7 +127,7 @@ function ChatMessage({
   return (
     <div className="flex items-start gap-2.5 px-4 py-1.5">
       <Avatar className="size-7 shrink-0 mt-0.5">
-        <AvatarFallback className="bg-gradient-to-br from-[#1a2744] to-[#2d7a4f] text-white text-[10px]">
+        <AvatarFallback className="bg-gradient-to-br from-[var(--institution-primary)] to-[var(--institution-secondary)] text-white text-[10px]">
           <Bot className="size-3.5" />
         </AvatarFallback>
       </Avatar>
@@ -142,7 +142,7 @@ function ChatMessage({
               <button
                 key={action.label}
                 onClick={() => onQuickAction(action.keyword)}
-                className="text-xs px-3 py-1.5 rounded-full border border-[#2d7a4f30] text-[#2d7a4f] bg-[#2d7a4f08] hover:bg-[#2d7a4f15] hover:border-[#2d7a4f50] transition-colors font-medium"
+                className="text-xs px-3 py-1.5 rounded-full border border-[var(--institution-secondary-30)] text-[var(--institution-secondary)] bg-[var(--institution-secondary-08)] hover:bg-[var(--institution-secondary-15)] hover:border-[var(--institution-secondary-50)] transition-colors font-medium"
               >
                 {action.label}
               </button>
@@ -231,13 +231,13 @@ export function AIAssistantWidget() {
             exit={{ scale: 0, opacity: 0 }}
             transition={{ type: 'spring', stiffness: 260, damping: 20 }}
             onClick={toggleChat}
-            className="fixed bottom-6 left-6 md:left-[276px] z-50 size-14 rounded-full bg-gradient-to-br from-[#1a2744] to-[#2d7a4f] shadow-lg hover:shadow-xl flex items-center justify-center group"
+            className="fixed bottom-6 left-6 md:left-[276px] z-50 size-14 rounded-full bg-gradient-to-br from-[var(--institution-primary)] to-[var(--institution-secondary)] shadow-lg hover:shadow-xl flex items-center justify-center group"
             aria-label="Ouvrir l'assistant IA"
           >
             <Sparkles className="size-6 text-white group-hover:scale-110 transition-transform" />
             {/* Pulse ring */}
             <motion.span
-              className="absolute inset-0 rounded-full bg-gradient-to-br from-[#1a2744] to-[#2d7a4f]"
+              className="absolute inset-0 rounded-full bg-gradient-to-br from-[var(--institution-primary)] to-[var(--institution-secondary)]"
               animate={{ scale: [1, 1.3], opacity: [0.5, 0] }}
               transition={{ duration: 1.8, repeat: Infinity, ease: 'easeOut' }}
             />
@@ -262,7 +262,7 @@ export function AIAssistantWidget() {
             style={{ maxHeight: isMinimized ? 'auto' : '520px' }}
           >
             {/* Chat Header */}
-            <div className="bg-gradient-to-r from-[#1a2744] to-[#2d7a4f] px-4 py-3 flex items-center justify-between shrink-0">
+            <div className="bg-gradient-to-r from-[var(--institution-primary)] to-[var(--institution-secondary)] px-4 py-3 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2.5">
                 <div className="size-9 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
                   <Bot className="size-5 text-white" />
@@ -326,14 +326,14 @@ export function AIAssistantWidget() {
                       onChange={(e) => setInputValue(e.target.value)}
                       onKeyDown={handleKeyDown}
                       placeholder="Posez votre question..."
-                      className="flex-1 h-9 text-sm border-gray-200 focus:border-[#2d7a4f] focus:ring-[#2d7a4f20]"
+                      className="flex-1 h-9 text-sm border-gray-200 focus:border-[var(--institution-secondary)] focus:ring-[var(--institution-secondary-20)]"
                       disabled={isTyping}
                     />
                     <Button
                       onClick={handleSend}
                       disabled={!inputValue.trim() || isTyping}
                       size="sm"
-                      className="size-9 p-0 bg-gradient-to-r from-[#1a2744] to-[#2d7a4f] hover:from-[#1e2f52] hover:to-[#348c5a] text-white rounded-lg shrink-0"
+                      className="size-9 p-0 bg-gradient-to-r from-[var(--institution-primary)] to-[var(--institution-secondary)] hover:from-[#1e2f52] hover:to-[#348c5a] text-white rounded-lg shrink-0"
                       aria-label="Envoyer"
                     >
                       <Send className="size-4" />

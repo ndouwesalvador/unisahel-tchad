@@ -187,9 +187,9 @@ function mapBeneficiary(a: ScholarshipApplicationRecord): Beneficiary {
 }
 
 const typeConfig: Record<string, { label: string; className: string }> = {
-  merite: { label: 'Merite', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0' },
-  besoin: { label: 'Besoin', className: 'bg-[#d4a85315] text-[#d4a853] border-0' },
-  gouvernemental: { label: 'Gouvernemental', className: 'bg-[#1a274415] text-[#1a2744] border-0' },
+  merite: { label: 'Merite', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0' },
+  besoin: { label: 'Besoin', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0' },
+  gouvernemental: { label: 'Gouvernemental', className: 'bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0' },
   international: { label: 'International', className: 'bg-[#6366f115] text-[#6366f1] border-0' },
   urgence: { label: 'Urgence', className: 'bg-[#c6282815] text-[#c62828] border-0' },
   recherche: { label: 'Recherche', className: 'bg-[#8b5cf615] text-[#8b5cf6] border-0' },
@@ -198,14 +198,14 @@ const typeConfig: Record<string, { label: string; className: string }> = {
 }
 
 const scholarshipStatusConfig: Record<string, { label: string; className: string }> = {
-  active: { label: 'Active', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0' },
+  active: { label: 'Active', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0' },
   cloturee: { label: 'Cloturee', className: 'bg-[#c6282815] text-[#c62828] border-0' },
-  en_attente: { label: 'En attente', className: 'bg-[#d4a85315] text-[#d4a853] border-0' },
+  en_attente: { label: 'En attente', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0' },
 }
 
 const beneficiaryStatusConfig: Record<string, { label: string; className: string; icon: React.ElementType }> = {
-  beneficiaire: { label: 'Beneficiaire', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0', icon: CheckCircle2 },
-  en_attente: { label: 'En attente', className: 'bg-[#d4a85315] text-[#d4a853] border-0', icon: Clock },
+  beneficiaire: { label: 'Beneficiaire', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0', icon: CheckCircle2 },
+  en_attente: { label: 'En attente', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0', icon: Clock },
   refusee: { label: 'Refusee', className: 'bg-[#c6282815] text-[#c62828] border-0', icon: XCircle },
 }
 
@@ -266,9 +266,9 @@ export function ScholarshipsPage() {
 
   // Financial summary data
   const typeColors: Record<Scholarship['type'], string> = {
-    merite: '#2d7a4f',
-    besoin: '#d4a853',
-    gouvernemental: '#1a2744',
+    merite: 'var(--institution-secondary)',
+    besoin: 'var(--institution-accent)',
+    gouvernemental: 'var(--institution-primary)',
     international: '#6366f1',
     urgence: '#c62828',
     recherche: '#8b5cf6',
@@ -411,13 +411,13 @@ export function ScholarshipsPage() {
       {/* ── Header ────────────────────────────────────────────────────────────── */}
       <motion.div variants={itemVariants} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-[#1a2744]">Bourses &amp; Aide financiere</h1>
+          <h1 className="text-xl font-bold text-[var(--institution-primary)]">Bourses &amp; Aide financiere</h1>
           <p className="text-sm text-gray-500">Gestion des bourses et de l'aide financiaire aux étudiants</p>
         </div>
         <div className="flex gap-2">
           <Dialog open={showNewScholarship} onOpenChange={(open) => { setShowNewScholarship(open); if (!open) resetScholarshipForm() }}>
             <DialogTrigger asChild>
-              <Button size="sm" className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs">
+              <Button size="sm" className="bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white text-xs">
                 <Plus className="size-3.5 mr-1.5" />
                 Nouvelle bourse
               </Button>
@@ -472,7 +472,7 @@ export function ScholarshipsPage() {
                 <div className="space-y-2">
                   <Label className="text-sm">Criteres d&apos;eligibilite</Label>
                   <textarea
-                    className="w-full min-h-[80px] rounded-md border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f] focus:border-transparent resize-none"
+                    className="w-full min-h-[80px] rounded-md border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--institution-secondary)] focus:border-transparent resize-none"
                     placeholder="Moyenne minimale, niveau d'etude, etc."
                     value={newScholarshipForm.eligibility}
                     onChange={(e) => setNewScholarshipForm(f => ({ ...f, eligibility: e.target.value }))}
@@ -483,7 +483,7 @@ export function ScholarshipsPage() {
                   <Input type="number" placeholder="50" value={newScholarshipForm.maxBeneficiaires} onChange={(e) => setNewScholarshipForm(f => ({ ...f, maxBeneficiaires: e.target.value }))} />
                 </div>
                 <div className="flex gap-2 pt-2">
-                  <Button className="flex-1 bg-[#2d7a4f] hover:bg-[#236b40] text-white" onClick={saveScholarship} disabled={isSavingScholarship}>
+                  <Button className="flex-1 bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white" onClick={saveScholarship} disabled={isSavingScholarship}>
                     {isSavingScholarship ? 'Enregistrement...' : editingScholarship ? 'Enregistrer' : 'Creer la bourse'}
                   </Button>
                   <Button variant="outline" className="flex-1" onClick={() => setShowNewScholarship(false)}>
@@ -493,7 +493,7 @@ export function ScholarshipsPage() {
               </div>
             </DialogContent>
           </Dialog>
-          <Button size="sm" variant="outline" className="text-xs border-[#1a274430] text-[#1a2744] hover:bg-[#1a274408]" onClick={exportScholarships}>
+          <Button size="sm" variant="outline" className="text-xs border-[var(--institution-primary-30)] text-[var(--institution-primary)] hover:bg-[var(--institution-primary-08)]" onClick={exportScholarships}>
             <Download className="size-3.5 mr-1.5" />
             Exporter
           </Button>
@@ -503,81 +503,81 @@ export function ScholarshipsPage() {
       {/* ── Stats Cards ──────────────────────────────────────────────────────── */}
       <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Bourses actives */}
-        <Card className="overflow-hidden relative border-l-4 border-l-[#2d7a4f]">
-          <div className="absolute inset-0 bg-gradient-to-br from-[#2d7a4f08] to-[#2d7a4f00] pointer-events-none" />
+        <Card className="overflow-hidden relative border-l-4 border-l-[var(--institution-secondary)]">
+          <div className="absolute inset-0 bg-gradient-to-br from-[var(--institution-secondary-08)] to-[var(--institution-secondary-00)] pointer-events-none" />
           <CardContent className="p-4 relative">
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Bourses actives</p>
-                <p className="text-xl font-bold text-[#2d7a4f] mt-1">{totalActive}</p>
+                <p className="text-xl font-bold text-[var(--institution-secondary)] mt-1">{totalActive}</p>
                 <p className="text-xs text-gray-400 mt-1">sur {scholarships.length} programmes</p>
               </div>
-              <div className="w-10 h-10 rounded-xl bg-[#2d7a4f15] flex items-center justify-center">
-                <Award className="size-5 text-[#2d7a4f]" />
+              <div className="w-10 h-10 rounded-xl bg-[var(--institution-secondary-15)] flex items-center justify-center">
+                <Award className="size-5 text-[var(--institution-secondary)]" />
               </div>
             </div>
             <div className="mt-3">
-              <Progress value={scholarships.length > 0 ? (totalActive / scholarships.length) * 100 : 0} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#2d7a4f]" />
+              <Progress value={scholarships.length > 0 ? (totalActive / scholarships.length) * 100 : 0} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[var(--institution-secondary)]" />
             </div>
           </CardContent>
         </Card>
 
         {/* Beneficiaires */}
-        <Card className="overflow-hidden relative border-l-4 border-l-[#1a2744]">
-          <div className="absolute inset-0 bg-gradient-to-br from-[#1a274408] to-[#1a274400] pointer-events-none" />
+        <Card className="overflow-hidden relative border-l-4 border-l-[var(--institution-primary)]">
+          <div className="absolute inset-0 bg-gradient-to-br from-[var(--institution-primary-08)] to-[var(--institution-primary-00)] pointer-events-none" />
           <CardContent className="p-4 relative">
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Beneficiaires</p>
-                <p className="text-xl font-bold text-[#1a2744] mt-1">{totalBeneficiaires}</p>
+                <p className="text-xl font-bold text-[var(--institution-primary)] mt-1">{totalBeneficiaires}</p>
                 <p className="text-xs text-gray-400 mt-1">étudiants soutenus</p>
               </div>
-              <div className="w-10 h-10 rounded-xl bg-[#1a274415] flex items-center justify-center">
-                <Users className="size-5 text-[#1a2744]" />
+              <div className="w-10 h-10 rounded-xl bg-[var(--institution-primary-15)] flex items-center justify-center">
+                <Users className="size-5 text-[var(--institution-primary)]" />
               </div>
             </div>
             <div className="mt-3">
-              <Progress value={totalMaxBeneficiaires > 0 ? (totalBeneficiaires / totalMaxBeneficiaires) * 100 : 0} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#1a2744]" />
+              <Progress value={totalMaxBeneficiaires > 0 ? (totalBeneficiaires / totalMaxBeneficiaires) * 100 : 0} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[var(--institution-primary)]" />
             </div>
           </CardContent>
         </Card>
 
         {/* Budget total */}
-        <Card className="overflow-hidden relative border-l-4 border-l-[#d4a853]">
-          <div className="absolute inset-0 bg-gradient-to-br from-[#d4a85308] to-[#d4a85300] pointer-events-none" />
+        <Card className="overflow-hidden relative border-l-4 border-l-[var(--institution-accent)]">
+          <div className="absolute inset-0 bg-gradient-to-br from-[var(--institution-accent-08)] to-[var(--institution-accent-00)] pointer-events-none" />
           <CardContent className="p-4 relative">
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Budget total</p>
-                <p className="text-xl font-bold text-[#d4a853] mt-1">{formatFCFA(totalBudget)}</p>
+                <p className="text-xl font-bold text-[var(--institution-accent)] mt-1">{formatFCFA(totalBudget)}</p>
                 <p className="text-xs text-gray-400 mt-1">tous programmes confondus</p>
               </div>
-              <div className="w-10 h-10 rounded-xl bg-[#d4a85315] flex items-center justify-center">
-                <Banknote className="size-5 text-[#d4a853]" />
+              <div className="w-10 h-10 rounded-xl bg-[var(--institution-accent-15)] flex items-center justify-center">
+                <Banknote className="size-5 text-[var(--institution-accent)]" />
               </div>
             </div>
             <div className="mt-3">
-              <Progress value={totalBudget > 0 ? Math.round((totalCommitted / totalBudget) * 100) : 0} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#d4a853]" />
+              <Progress value={totalBudget > 0 ? Math.round((totalCommitted / totalBudget) * 100) : 0} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[var(--institution-accent)]" />
             </div>
           </CardContent>
         </Card>
 
         {/* Taux couverture */}
-        <Card className="overflow-hidden relative border-l-4 border-l-[#1a2744]">
-          <div className="absolute inset-0 bg-gradient-to-br from-[#1a274408] to-[#1a274400] pointer-events-none" />
+        <Card className="overflow-hidden relative border-l-4 border-l-[var(--institution-primary)]">
+          <div className="absolute inset-0 bg-gradient-to-br from-[var(--institution-primary-08)] to-[var(--institution-primary-00)] pointer-events-none" />
           <CardContent className="p-4 relative">
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Taux couverture</p>
-                <p className="text-xl font-bold text-[#1a2744] mt-1">{tauxCouverture}%</p>
+                <p className="text-xl font-bold text-[var(--institution-primary)] mt-1">{tauxCouverture}%</p>
                 <p className="text-xs text-gray-400 mt-1">places pourvues</p>
               </div>
-              <div className="w-10 h-10 rounded-xl bg-[#1a274415] flex items-center justify-center">
-                <PieChart className="size-5 text-[#1a2744]" />
+              <div className="w-10 h-10 rounded-xl bg-[var(--institution-primary-15)] flex items-center justify-center">
+                <PieChart className="size-5 text-[var(--institution-primary)]" />
               </div>
             </div>
             <div className="mt-3">
-              <Progress value={tauxCouverture} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#1a2744]" />
+              <Progress value={tauxCouverture} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[var(--institution-primary)]" />
             </div>
           </CardContent>
         </Card>
@@ -588,7 +588,7 @@ export function ScholarshipsPage() {
         <Card>
           <CardHeader className="pb-3">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-              <CardTitle className="text-sm font-semibold text-[#1a2744]">Programmes de bourses</CardTitle>
+              <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Programmes de bourses</CardTitle>
               <div className="relative w-full sm:w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
                 <Input
@@ -624,11 +624,11 @@ export function ScholarshipsPage() {
                     return (
                       <TableRow
                         key={scholarship.id}
-                        className="hover:bg-[#2d7a4f05] transition-colors cursor-pointer"
+                        className="hover:bg-[var(--institution-secondary-05)] transition-colors cursor-pointer"
                       >
                         <TableCell className="py-2.5">
                           <div>
-                            <p className="text-sm font-medium text-[#1a2744]">{scholarship.name}</p>
+                            <p className="text-sm font-medium text-[var(--institution-primary)]">{scholarship.name}</p>
                             <p className="text-[10px] text-gray-400">Duree: {scholarship.duration}</p>
                           </div>
                         </TableCell>
@@ -639,11 +639,11 @@ export function ScholarshipsPage() {
                             </Badge>
                           ) : null}
                         </TableCell>
-                        <TableCell className="text-sm text-right font-semibold text-[#1a2744] py-2.5">
+                        <TableCell className="text-sm text-right font-semibold text-[var(--institution-primary)] py-2.5">
                           {formatFCFA(scholarship.budget)}
                         </TableCell>
                         <TableCell className="text-center py-2.5">
-                          <span className="text-sm font-semibold text-[#1a2744]">{scholarship.beneficiaires}</span>
+                          <span className="text-sm font-semibold text-[var(--institution-primary)]">{scholarship.beneficiaires}</span>
                           <span className="text-xs text-gray-400">/{scholarship.maxBeneficiaires}</span>
                         </TableCell>
                         <TableCell className="py-2.5">
@@ -655,7 +655,7 @@ export function ScholarshipsPage() {
                         </TableCell>
                         <TableCell className="py-2.5">
                           <div className="flex items-center gap-2 min-w-[100px]">
-                            <Progress value={occupancyPercent} className="h-1.5 flex-1 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-gradient-to-r [&>[data-slot=progress-indicator]]:from-[#2d7a4f] [&>[data-slot=progress-indicator]]:to-[#3da66a]" />
+                            <Progress value={occupancyPercent} className="h-1.5 flex-1 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-gradient-to-r [&>[data-slot=progress-indicator]]:from-[var(--institution-secondary)] [&>[data-slot=progress-indicator]]:to-[var(--institution-secondary-bright)]" />
                             <span className="text-[10px] font-medium text-gray-500 w-8">{occupancyPercent}%</span>
                           </div>
                         </TableCell>
@@ -719,29 +719,29 @@ export function ScholarshipsPage() {
             <div className="space-y-4 py-2">
               <div>
                 <p className="text-xs text-gray-500">Nom</p>
-                <p className="text-sm font-semibold text-[#1a2744]">{selectedScholarship.name}</p>
+                <p className="text-sm font-semibold text-[var(--institution-primary)]">{selectedScholarship.name}</p>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <p className="text-xs text-gray-500">Type</p>
-                  <p className="text-sm text-[#1a2744]">{typeConfig[selectedScholarship.type]?.label || selectedScholarship.type}</p>
+                  <p className="text-sm text-[var(--institution-primary)]">{typeConfig[selectedScholarship.type]?.label || selectedScholarship.type}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">Statut</p>
-                  <p className="text-sm text-[#1a2744]">{scholarshipStatusConfig[selectedScholarship.status]?.label || selectedScholarship.status}</p>
+                  <p className="text-sm text-[var(--institution-primary)]">{scholarshipStatusConfig[selectedScholarship.status]?.label || selectedScholarship.status}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">Budget</p>
-                  <p className="text-sm text-[#1a2744]">{formatFCFA(selectedScholarship.budget)}</p>
+                  <p className="text-sm text-[var(--institution-primary)]">{formatFCFA(selectedScholarship.budget)}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">Beneficiaires</p>
-                  <p className="text-sm text-[#1a2744]">{selectedScholarship.beneficiaires}/{selectedScholarship.maxBeneficiaires || 0}</p>
+                  <p className="text-sm text-[var(--institution-primary)]">{selectedScholarship.beneficiaires}/{selectedScholarship.maxBeneficiaires || 0}</p>
                 </div>
               </div>
               <div>
                 <p className="text-xs text-gray-500">Criteres d eligibilite</p>
-                <p className="text-sm text-[#1a2744] whitespace-pre-wrap">{selectedScholarship.eligibility || 'Non renseignes'}</p>
+                <p className="text-sm text-[var(--institution-primary)] whitespace-pre-wrap">{selectedScholarship.eligibility || 'Non renseignes'}</p>
               </div>
             </div>
           )}
@@ -752,7 +752,7 @@ export function ScholarshipsPage() {
       <motion.div variants={itemVariants}>
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold text-[#1a2744]">Gestion des beneficiaires</CardTitle>
+            <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Gestion des beneficiaires</CardTitle>
           </CardHeader>
           <CardContent className="p-4 pt-0">
             {/* Search + Filters */}
@@ -823,11 +823,11 @@ export function ScholarshipsPage() {
                     return (
                       <TableRow
                         key={beneficiary.id}
-                        className="hover:bg-[#2d7a4f05] transition-colors"
+                        className="hover:bg-[var(--institution-secondary-05)] transition-colors"
                       >
                         <TableCell className="py-2.5">
                           <div>
-                            <p className="text-sm font-medium text-[#1a2744]">{beneficiary.name}</p>
+                            <p className="text-sm font-medium text-[var(--institution-primary)]">{beneficiary.name}</p>
                             <p className="text-[10px] text-gray-400 font-mono">{beneficiary.matricule}</p>
                           </div>
                         </TableCell>
@@ -838,7 +838,7 @@ export function ScholarshipsPage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-xs text-gray-600 py-2.5">{beneficiary.scholarshipType}</TableCell>
-                        <TableCell className="text-sm text-right font-semibold text-[#1a2744] py-2.5">{formatFCFA(beneficiary.amount)}</TableCell>
+                        <TableCell className="text-sm text-right font-semibold text-[var(--institution-primary)] py-2.5">{formatFCFA(beneficiary.amount)}</TableCell>
                         <TableCell className="py-2.5">
                           {bStatusConf ? (
                             <Badge className={`text-[10px] ${bStatusConf.className}`}>
@@ -886,8 +886,8 @@ export function ScholarshipsPage() {
           <Card className="h-full">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-semibold text-[#1a2744]">Repartition budgetaire par type</CardTitle>
-                <TrendingUp className="size-4 text-[#2d7a4f]" />
+                <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Repartition budgetaire par type</CardTitle>
+                <TrendingUp className="size-4 text-[var(--institution-secondary)]" />
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -902,11 +902,11 @@ export function ScholarshipsPage() {
                           className="w-2.5 h-2.5 rounded-full shrink-0"
                           style={{ backgroundColor: item.color }}
                         />
-                        <span className="text-xs font-medium text-[#1a2744]">{item.type}</span>
+                        <span className="text-xs font-medium text-[var(--institution-primary)]">{item.type}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-[10px] text-gray-400">{item.percent}%</span>
-                        <span className="text-xs font-semibold text-[#1a2744]">{formatShort(item.amount)}</span>
+                        <span className="text-xs font-semibold text-[var(--institution-primary)]">{formatShort(item.amount)}</span>
                       </div>
                     </div>
                     <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
@@ -930,11 +930,11 @@ export function ScholarshipsPage() {
                 </div>
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs text-gray-500">Disponible</span>
-                  <span className="text-sm font-bold text-[#2d7a4f]">{formatFCFA(totalAvailable > 0 ? totalAvailable : 0)}</span>
+                  <span className="text-sm font-bold text-[var(--institution-secondary)]">{formatFCFA(totalAvailable > 0 ? totalAvailable : 0)}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-gray-500">Budget total</span>
-                  <span className="text-sm font-bold text-[#1a2744]">{formatFCFA(totalBudget)}</span>
+                  <span className="text-sm font-bold text-[var(--institution-primary)]">{formatFCFA(totalBudget)}</span>
                 </div>
               </div>
 
@@ -954,7 +954,7 @@ export function ScholarshipsPage() {
                         style={{ backgroundColor: item.color }}
                       />
                       <span className="text-[10px] text-gray-600">{item.type}</span>
-                      <span className="text-[10px] font-semibold text-[#1a2744]">{item.percent}%</span>
+                      <span className="text-[10px] font-semibold text-[var(--institution-primary)]">{item.percent}%</span>
                     </div>
                     ))}
                   </div>
@@ -966,58 +966,58 @@ export function ScholarshipsPage() {
 
         {/* Operational limits card */}
         <motion.div variants={itemVariants}>
-          <Card className="h-full border-l-4 border-l-[#d4a853]">
+          <Card className="h-full border-l-4 border-l-[var(--institution-accent)]">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-semibold text-[#1a2744]">Fonctionnalites et limites</CardTitle>
-                <Landmark className="size-4 text-[#d4a853]" />
+                <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Fonctionnalites et limites</CardTitle>
+                <Landmark className="size-4 text-[var(--institution-accent)]" />
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="p-3 rounded-lg bg-[#d4a85308] border border-[#d4a85315]">
+              <div className="p-3 rounded-lg bg-[var(--institution-accent-08)] border border-[var(--institution-accent-15)]">
                 <div className="flex items-center gap-2 mb-2">
-                  <Banknote className="size-4 text-[#d4a853]" />
-                  <span className="text-sm font-semibold text-[#1a2744]">Budgets enregistres</span>
+                  <Banknote className="size-4 text-[var(--institution-accent)]" />
+                  <span className="text-sm font-semibold text-[var(--institution-primary)]">Budgets enregistres</span>
                 </div>
                 <p className="text-xs text-gray-600 leading-relaxed">
                   Les budgets, plafonds et beneficiaires sont suivis dans la base de l&apos;institution. Les montants affiches ici servent au pilotage administratif des aides.
                 </p>
                 <div className="flex items-center gap-2 mt-2">
                   <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-white border border-gray-100">
-                    <CheckCircle2 className="size-3 text-[#2d7a4f]" />
+                    <CheckCircle2 className="size-3 text-[var(--institution-secondary)]" />
                     <span className="text-[10px] text-gray-600">Donnees sauvegardees</span>
                   </div>
                   <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-white border border-gray-100">
-                    <CheckCircle2 className="size-3 text-[#2d7a4f]" />
+                    <CheckCircle2 className="size-3 text-[var(--institution-secondary)]" />
                     <span className="text-[10px] text-gray-600">Export disponible</span>
                   </div>
                 </div>
               </div>
 
-              <div className="p-3 rounded-lg bg-[#1a274408] border border-[#1a274415]">
+              <div className="p-3 rounded-lg bg-[var(--institution-primary-08)] border border-[var(--institution-primary-15)]">
                 <div className="flex items-center gap-2 mb-2">
-                  <AlertCircle className="size-4 text-[#1a2744]" />
-                  <span className="text-sm font-semibold text-[#1a2744]">Versements non connectes</span>
+                  <AlertCircle className="size-4 text-[var(--institution-primary)]" />
+                  <span className="text-sm font-semibold text-[var(--institution-primary)]">Versements non connectes</span>
                 </div>
                 <p className="text-xs text-gray-600 leading-relaxed">
                   Cet onglet ne declenche aucun paiement externe. Les virements, paiements mobiles ou validations comptables restent a effectuer dans les outils financiers officiels de l&apos;institution.
                 </p>
                 <div className="flex items-center gap-1.5 mt-2">
-                  <div className="w-2 h-2 rounded-full bg-[#d4a853]" />
+                  <div className="w-2 h-2 rounded-full bg-[var(--institution-accent)]" />
                   <span className="text-[10px] text-gray-500">Suivi administratif uniquement</span>
                 </div>
               </div>
 
-              <div className="p-3 rounded-lg bg-[#2d7a4f08] border border-[#2d7a4f15]">
+              <div className="p-3 rounded-lg bg-[var(--institution-secondary-08)] border border-[var(--institution-secondary-15)]">
                 <div className="flex items-center gap-2 mb-2">
-                  <Clock className="size-4 text-[#2d7a4f]" />
-                  <span className="text-sm font-semibold text-[#1a2744]">Connexion requise</span>
+                  <Clock className="size-4 text-[var(--institution-secondary)]" />
+                  <span className="text-sm font-semibold text-[var(--institution-primary)]">Connexion requise</span>
                 </div>
                 <p className="text-xs text-gray-600 leading-relaxed">
                   Les creations, modifications, suppressions et exports utilisent les API du serveur. Si la connexion est interrompue, l&apos;action doit etre relancee apres retour du reseau.
                 </p>
                 <div className="flex items-center gap-1.5 mt-2">
-                  <div className="w-2 h-2 rounded-full bg-[#2d7a4f]" />
+                  <div className="w-2 h-2 rounded-full bg-[var(--institution-secondary)]" />
                   <span className="text-[10px] text-gray-500">Validation cote serveur</span>
                 </div>
               </div>
@@ -1025,25 +1025,25 @@ export function ScholarshipsPage() {
               <div className="pt-2 border-t border-gray-100">
                 <div className="grid grid-cols-3 gap-3 text-center">
                   <div>
-                    <div className="w-8 h-8 rounded-full bg-[#d4a85315] flex items-center justify-center mx-auto mb-1">
-                      <Banknote className="size-4 text-[#d4a853]" />
+                    <div className="w-8 h-8 rounded-full bg-[var(--institution-accent-15)] flex items-center justify-center mx-auto mb-1">
+                      <Banknote className="size-4 text-[var(--institution-accent)]" />
                     </div>
                     <p className="text-[10px] text-gray-400">Devise</p>
-                    <p className="text-[10px] font-semibold text-[#1a2744]">FCFA</p>
+                    <p className="text-[10px] font-semibold text-[var(--institution-primary)]">FCFA</p>
                   </div>
                   <div>
-                    <div className="w-8 h-8 rounded-full bg-[#1a274415] flex items-center justify-center mx-auto mb-1">
-                      <AlertCircle className="size-4 text-[#1a2744]" />
+                    <div className="w-8 h-8 rounded-full bg-[var(--institution-primary-15)] flex items-center justify-center mx-auto mb-1">
+                      <AlertCircle className="size-4 text-[var(--institution-primary)]" />
                     </div>
                     <p className="text-[10px] text-gray-400">Paiement</p>
-                    <p className="text-[10px] font-semibold text-[#1a2744]">Externe</p>
+                    <p className="text-[10px] font-semibold text-[var(--institution-primary)]">Externe</p>
                   </div>
                   <div>
-                    <div className="w-8 h-8 rounded-full bg-[#2d7a4f15] flex items-center justify-center mx-auto mb-1">
-                      <Clock className="size-4 text-[#2d7a4f]" />
+                    <div className="w-8 h-8 rounded-full bg-[var(--institution-secondary-15)] flex items-center justify-center mx-auto mb-1">
+                      <Clock className="size-4 text-[var(--institution-secondary)]" />
                     </div>
                     <p className="text-[10px] text-gray-400">Mode</p>
-                    <p className="text-[10px] font-semibold text-[#1a2744]">En ligne</p>
+                    <p className="text-[10px] font-semibold text-[var(--institution-primary)]">En ligne</p>
                   </div>
                 </div>
               </div>

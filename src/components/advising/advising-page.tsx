@@ -212,12 +212,12 @@ function getInitials(name: string): string {
 }
 
 const AVATAR_GRADIENTS: [string, string][] = [
-  ['#1a2744', '#2d7a4f'],
-  ['#2d7a4f', '#3da66a'],
-  ['#d4a853', '#c4933e'],
-  ['#1a2744', '#d4a853'],
-  ['#2d7a4f', '#d4a853'],
-  ['#d4a853', '#1a2744'],
+  ['var(--institution-primary)', 'var(--institution-secondary)'],
+  ['var(--institution-secondary)', 'var(--institution-secondary-bright)'],
+  ['var(--institution-accent)', '#c4933e'],
+  ['var(--institution-primary)', 'var(--institution-accent)'],
+  ['var(--institution-secondary)', 'var(--institution-accent)'],
+  ['var(--institution-accent)', 'var(--institution-primary)'],
 ]
 
 function getAvatarGradient(index: number): [string, string] {
@@ -225,8 +225,8 @@ function getAvatarGradient(index: number): [string, string] {
 }
 
 const ALERT_GRADIENTS: Record<AlertLevel, [string, string]> = {
-  Vert: ['#2d7a4f', '#3da66a'],
-  Jaune: ['#d4a853', '#c4933e'],
+  Vert: ['var(--institution-secondary)', 'var(--institution-secondary-bright)'],
+  Jaune: ['var(--institution-accent)', '#c4933e'],
   Orange: ['#ea580c', '#c2410c'],
   Rouge: ['#c62828', '#8f1d1d'],
 }
@@ -244,37 +244,37 @@ const APPOINTMENT_TYPE_OPTIONS = [
 // ─── Config Maps ──────────────────────────────────────────────────────────────
 
 const typeConfig: Record<string, { label: string; className: string }> = {
-  'Orientation': { label: 'Orientation', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0' },
-  'Suivi pedagogique': { label: 'Suivi ped.', className: 'bg-[#1a274415] text-[#1a2744] border-0' },
+  'Orientation': { label: 'Orientation', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0' },
+  'Suivi pedagogique': { label: 'Suivi ped.', className: 'bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0' },
   'Reorientation': { label: 'Reorientation', className: 'bg-[#ea580c15] text-[#ea580c] border-0' },
-  'Probleme personnel': { label: 'Perso.', className: 'bg-[#d4a85315] text-[#d4a853] border-0' },
+  'Probleme personnel': { label: 'Perso.', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0' },
   'Projet professionnel': { label: 'Projet pro.', className: 'bg-[#8b5cf615] text-[#8b5cf6] border-0' },
 }
 
 const statusConfig: Record<string, { label: string; className: string; icon: React.ElementType }> = {
-  'Planifie': { label: 'Planifie', className: 'bg-[#1a274415] text-[#1a2744] border-0', icon: Clock },
-  'En cours': { label: 'En cours', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0', icon: CalendarCheck },
-  'Termine': { label: 'Termine', className: 'bg-[#d4a85315] text-[#d4a853] border-0', icon: CheckCircle2 },
+  'Planifie': { label: 'Planifie', className: 'bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0', icon: Clock },
+  'En cours': { label: 'En cours', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0', icon: CalendarCheck },
+  'Termine': { label: 'Termine', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0', icon: CheckCircle2 },
   'Annule': { label: 'Annule', className: 'bg-[#c6282815] text-[#c62828] border-0', icon: XCircle },
 }
 
 const alertConfig: Record<string, { label: string; className: string; bgClass: string; icon: React.ElementType }> = {
-  'Vert': { label: 'Vert', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0', bgClass: 'bg-[#2d7a4f08]', icon: CheckCircle2 },
-  'Jaune': { label: 'Jaune', className: 'bg-[#d4a85315] text-[#d4a853] border-0', bgClass: 'bg-[#d4a85308]', icon: AlertTriangle },
+  'Vert': { label: 'Vert', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0', bgClass: 'bg-[var(--institution-secondary-08)]', icon: CheckCircle2 },
+  'Jaune': { label: 'Jaune', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0', bgClass: 'bg-[var(--institution-accent-08)]', icon: AlertTriangle },
   'Orange': { label: 'Orange', className: 'bg-[#ea580c15] text-[#ea580c] border-0', bgClass: 'bg-[#ea580c08]', icon: AlertTriangle },
   'Rouge': { label: 'Rouge', className: 'bg-[#c6282815] text-[#c62828] border-0', bgClass: 'bg-[#c6282808]', icon: XCircle },
 }
 
 const disponibiliteConfig: Record<string, { label: string; className: string; dotColor: string }> = {
-  'Libre': { label: 'Libre', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0', dotColor: '#2d7a4f' },
-  'Occupe': { label: 'Occupe', className: 'bg-[#d4a85315] text-[#d4a853] border-0', dotColor: '#d4a853' },
-  'En RDV': { label: 'En RDV', className: 'bg-[#1a274415] text-[#1a2744] border-0', dotColor: '#1a2744' },
+  'Libre': { label: 'Libre', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0', dotColor: 'var(--institution-secondary)' },
+  'Occupe': { label: 'Occupe', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0', dotColor: 'var(--institution-accent)' },
+  'En RDV': { label: 'En RDV', className: 'bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0', dotColor: 'var(--institution-primary)' },
 }
 
 const specialtyConfig: Record<string, { label: string; className: string }> = {
-  'Orientation': { label: 'Orientation', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0' },
-  'Pedagogie': { label: 'Pedagogie', className: 'bg-[#1a274415] text-[#1a2744] border-0' },
-  'Professionnel': { label: 'Professionnel', className: 'bg-[#d4a85315] text-[#d4a853] border-0' },
+  'Orientation': { label: 'Orientation', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0' },
+  'Pedagogie': { label: 'Pedagogie', className: 'bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0' },
+  'Professionnel': { label: 'Professionnel', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0' },
   'Psychologique': { label: 'Psychologique', className: 'bg-[#8b5cf615] text-[#8b5cf6] border-0' },
 }
 
@@ -382,17 +382,17 @@ export function AdvisingPage() {
     {
       objectif: `Atteindre la moyenne minimale de ${passingGrade}/20`,
       progress: Math.max(0, Math.min(100, Math.round((priorityStudent.moyenne / passingGrade) * 100))),
-      color: '#2d7a4f',
+      color: 'var(--institution-secondary)',
     },
     {
       objectif: `Valider les ${priorityStudent.creditsTotal} credits de l'annee`,
       progress: priorityStudent.creditsTotal > 0 ? Math.round((priorityStudent.creditsAcquis / priorityStudent.creditsTotal) * 100) : 0,
-      color: '#1a2744',
+      color: 'var(--institution-primary)',
     },
     {
       objectif: 'Regulariser les paiements en attente',
       progress: priorityStudent.dettes === 0 ? 100 : Math.max(0, 100 - priorityStudent.dettes * 25),
-      color: '#d4a853',
+      color: 'var(--institution-accent)',
     },
   ] : []
 
@@ -517,7 +517,7 @@ export function AdvisingPage() {
       <DialogTrigger asChild>
         <Button
           size="sm"
-          className="text-xs bg-[#2d7a4f] hover:bg-[#236b40] text-white"
+          className="text-xs bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white"
           disabled={noAdvisors}
           onClick={() => openNewAppointment()}
         >
@@ -600,7 +600,7 @@ export function AdvisingPage() {
               />
             </div>
             <div className="flex gap-2 pt-2">
-              <Button className="flex-1 bg-[#2d7a4f] hover:bg-[#236b40] text-white" disabled={isSubmittingAppt} onClick={createAppointment}>
+              <Button className="flex-1 bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white" disabled={isSubmittingAppt} onClick={createAppointment}>
                 {isSubmittingAppt ? 'Planification...' : 'Planifier'}
               </Button>
               <Button variant="outline" className="flex-1" onClick={() => setShowNewAppointment(false)}>
@@ -622,7 +622,7 @@ export function AdvisingPage() {
     >
       {/* ─── Gradient Header Banner ─────────────────────────────────────────── */}
       <motion.div variants={itemVariants} className="relative overflow-hidden rounded-xl">
-        <div className="absolute inset-0 bg-gradient-to-r from-[#1a2744] via-[#1f3050] to-[#2d7a4f]" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[var(--institution-primary)] via-[var(--institution-primary-light)] to-[var(--institution-secondary)]" />
         <svg className="absolute inset-0 w-full h-full opacity-[0.07]" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <pattern id="advising-pattern" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
@@ -669,22 +669,22 @@ export function AdvisingPage() {
       <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Etudiants suivis */}
         <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
-        <Card className="overflow-hidden relative border-l-4 border-l-[#2d7a4f]">
-          <div className="h-1 bg-gradient-to-r from-[#2d7a4f] to-[#3da66a]" />
-          <div className="absolute inset-0 bg-gradient-to-br from-[#2d7a4f08] to-[#2d7a4f00] pointer-events-none" />
+        <Card className="overflow-hidden relative border-l-4 border-l-[var(--institution-secondary)]">
+          <div className="h-1 bg-gradient-to-r from-[var(--institution-secondary)] to-[var(--institution-secondary-bright)]" />
+          <div className="absolute inset-0 bg-gradient-to-br from-[var(--institution-secondary-08)] to-[var(--institution-secondary-00)] pointer-events-none" />
           <CardContent className="p-4 relative">
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Etudiants suivis</p>
-                <p className="text-xl font-bold text-[#2d7a4f] mt-1">{useCountUp(monitoredStudents.length, 1400)}</p>
+                <p className="text-xl font-bold text-[var(--institution-secondary)] mt-1">{useCountUp(monitoredStudents.length, 1400)}</p>
                 <p className="text-xs text-gray-400 mt-1">{advisedMonitoredCount} avec conseiller assigne</p>
               </div>
-              <div className="w-10 h-10 rounded-xl bg-[#2d7a4f15] flex items-center justify-center">
-                <Users className="size-5 text-[#2d7a4f]" />
+              <div className="w-10 h-10 rounded-xl bg-[var(--institution-secondary-15)] flex items-center justify-center">
+                <Users className="size-5 text-[var(--institution-secondary)]" />
               </div>
             </div>
             <div className="mt-3">
-              <Progress value={coverageRate} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#2d7a4f]" />
+              <Progress value={coverageRate} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[var(--institution-secondary)]" />
             </div>
           </CardContent>
         </Card>
@@ -692,22 +692,22 @@ export function AdvisingPage() {
 
         {/* Rendez-vous ce mois */}
         <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
-        <Card className="overflow-hidden relative border-l-4 border-l-[#1a2744]">
-          <div className="h-1 bg-gradient-to-r from-[#1a2744] to-[#2d3e5e]" />
-          <div className="absolute inset-0 bg-gradient-to-br from-[#1a274408] to-[#1a274400] pointer-events-none" />
+        <Card className="overflow-hidden relative border-l-4 border-l-[var(--institution-primary)]">
+          <div className="h-1 bg-gradient-to-r from-[var(--institution-primary)] to-[#2d3e5e]" />
+          <div className="absolute inset-0 bg-gradient-to-br from-[var(--institution-primary-08)] to-[var(--institution-primary-00)] pointer-events-none" />
           <CardContent className="p-4 relative">
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Rendez-vous ce mois</p>
-                <p className="text-xl font-bold text-[#1a2744] mt-1">{useCountUp(sessionsThisMonth, 1200)}</p>
+                <p className="text-xl font-bold text-[var(--institution-primary)] mt-1">{useCountUp(sessionsThisMonth, 1200)}</p>
                 <p className="text-xs text-gray-400 mt-1">{sessionsThisWeek} cette semaine</p>
               </div>
-              <div className="w-10 h-10 rounded-xl bg-[#1a274415] flex items-center justify-center">
-                <CalendarCheck className="size-5 text-[#1a2744]" />
+              <div className="w-10 h-10 rounded-xl bg-[var(--institution-primary-15)] flex items-center justify-center">
+                <CalendarCheck className="size-5 text-[var(--institution-primary)]" />
               </div>
             </div>
             <div className="mt-3">
-              <Progress value={appointments.length > 0 ? Math.round((sessionsThisMonth / appointments.length) * 100) : 0} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#1a2744]" />
+              <Progress value={appointments.length > 0 ? Math.round((sessionsThisMonth / appointments.length) * 100) : 0} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[var(--institution-primary)]" />
             </div>
           </CardContent>
         </Card>
@@ -715,22 +715,22 @@ export function AdvisingPage() {
 
         {/* Taux de reussite */}
         <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
-        <Card className="overflow-hidden relative border-l-4 border-l-[#d4a853]">
-          <div className="h-1 bg-gradient-to-r from-[#d4a853] to-[#e6c477]" />
-          <div className="absolute inset-0 bg-gradient-to-br from-[#d4a85308] to-[#d4a85300] pointer-events-none" />
+        <Card className="overflow-hidden relative border-l-4 border-l-[var(--institution-accent)]">
+          <div className="h-1 bg-gradient-to-r from-[var(--institution-accent)] to-[var(--institution-accent-light)]" />
+          <div className="absolute inset-0 bg-gradient-to-br from-[var(--institution-accent-08)] to-[var(--institution-accent-00)] pointer-events-none" />
           <CardContent className="p-4 relative">
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Taux de reussite</p>
-                <p className="text-xl font-bold text-[#d4a853] mt-1">{useCountUp(tauxReussite, 1300)}%</p>
+                <p className="text-xl font-bold text-[var(--institution-accent)] mt-1">{useCountUp(tauxReussite, 1300)}%</p>
                 <p className="text-xs text-gray-400 mt-1">{successCount}/{monitoredStudents.length} suivis au-dessus de {passingGrade}/20</p>
               </div>
-              <div className="w-10 h-10 rounded-xl bg-[#d4a85315] flex items-center justify-center">
-                <TrendingUp className="size-5 text-[#d4a853]" />
+              <div className="w-10 h-10 rounded-xl bg-[var(--institution-accent-15)] flex items-center justify-center">
+                <TrendingUp className="size-5 text-[var(--institution-accent)]" />
               </div>
             </div>
             <div className="mt-3">
-              <Progress value={tauxReussite} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#d4a853]" />
+              <Progress value={tauxReussite} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[var(--institution-accent)]" />
             </div>
           </CardContent>
         </Card>
@@ -738,22 +738,22 @@ export function AdvisingPage() {
 
         {/* Conseillers actifs */}
         <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
-        <Card className="overflow-hidden relative border-l-4 border-l-[#1a2744]">
-          <div className="h-1 bg-gradient-to-r from-[#1a2744] to-[#2d3e5e]" />
-          <div className="absolute inset-0 bg-gradient-to-br from-[#1a274408] to-[#1a274400] pointer-events-none" />
+        <Card className="overflow-hidden relative border-l-4 border-l-[var(--institution-primary)]">
+          <div className="h-1 bg-gradient-to-r from-[var(--institution-primary)] to-[#2d3e5e]" />
+          <div className="absolute inset-0 bg-gradient-to-br from-[var(--institution-primary-08)] to-[var(--institution-primary-00)] pointer-events-none" />
           <CardContent className="p-4 relative">
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Conseillers actifs</p>
-                <p className="text-xl font-bold text-[#1a2744] mt-1">{useCountUp(advisors.length, 1000)}</p>
+                <p className="text-xl font-bold text-[var(--institution-primary)] mt-1">{useCountUp(advisors.length, 1000)}</p>
                 <p className="text-xs text-gray-400 mt-1">{advisorsDisponibles} disponibles</p>
               </div>
-              <div className="w-10 h-10 rounded-xl bg-[#1a274415] flex items-center justify-center">
-                <UserCheck className="size-5 text-[#1a2744]" />
+              <div className="w-10 h-10 rounded-xl bg-[var(--institution-primary-15)] flex items-center justify-center">
+                <UserCheck className="size-5 text-[var(--institution-primary)]" />
               </div>
             </div>
             <div className="mt-3">
-              <Progress value={advisors.length > 0 ? Math.round((advisorsDisponibles / advisors.length) * 100) : 0} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#1a2744]" />
+              <Progress value={advisors.length > 0 ? Math.round((advisorsDisponibles / advisors.length) * 100) : 0} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[var(--institution-primary)]" />
             </div>
           </CardContent>
         </Card>
@@ -762,17 +762,17 @@ export function AdvisingPage() {
 
       {/* ── Rendez-vous de Conseils Card ──────────────────────────────────────── */}
       <motion.div variants={itemVariants}>
-        <Card className="border-l-4 border-l-[#1a2744]">
-          <div className="h-1 bg-gradient-to-r from-[#1a2744] via-[#2d7a4f] to-[#d4a853]" />
+        <Card className="border-l-4 border-l-[var(--institution-primary)]">
+          <div className="h-1 bg-gradient-to-r from-[var(--institution-primary)] via-[var(--institution-secondary)] to-[var(--institution-accent)]" />
           <CardHeader className="pb-3">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-              <CardTitle className="text-sm font-semibold text-[#1a2744]">Rendez-vous de conseils</CardTitle>
+              <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Rendez-vous de conseils</CardTitle>
               <div className="flex items-center gap-2">
                 {newAppointmentDialog}
                 <Button
                   size="sm"
                   variant="ghost"
-                  className="text-xs text-[#2d7a4f] hover:text-[#236b40] hover:bg-[#2d7a4f10]"
+                  className="text-xs text-[var(--institution-secondary)] hover:text-[var(--institution-secondary-dark)] hover:bg-[var(--institution-secondary-10)]"
                   onClick={() => setShowSchedule(!showSchedule)}
                 >
                   {showSchedule ? (
@@ -813,10 +813,10 @@ export function AdvisingPage() {
                     const tConf = typeConfig[appt.type]
                     const sConf = statusConfig[appt.status]
                     return (
-                      <TableRow key={appt.id} className="hover:bg-[#2d7a4f05] transition-colors">
+                      <TableRow key={appt.id} className="hover:bg-[var(--institution-secondary-05)] transition-colors">
                         <TableCell className="py-2.5">
                           <div>
-                            <p className="text-sm font-medium text-[#1a2744]">{appt.studentName}</p>
+                            <p className="text-sm font-medium text-[var(--institution-primary)]">{appt.studentName}</p>
                             <p className="text-[10px] text-gray-400 font-mono">{appt.matricule}</p>
                           </div>
                         </TableCell>
@@ -841,7 +841,7 @@ export function AdvisingPage() {
                             <div className="flex items-center gap-1.5">
                               <motion.div
                                 className="w-2 h-2 rounded-full shrink-0"
-                                style={{ backgroundColor: appt.status === 'En cours' ? '#2d7a4f' : appt.status === 'Planifie' ? '#d4a853' : 'transparent' }}
+                                style={{ backgroundColor: appt.status === 'En cours' ? 'var(--institution-secondary)' : appt.status === 'Planifie' ? 'var(--institution-accent)' : 'transparent' }}
                                 animate={appt.status === 'En cours' || appt.status === 'Planifie' ? { scale: [1, 1.4, 1], opacity: [1, 0.6, 1] } : {}}
                                 transition={{ duration: 2, repeat: Infinity }}
                               />
@@ -912,7 +912,7 @@ export function AdvisingPage() {
                 exit={{ opacity: 0, height: 0 }}
                 className="mt-4 p-4 rounded-lg bg-gray-50 border border-gray-100"
               >
-                <p className="text-xs font-semibold text-[#1a2744] mb-3">Emploi du temps de la semaine en cours</p>
+                <p className="text-xs font-semibold text-[var(--institution-primary)] mb-3">Emploi du temps de la semaine en cours</p>
                 <div className="grid grid-cols-5 gap-2">
                   {WEEK_DAYS.map(day => (
                     <div key={day} className="text-center">
@@ -923,7 +923,7 @@ export function AdvisingPage() {
                         )}
                         {weekSchedule[day].map(appt => (
                             <div key={appt.id} className="p-1.5 rounded bg-white border border-gray-100 text-left">
-                              <p className="text-[9px] font-medium text-[#1a2744] truncate">{appt.studentName}</p>
+                              <p className="text-[9px] font-medium text-[var(--institution-primary)] truncate">{appt.studentName}</p>
                               <p className="text-[8px] text-gray-400">{appt.time}</p>
                             </div>
                           ))
@@ -940,10 +940,10 @@ export function AdvisingPage() {
 
       {/* ── Suivi Pedagogique Table ────────────────────────────────────────────── */}
       <motion.div variants={itemVariants}>
-        <Card className="border-l-4 border-l-[#2d7a4f]">
-          <div className="h-1 bg-gradient-to-r from-[#2d7a4f] to-[#3da66a]" />
+        <Card className="border-l-4 border-l-[var(--institution-secondary)]">
+          <div className="h-1 bg-gradient-to-r from-[var(--institution-secondary)] to-[var(--institution-secondary-bright)]" />
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold text-[#1a2744]">Suivi pedagogique</CardTitle>
+            <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Suivi pedagogique</CardTitle>
           </CardHeader>
           <CardContent className="p-4 pt-0">
             {/* Search + Filters */}
@@ -1029,11 +1029,11 @@ export function AdvisingPage() {
                     return (
                       <TableRow
                         key={student.id}
-                        className={`hover:bg-[#2d7a4f05] transition-colors ${aConf ? aConf.bgClass : ''}`}
+                        className={`hover:bg-[var(--institution-secondary-05)] transition-colors ${aConf ? aConf.bgClass : ''}`}
                       >
                         <TableCell className="py-2.5">
                           <div>
-                            <p className="text-sm font-medium text-[#1a2744]">{student.name}</p>
+                            <p className="text-sm font-medium text-[var(--institution-primary)]">{student.name}</p>
                             <p className="text-[10px] text-gray-400 font-mono">{student.matricule}</p>
                           </div>
                         </TableCell>
@@ -1045,8 +1045,8 @@ export function AdvisingPage() {
                         </TableCell>
                         <TableCell className="text-center py-2.5">
                           <span className={`text-sm font-semibold ${
-                            student.moyenne >= passingGrade + 2 ? 'text-[#2d7a4f]' :
-                            student.moyenne >= passingGrade ? 'text-[#d4a853]' :
+                            student.moyenne >= passingGrade + 2 ? 'text-[var(--institution-secondary)]' :
+                            student.moyenne >= passingGrade ? 'text-[var(--institution-accent)]' :
                             'text-[#c62828]'
                           }`}>
                             {student.moyenne.toFixed(1)}
@@ -1054,14 +1054,14 @@ export function AdvisingPage() {
                         </TableCell>
                         <TableCell className="text-center py-2.5">
                           <div className="flex items-center gap-1 justify-center">
-                            <span className="text-xs font-semibold text-[#1a2744]">{student.creditsAcquis}</span>
+                            <span className="text-xs font-semibold text-[var(--institution-primary)]">{student.creditsAcquis}</span>
                             <span className="text-[10px] text-gray-400">/{student.creditsTotal}</span>
                           </div>
                         </TableCell>
                         <TableCell className="text-center py-2.5">
                           <span className={`text-xs font-semibold ${
-                            student.dettes === 0 ? 'text-[#2d7a4f]' :
-                            student.dettes <= 3 ? 'text-[#d4a853]' :
+                            student.dettes === 0 ? 'text-[var(--institution-secondary)]' :
+                            student.dettes <= 3 ? 'text-[var(--institution-accent)]' :
                             'text-[#c62828]'
                           }`}>
                             {student.dettes}
@@ -1137,13 +1137,13 @@ export function AdvisingPage() {
 
       {/* ── Plan d'Accompagnement Card ─────────────────────────────────────────── */}
       <motion.div variants={itemVariants}>
-        <Card className="border-l-4 border-l-[#d4a853]">
-          <div className="h-1 bg-gradient-to-r from-[#d4a853] to-[#e6c477]" />
+        <Card className="border-l-4 border-l-[var(--institution-accent)]">
+          <div className="h-1 bg-gradient-to-r from-[var(--institution-accent)] to-[var(--institution-accent-light)]" />
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-semibold text-[#1a2744]">Plan d&apos;accompagnement</CardTitle>
+              <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Plan d&apos;accompagnement</CardTitle>
               {priorityStudent && (
-                <Badge className="text-[10px] bg-[#d4a85315] text-[#d4a853] border-0">
+                <Badge className="text-[10px] bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0">
                   <Target className="size-3 mr-1" />
                   Suivi prioritaire
                 </Badge>
@@ -1168,7 +1168,7 @@ export function AdvisingPage() {
                         {getInitials(priorityStudent.name)}
                       </div>
                       <div>
-                        <p className="text-sm font-semibold text-[#1a2744]">{priorityStudent.name}</p>
+                        <p className="text-sm font-semibold text-[var(--institution-primary)]">{priorityStudent.name}</p>
                         <p className="text-[10px] text-gray-400 font-mono">{priorityStudent.matricule} - {priorityStudent.program} - {priorityStudent.level}</p>
                       </div>
                     </div>
@@ -1179,7 +1179,7 @@ export function AdvisingPage() {
                       </div>
                       <div className="text-center">
                         <p className="text-[10px] text-gray-400 uppercase">Credits</p>
-                        <p className="text-sm font-bold text-[#1a2744]">{priorityStudent.creditsAcquis}/{priorityStudent.creditsTotal}</p>
+                        <p className="text-sm font-bold text-[var(--institution-primary)]">{priorityStudent.creditsAcquis}/{priorityStudent.creditsTotal}</p>
                       </div>
                       <div className="text-center">
                         <p className="text-[10px] text-gray-400 uppercase">Dettes</p>
@@ -1191,7 +1191,7 @@ export function AdvisingPage() {
 
                 {/* Objectifs definis */}
                 <div>
-                  <p className="text-xs font-semibold text-[#1a2744] mb-3">Objectifs definis</p>
+                  <p className="text-xs font-semibold text-[var(--institution-primary)] mb-3">Objectifs definis</p>
                   <div className="space-y-3">
                     {objectifs.map((obj, idx) => (
                       <div key={idx} className="space-y-1.5">
@@ -1215,19 +1215,19 @@ export function AdvisingPage() {
 
                 {/* Ressources recommandees */}
                 <div>
-                  <p className="text-xs font-semibold text-[#1a2744] mb-3">Ressources recommandees</p>
+                  <p className="text-xs font-semibold text-[var(--institution-primary)] mb-3">Ressources recommandees</p>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                     {[
-                      { title: 'Tutorat individuel', desc: 'Renforcement en UE deficitaires', icon: GraduationCap, color: '#2d7a4f' },
-                      { title: 'Atelier methode', desc: 'Techniques de travail efficaces', icon: BookOpen, color: '#1a2744' },
-                      { title: 'Suivi psychologique', desc: 'Accompagnement personnel', icon: Heart, color: '#d4a853' },
+                      { title: 'Tutorat individuel', desc: 'Renforcement en UE deficitaires', icon: GraduationCap, color: 'var(--institution-secondary)' },
+                      { title: 'Atelier methode', desc: 'Techniques de travail efficaces', icon: BookOpen, color: 'var(--institution-primary)' },
+                      { title: 'Suivi psychologique', desc: 'Accompagnement personnel', icon: Heart, color: 'var(--institution-accent)' },
                     ].map((res, idx) => (
                       <div key={idx} className="p-3 rounded-lg bg-gray-50 border border-gray-100 hover:border-gray-200 transition-colors">
                         <div className="flex items-center gap-2 mb-1">
                           <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${res.color}15` }}>
                             <res.icon className="size-3.5" style={{ color: res.color }} />
                           </div>
-                          <span className="text-xs font-semibold text-[#1a2744]">{res.title}</span>
+                          <span className="text-xs font-semibold text-[var(--institution-primary)]">{res.title}</span>
                         </div>
                         <p className="text-[10px] text-gray-500">{res.desc}</p>
                       </div>
@@ -1237,7 +1237,7 @@ export function AdvisingPage() {
 
                 {/* Historique des entretiens */}
                 <div>
-                  <p className="text-xs font-semibold text-[#1a2744] mb-3">Historique des entretiens</p>
+                  <p className="text-xs font-semibold text-[var(--institution-primary)] mb-3">Historique des entretiens</p>
                   {priorityStudentAppointments.length === 0 ? (
                     <p className="text-xs text-gray-400">Aucun entretien enregistre pour cet etudiant.</p>
                   ) : (
@@ -1245,12 +1245,12 @@ export function AdvisingPage() {
                       {priorityStudentAppointments.map((entretien, idx) => (
                         <div key={entretien.id} className="flex gap-3">
                           <div className="flex flex-col items-center">
-                            <div className="w-2.5 h-2.5 rounded-full bg-[#2d7a4f] mt-1 shrink-0" />
+                            <div className="w-2.5 h-2.5 rounded-full bg-[var(--institution-secondary)] mt-1 shrink-0" />
                             {idx < priorityStudentAppointments.length - 1 && <div className="w-0.5 flex-1 bg-gray-200 mt-1" />}
                           </div>
                           <div className="flex-1 pb-3">
                             <div className="flex items-center gap-2 mb-1">
-                              <span className="text-xs font-semibold text-[#1a2744]">{entretien.date}</span>
+                              <span className="text-xs font-semibold text-[var(--institution-primary)]">{entretien.date}</span>
                               <Badge variant="outline" className="text-[9px] border-gray-200 text-gray-500 py-0">{entretien.conseiller}</Badge>
                               {statusConfig[entretien.status] && (
                                 <Badge className={`text-[9px] py-0 ${statusConfig[entretien.status].className}`}>{statusConfig[entretien.status].label}</Badge>
@@ -1271,10 +1271,10 @@ export function AdvisingPage() {
 
       {/* ── Equipe de Conseillers Card ─────────────────────────────────────────── */}
       <motion.div variants={itemVariants}>
-        <Card className="border-l-4 border-l-[#1a2744]">
+        <Card className="border-l-4 border-l-[var(--institution-primary)]">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-semibold text-[#1a2744]">Equipe de conseillers</CardTitle>
+              <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Equipe de conseillers</CardTitle>
               <Button size="sm" variant="outline" className="text-xs h-8" onClick={() => setShowNewAdvisor((v) => !v)}>
                 <Plus className="size-3.5 mr-1.5" />
                 Ajouter un conseiller
@@ -1317,7 +1317,7 @@ export function AdvisingPage() {
                       }))}
                       className={`text-[10px] px-2 py-1 rounded-full border transition-colors ${
                         newAdvisor.specialties.includes(spec)
-                          ? 'bg-[#1a2744] text-white border-[#1a2744]'
+                          ? 'bg-[var(--institution-primary)] text-white border-[var(--institution-primary)]'
                           : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
                       }`}
                     >
@@ -1325,7 +1325,7 @@ export function AdvisingPage() {
                     </button>
                   ))}
                 </div>
-                <Button size="sm" className="h-7 text-[10px] bg-[#1a2744] hover:bg-[#1a2744]/90 text-white" onClick={createAdvisor} disabled={isSubmittingAdvisor}>
+                <Button size="sm" className="h-7 text-[10px] bg-[var(--institution-primary)] hover:bg-[var(--institution-primary)]/90 text-white" onClick={createAdvisor} disabled={isSubmittingAdvisor}>
                   {isSubmittingAdvisor ? 'Ajout...' : 'Enregistrer'}
                 </Button>
               </div>
@@ -1353,7 +1353,7 @@ export function AdvisingPage() {
                           {getInitials(conseiller.name)}
                         </div>
                         <div className="min-w-0">
-                          <p className="text-sm font-semibold text-[#1a2744] truncate">{conseiller.name}</p>
+                          <p className="text-sm font-semibold text-[var(--institution-primary)] truncate">{conseiller.name}</p>
                           <p className="text-[10px] text-gray-400">{conseiller.title}</p>
                           <p className="text-[10px] text-gray-400">{conseiller.department}</p>
                         </div>
@@ -1388,7 +1388,7 @@ export function AdvisingPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="w-full text-xs border-[#1a274420] text-[#1a2744] hover:bg-[#1a274408]"
+                        className="w-full text-xs border-[var(--institution-primary-20)] text-[var(--institution-primary)] hover:bg-[var(--institution-primary-08)]"
                         onClick={() => openNewAppointment({ advisorId: conseiller.id })}
                       >
                         <Calendar className="size-3 mr-1.5" />
@@ -1405,9 +1405,9 @@ export function AdvisingPage() {
 
       {/* ── Ateliers & Seances Collectives Card ────────────────────────────────── */}
       <motion.div variants={itemVariants}>
-        <Card className="border-l-4 border-l-[#2d7a4f]">
+        <Card className="border-l-4 border-l-[var(--institution-secondary)]">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold text-[#1a2744]">Ateliers &amp; Seances collectives</CardTitle>
+            <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Ateliers &amp; Seances collectives</CardTitle>
           </CardHeader>
           <CardContent className="p-4 pt-0">
             {!isLoading && workshops.length === 0 ? (
@@ -1424,11 +1424,11 @@ export function AdvisingPage() {
                       className="p-4 rounded-lg border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all"
                     >
                       <div className="flex items-start gap-3 mb-3">
-                        <div className="w-10 h-10 rounded-xl bg-[#2d7a4f15] flex items-center justify-center shrink-0">
-                          <BookOpen className="size-5 text-[#2d7a4f]" />
+                        <div className="w-10 h-10 rounded-xl bg-[var(--institution-secondary-15)] flex items-center justify-center shrink-0">
+                          <BookOpen className="size-5 text-[var(--institution-secondary)]" />
                         </div>
                         <div className="min-w-0">
-                          <p className="text-sm font-semibold text-[#1a2744]">{workshop.title}</p>
+                          <p className="text-sm font-semibold text-[var(--institution-primary)]">{workshop.title}</p>
                           <div className="flex items-center gap-3 mt-1">
                             <div className="flex items-center gap-1">
                               <Calendar className="size-3 text-gray-400" />
@@ -1457,12 +1457,12 @@ export function AdvisingPage() {
                       <div className="mb-3">
                         <div className="flex items-center justify-between mb-1.5">
                           <span className="text-[10px] text-gray-400">Inscriptions</span>
-                          <span className="text-[10px] font-semibold text-[#1a2744]">{workshop.inscrits}/{workshop.places} places</span>
+                          <span className="text-[10px] font-semibold text-[var(--institution-primary)]">{workshop.inscrits}/{workshop.places} places</span>
                         </div>
                         <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                           <motion.div
                             className="h-full rounded-full"
-                            style={{ backgroundColor: isFull ? '#ea580c' : '#2d7a4f' }}
+                            style={{ backgroundColor: isFull ? '#ea580c' : 'var(--institution-secondary)' }}
                             initial={{ width: 0 }}
                             animate={{ width: `${occupancyPercent}%` }}
                             transition={{ duration: 0.6, ease: 'easeOut' }}
@@ -1473,7 +1473,7 @@ export function AdvisingPage() {
                       <Button
                         size="sm"
                         variant={isFull ? 'outline' : 'default'}
-                        className={`w-full text-xs ${isFull ? 'border-[#ea580c30] text-[#ea580c] hover:bg-[#ea580c08]' : 'bg-[#2d7a4f] hover:bg-[#236b40] text-white'}`}
+                        className={`w-full text-xs ${isFull ? 'border-[#ea580c30] text-[#ea580c] hover:bg-[#ea580c08]' : 'bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white'}`}
                         disabled={isFull}
                         onClick={() => openNewAppointment({
                           type: 'Orientation',
@@ -1494,9 +1494,9 @@ export function AdvisingPage() {
 
       {/* ── Statistiques d'Orientation Card ────────────────────────────────────── */}
       <motion.div variants={itemVariants}>
-        <Card className="border-l-4 border-l-[#d4a853]">
+        <Card className="border-l-4 border-l-[var(--institution-accent)]">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold text-[#1a2744]">Statistiques d&apos;orientation</CardTitle>
+            <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Statistiques d&apos;orientation</CardTitle>
           </CardHeader>
           <CardContent className="p-4 pt-0">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -1504,7 +1504,7 @@ export function AdvisingPage() {
               <div className="space-y-5">
                 {/* Distribution des motifs */}
                 <div>
-                  <p className="text-xs font-semibold text-[#1a2744] mb-3">Distribution des motifs de consultation</p>
+                  <p className="text-xs font-semibold text-[var(--institution-primary)] mb-3">Distribution des motifs de consultation</p>
                   {motifData.length === 0 ? (
                     <p className="text-xs text-gray-400">Aucune consultation enregistree pour le moment.</p>
                   ) : (
@@ -1517,7 +1517,7 @@ export function AdvisingPage() {
                                 className="w-2.5 h-2.5 rounded-full shrink-0"
                                 style={{ backgroundColor: item.color }}
                               />
-                              <span className="text-xs font-medium text-[#1a2744]">{typeConfig[item.motif]?.label || item.motif}</span>
+                              <span className="text-xs font-medium text-[var(--institution-primary)]">{typeConfig[item.motif]?.label || item.motif}</span>
                             </div>
                             <span className="text-xs font-semibold" style={{ color: item.color }}>{item.percent}%</span>
                           </div>
@@ -1540,11 +1540,11 @@ export function AdvisingPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="p-3 rounded-lg bg-gray-50 border border-gray-100 text-center">
                     <p className="text-[10px] text-gray-400 uppercase mb-1">Delai moyen demande-RV</p>
-                    <p className="text-lg font-bold text-[#2d7a4f]">{appointments.length > 0 ? avgLeadTimeDays.toFixed(1) : '—'}<span className="text-xs text-gray-400"> jours</span></p>
+                    <p className="text-lg font-bold text-[var(--institution-secondary)]">{appointments.length > 0 ? avgLeadTimeDays.toFixed(1) : '—'}<span className="text-xs text-gray-400"> jours</span></p>
                   </div>
                   <div className="p-3 rounded-lg bg-gray-50 border border-gray-100 text-center">
                     <p className="text-[10px] text-gray-400 uppercase mb-1">Taux d&apos;annulation</p>
-                    <p className="text-lg font-bold text-[#1a2744]">{cancellationRate}%</p>
+                    <p className="text-lg font-bold text-[var(--institution-primary)]">{cancellationRate}%</p>
                     <p className="text-[10px] text-gray-400">{cancelledCount} rendez-vous annules</p>
                   </div>
                 </div>
@@ -1552,7 +1552,7 @@ export function AdvisingPage() {
 
               {/* Right column: Evolution mensuelle */}
               <div>
-                <p className="text-xs font-semibold text-[#1a2744] mb-3">Evolution mensuelle des consultations</p>
+                <p className="text-xs font-semibold text-[var(--institution-primary)] mb-3">Evolution mensuelle des consultations</p>
                 {appointments.length === 0 ? (
                   <div className="p-3 rounded-lg bg-gray-50 border border-gray-100 h-40 flex items-center justify-center">
                     <p className="text-xs text-gray-400">Aucune consultation enregistree</p>
@@ -1564,11 +1564,11 @@ export function AdvisingPage() {
                         const heightPercent = maxMonthly > 0 ? (item.count / maxMonthly) * 100 : 0
                         return (
                           <div key={item.month} className="flex-1 flex flex-col items-center justify-end h-full">
-                            <span className="text-[10px] font-semibold text-[#1a2744] mb-1">{item.count}</span>
+                            <span className="text-[10px] font-semibold text-[var(--institution-primary)] mb-1">{item.count}</span>
                             <motion.div
                               className="w-full rounded-t-md max-w-[40px]"
                               style={{
-                                background: `linear-gradient(to top, #1a2744, #2d7a4f)`,
+                                background: `linear-gradient(to top, var(--institution-primary), var(--institution-secondary))`,
                                 height: 0,
                               }}
                               animate={{ height: `${heightPercent}%` }}
@@ -1584,14 +1584,14 @@ export function AdvisingPage() {
 
                 {/* Summary stats */}
                 <div className="grid grid-cols-2 gap-3 mt-3">
-                  <div className="p-3 rounded-lg bg-[#2d7a4f08] border border-[#2d7a4f15]">
+                  <div className="p-3 rounded-lg bg-[var(--institution-secondary-08)] border border-[var(--institution-secondary-15)]">
                     <p className="text-[10px] text-gray-500">Total consultations</p>
-                    <p className="text-sm font-bold text-[#1a2744]">{appointments.length}</p>
+                    <p className="text-sm font-bold text-[var(--institution-primary)]">{appointments.length}</p>
                   </div>
-                  <div className="p-3 rounded-lg bg-[#d4a85308] border border-[#d4a85315]">
+                  <div className="p-3 rounded-lg bg-[var(--institution-accent-08)] border border-[var(--institution-accent-15)]">
                     <p className="text-[10px] text-gray-500">Taux de retour</p>
-                    <p className="text-sm font-bold text-[#1a2744]">{returnRate}%</p>
-                    <p className="text-[10px] text-[#d4a853] font-medium">Etudiants revenus</p>
+                    <p className="text-sm font-bold text-[var(--institution-primary)]">{returnRate}%</p>
+                    <p className="text-[10px] text-[var(--institution-accent)] font-medium">Etudiants revenus</p>
                   </div>
                 </div>
               </div>

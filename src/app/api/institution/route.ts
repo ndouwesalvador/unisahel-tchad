@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
+import { validBrandColor, validHeaderLines } from '@/lib/institution-branding'
 
 const TENANT_FIELDS = [
   'name', 'shortName', 'motto', 'ministry', 'country', 'city', 'address',
   'phone', 'email', 'website', 'rectorName', 'rectorTitle', 'secondarySignerName', 'secondarySignerTitle', 'thirdSignerName', 'thirdSignerTitle', 'academicSystem',
   'headerLanguageMode', 'arabicCountry', 'arabicName', 'arabicMinistry',
+  'headerLinesFr', 'headerLinesAr',
 ] as const
 
 const SETTINGS_FIELDS = [
@@ -62,12 +64,28 @@ async function handlePut(user: SessionUser, tenantId: string, request: NextReque
         return NextResponse.json({ error: `Texte ${field} invalide (130 caractères maximum)` }, { status: 400 })
       }
     }
+    for (const field of ['headerLinesFr', 'headerLinesAr'] as const) {
+      if (body[field] !== undefined && !validHeaderLines(body[field])) {
+        return NextResponse.json({ error: `${field} : 10 lignes non vides maximum, 130 caractères par ligne` }, { status: 400 })
+      }
+    }
+    if (body.headerLinesFr !== undefined && body.headerLinesFr.length === 0) {
+      return NextResponse.json({ error: 'Ajoutez au moins une ligne française à l’en-tête officiel' }, { status: 400 })
+    }
+    for (const field of ['primaryColor', 'secondaryColor', 'accentColor'] as const) {
+      if (body[field] !== undefined && !validBrandColor(body[field])) {
+        return NextResponse.json({ error: `${field} doit être une couleur hexadécimale #RRGGBB` }, { status: 400 })
+      }
+    }
     for (const field of ['secondarySignerName', 'secondarySignerTitle', 'thirdSignerName', 'thirdSignerTitle'] as const) {
       if (body[field] !== undefined && (typeof body[field] !== 'string' || body[field].length > 130)) {
         return NextResponse.json({ error: `${field} invalide (130 caractères maximum)` }, { status: 400 })
       }
     }
-    if (body.headerLanguageMode === 'FR_AR') {
+    if (body.headerLanguageMode === 'FR_AR' && body.headerLinesAr !== undefined && body.headerLinesAr.length === 0) {
+      return NextResponse.json({ error: 'Ajoutez au moins une ligne arabe pour l’en-tête bilingue' }, { status: 400 })
+    }
+    if (body.headerLanguageMode === 'FR_AR' && body.headerLinesAr === undefined) {
       const existing = await db.tenant.findUnique({ where: { id: tenantId }, select: { arabicCountry: true, arabicName: true } })
       if (!(body.arabicCountry ?? existing?.arabicCountry)?.trim() || !(body.arabicName ?? existing?.arabicName)?.trim()) {
         return NextResponse.json({ error: 'Pays et nom officiel en arabe requis pour l’en-tête bilingue' }, { status: 400 })
@@ -76,7 +94,8 @@ async function handlePut(user: SessionUser, tenantId: string, request: NextReque
 
     const tenantData: Record<string, unknown> = {}
     for (const field of TENANT_FIELDS) {
-      if (body[field] !== undefined) tenantData[field] = body[field]
+      if (body[field] !== undefined) tenantData[field] = field === 'headerLinesFr' || field === 'headerLinesAr'
+        ? JSON.stringify(body[field].map((line: string) => line.trim())) : body[field]
     }
 
     const settingsData: Record<string, unknown> = {}

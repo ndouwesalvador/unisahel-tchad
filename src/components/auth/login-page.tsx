@@ -186,44 +186,44 @@ export function LoginPage() {
         <div
           className="absolute inset-0"
           style={{
-            backgroundImage: 'radial-gradient(circle, #1a2744 1px, transparent 1px)',
+            backgroundImage: 'radial-gradient(circle, var(--institution-primary) 1px, transparent 1px)',
             backgroundSize: '40px 40px',
           }}
         />
       </div>
 
       <FloatingShape
-        className="absolute top-[10%] left-[8%] w-24 h-24 rounded-full border border-[#1a2744] opacity-[0.04]"
+        className="absolute top-[10%] left-[8%] w-24 h-24 rounded-full border border-[var(--institution-primary)] opacity-[0.04]"
         duration={25}
         delay={0}
       />
       <FloatingShape
-        className="absolute top-[60%] right-[12%] w-32 h-32 rounded-full border border-[#2d7a4f] opacity-[0.03]"
+        className="absolute top-[60%] right-[12%] w-32 h-32 rounded-full border border-[var(--institution-secondary)] opacity-[0.03]"
         duration={30}
         delay={2}
       />
       <FloatingShape
-        className="absolute top-[30%] right-[25%] w-16 h-16 border border-[#d4a853] opacity-[0.05] rotate-45"
+        className="absolute top-[30%] right-[25%] w-16 h-16 border border-[var(--institution-accent)] opacity-[0.05] rotate-45"
         duration={22}
         delay={1}
       />
       <FloatingShape
-        className="absolute bottom-[15%] left-[20%] w-20 h-20 rounded-full border border-[#2d7a4f] opacity-[0.04]"
+        className="absolute bottom-[15%] left-[20%] w-20 h-20 rounded-full border border-[var(--institution-secondary)] opacity-[0.04]"
         duration={28}
         delay={3}
       />
       <FloatingShape
-        className="absolute top-[50%] left-[5%] w-12 h-12 border border-[#1a2744] opacity-[0.06] rotate-12"
+        className="absolute top-[50%] left-[5%] w-12 h-12 border border-[var(--institution-primary)] opacity-[0.06] rotate-12"
         duration={18}
         delay={0.5}
       />
       <div className="absolute bottom-[30%] right-[8%] w-28 h-28 opacity-[0.03] pointer-events-none">
-        <svg viewBox="0 0 100 100" className="w-full h-full text-[#1a2744]">
+        <svg viewBox="0 0 100 100" className="w-full h-full text-[var(--institution-primary)]">
           <polygon points="50,3 97,25 97,75 50,97 3,75 3,25" fill="none" stroke="currentColor" strokeWidth="1.5" />
         </svg>
       </div>
 
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#2d7a4f05] rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[var(--institution-secondary-05)] rounded-full blur-3xl pointer-events-none" />
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -233,18 +233,18 @@ export function LoginPage() {
       >
         <button
           onClick={() => setView('landing')}
-          className="flex items-center gap-2 text-gray-500 hover:text-[#1a2744] text-sm mb-6 transition-colors"
+          className="flex items-center gap-2 text-gray-500 hover:text-[var(--institution-primary)] text-sm mb-6 transition-colors"
         >
           <ArrowLeft className="size-4" />
           Retour à l&apos;accueil
         </button>
 
-        <div className="bg-gradient-to-br from-[#1a2744] via-[#2d7a4f] to-[#d4a853] p-[2px] rounded-2xl shadow-xl shadow-[#1a274420]">
+        <div className="bg-gradient-to-br from-[var(--institution-primary)] via-[var(--institution-secondary)] to-[var(--institution-accent)] p-[2px] rounded-2xl shadow-xl shadow-[var(--institution-primary-20)]">
           <Card className="border-0 bg-white rounded-[14px]">
             <CardHeader className="text-center pb-2">
               <div className="flex items-center justify-center gap-2 mb-2">
                 <motion.div
-                  className="p-2 rounded-lg bg-[#1a2744]"
+                  className="p-2 rounded-lg bg-[var(--institution-primary)]"
                   animate={{ rotate: [0, 0, 0] }}
                   whileHover={{ scale: 1.05 }}
                 >
@@ -255,10 +255,10 @@ export function LoginPage() {
                     <ShieldCheck className="size-5 text-white" />
                   </motion.div>
                 </motion.div>
-                <span className="text-lg font-bold text-[#1a2744]">
+                <span className="text-lg font-bold text-[var(--institution-primary)]">
                   Uni
                   <motion.span
-                    className="text-[#2d7a4f]"
+                    className="text-[var(--institution-secondary)]"
                     animate={{ opacity: [0.9, 1, 0.9] }}
                     transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
                   >
@@ -266,7 +266,7 @@ export function LoginPage() {
                   </motion.span>
                 </span>
               </div>
-              <CardTitle className="text-xl font-bold text-[#1a2744]">Connexion</CardTitle>
+              <CardTitle className="text-xl font-bold text-[var(--institution-primary)]">Connexion</CardTitle>
               <CardDescription className="text-gray-500">
                 Accedez a votre espace de gestion universitaire
               </CardDescription>
@@ -300,7 +300,7 @@ export function LoginPage() {
                     <button
                       type="button"
                       onClick={() => toast.info('Fonctionnalite de reinitialisation disponible en version complete')}
-                      className="text-xs text-[#2d7a4f] hover:text-[#236b40] font-medium"
+                      className="text-xs text-[var(--institution-secondary)] hover:text-[var(--institution-secondary-dark)] font-medium"
                     >
                       Mot de passe oublie ?
                     </button>
@@ -321,7 +321,7 @@ export function LoginPage() {
 
                 <Button
                   type="submit"
-                  className="w-full bg-[#2d7a4f] hover:bg-[#236b40] text-white h-10"
+                  className="w-full bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white h-10"
                   disabled={isLoading}
                 >
                   {isLoading ? 'Connexion...' : 'Connexion'}
@@ -335,14 +335,14 @@ export function LoginPage() {
                 </span>
               </div>
 
-              <div className="bg-gradient-to-r from-[#1a2744] via-[#2d7a4f] to-[#d4a853] p-[1.5px] rounded-lg">
+              <div className="bg-gradient-to-r from-[var(--institution-primary)] via-[var(--institution-secondary)] to-[var(--institution-accent)] p-[1.5px] rounded-lg">
                 <motion.button
                   onClick={() => setView('student-login')}
                   whileHover={{ scale: 1.01 }}
                   whileTap={{ scale: 0.99 }}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-[6px] bg-white text-sm font-medium text-[#1a2744] hover:bg-[#2d7a4f05] transition-colors"
+                  className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-[6px] bg-white text-sm font-medium text-[var(--institution-primary)] hover:bg-[var(--institution-secondary-05)] transition-colors"
                 >
-                  <GraduationCap className="size-4 text-[#2d7a4f]" />
+                  <GraduationCap className="size-4 text-[var(--institution-secondary)]" />
                   Connexion étudiant
                 </motion.button>
               </div>
@@ -351,7 +351,7 @@ export function LoginPage() {
                 Nouvel établissement ?{' '}
                 <button
                   onClick={() => setView('signup')}
-                  className="text-[#2d7a4f] font-medium hover:underline"
+                  className="text-[var(--institution-secondary)] font-medium hover:underline"
                 >
                   Creer un compte
                 </button>
@@ -372,11 +372,11 @@ export function LoginPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="justify-start text-xs h-9 border-gray-200 hover:border-l-2 hover:border-l-[#2d7a4f] hover:bg-[#2d7a4f08] transition-all duration-200 w-full"
+                          className="justify-start text-xs h-9 border-gray-200 hover:border-l-2 hover:border-l-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-08)] transition-all duration-200 w-full"
                           onClick={() => handleDemoLogin(demo)}
                           disabled={isLoading}
                         >
-                          <demo.icon className="size-3.5 mr-1.5 text-[#2d7a4f]" />
+                          <demo.icon className="size-3.5 mr-1.5 text-[var(--institution-secondary)]" />
                           {demo.label}
                         </Button>
                       </motion.div>

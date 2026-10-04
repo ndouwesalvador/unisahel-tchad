@@ -5,6 +5,8 @@ import { motion } from 'framer-motion'
 import { signOut } from 'next-auth/react'
 import { useAppStore, type AppUser, type AppView, type UserRole } from '@/lib/store'
 import { useAcademicYears, useNotifications } from '@/lib/api-hooks'
+import { useQuery } from '@tanstack/react-query'
+import { DEFAULT_BRAND, readableBrandColor } from '@/lib/institution-branding'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -80,7 +82,7 @@ import { AIAssistantWidget } from '@/components/ai-assistant/ai-assistant-widget
 function ViewLoading() {
   return (
     <div className="flex items-center justify-center py-24">
-      <Loader2 className="size-6 animate-spin text-[#2d7a4f]" />
+      <Loader2 className="size-6 animate-spin text-[var(--institution-secondary)]" />
     </div>
   )
 }
@@ -386,14 +388,14 @@ function SidebarContent() {
   const initials = `${user.firstName[0]}${user.lastName[0]}`
 
   return (
-    <div className="flex flex-col h-full bg-[#1a2744] text-white">
+    <div className="flex flex-col h-full bg-[var(--institution-primary)] text-white">
       {/* Logo area */}
       <div className={`relative flex items-center gap-3 px-4 py-5 ${sidebarCollapsed ? 'justify-center' : ''}`}>
-        <div className="relative p-1.5 rounded-lg bg-[#2d7a4f] shrink-0">
+        <div className="relative p-1.5 rounded-lg bg-[var(--institution-secondary)] shrink-0">
           <Shield className="size-5 text-white" />
           {/* Pulsing green dot indicator */}
           <motion.div
-            className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#3da66a]"
+            className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[var(--institution-secondary-bright)]"
             animate={{ scale: [1, 1.3, 1], opacity: [1, 0.7, 1] }}
             transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
           />
@@ -405,7 +407,7 @@ function SidebarContent() {
             className="overflow-hidden"
           >
             <div className="text-lg font-bold tracking-tight">
-              Uni<span className="text-[#3da66a]">Sahel</span>
+              Uni<span className="text-[var(--institution-secondary-bright)]">Sahel</span>
             </div>
             <div className="text-[10px] text-white/50 truncate">
               {user.role === 'SUPER_ADMIN' ? 'Administration plateforme' : (user.tenantName || 'Établissement')}
@@ -414,7 +416,7 @@ function SidebarContent() {
         )}
         {/* Animated gradient border-bottom */}
         <motion.div
-          className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-[#2d7a4f40] via-[#3da66a60] to-[#2d7a4f40]"
+          className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-[var(--institution-secondary-40)] via-[var(--institution-secondary-bright-60)] to-[var(--institution-secondary-40)]"
           animate={{ opacity: [0.5, 1, 0.5] }}
           transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
         />
@@ -423,14 +425,14 @@ function SidebarContent() {
       {/* User info */}
       <div className={`flex items-center gap-3 px-4 py-3 border-b border-white/10 ${sidebarCollapsed ? 'justify-center' : ''}`}>
         <div className="relative shrink-0">
-          <Avatar className="size-9 border-2 border-[#2d7a4f]">
-            <AvatarFallback className="bg-[#2d7a4f] text-white text-xs font-semibold">
+          <Avatar className="size-9 border-2 border-[var(--institution-secondary)]">
+            <AvatarFallback className="bg-[var(--institution-secondary)] text-white text-xs font-semibold">
               {initials}
             </AvatarFallback>
           </Avatar>
           {/* Green online indicator dot */}
           <motion.div
-            className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-[#3da66a] border-2 border-[#1a2744]"
+            className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-[var(--institution-secondary-bright)] border-2 border-[var(--institution-primary)]"
             animate={{ scale: [1, 1.2, 1], opacity: [1, 0.7, 1] }}
             transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
           />
@@ -438,7 +440,7 @@ function SidebarContent() {
         {!sidebarCollapsed && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="overflow-hidden min-w-0">
             <div className="text-sm font-medium truncate">{user.firstName} {user.lastName}</div>
-            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-gradient-to-r from-[#2d7a4f30] to-[#2d7a4f10] text-[#3da66a] border-0 mt-0.5">
+            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-gradient-to-r from-[var(--institution-secondary-30)] to-[var(--institution-secondary-10)] text-[var(--institution-secondary-bright)] border-0 mt-0.5">
               {roleLabels[user.role]}
             </Badge>
           </motion.div>
@@ -461,25 +463,25 @@ function SidebarContent() {
                   sidebarCollapsed ? 'justify-center' : ''
                 } ${
                   isActive
-                    ? 'bg-[#2d7a4f20] text-white'
-                    : 'text-white/60 hover:text-white hover:bg-gradient-to-r hover:from-[#2d7a4f10] hover:to-transparent'
+                    ? 'bg-[var(--institution-secondary-20)] text-white'
+                    : 'text-white/60 hover:text-white hover:bg-gradient-to-r hover:from-[var(--institution-secondary-10)] hover:to-transparent'
                 }`}
               >
                 {/* Animated gradient left border for active item */}
                 {isActive && (
                   <motion.div
-                    className="absolute left-0 top-0 bottom-0 w-0.5 bg-gradient-to-b from-[#2d7a4f] to-[#3da66a]"
+                    className="absolute left-0 top-0 bottom-0 w-0.5 bg-gradient-to-b from-[var(--institution-secondary)] to-[var(--institution-secondary-bright)]"
                     animate={{ scaleY: [0.8, 1, 0.8], opacity: [0.7, 1, 0.7] }}
                     transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
                     style={{ transformOrigin: 'center' }}
                   />
                 )}
-                <item.icon className={`size-[18px] shrink-0 transition-colors duration-200 ${isActive ? 'text-[#3da66a]' : 'text-white/50 group-hover:text-[#3da66a]'}`} />
+                <item.icon className={`size-[18px] shrink-0 transition-colors duration-200 ${isActive ? 'text-[var(--institution-secondary-bright)]' : 'text-white/50 group-hover:text-[var(--institution-secondary-bright)]'}`} />
                 {!sidebarCollapsed && (
                   <span className="truncate">{item.label}</span>
                 )}
                 {sidebarCollapsed && (
-                  <div className="absolute left-full ml-2 px-2 py-1 bg-[#1a2744] border border-white/20 rounded text-xs text-white whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 shadow-lg">
+                  <div className="absolute left-full ml-2 px-2 py-1 bg-[var(--institution-primary)] border border-white/20 rounded text-xs text-white whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 shadow-lg">
                     {item.label}
                   </div>
                 )}
@@ -626,6 +628,39 @@ function MainContent({ view }: { view: AppView }) {
 
 export function DashboardShell() {
   const { user, currentView, setView, logout, sidebarCollapsed, toggleSidebarCollapse, toggleNotifications, selectedAcademicYearId, setAcademicYear } = useAppStore()
+  const { data: institutionTheme } = useQuery<{ settings: { primaryColor: string; secondaryColor: string; accentColor: string } | null }>({
+    queryKey: ['institution-theme', user?.tenantId],
+    enabled: Boolean(user?.tenantId),
+    queryFn: async () => {
+      const response = await fetch('/api/institution/branding')
+      if (!response.ok) throw new Error('Impossible de charger la palette institutionnelle')
+      return response.json()
+    },
+  })
+  useEffect(() => {
+    if (!user?.tenantId) return
+    const settings = institutionTheme?.settings
+    const primary = readableBrandColor(settings?.primaryColor || DEFAULT_BRAND.primaryColor)
+    const secondary = readableBrandColor(settings?.secondaryColor || DEFAULT_BRAND.secondaryColor)
+    const accent = settings?.accentColor || DEFAULT_BRAND.accentColor
+    const root = document.documentElement
+    root.style.setProperty('--institution-primary', primary)
+    root.style.setProperty('--institution-secondary', secondary)
+    root.style.setProperty('--institution-accent', accent)
+    root.style.setProperty('--primary', primary)
+    root.style.setProperty('--ring', secondary)
+    root.style.setProperty('--chart-1', primary)
+    root.style.setProperty('--chart-2', secondary)
+    root.style.setProperty('--chart-3', accent)
+    root.style.setProperty('--sidebar', primary)
+    root.style.setProperty('--sidebar-primary', secondary)
+    return () => {
+      root.style.removeProperty('--institution-primary')
+      root.style.removeProperty('--institution-secondary')
+      root.style.removeProperty('--institution-accent')
+      for (const token of ['--primary', '--ring', '--chart-1', '--chart-2', '--chart-3', '--sidebar', '--sidebar-primary']) root.style.removeProperty(token)
+    }
+  }, [user?.tenantId, institutionTheme])
   const { data: notificationsData } = useNotifications()
   const { data: academicYearsData } = useAcademicYears({ enabled: Boolean(user?.tenantId) && user?.role !== 'SUPER_ADMIN' })
   const unreadCount: number = notificationsData?.unreadCount ?? 0
@@ -705,7 +740,7 @@ export function DashboardShell() {
 
       {/* Mobile Sidebar */}
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-        <SheetContent side="left" className="p-0 w-[260px] bg-[#1a2744]">
+        <SheetContent side="left" className="p-0 w-[260px] bg-[var(--institution-primary)]">
           <SidebarContent />
         </SheetContent>
       </Sheet>
@@ -732,7 +767,7 @@ export function DashboardShell() {
               <nav className="flex items-center gap-1.5 text-sm">
                 <span className="text-gray-500">UniSahel</span>
                 <span className="text-gray-400">/</span>
-                <span className="font-medium text-[#1a2744]">{user.role === 'ENSEIGNANT' && currentView === 'maquette' ? 'Mes UE' : viewLabels[currentView]}</span>
+                <span className="font-medium text-[var(--institution-primary)]">{user.role === 'ENSEIGNANT' && currentView === 'maquette' ? 'Mes UE' : viewLabels[currentView]}</span>
               </nav>
             </div>
 
@@ -754,7 +789,7 @@ export function DashboardShell() {
                     }
                   }}
                   placeholder="Rechercher..."
-                  className="pl-9 h-8 text-sm bg-gray-50 border-gray-200 focus:ring-2 focus:ring-[#2d7a4f20] focus:border-[#2d7a4f] transition-all"
+                  className="pl-9 h-8 text-sm bg-gray-50 border-gray-200 focus:ring-2 focus:ring-[var(--institution-secondary-20)] focus:border-[var(--institution-secondary)] transition-all"
                 />
                 {searchTerm && (
                   <div className="absolute left-0 right-0 top-10 z-50 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg">
@@ -764,9 +799,9 @@ export function DashboardShell() {
                           key={item.view}
                           type="button"
                           onClick={() => openSearchResult(item.view)}
-                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 transition-colors hover:bg-[#2d7a4f10] hover:text-[#1a2744]"
+                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 transition-colors hover:bg-[var(--institution-secondary-10)] hover:text-[var(--institution-primary)]"
                         >
-                          <item.icon className="size-4 text-[#2d7a4f]" />
+                          <item.icon className="size-4 text-[var(--institution-secondary)]" />
                           <span>{item.label}</span>
                         </button>
                       ))
@@ -805,7 +840,7 @@ export function DashboardShell() {
                 <Bell className="size-[18px] text-gray-500" />
                 {unreadCount > 0 && (
                   <motion.span
-                    className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center bg-[#2d7a4f] text-white text-[10px] font-bold rounded-full px-1 ring-2 ring-[#2d7a4f20]"
+                    className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center bg-[var(--institution-secondary)] text-white text-[10px] font-bold rounded-full px-1 ring-2 ring-[var(--institution-secondary-20)]"
                     animate={{ scale: [1, 1.15, 1] }}
                     transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
                   >
@@ -818,7 +853,7 @@ export function DashboardShell() {
               {user.role !== 'ENSEIGNANT' && <Button
                 variant="ghost"
                 size="sm"
-                className="hidden sm:flex text-xs text-[#2d7a4f] hover:text-[#236b40]"
+                className="hidden sm:flex text-xs text-[var(--institution-secondary)] hover:text-[var(--institution-secondary-dark)]"
                 onClick={() => setView('verify')}
               >
                 Vérifier document
@@ -828,13 +863,13 @@ export function DashboardShell() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button className="flex items-center gap-2 p-1 rounded-lg hover:bg-gray-100 transition-colors group">
-                    <Avatar className="size-8 border-2 border-[#2d7a4f20] group-hover:ring-2 group-hover:ring-[#2d7a4f30] transition-all">
-                      <AvatarFallback className="bg-[#2d7a4f] text-white text-xs font-semibold">
+                    <Avatar className="size-8 border-2 border-[var(--institution-secondary-20)] group-hover:ring-2 group-hover:ring-[var(--institution-secondary-30)] transition-all">
+                      <AvatarFallback className="bg-[var(--institution-secondary)] text-white text-xs font-semibold">
                         {initials}
                       </AvatarFallback>
                     </Avatar>
                     <div className="hidden md:block text-left">
-                      <div className="text-xs font-medium text-[#1a2744] leading-tight">{user.firstName} {user.lastName}</div>
+                      <div className="text-xs font-medium text-[var(--institution-primary)] leading-tight">{user.firstName} {user.lastName}</div>
                       <div className="text-[10px] text-gray-400">{roleLabels[user.role]}</div>
                     </div>
                   </button>
@@ -858,7 +893,7 @@ export function DashboardShell() {
             </div>
           </div>
           {/* Gradient bottom border */}
-          <div className="h-0.5 bg-gradient-to-r from-[#1a2744] via-[#2d7a4f] to-[#d4a853]" />
+          <div className="h-0.5 bg-gradient-to-r from-[var(--institution-primary)] via-[var(--institution-secondary)] to-[var(--institution-accent)]" />
         </header>
 
         {/* Content Area */}

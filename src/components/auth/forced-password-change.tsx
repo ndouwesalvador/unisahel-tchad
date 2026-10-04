@@ -56,10 +56,10 @@ export function ForcedPasswordChange() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-2">
-          <div className="mx-auto w-12 h-12 rounded-full bg-[#1a274415] flex items-center justify-center">
-            <KeyRound className="size-6 text-[#1a2744]" />
+          <div className="mx-auto w-12 h-12 rounded-full bg-[var(--institution-primary-15)] flex items-center justify-center">
+            <KeyRound className="size-6 text-[var(--institution-primary)]" />
           </div>
-          <CardTitle className="text-[#1a2744]">Choisissez votre mot de passe</CardTitle>
+          <CardTitle className="text-[var(--institution-primary)]">Choisissez votre mot de passe</CardTitle>
           <CardDescription>
             Votre compte a ete cree avec un mot de passe temporaire. Vous devez le remplacer avant de continuer.
           </CardDescription>
@@ -98,7 +98,7 @@ export function ForcedPasswordChange() {
                 required
               />
             </div>
-            <Button type="submit" className="w-full bg-[#1a2744] hover:bg-[#243352] text-white" disabled={isLoading}>
+            <Button type="submit" className="w-full bg-[var(--institution-primary)] hover:bg-[#243352] text-white" disabled={isLoading}>
               {isLoading ? 'Enregistrement...' : 'Valider et continuer'}
             </Button>
             <Button

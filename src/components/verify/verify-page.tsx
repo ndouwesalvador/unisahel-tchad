@@ -117,7 +117,7 @@ export function VerifyPage() {
   return (
     <div className="space-y-0 -m-4 lg:-m-6">
       {/* ─────────────────── Hero Section ─────────────────── */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-[#1a2744] via-[#1f3055] to-[#2d7a4f]">
+      <div className="relative overflow-hidden bg-gradient-to-br from-[var(--institution-primary)] via-[#1f3055] to-[var(--institution-secondary)]">
         {/* Background decorative elements */}
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-10 left-10 w-40 h-40 rounded-full border-2 border-white" />
@@ -177,8 +177,8 @@ export function VerifyPage() {
           <div className="lg:col-span-3 space-y-4">
             <Card className="shadow-lg border-0 shadow-gray-200/50">
               <CardContent className="p-6">
-                <h2 className="text-base font-semibold text-[#1a2744] mb-4 flex items-center gap-2">
-                  <Search className="size-5 text-[#2d7a4f]" />
+                <h2 className="text-base font-semibold text-[var(--institution-primary)] mb-4 flex items-center gap-2">
+                  <Search className="size-5 text-[var(--institution-secondary)]" />
                   Vérifier un document
                 </h2>
 
@@ -200,7 +200,7 @@ export function VerifyPage() {
 
                   <div>
                     <Button
-                      className="w-full h-11 bg-gradient-to-r from-[#2d7a4f] to-[#3da66a] hover:from-[#236b40] hover:to-[#2d7a4f] text-white text-sm"
+                      className="w-full h-11 bg-gradient-to-r from-[var(--institution-secondary)] to-[var(--institution-secondary-bright)] hover:from-[var(--institution-secondary-dark)] hover:to-[var(--institution-secondary)] text-white text-sm"
                       onClick={handleSearch}
                       disabled={verifying}
                     >
@@ -230,28 +230,28 @@ export function VerifyPage() {
                     >
                       {searchResult && searchResult.valide ? (
                         /* Valid Document */
-                        <div className="border-2 border-[#2d7a4f30] rounded-xl p-5 bg-gradient-to-br from-[#2d7a4f08] to-[#2d7a4f03]">
+                        <div className="border-2 border-[var(--institution-secondary-30)] rounded-xl p-5 bg-gradient-to-br from-[var(--institution-secondary-08)] to-[var(--institution-secondary-03)]">
                           <div className="flex items-center gap-3 mb-4">
                             <motion.div
                               initial={{ scale: 0 }}
                               animate={{ scale: 1 }}
                               transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0.1 }}
-                              className="w-12 h-12 rounded-full bg-[#2d7a4f15] flex items-center justify-center"
+                              className="w-12 h-12 rounded-full bg-[var(--institution-secondary-15)] flex items-center justify-center"
                             >
-                              <CheckCircle2 className="size-6 text-[#2d7a4f]" />
+                              <CheckCircle2 className="size-6 text-[var(--institution-secondary)]" />
                             </motion.div>
                             <div>
-                              <h3 className="font-semibold text-[#2d7a4f]">Référence institutionnelle validée</h3>
+                              <h3 className="font-semibold text-[var(--institution-secondary)]">Référence institutionnelle validée</h3>
                               <p className="text-xs text-gray-500">Le code existe et la validation est enregistrée. Le fichier lui-même n’est pas encore contrôlé.</p>
                             </div>
-                            <Badge className="ml-auto bg-[#2d7a4f] text-white text-[10px] border-0">
+                            <Badge className="ml-auto bg-[var(--institution-secondary)] text-white text-[10px] border-0">
                               <CheckCircle2 className="size-3 mr-1" />
                               Code valide
                             </Badge>
                           </div>
 
                           {searchResult.fileVerificationAvailable ? <div className="mt-4 rounded-lg border border-[#c7a44b66] bg-white/80 p-3 space-y-2">
-                            <label htmlFor="pdf-integrity-file" className="text-xs font-semibold text-[#1a2744]">Comparer le PDF reçu à l’original</label>
+                            <label htmlFor="pdf-integrity-file" className="text-xs font-semibold text-[var(--institution-primary)]">Comparer le PDF reçu à l’original</label>
                             <Input id="pdf-integrity-file" type="file" accept="application/pdf,.pdf" onChange={(event) => { setPdfFile(event.target.files?.[0] ?? null); setFileCheck(null) }} />
                             <Button type="button" size="sm" variant="outline" disabled={!pdfFile || checkingFile} onClick={() => void verifyPdfFile()}>{checkingFile ? 'Comparaison…' : 'Vérifier l’intégrité du fichier'}</Button>
                             {fileCheck === 'match' && <p role="status" className="text-xs font-semibold text-[#176341]">PDF identique à l’original validé (empreinte SHA‑256).</p>}
@@ -261,44 +261,44 @@ export function VerifyPage() {
 
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div className="flex items-start gap-3 p-2.5 rounded-lg bg-white/60">
-                              <FileText className="size-4 text-[#2d7a4f] mt-0.5 shrink-0" />
+                              <FileText className="size-4 text-[var(--institution-secondary)] mt-0.5 shrink-0" />
                               <div>
                                 <span className="text-[10px] text-gray-400 uppercase tracking-wider">Type de document</span>
-                                <p className="text-sm font-medium text-[#1a2744]">{searchResult.type}</p>
+                                <p className="text-sm font-medium text-[var(--institution-primary)]">{searchResult.type}</p>
                               </div>
                             </div>
                             <div className="flex items-start gap-3 p-2.5 rounded-lg bg-white/60">
-                              <User className="size-4 text-[#2d7a4f] mt-0.5 shrink-0" />
+                              <User className="size-4 text-[var(--institution-secondary)] mt-0.5 shrink-0" />
                               <div>
                                 <span className="text-[10px] text-gray-400 uppercase tracking-wider">Étudiant</span>
-                                <p className="text-sm font-medium text-[#1a2744]">{searchResult.etudiant}</p>
+                                <p className="text-sm font-medium text-[var(--institution-primary)]">{searchResult.etudiant}</p>
                                 <p className="text-[10px] text-gray-400 font-mono">{searchResult.matricule}</p>
                               </div>
                             </div>
                             <div className="flex items-start gap-3 p-2.5 rounded-lg bg-white/60">
-                              <Building2 className="size-4 text-[#2d7a4f] mt-0.5 shrink-0" />
+                              <Building2 className="size-4 text-[var(--institution-secondary)] mt-0.5 shrink-0" />
                               <div>
                                 <span className="text-[10px] text-gray-400 uppercase tracking-wider">Institution</span>
-                                <p className="text-sm font-medium text-[#1a2744]">{searchResult.institution}</p>
+                                <p className="text-sm font-medium text-[var(--institution-primary)]">{searchResult.institution}</p>
                               </div>
                             </div>
                             <div className="flex items-start gap-3 p-2.5 rounded-lg bg-white/60">
-                              <Calendar className="size-4 text-[#2d7a4f] mt-0.5 shrink-0" />
+                              <Calendar className="size-4 text-[var(--institution-secondary)] mt-0.5 shrink-0" />
                               <div>
                                 <span className="text-[10px] text-gray-400 uppercase tracking-wider">Date d&apos;émission</span>
-                                <p className="text-sm font-medium text-[#1a2744]">{searchResult.date}</p>
+                                <p className="text-sm font-medium text-[var(--institution-primary)]">{searchResult.date}</p>
                               </div>
                             </div>
                             <div className="flex flex-col items-center gap-2 p-3 rounded-lg bg-white/60 sm:col-span-2">
                               <QrDisplay value={`${typeof window !== 'undefined' ? window.location.origin : ''}/verify?code=${code.toUpperCase()}`} size={100} />
                               <div className="text-center">
                                 <span className="text-[10px] text-gray-400 uppercase tracking-wider">Code de vérification</span>
-                                <p className="text-sm font-mono font-bold text-[#2d7a4f]">{code.toUpperCase()}</p>
+                                <p className="text-sm font-mono font-bold text-[var(--institution-secondary)]">{code.toUpperCase()}</p>
                               </div>
                             </div>
                           </div>
 
-                          <div className="mt-4 flex items-center justify-between text-[10px] text-gray-400 border-t border-[#2d7a4f15] pt-3">
+                          <div className="mt-4 flex items-center justify-between text-[10px] text-gray-400 border-t border-[var(--institution-secondary-15)] pt-3">
                             <span className="flex items-center gap-1">
                               <Clock className="size-3" />
                               Vérifié le {new Date().toLocaleDateString('fr-FR')} à {new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
@@ -328,7 +328,7 @@ export function VerifyPage() {
                           </div>
 
                           <div className="p-3 rounded-lg bg-[#c6282808] border border-[#c6282810]">
-                            <p className="text-xs font-medium text-[#1a2744] mb-2">Causes possibles :</p>
+                            <p className="text-xs font-medium text-[var(--institution-primary)] mb-2">Causes possibles :</p>
                             <ul className="text-xs text-gray-500 space-y-1">
                               <li className="flex items-start gap-2">
                                 <span className="text-[#c62828] mt-0.5">•</span>
@@ -359,7 +359,7 @@ export function VerifyPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="text-xs text-[#2d7a4f] hover:text-[#236b40]"
+                          className="text-xs text-[var(--institution-secondary)] hover:text-[var(--institution-secondary-dark)]"
                           onClick={handleReset}
                         >
                           Effacer
@@ -377,43 +377,43 @@ export function VerifyPage() {
             {/* Trust Card */}
             <Card className="shadow-lg border-0 shadow-gray-200/50">
               <CardContent className="p-5">
-                <h3 className="text-sm font-semibold text-[#1a2744] mb-4 flex items-center gap-2">
-                  <ShieldCheck className="size-4 text-[#2d7a4f]" />
+                <h3 className="text-sm font-semibold text-[var(--institution-primary)] mb-4 flex items-center gap-2">
+                  <ShieldCheck className="size-4 text-[var(--institution-secondary)]" />
                   Vérification sécurisée
                 </h3>
 
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-[#2d7a4f08] border border-[#2d7a4f15]">
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-[var(--institution-secondary-08)] border border-[var(--institution-secondary-15)]">
                     <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-lg bg-[#2d7a4f15] flex items-center justify-center">
-                        <FileText className="size-4 text-[#2d7a4f]" />
+                      <div className="w-8 h-8 rounded-lg bg-[var(--institution-secondary-15)] flex items-center justify-center">
+                        <FileText className="size-4 text-[var(--institution-secondary)]" />
                       </div>
                       <div>
-                        <p className="text-xs font-medium text-[#1a2744]">Base officielle</p>
+                        <p className="text-xs font-medium text-[var(--institution-primary)]">Base officielle</p>
                         <p className="text-[11px] text-gray-500">Chaque code est recherché dans les documents réellement générés.</p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-[#1a274408] border border-[#1a274415]">
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-[var(--institution-primary-08)] border border-[var(--institution-primary-15)]">
                     <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-lg bg-[#1a274415] flex items-center justify-center">
-                        <ShieldCheck className="size-4 text-[#1a2744]" />
+                      <div className="w-8 h-8 rounded-lg bg-[var(--institution-primary-15)] flex items-center justify-center">
+                        <ShieldCheck className="size-4 text-[var(--institution-primary)]" />
                       </div>
                       <div>
-                        <p className="text-xs font-medium text-[#1a2744]">Intégrité des nouveaux PDF</p>
+                        <p className="text-xs font-medium text-[var(--institution-primary)]">Intégrité des nouveaux PDF</p>
                         <p className="text-[11px] text-gray-500">Le fichier présenté peut être comparé à son empreinte enregistrée lors de l’émission.</p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-[#d4a85308] border border-[#d4a85320]">
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-[var(--institution-accent-08)] border border-[var(--institution-accent-20)]">
                     <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-lg bg-[#d4a85315] flex items-center justify-center">
-                        <Fingerprint className="size-4 text-[#d4a853]" />
+                      <div className="w-8 h-8 rounded-lg bg-[var(--institution-accent-15)] flex items-center justify-center">
+                        <Fingerprint className="size-4 text-[var(--institution-accent)]" />
                       </div>
                       <div>
-                        <p className="text-xs font-medium text-[#1a2744]">Traçabilité</p>
+                        <p className="text-xs font-medium text-[var(--institution-primary)]">Traçabilité</p>
                         <p className="text-[11px] text-gray-500">Le résultat affiche uniquement les données associées au code officiel.</p>
                       </div>
                     </div>
@@ -425,35 +425,35 @@ export function VerifyPage() {
             {/* How It Works Card */}
             <Card className="shadow-lg border-0 shadow-gray-200/50">
               <CardContent className="p-5">
-                <h3 className="text-sm font-semibold text-[#1a2744] mb-4">Comment ça marche ?</h3>
+                <h3 className="text-sm font-semibold text-[var(--institution-primary)] mb-4">Comment ça marche ?</h3>
 
                 <div className="space-y-4">
                   <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#1a2744] to-[#2d3a54] flex items-center justify-center shrink-0 text-white text-xs font-bold">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--institution-primary)] to-[#2d3a54] flex items-center justify-center shrink-0 text-white text-xs font-bold">
                       1
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-[#1a2744]">Scannez le QR code</p>
+                      <p className="text-sm font-medium text-[var(--institution-primary)]">Scannez le QR code</p>
                       <p className="text-xs text-gray-400">Utilisez votre appareil photo pour scanner le QR code sur le document</p>
                     </div>
                   </div>
 
                   <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#2d7a4f] to-[#3da66a] flex items-center justify-center shrink-0 text-white text-xs font-bold">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--institution-secondary)] to-[var(--institution-secondary-bright)] flex items-center justify-center shrink-0 text-white text-xs font-bold">
                       2
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-[#1a2744]">Entrez le code</p>
+                      <p className="text-sm font-medium text-[var(--institution-primary)]">Entrez le code</p>
                       <p className="text-xs text-gray-400">Ou saisissez manuellement le code de vérification</p>
                     </div>
                   </div>
 
                   <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#d4a853] to-[#e0be6e] flex items-center justify-center shrink-0 text-white text-xs font-bold">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--institution-accent)] to-[#e0be6e] flex items-center justify-center shrink-0 text-white text-xs font-bold">
                       3
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-[#1a2744]">Contrôlez la référence et le fichier</p>
+                      <p className="text-sm font-medium text-[var(--institution-primary)]">Contrôlez la référence et le fichier</p>
                       <p className="text-xs text-gray-400">Le code seul ne prouve pas qu’un PDF n’a pas été modifié.</p>
                     </div>
                   </div>

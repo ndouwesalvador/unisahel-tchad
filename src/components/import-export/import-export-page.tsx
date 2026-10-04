@@ -90,11 +90,11 @@ const exportTypeMap: Record<ExportType, ExportTypeLabel> = {
 }
 
 const importStatusConfig: Record<ImportStatus, { label: ImportStatusLabel; className: string; icon: React.ElementType }> = {
-  Succes: { label: 'Succès', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0', icon: CheckCircle2 },
-  Partiel: { label: 'Partiel', className: 'bg-[#d4a85315] text-[#d4a853] border-0', icon: AlertCircle },
+  Succes: { label: 'Succès', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0', icon: CheckCircle2 },
+  Partiel: { label: 'Partiel', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0', icon: AlertCircle },
   Echoue: { label: 'Échoué', className: 'bg-[#c6282815] text-[#c62828] border-0', icon: XCircle },
-  EnCours: { label: 'En cours', className: 'bg-[#1a274415] text-[#1a2744] border-0', icon: Clock },
-  EnAttente: { label: 'En attente', className: 'bg-[#d4a85315] text-[#d4a853] border-0', icon: AlertCircle },
+  EnCours: { label: 'En cours', className: 'bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0', icon: Clock },
+  EnAttente: { label: 'En attente', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0', icon: AlertCircle },
 }
 
 // ─── Import Preview ───────────────────────────────────────────────────────────
@@ -499,9 +499,9 @@ export function ImportExportPage() {
     ? Math.max(0, Math.round(((importsThisMonth - (stats?.errors ?? 0)) / importsThisMonth) * 100))
     : 0
   const statsCards = [
-    { label: 'Imports ce mois', value: importsThisMonth, icon: ArrowRightLeft, color: '#1a2744' },
-    { label: 'En attente', value: stats?.pending ?? 0, icon: Clock, color: '#d4a853' },
-    { label: 'Exports ce mois', value: exportsThisMonth, icon: Download, color: '#2d7a4f' },
+    { label: 'Imports ce mois', value: importsThisMonth, icon: ArrowRightLeft, color: 'var(--institution-primary)' },
+    { label: 'En attente', value: stats?.pending ?? 0, icon: Clock, color: 'var(--institution-accent)' },
+    { label: 'Exports ce mois', value: exportsThisMonth, icon: Download, color: 'var(--institution-secondary)' },
     { label: 'Erreurs', value: stats?.errors ?? 0, icon: XCircle, color: '#c62828' },
   ]
 
@@ -514,7 +514,7 @@ export function ImportExportPage() {
       file: l.fileName || '',
       date: new Date(l.createdAt),
       status: l.status || '—',
-      statusColor: l.status === 'Succes' ? '#2d7a4f' : l.status === 'Partiel' ? '#d4a853' : '#c62828',
+      statusColor: l.status === 'Succes' ? 'var(--institution-secondary)' : l.status === 'Partiel' ? 'var(--institution-accent)' : '#c62828',
     }))
     const exports = (importExportData?.exportHistory ?? []).map((l: Log) => ({
       icon: Download,
@@ -522,7 +522,7 @@ export function ImportExportPage() {
       file: `${l.type}.${(l.format || 'xlsx').toLowerCase()}`,
       date: new Date(l.createdAt),
       status: 'Termine',
-      statusColor: '#2d7a4f',
+      statusColor: 'var(--institution-secondary)',
     }))
     return [...imports, ...exports].sort((a, b) => b.date.getTime() - a.date.getTime()).slice(0, 5)
   }, [importExportData])
@@ -549,7 +549,7 @@ export function ImportExportPage() {
     >
       {/* ─── Gradient Header Banner ─────────────────────────────────────────── */}
       <motion.div variants={itemVariants} className="relative overflow-hidden rounded-xl">
-        <div className="absolute inset-0 bg-gradient-to-r from-[#1a2744] via-[#1f3050] to-[#2d7a4f]" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[var(--institution-primary)] via-[var(--institution-primary-light)] to-[var(--institution-secondary)]" />
         <svg className="absolute inset-0 w-full h-full opacity-[0.07]" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <pattern id="import-export-pattern" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
@@ -576,15 +576,15 @@ export function ImportExportPage() {
 
       {/* ─── Recent Activity Ticker ─────────────────────────────────────────── */}
       <motion.div variants={itemVariants}>
-        <Card className="border-l-4 border-l-[#2d7a4f]">
+        <Card className="border-l-4 border-l-[var(--institution-secondary)]">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-3">
               <motion.div
-                className="w-2 h-2 rounded-full bg-[#2d7a4f]"
+                className="w-2 h-2 rounded-full bg-[var(--institution-secondary)]"
                 animate={{ scale: [1, 1.4, 1], opacity: [1, 0.6, 1] }}
                 transition={{ duration: 2, repeat: Infinity }}
               />
-              <span className="text-xs font-semibold text-[#1a2744]">Activite recente</span>
+              <span className="text-xs font-semibold text-[var(--institution-primary)]">Activite recente</span>
             </div>
             <div className="space-y-2">
               {recentActivity.length === 0 && (
@@ -598,11 +598,11 @@ export function ImportExportPage() {
                   transition={{ duration: 0.3, delay: idx * 0.08 }}
                   className="flex items-center gap-3 p-2 rounded-lg bg-gray-50/50 hover:bg-gray-100/50 transition-colors"
                 >
-                  <div className="w-7 h-7 rounded-lg bg-[#1a274410] flex items-center justify-center shrink-0">
-                    <activity.icon className="size-3.5 text-[#1a2744]" />
+                  <div className="w-7 h-7 rounded-lg bg-[var(--institution-primary-10)] flex items-center justify-center shrink-0">
+                    <activity.icon className="size-3.5 text-[var(--institution-primary)]" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-[#1a2744]">{activity.label}</p>
+                    <p className="text-xs font-medium text-[var(--institution-primary)]">{activity.label}</p>
                     <p className="text-[10px] text-gray-400 font-mono truncate">{activity.file}</p>
                   </div>
                   <span className="text-[10px] text-gray-400">{activity.date.toLocaleDateString('fr-FR')}</span>
@@ -666,14 +666,14 @@ export function ImportExportPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <Card className="border-l-4 border-l-[#2d7a4f]" style={{ borderTop: '3px solid #2d7a4f' }}>
+            <Card className="border-l-4 border-l-[var(--institution-secondary)]" style={{ borderTop: '3px solid var(--institution-secondary)' }}>
               <CardHeader className="pb-3">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-[#2d7a4f15] flex items-center justify-center">
-                    <Upload className="size-4 text-[#2d7a4f]" />
+                  <div className="w-8 h-8 rounded-lg bg-[var(--institution-secondary-15)] flex items-center justify-center">
+                    <Upload className="size-4 text-[var(--institution-secondary)]" />
                   </div>
                   <div>
-                    <CardTitle className="text-sm font-semibold text-[#1a2744]">Importer des donnees</CardTitle>
+                    <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Importer des donnees</CardTitle>
                     <p className="text-xs text-gray-400 mt-0.5">Chargez vos fichiers pour importer en masse</p>
                   </div>
                 </div>
@@ -715,7 +715,7 @@ export function ImportExportPage() {
                               toast.success('Modèle téléchargé', { description: `Remplissez les colonnes puis importez le fichier ${label}.` })
                             }}
                           >
-                            <FileDown className="size-3 mr-1.5 text-[#2d7a4f]" />
+                            <FileDown className="size-3 mr-1.5 text-[var(--institution-secondary)]" />
                             Modèle {label}
                             <Download className="size-3 ml-auto text-gray-400" />
                           </Button>
@@ -731,8 +731,8 @@ export function ImportExportPage() {
                         transition={{ duration: 0.2 }}
                         className={`border-2 border-dashed rounded-xl p-8 text-center transition-all duration-200 cursor-pointer ${
                           isDragOver
-                            ? 'border-[#2d7a4f] bg-[#2d7a4f08]'
-                            : 'border-gray-200 hover:border-[#2d7a4f] hover:bg-gray-50'
+                            ? 'border-[var(--institution-secondary)] bg-[var(--institution-secondary-08)]'
+                            : 'border-gray-200 hover:border-[var(--institution-secondary)] hover:bg-gray-50'
                         }`}
                         onDragOver={(e) => { e.preventDefault(); setIsDragOver(true) }}
                         onDragLeave={() => setIsDragOver(false)}
@@ -742,7 +742,7 @@ export function ImportExportPage() {
                           animate={isDragOver ? { scale: 1.05 } : { scale: 1 }}
                           transition={{ duration: 0.15 }}
                         >
-                          <Upload className={`size-10 mx-auto mb-3 ${isDragOver ? 'text-[#2d7a4f]' : 'text-gray-300'}`} />
+                          <Upload className={`size-10 mx-auto mb-3 ${isDragOver ? 'text-[var(--institution-secondary)]' : 'text-gray-300'}`} />
                         </motion.div>
                         <p className="text-sm font-medium text-gray-600 mb-1">
                           Glisser-déposer votre fichier ici
@@ -750,15 +750,15 @@ export function ImportExportPage() {
                         <p className="text-xs text-gray-400 mb-3">ou cliquer pour sélectionner</p>
                         <div className="flex items-center justify-center gap-2 flex-wrap mb-4">
                           <Badge variant="outline" className="text-[10px] bg-white">
-                            <FileSpreadsheet className="size-3 mr-1 text-[#2d7a4f]" />
+                            <FileSpreadsheet className="size-3 mr-1 text-[var(--institution-secondary)]" />
                             .xlsx
                           </Badge>
                           <Badge variant="outline" className="text-[10px] bg-white">
-                            <FileSpreadsheet className="size-3 mr-1 text-[#2d7a4f]" />
+                            <FileSpreadsheet className="size-3 mr-1 text-[var(--institution-secondary)]" />
                             .xls
                           </Badge>
                           <Badge variant="outline" className="text-[10px] bg-white">
-                            <FileText className="size-3 mr-1 text-[#d4a853]" />
+                            <FileText className="size-3 mr-1 text-[var(--institution-accent)]" />
                             .csv
                           </Badge>
                         </div>
@@ -777,7 +777,7 @@ export function ImportExportPage() {
 
                     {/* Preview Button */}
                     <Button
-                      className="w-full bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs h-10"
+                      className="w-full bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white text-xs h-10"
                       onClick={handlePreview}
                     >
                       <Eye className="size-3.5 mr-1.5" />
@@ -792,13 +792,13 @@ export function ImportExportPage() {
                       <CardHeader className="pb-3">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <TableIcon className="size-4 text-[#1a2744]" />
-                            <CardTitle className="text-sm font-semibold text-[#1a2744]">
+                            <TableIcon className="size-4 text-[var(--institution-primary)]" />
+                            <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">
                               Aperçu des données - {importTypeMap[importType]}
                             </CardTitle>
                           </div>
                           {showPreview && (
-                            <Badge className="text-[10px] bg-[#2d7a4f15] text-[#2d7a4f] border-0">
+                            <Badge className="text-[10px] bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0">
                               {dynamicPreviewRows.length} lignes détectées
                             </Badge>
                           )}
@@ -829,9 +829,9 @@ export function ImportExportPage() {
                                       {row.map((cell, cidx) => (
                                         <TableCell key={cidx} className="py-1.5 text-xs text-gray-600">
                                           {cidx === 0 ? (
-                                            <span className="font-mono text-[#2d7a4f]">{cell}</span>
+                                            <span className="font-mono text-[var(--institution-secondary)]">{cell}</span>
                                           ) : cidx === row.length - 1 ? (
-                                            <Badge className="text-[9px] bg-[#2d7a4f15] text-[#2d7a4f] border-0">{cell}</Badge>
+                                            <Badge className="text-[9px] bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0">{cell}</Badge>
                                           ) : (
                                             cell
                                           )}
@@ -864,11 +864,11 @@ export function ImportExportPage() {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                       >
-                        <Card className="border-[#2d7a4f30]">
+                        <Card className="border-[var(--institution-secondary-30)]">
                           <CardContent className="p-4">
                             <div className="flex items-center justify-between mb-2">
-                              <span className="text-xs font-medium text-[#1a2744]">Import en cours...</span>
-                              <span className="text-xs font-semibold text-[#2d7a4f]">{importProgress}%</span>
+                              <span className="text-xs font-medium text-[var(--institution-primary)]">Import en cours...</span>
+                              <span className="text-xs font-semibold text-[var(--institution-secondary)]">{importProgress}%</span>
                             </div>
                             <Progress value={importProgress} className="h-2" />
                             <p className="text-[10px] text-gray-400 mt-2">
@@ -891,15 +891,15 @@ export function ImportExportPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: 0.1 }}
             >
-              <Card className="border-l-4 border-l-[#d4a853]">
+              <Card className="border-l-4 border-l-[var(--institution-accent)]">
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-lg bg-[#d4a85315] flex items-center justify-center">
-                        <AlertTriangle className="size-4 text-[#d4a853]" />
+                      <div className="w-8 h-8 rounded-lg bg-[var(--institution-accent-15)] flex items-center justify-center">
+                        <AlertTriangle className="size-4 text-[var(--institution-accent)]" />
                       </div>
                       <div>
-                        <CardTitle className="text-sm font-semibold text-[#1a2744]">Validation des données</CardTitle>
+                        <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Validation des données</CardTitle>
                         <p className="text-xs text-gray-400 mt-0.5">Vérifiez les données avant de confirmer l&apos;import</p>
                       </div>
                     </div>
@@ -917,10 +917,10 @@ export function ImportExportPage() {
                 <CardContent>
                   {/* Validation Summary */}
                   <div className="grid grid-cols-3 gap-3 mb-4">
-                    <div className="flex items-center gap-3 p-3 rounded-lg bg-[#2d7a4f08] border border-[#2d7a4f20]">
-                      <CheckCircle2 className="size-5 text-[#2d7a4f] shrink-0" />
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-[var(--institution-secondary-08)] border border-[var(--institution-secondary-20)]">
+                      <CheckCircle2 className="size-5 text-[var(--institution-secondary)] shrink-0" />
                       <div>
-                        <p className="text-lg font-bold text-[#2d7a4f]">{validationSummary.validLines}</p>
+                        <p className="text-lg font-bold text-[var(--institution-secondary)]">{validationSummary.validLines}</p>
                         <p className="text-[10px] text-gray-500">Lignes valides</p>
                       </div>
                     </div>
@@ -931,10 +931,10 @@ export function ImportExportPage() {
                         <p className="text-[10px] text-gray-500">Lignes en erreur</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 p-3 rounded-lg bg-[#d4a5308] border border-[#d4a85320]">
-                      <Copy className="size-5 text-[#d4a853] shrink-0" />
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-[#d4a5308] border border-[var(--institution-accent-20)]">
+                      <Copy className="size-5 text-[var(--institution-accent)] shrink-0" />
                       <div>
-                        <p className="text-lg font-bold text-[#d4a853]">{validationSummary.duplicates}</p>
+                        <p className="text-lg font-bold text-[var(--institution-accent)]">{validationSummary.duplicates}</p>
                         <p className="text-[10px] text-gray-500">Doublons détectés</p>
                       </div>
                     </div>
@@ -985,7 +985,7 @@ export function ImportExportPage() {
                   {/* Action Buttons */}
                   <div className="flex items-center gap-3 pt-2 border-t border-gray-100">
                     <Button
-                      className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs h-9"
+                      className="bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white text-xs h-9"
                       onClick={handleImport}
                       disabled={isImporting}
                     >
@@ -1019,7 +1019,7 @@ export function ImportExportPage() {
             <Card>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-semibold text-[#1a2744]">
+                  <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">
                     Historique des imports
                   </CardTitle>
                   <Badge className="text-[10px] bg-gray-100 text-gray-500 border-0">
@@ -1058,16 +1058,16 @@ export function ImportExportPage() {
                               <span className="text-xs text-gray-500">{new Date(record.createdAt).toLocaleString('fr-FR')}</span>
                             </TableCell>
                             <TableCell className="py-2.5">
-                              <Badge className="text-[10px] bg-[#1a274410] text-[#1a2744] border-0">{record.type}</Badge>
+                              <Badge className="text-[10px] bg-[var(--institution-primary-10)] text-[var(--institution-primary)] border-0">{record.type}</Badge>
                             </TableCell>
                             <TableCell className="py-2.5">
                               <div className="flex items-center gap-1.5">
-                                <FileSpreadsheet className="size-3.5 text-[#2d7a4f]" />
+                                <FileSpreadsheet className="size-3.5 text-[var(--institution-secondary)]" />
                                 <span className="text-xs text-gray-600 font-mono">{record.fileName}</span>
                               </div>
                             </TableCell>
                             <TableCell className="py-2.5 text-center">
-                              <span className="text-xs font-semibold text-[#1a2744]">{record.totalRows}</span>
+                              <span className="text-xs font-semibold text-[var(--institution-primary)]">{record.totalRows}</span>
                             </TableCell>
                             <TableCell className="py-2.5">
                               <div className="flex items-center gap-1">
@@ -1082,7 +1082,7 @@ export function ImportExportPage() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="h-7 text-[10px] text-[#2d7a4f]"
+                                  className="h-7 text-[10px] text-[var(--institution-secondary)]"
                                   onClick={() => {
                                     const rowErrors = parseImportErrors(record.errors)
                                     if (rowErrors.length === 0) {
@@ -1113,14 +1113,14 @@ export function ImportExportPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.3 }}
           >
-            <Card className="bg-[#1a274408] border-[#1a274420]">
+            <Card className="bg-[var(--institution-primary-08)] border-[var(--institution-primary-20)]">
               <CardContent className="p-5">
                 <div className="flex gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-[#1a274415] flex items-center justify-center shrink-0">
-                    <Info className="size-5 text-[#1a2744]" />
+                  <div className="w-10 h-10 rounded-lg bg-[var(--institution-primary-15)] flex items-center justify-center shrink-0">
+                    <Info className="size-5 text-[var(--institution-primary)]" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-semibold text-[#1a2744] mb-1">
+                    <h3 className="text-sm font-semibold text-[var(--institution-primary)] mb-1">
                       Import adapté aux universités africaines
                     </h3>
                     <p className="text-xs text-gray-500 leading-relaxed">
@@ -1164,14 +1164,14 @@ export function ImportExportPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <Card className="border-l-4 border-l-[#1a2744]" style={{ borderTop: '3px solid #1a2744' }}>
+            <Card className="border-l-4 border-l-[var(--institution-primary)]" style={{ borderTop: '3px solid var(--institution-primary)' }}>
               <CardHeader className="pb-3">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-[#1a274415] flex items-center justify-center">
-                    <Download className="size-4 text-[#1a2744]" />
+                  <div className="w-8 h-8 rounded-lg bg-[var(--institution-primary-15)] flex items-center justify-center">
+                    <Download className="size-4 text-[var(--institution-primary)]" />
                   </div>
                   <div>
-                    <CardTitle className="text-sm font-semibold text-[#1a2744]">Exporter des donnees</CardTitle>
+                    <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Exporter des donnees</CardTitle>
                     <p className="text-xs text-gray-400 mt-0.5">Générez des rapports et extractions de données</p>
                   </div>
                 </div>
@@ -1207,16 +1207,16 @@ export function ImportExportPage() {
                             onClick={() => setExportFormat(fmt)}
                             className={`flex flex-col items-center gap-1.5 p-3 rounded-lg border-2 transition-all text-center ${
                               exportFormat === fmt
-                                ? 'border-[#1a2744] bg-[#1a274408]'
+                                ? 'border-[var(--institution-primary)] bg-[var(--institution-primary-08)]'
                                 : 'border-gray-100 hover:border-gray-200 bg-white'
                             }`}
                           >
                             {fmt === 'Excel' ? (
-                              <FileSpreadsheet className={`size-5 ${exportFormat === fmt ? 'text-[#2d7a4f]' : 'text-gray-400'}`} />
+                              <FileSpreadsheet className={`size-5 ${exportFormat === fmt ? 'text-[var(--institution-secondary)]' : 'text-gray-400'}`} />
                             ) : (
-                              <Database className={`size-5 ${exportFormat === fmt ? 'text-[#d4a853]' : 'text-gray-400'}`} />
+                              <Database className={`size-5 ${exportFormat === fmt ? 'text-[var(--institution-accent)]' : 'text-gray-400'}`} />
                             )}
-                            <span className={`text-xs font-medium ${exportFormat === fmt ? 'text-[#1a2744]' : 'text-gray-500'}`}>
+                            <span className={`text-xs font-medium ${exportFormat === fmt ? 'text-[var(--institution-primary)]' : 'text-gray-500'}`}>
                               {fmt}
                             </span>
                           </motion.button>
@@ -1226,7 +1226,7 @@ export function ImportExportPage() {
 
                     {/* Generate Button */}
                     <Button 
-                      className="w-full bg-[#1a2744] hover:bg-[#1a2744]/90 text-white text-xs h-10"
+                      className="w-full bg-[var(--institution-primary)] hover:bg-[var(--institution-primary)]/90 text-white text-xs h-10"
                       onClick={handleExport}
                     >
                       <Download className="size-3.5 mr-1.5" />
@@ -1239,7 +1239,7 @@ export function ImportExportPage() {
                     <Card>
                       <CardHeader className="pb-3">
                         <div className="flex items-center justify-between">
-                          <CardTitle className="text-sm font-semibold text-[#1a2744]">
+                          <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">
                             Exports récents
                           </CardTitle>
                           <Badge className="text-[10px] bg-gray-100 text-gray-500 border-0">
@@ -1281,9 +1281,9 @@ export function ImportExportPage() {
                                       {record.format === 'PDF' ? (
                                         <FileText className="size-3.5 text-[#c62828]" />
                                       ) : record.format === 'Excel' ? (
-                                        <FileSpreadsheet className="size-3.5 text-[#2d7a4f]" />
+                                        <FileSpreadsheet className="size-3.5 text-[var(--institution-secondary)]" />
                                       ) : (
-                                        <Database className="size-3.5 text-[#d4a853]" />
+                                        <Database className="size-3.5 text-[var(--institution-accent)]" />
                                       )}
                                       <span className="text-xs text-gray-600">{record.format}</span>
                                     </div>
@@ -1292,7 +1292,7 @@ export function ImportExportPage() {
                                     <span className="text-xs text-gray-500">{record.fileSizeLabel ?? '—'}</span>
                                   </TableCell>
                                   <TableCell className="py-2.5 text-center">
-                                    <span className="text-xs font-semibold text-[#1a2744]">{record.rowCount}</span>
+                                    <span className="text-xs font-semibold text-[var(--institution-primary)]">{record.rowCount}</span>
                                   </TableCell>
                                 </TableRow>
                               ))}
@@ -1330,15 +1330,15 @@ export function ImportExportPage() {
           </DialogHeader>
           <div className="space-y-4 text-sm text-gray-600">
             <div>
-              <p className="font-semibold text-[#1a2744]">Fichiers acceptes</p>
+              <p className="font-semibold text-[var(--institution-primary)]">Fichiers acceptes</p>
               <p>Excel .xlsx, .xls et CSV avec encodage UTF-8 recommande.</p>
             </div>
             <div>
-              <p className="font-semibold text-[#1a2744]">Etudiants</p>
+              <p className="font-semibold text-[var(--institution-primary)]">Etudiants</p>
               <p>Colonnes recommandees : Matricule, Nom, Prenom, Date naissance, Filiere, Statut.</p>
             </div>
             <div>
-              <p className="font-semibold text-[#1a2744]">Enseignants</p>
+              <p className="font-semibold text-[var(--institution-primary)]">Enseignants</p>
               <p>Colonnes recommandees : Nom, Prenom, Email, Grade, Specialisation, Departement.</p>
             </div>
           </div>

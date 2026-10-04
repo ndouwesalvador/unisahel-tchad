@@ -112,26 +112,26 @@ function isToday(date: Date): boolean {
 function getNotificationIconColor(type: NotificationType) {
   switch (type) {
     case 'info':
-      return 'text-[#1a2744] bg-[#1a2744]/10'
+      return 'text-[var(--institution-primary)] bg-[var(--institution-primary)]/10'
     case 'success':
-      return 'text-[#2d7a4f] bg-[#2d7a4f]/10'
+      return 'text-[var(--institution-secondary)] bg-[var(--institution-secondary)]/10'
     case 'warning':
-      return 'text-[#d4a853] bg-[#d4a853]/10'
+      return 'text-[var(--institution-accent)] bg-[var(--institution-accent)]/10'
     case 'error':
       return 'text-red-500 bg-red-500/10'
     case 'mention':
-      return 'text-[#1a2744] bg-[#1a2744]/10'
+      return 'text-[var(--institution-primary)] bg-[var(--institution-primary)]/10'
   }
 }
 
 function getCategoryColor(category: NotificationCategory) {
   switch (category) {
     case 'Academique':
-      return 'bg-[#2d7a4f]/10 text-[#2d7a4f] border-[#2d7a4f]/20'
+      return 'bg-[var(--institution-secondary)]/10 text-[var(--institution-secondary)] border-[var(--institution-secondary)]/20'
     case 'Paiement':
-      return 'bg-[#d4a853]/10 text-[#d4a853] border-[#d4a853]/20'
+      return 'bg-[var(--institution-accent)]/10 text-[var(--institution-accent)] border-[var(--institution-accent)]/20'
     case 'Systeme':
-      return 'bg-[#1a2744]/10 text-[#1a2744] border-[#1a2744]/20'
+      return 'bg-[var(--institution-primary)]/10 text-[var(--institution-primary)] border-[var(--institution-primary)]/20'
     case 'Document':
       return 'bg-[#6b7280]/10 text-[#6b7280] border-[#6b7280]/20'
     case 'Administratif':
@@ -190,12 +190,12 @@ function NotificationItem({
       transition={{ duration: 0.2, delay: index * 0.03 }}
       onClick={() => !notification.read && onMarkRead(notification.id)}
       className={`relative flex gap-3 p-3 rounded-lg transition-colors hover:bg-gray-50 cursor-pointer ${
-        !notification.read ? 'bg-[#2d7a4f]/[0.03]' : ''
+        !notification.read ? 'bg-[var(--institution-secondary)]/[0.03]' : ''
       }`}
     >
       {/* Unread indicator */}
       {!notification.read && (
-        <div className="absolute left-1 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-[#2d7a4f]" />
+        <div className="absolute left-1 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-[var(--institution-secondary)]" />
       )}
 
       {/* Icon */}
@@ -206,7 +206,7 @@ function NotificationItem({
       {/* Content */}
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2">
-          <p className={`text-sm leading-snug ${!notification.read ? 'font-semibold text-[#1a2744]' : 'font-medium text-gray-700'}`}>
+          <p className={`text-sm leading-snug ${!notification.read ? 'font-semibold text-[var(--institution-primary)]' : 'font-medium text-gray-700'}`}>
             {notification.title}
           </p>
         </div>
@@ -301,11 +301,11 @@ export function NotificationPanel() {
         <SheetHeader className="p-4 pb-0 space-y-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <SheetTitle className="text-lg font-bold text-[#1a2744]">
+              <SheetTitle className="text-lg font-bold text-[var(--institution-primary)]">
                 Notifications
               </SheetTitle>
               {unreadCount > 0 && (
-                <Badge className="bg-[#2d7a4f] text-white text-[10px] px-1.5 h-5 font-semibold hover:bg-[#2d7a4f]">
+                <Badge className="bg-[var(--institution-secondary)] text-white text-[10px] px-1.5 h-5 font-semibold hover:bg-[var(--institution-secondary)]">
                   {unreadCount}
                 </Badge>
               )}
@@ -314,7 +314,7 @@ export function NotificationPanel() {
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-xs text-[#2d7a4f] hover:text-[#236b40] h-7 px-2"
+                className="text-xs text-[var(--institution-secondary)] hover:text-[var(--institution-secondary-dark)] h-7 px-2"
                 onClick={handleMarkAllRead}
                 disabled={unreadCount === 0}
               >
@@ -354,7 +354,7 @@ export function NotificationPanel() {
                   </TabsTrigger>
                   <TabsTrigger value="non-lues" className="text-[11px] h-7 px-2 flex-1">
                     Non lues
-                    <Badge variant="secondary" className="ml-1 text-[9px] px-1 h-4 bg-[#2d7a4f]/10 text-[#2d7a4f] font-medium">
+                    <Badge variant="secondary" className="ml-1 text-[9px] px-1 h-4 bg-[var(--institution-secondary)]/10 text-[var(--institution-secondary)] font-medium">
                       {unreadNotifications.length}
                     </Badge>
                   </TabsTrigger>
@@ -416,14 +416,14 @@ export function NotificationPanel() {
               <div className="p-4 space-y-3">
                 <Button
                   variant="outline"
-                  className="w-full text-[#2d7a4f] border-[#2d7a4f]/30 hover:bg-[#2d7a4f]/5 hover:border-[#2d7a4f]/50 text-sm font-medium"
+                  className="w-full text-[var(--institution-secondary)] border-[var(--institution-secondary)]/30 hover:bg-[var(--institution-secondary)]/5 hover:border-[var(--institution-secondary)]/50 text-sm font-medium"
                 >
                   <Bell className="size-4 mr-2" />
                   Voir toutes les notifications
                 </Button>
                 <div className="flex items-center justify-center gap-4 text-[11px] text-gray-400">
                   <div className="flex items-center gap-1">
-                    <div className="w-1.5 h-1.5 rounded-full bg-[#2d7a4f]" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-[var(--institution-secondary)]" />
                     <span>{unreadNotifications.length} non lues</span>
                   </div>
                   <Separator orientation="vertical" className="h-3" />

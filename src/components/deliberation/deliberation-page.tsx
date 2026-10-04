@@ -128,17 +128,17 @@ function describeReadinessIssue(readiness: DeliberationReadiness): string {
 }
 
 const decisionConfig: Record<Decision, { label: string; className: string; icon: React.ElementType; tooltip: string }> = {
-  ADMI: { label: 'Admis', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0 hover:bg-[#2d7a4f15]', icon: CheckCircle2, tooltip: 'Etudiant admis avec succes' },
+  ADMI: { label: 'Admis', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0 hover:bg-[var(--institution-secondary-15)]', icon: CheckCircle2, tooltip: 'Etudiant admis avec succes' },
   AJOURNE: { label: 'Ajourne', className: 'bg-[#ef6c0015] text-[#ef6c00] border-0 hover:bg-[#ef6c0015]', icon: Clock, tooltip: 'Passage en session de rattrapage' },
   REDOUBLANT: { label: 'Redoublant', className: 'bg-[#c6282815] text-[#c62828] border-0 hover:bg-[#c6282815]', icon: XCircle, tooltip: 'Redoublement du semestre' },
   EXCLU: { label: 'Exclu', className: 'bg-[#8b000015] text-[#8b0000] border-0 hover:bg-[#8b000015]', icon: AlertTriangle, tooltip: 'Exclusion definitive' },
-  ADMI_DETTE: { label: 'Admis avec dette', className: 'bg-[#d4a85315] text-[#d4a853] border-0 hover:bg-[#d4a85315]', icon: Award, tooltip: 'Admis mais avec des credits en dette' },
-  COMPENSE: { label: 'Compense', className: 'bg-[#1a274415] text-[#1a2744] border-0 hover:bg-[#1a274415]', icon: TrendingUp, tooltip: 'Compensation inter-UE validee' },
+  ADMI_DETTE: { label: 'Admis avec dette', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0 hover:bg-[var(--institution-accent-15)]', icon: Award, tooltip: 'Admis mais avec des credits en dette' },
+  COMPENSE: { label: 'Compense', className: 'bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0 hover:bg-[var(--institution-primary-15)]', icon: TrendingUp, tooltip: 'Compensation inter-UE validee' },
 }
 
 const sessionStatusConfig: Record<string, { label: string; className: string }> = {
-  planifiee: { label: 'Planifiee', className: 'bg-[#d4a85315] text-[#d4a853] border-0' },
-  en_cours: { label: 'En cours', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0' },
+  planifiee: { label: 'Planifiee', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0' },
+  en_cours: { label: 'En cours', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0' },
   terminee: { label: 'Terminee', className: 'bg-gray-100 text-gray-500 border-0' },
 }
 
@@ -453,9 +453,9 @@ export function DeliberationPage() {
   // ─── Get Decision Badge Color for Row ──────────────────────────────────
   const getDecisionRowBg = (decision: Decision) => {
     switch (decision) {
-      case 'ADMI': return 'bg-[#2d7a4f05]'
-      case 'COMPENSE': return 'bg-[#1a274405]'
-      case 'ADMI_DETTE': return 'bg-[#d4a85305]'
+      case 'ADMI': return 'bg-[var(--institution-secondary-05)]'
+      case 'COMPENSE': return 'bg-[var(--institution-primary-05)]'
+      case 'ADMI_DETTE': return 'bg-[var(--institution-accent-05)]'
       case 'AJOURNE': return 'bg-[#ef6c0005]'
       case 'REDOUBLANT': return 'bg-[#c6282805]'
       case 'EXCLU': return 'bg-[#8b000005]'
@@ -464,7 +464,7 @@ export function DeliberationPage() {
   }
 
   const getMoyenneColor = (moyenne: number) => {
-    if (moyenne >= 10) return 'text-[#2d7a4f]'
+    if (moyenne >= 10) return 'text-[var(--institution-secondary)]'
     if (moyenne >= 8) return 'text-[#f9a825]'
     return 'text-[#c62828]'
   }
@@ -482,7 +482,7 @@ export function DeliberationPage() {
           transition={{ duration: 0.4 }}
         >
           <Card className="overflow-hidden">
-            <div className="bg-gradient-to-r from-[#1a2744] via-[#1f3050] to-[#2d7a4f] p-6 text-white relative">
+            <div className="bg-gradient-to-r from-[var(--institution-primary)] via-[var(--institution-primary-light)] to-[var(--institution-secondary)] p-6 text-white relative">
               <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PHBhdGggZD0iTTM2IDE0YzAtMi4yMS0xLjc5LTQtNC00cy00IDEuNzktNCA0IDEuNzkgNCA0IDQgNC0xLjc5IDQtNHptLTQgMmMtMS4xIDAtMi0uOS0yLTJzLjktMiAyLTIgMiAuOSAyIDItLjkgMi0yIDJ6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-50" />
               <div className="relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
@@ -493,7 +493,7 @@ export function DeliberationPage() {
                 </div>
                 <div className="flex items-center gap-3">
                   <Select value={pvPageFormat} onValueChange={(value) => setPvPageFormat(value as 'A3' | 'A4')}>
-                    <SelectTrigger aria-label="Format du procès-verbal" className="w-24 h-8 bg-white text-[#1a2744]"><SelectValue /></SelectTrigger>
+                    <SelectTrigger aria-label="Format du procès-verbal" className="w-24 h-8 bg-white text-[var(--institution-primary)]"><SelectValue /></SelectTrigger>
                     <SelectContent><SelectItem value="A3">A3</SelectItem><SelectItem value="A4">A4</SelectItem></SelectContent>
                   </Select>
                   {/* Animated Badge */}
@@ -527,21 +527,21 @@ export function DeliberationPage() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <Activity className="size-4 text-[#1a2744]" />
-                  <span className="text-sm font-semibold text-[#1a2744]">Statut du jury</span>
+                  <Activity className="size-4 text-[var(--institution-primary)]" />
+                  <span className="text-sm font-semibold text-[var(--institution-primary)]">Statut du jury</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-50 border border-gray-100">
                     {juryStatus === 'active' && (
                       <motion.div
-                        className="w-2.5 h-2.5 rounded-full bg-[#2d7a4f]"
+                        className="w-2.5 h-2.5 rounded-full bg-[var(--institution-secondary)]"
                         animate={{ scale: [1, 1.3, 1], opacity: [1, 0.7, 1] }}
                         transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
                       />
                     )}
                     {juryStatus === 'pending' && (
                       <motion.div
-                        className="w-2.5 h-2.5 rounded-full bg-[#d4a853]"
+                        className="w-2.5 h-2.5 rounded-full bg-[var(--institution-accent)]"
                         animate={{ scale: [1, 1.2, 1], opacity: [1, 0.6, 1] }}
                         transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
                       />
@@ -550,8 +550,8 @@ export function DeliberationPage() {
                       <div className="w-2.5 h-2.5 rounded-full bg-gray-400" />
                     )}
                     <span className={`text-xs font-medium ${
-                      juryStatus === 'active' ? 'text-[#2d7a4f]' :
-                      juryStatus === 'pending' ? 'text-[#d4a853]' :
+                      juryStatus === 'active' ? 'text-[var(--institution-secondary)]' :
+                      juryStatus === 'pending' ? 'text-[var(--institution-accent)]' :
                       'text-gray-400'
                     }`}>
                       {!currentSession ? 'Aucune délibération sélectionnée' :
@@ -561,7 +561,7 @@ export function DeliberationPage() {
                     </span>
                   </div>
                   {juryStatus === 'active' && (
-                    <Badge className="text-[10px] bg-[#2d7a4f15] text-[#2d7a4f] border-0">
+                    <Badge className="text-[10px] bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0">
                       {juryMembers.length} membres presents
                     </Badge>
                   )}
@@ -577,20 +577,20 @@ export function DeliberationPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.08 }}
         >
-          <Card className={`border-l-4 ${isReadyForJury ? 'border-l-[#2d7a4f]' : 'border-l-[#d4a853]'}`}>
+          <Card className={`border-l-4 ${isReadyForJury ? 'border-l-[var(--institution-secondary)]' : 'border-l-[var(--institution-accent)]'}`}>
             <CardContent className="p-4">
               <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
                 <div className="space-y-3 flex-1">
                   <div className="flex items-start gap-3">
-                    <div className={`p-2 rounded-lg ${isReadyForJury ? 'bg-[#2d7a4f10]' : 'bg-[#d4a85315]'}`}>
+                    <div className={`p-2 rounded-lg ${isReadyForJury ? 'bg-[var(--institution-secondary-10)]' : 'bg-[var(--institution-accent-15)]'}`}>
                       {isReadyForJury ? (
-                        <CheckCircle2 className="size-4 text-[#2d7a4f]" />
+                        <CheckCircle2 className="size-4 text-[var(--institution-secondary)]" />
                       ) : (
-                        <AlertTriangle className="size-4 text-[#d4a853]" />
+                        <AlertTriangle className="size-4 text-[var(--institution-accent)]" />
                       )}
                     </div>
                     <div>
-                      <h3 className="text-sm font-semibold text-[#1a2744]">
+                      <h3 className="text-sm font-semibold text-[var(--institution-primary)]">
                         {isReadyForJury ? 'Notes prêtes pour jury' : 'Délibération bloquée : notes incomplètes ou incohérentes'}
                       </h3>
                       <p className="text-xs text-gray-500 mt-1">
@@ -608,37 +608,37 @@ export function DeliberationPage() {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                     <div className="rounded-lg bg-gray-50 border border-gray-100 p-3">
                       <p className="text-[10px] uppercase tracking-wide text-gray-400">Notes verrouillées</p>
-                      <p className="text-lg font-bold text-[#1a2744]">
+                      <p className="text-lg font-bold text-[var(--institution-primary)]">
                         {readiness ? `${readiness.lockedGradeCount}/${readiness.expectedGradeCount}` : '—'}
                       </p>
                     </div>
                     <div className="rounded-lg bg-gray-50 border border-gray-100 p-3">
                       <p className="text-[10px] uppercase tracking-wide text-gray-400">Manquantes</p>
-                      <p className={`text-lg font-bold ${readiness?.missingGradeCount ? 'text-[#d4a853]' : 'text-[#2d7a4f]'}`}>
+                      <p className={`text-lg font-bold ${readiness?.missingGradeCount ? 'text-[var(--institution-accent)]' : 'text-[var(--institution-secondary)]'}`}>
                         {readiness?.missingGradeCount ?? '—'}
                       </p>
                     </div>
                     <div className="rounded-lg bg-gray-50 border border-gray-100 p-3">
                       <p className="text-[10px] uppercase tracking-wide text-gray-400">Étudiants complets</p>
-                      <p className="text-lg font-bold text-[#1a2744]">
+                      <p className="text-lg font-bold text-[var(--institution-primary)]">
                         {readiness ? `${readiness.studentsReady}/${readiness.studentsTotal}` : '—'}
                       </p>
                     </div>
                     <div className="rounded-lg bg-gray-50 border border-gray-100 p-3">
                       <p className="text-[10px] uppercase tracking-wide text-gray-400">Session</p>
-                      <p className="text-lg font-bold text-[#1a2744]">
+                      <p className="text-lg font-bold text-[var(--institution-primary)]">
                         {selectedSessionType === 'normale' ? 'Normale' : 'Rattrapage'}
                       </p>
                     </div>
                   </div>
 
                   {!isReadyForJury && readiness && readiness.incompleteStudents.length > 0 && (
-                    <div className="rounded-lg border border-[#d4a85330] bg-[#d4a85308] p-3 space-y-2">
-                      <p className="text-xs font-medium text-[#1a2744]">Éléments à compléter en priorité</p>
+                    <div className="rounded-lg border border-[var(--institution-accent-30)] bg-[var(--institution-accent-08)] p-3 space-y-2">
+                      <p className="text-xs font-medium text-[var(--institution-primary)]">Éléments à compléter en priorité</p>
                       <div className="space-y-2">
                         {readiness.incompleteStudents.slice(0, 3).map((student) => (
                           <div key={student.studentId} className="text-xs text-gray-600">
-                            <span className="font-semibold text-[#1a2744]">{student.name}</span>
+                            <span className="font-semibold text-[var(--institution-primary)]">{student.name}</span>
                             <span className="text-gray-400"> ({student.matricule}) — </span>
                             <span>{student.missing} note(s) manquante(s) : </span>
                             <span className="text-gray-500">
@@ -674,11 +674,11 @@ export function DeliberationPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.1 }}
         >
-          <Card className="border-l-4 border-l-[#2d7a4f]">
+          <Card className="border-l-4 border-l-[var(--institution-secondary)]">
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
-                <Gavel className="size-4 text-[#2d7a4f]" />
-                <CardTitle className="text-sm font-semibold text-[#1a2744]">
+                <Gavel className="size-4 text-[var(--institution-secondary)]" />
+                <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">
                   Configuration du jury
                 </CardTitle>
               </div>
@@ -735,7 +735,7 @@ export function DeliberationPage() {
                     <Users className="size-3.5" />
                     Membres du jury
                   </Label>
-                  <Badge className="text-[10px] bg-[#1a274410] text-[#1a2744] border-0">
+                  <Badge className="text-[10px] bg-[var(--institution-primary-10)] text-[var(--institution-primary)] border-0">
                     {juryMembers.length} membres
                   </Badge>
                 </div>
@@ -761,8 +761,8 @@ export function DeliberationPage() {
                             className="w-8 h-8 rounded-full flex items-center justify-center"
                             style={{
                               background: member.role === 'President'
-                                ? 'linear-gradient(135deg, #d4a853, #e0be72)'
-                                : 'linear-gradient(135deg, #1a2744, #2a3d5e)'
+                                ? 'linear-gradient(135deg, var(--institution-accent), #e0be72)'
+                                : 'linear-gradient(135deg, var(--institution-primary), #2a3d5e)'
                             }}
                             initial={{ scale: 0 }}
                             animate={{ scale: 1 }}
@@ -771,11 +771,11 @@ export function DeliberationPage() {
                             <User className="size-3.5 text-white" />
                           </motion.div>
                           <div>
-                            <p className="text-sm font-medium text-[#1a2744]">{member.name}</p>
+                            <p className="text-sm font-medium text-[var(--institution-primary)]">{member.name}</p>
                             <Badge className={`text-[10px] border-0 ${
                               member.role === 'President'
-                                ? 'bg-[#d4a85315] text-[#d4a853]'
-                                : 'bg-[#2d7a4f15] text-[#2d7a4f]'
+                                ? 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)]'
+                                : 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)]'
                             }`}>
                               {member.role}
                             </Badge>
@@ -822,7 +822,7 @@ export function DeliberationPage() {
                   </Select>
                   <Button
                     size="sm"
-                    className="h-9 bg-[#1a2744] hover:bg-[#253556] text-white text-xs"
+                    className="h-9 bg-[var(--institution-primary)] hover:bg-[#253556] text-white text-xs"
                     onClick={addMember}
                     disabled={isLocked}
                   >
@@ -838,7 +838,7 @@ export function DeliberationPage() {
               <div className="flex justify-end">
                 <Button
                   size="sm"
-                  className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs"
+                  className="bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white text-xs"
                   onClick={handleLaunch}
                   disabled={isLaunching || isDeliberationLoading || !hasStudents || !isReadyForJury || Boolean(selectedSession)}
                 >
@@ -872,15 +872,15 @@ export function DeliberationPage() {
                 transition={{ duration: 0.35, delay: 0.1 }}
               >
                 <Card className="relative overflow-hidden">
-                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#2d7a4f] to-[#3da66a]" />
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[var(--institution-secondary)] to-[var(--institution-secondary-bright)]" />
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between mb-2">
-                      <div className="p-2 rounded-lg bg-[#2d7a4f10]">
-                        <CheckCircle2 className="size-4 text-[#2d7a4f]" />
+                      <div className="p-2 rounded-lg bg-[var(--institution-secondary-10)]">
+                        <CheckCircle2 className="size-4 text-[var(--institution-secondary)]" />
                       </div>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Badge className="text-[10px] bg-[#2d7a4f15] text-[#2d7a4f] border-0 cursor-help">
+                          <Badge className="text-[10px] bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0 cursor-help">
                             {stats.admis + stats.admisDette}
                           </Badge>
                         </TooltipTrigger>
@@ -889,7 +889,7 @@ export function DeliberationPage() {
                         </TooltipContent>
                       </Tooltip>
                     </div>
-                    <p className="text-2xl font-bold text-[#2d7a4f]">{stats.admis + stats.admisDette}</p>
+                    <p className="text-2xl font-bold text-[var(--institution-secondary)]">{stats.admis + stats.admisDette}</p>
                     <p className="text-xs text-gray-500 mt-1">
                       {isReadyForJury ? 'Reussites' : 'Reussites provisoires'}
                     </p>
@@ -904,15 +904,15 @@ export function DeliberationPage() {
                 transition={{ duration: 0.35, delay: 0.15 }}
               >
                 <Card className="relative overflow-hidden">
-                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#1a2744] to-[#3a4d6e]" />
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[var(--institution-primary)] to-[#3a4d6e]" />
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between mb-2">
-                      <div className="p-2 rounded-lg bg-[#1a274410]">
-                        <TrendingUp className="size-4 text-[#1a2744]" />
+                      <div className="p-2 rounded-lg bg-[var(--institution-primary-10)]">
+                        <TrendingUp className="size-4 text-[var(--institution-primary)]" />
                       </div>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Badge className="text-[10px] bg-[#1a274415] text-[#1a2744] border-0 cursor-help">
+                          <Badge className="text-[10px] bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0 cursor-help">
                             {stats.compenses}
                           </Badge>
                         </TooltipTrigger>
@@ -921,7 +921,7 @@ export function DeliberationPage() {
                         </TooltipContent>
                       </Tooltip>
                     </div>
-                    <p className="text-2xl font-bold text-[#1a2744]">{stats.compenses}</p>
+                    <p className="text-2xl font-bold text-[var(--institution-primary)]">{stats.compenses}</p>
                     <p className="text-xs text-gray-500 mt-1">Compenses</p>
                   </CardContent>
                 </Card>
@@ -934,15 +934,15 @@ export function DeliberationPage() {
                 transition={{ duration: 0.35, delay: 0.2 }}
               >
                 <Card className="relative overflow-hidden">
-                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#d4a853] to-[#e0be72]" />
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[var(--institution-accent)] to-[#e0be72]" />
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between mb-2">
-                      <div className="p-2 rounded-lg bg-[#d4a85310]">
-                        <Clock className="size-4 text-[#d4a853]" />
+                      <div className="p-2 rounded-lg bg-[var(--institution-accent-10)]">
+                        <Clock className="size-4 text-[var(--institution-accent)]" />
                       </div>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Badge className="text-[10px] bg-[#d4a85315] text-[#d4a853] border-0 cursor-help">
+                          <Badge className="text-[10px] bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0 cursor-help">
                             {stats.ajournes}
                           </Badge>
                         </TooltipTrigger>
@@ -951,7 +951,7 @@ export function DeliberationPage() {
                         </TooltipContent>
                       </Tooltip>
                     </div>
-                    <p className="text-2xl font-bold text-[#d4a853]">{stats.ajournes}</p>
+                    <p className="text-2xl font-bold text-[var(--institution-accent)]">{stats.ajournes}</p>
                     <p className="text-xs text-gray-500 mt-1">Ajournes</p>
                   </CardContent>
                 </Card>
@@ -993,12 +993,12 @@ export function DeliberationPage() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <Award className="size-4 text-[#2d7a4f]" />
-                    <span className="text-sm font-semibold text-[#1a2744]">
+                    <Award className="size-4 text-[var(--institution-secondary)]" />
+                    <span className="text-sm font-semibold text-[var(--institution-primary)]">
                       {isReadyForJury ? 'Taux d\u2019admission' : 'Taux provisoire non officialisable'}
                     </span>
                   </div>
-                  <span className="text-2xl font-bold text-[#2d7a4f]">{stats.admissionRate}%</span>
+                  <span className="text-2xl font-bold text-[var(--institution-secondary)]">{stats.admissionRate}%</span>
                 </div>
                 <Progress value={stats.admissionRate} className="h-3" />
                 <div className="flex items-center justify-between mt-2">
@@ -1009,15 +1009,15 @@ export function DeliberationPage() {
                   </p>
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-1">
-                      <div className="w-2.5 h-2.5 rounded-sm bg-[#2d7a4f]" />
+                      <div className="w-2.5 h-2.5 rounded-sm bg-[var(--institution-secondary)]" />
                       <span className="text-[10px] text-gray-400">Admis</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <div className="w-2.5 h-2.5 rounded-sm bg-[#1a2744]" />
+                      <div className="w-2.5 h-2.5 rounded-sm bg-[var(--institution-primary)]" />
                       <span className="text-[10px] text-gray-400">Compense</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <div className="w-2.5 h-2.5 rounded-sm bg-[#d4a853]" />
+                      <div className="w-2.5 h-2.5 rounded-sm bg-[var(--institution-accent)]" />
                       <span className="text-[10px] text-gray-400">Dette</span>
                     </div>
                     <div className="flex items-center gap-1">
@@ -1041,16 +1041,16 @@ export function DeliberationPage() {
             <CardHeader className="pb-3">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <Users className="size-4 text-[#1a2744]" />
-                  <CardTitle className="text-sm font-semibold text-[#1a2744]">
+                  <Users className="size-4 text-[var(--institution-primary)]" />
+                  <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">
                     Resultats des etudiants
                   </CardTitle>
                   {!isReadyForJury && (
-                    <Badge className="text-[10px] bg-[#d4a85315] text-[#d4a853] border-0">
+                    <Badge className="text-[10px] bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0">
                       Provisoire
                     </Badge>
                   )}
-                  <Badge className="text-[10px] bg-[#1a274410] text-[#1a2744] border-0">
+                  <Badge className="text-[10px] bg-[var(--institution-primary-10)] text-[var(--institution-primary)] border-0">
                     {deliberationStudents.length} etudiants
                   </Badge>
                 </div>
@@ -1061,7 +1061,7 @@ export function DeliberationPage() {
                   </Button>
                   <Button
                     size="sm"
-                    className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs"
+                    className="bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white text-xs"
                     onClick={handleLock}
                     disabled={!canLock || isLocking}
                   >
@@ -1115,7 +1115,7 @@ export function DeliberationPage() {
                         >
                           <TableCell className="text-xs text-gray-400 py-2">{i + 1}</TableCell>
                           <TableCell className="text-xs font-mono text-gray-600 py-2">{student.matricule}</TableCell>
-                          <TableCell className="text-sm font-medium text-[#1a2744] py-2">
+                          <TableCell className="text-sm font-medium text-[var(--institution-primary)] py-2">
                             {student.nom} {student.prenom}
                           </TableCell>
                           <TableCell className="text-center py-2">
@@ -1125,16 +1125,16 @@ export function DeliberationPage() {
                           </TableCell>
                           <TableCell className="text-center py-2">
                             <div className="flex items-center justify-center gap-1.5">
-                              <span className="text-sm font-medium text-[#1a2744]">{student.credits}</span>
+                              <span className="text-sm font-medium text-[var(--institution-primary)]">{student.credits}</span>
                               <span className="text-xs text-gray-400">/ {student.creditsTotal}</span>
                             </div>
                             <div className="mt-0.5 h-1 bg-gray-100 rounded-full overflow-hidden mx-4">
                               <div
                                 className={`h-full rounded-full transition-all ${
                                   student.credits >= student.creditsTotal
-                                    ? 'bg-[#2d7a4f]'
+                                    ? 'bg-[var(--institution-secondary)]'
                                     : student.credits >= student.creditsTotal * 0.7
-                                      ? 'bg-[#d4a853]'
+                                      ? 'bg-[var(--institution-accent)]'
                                       : 'bg-[#c62828]'
                                 }`}
                                 style={{ width: `${(student.credits / student.creditsTotal) * 100}%` }}
@@ -1155,7 +1155,7 @@ export function DeliberationPage() {
                                 <p>{config.tooltip}</p>
                               </TooltipContent>
                             </Tooltip>
-                            {student.isModified && <span className="mt-1 block text-[10px] font-medium text-[#1a2744]">Corrigée par le jury</span>}
+                            {student.isModified && <span className="mt-1 block text-[10px] font-medium text-[var(--institution-primary)]">Corrigée par le jury</span>}
                           </TableCell>
                           <TableCell className="py-2">
                             <span className="text-xs text-gray-500">{student.modificationReason || student.observation || '-'}</span>
@@ -1183,9 +1183,9 @@ export function DeliberationPage() {
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.25 }}>
-          <Card className="border-l-4 border-l-[#d4a853]">
+          <Card className="border-l-4 border-l-[var(--institution-accent)]">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold text-[#1a2744]">Méthode et responsabilité du jury</CardTitle>
+              <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Méthode et responsabilité du jury</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-xs text-gray-700">
               <p>Les moyennes et crédits affichés proviennent des notes verrouillées. Les décisions initiales sont des propositions calculées ; le jury peut les corriger avec un motif avant leur validation définitive.</p>
@@ -1209,7 +1209,7 @@ export function DeliberationPage() {
         >
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold text-[#1a2744] flex items-center gap-2">
+              <CardTitle className="text-sm font-semibold text-[var(--institution-primary)] flex items-center gap-2">
                 <FileText className="size-4" />
                 Sessions de deliberation
               </CardTitle>
@@ -1235,10 +1235,10 @@ export function DeliberationPage() {
                   {deliberations.map((session) => (
                     <TableRow
                       key={session.id}
-                      className={`cursor-pointer transition-colors ${selectedSession === session.id ? 'bg-[#2d7a4f08]' : 'hover:bg-gray-50'}`}
+                      className={`cursor-pointer transition-colors ${selectedSession === session.id ? 'bg-[var(--institution-secondary-08)]' : 'hover:bg-gray-50'}`}
                       onClick={() => { setSelectedSession(session.id); setJuryMembers([]) }}
                     >
-                      <TableCell className="text-sm font-medium text-[#1a2744]">{session.titre}</TableCell>
+                      <TableCell className="text-sm font-medium text-[var(--institution-primary)]">{session.titre}</TableCell>
                       <TableCell className="text-sm text-gray-500">{session.date}</TableCell>
                       <TableCell>
                         <Badge className={`text-[10px] ${sessionStatusConfig[session.statut].className}`}>
@@ -1246,7 +1246,7 @@ export function DeliberationPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" className="h-7 text-xs text-[#2d7a4f]" onClick={(event) => { event.stopPropagation(); setSelectedSession(session.id); setJuryMembers([]); toast.success(`Session ${session.titre} sélectionnée`) }}>
+                        <Button variant="ghost" size="sm" className="h-7 text-xs text-[var(--institution-secondary)]" onClick={(event) => { event.stopPropagation(); setSelectedSession(session.id); setJuryMembers([]); toast.success(`Session ${session.titre} sélectionnée`) }}>
                           <ChevronRight className="size-3.5 mr-1" />
                           Detail
                         </Button>
@@ -1270,7 +1270,7 @@ export function DeliberationPage() {
           </DialogHeader>
           {editingStudent && (
             <div className="space-y-4">
-              <div className="rounded-lg border bg-gray-50 p-3 text-sm text-[#1a2744]">
+              <div className="rounded-lg border bg-gray-50 p-3 text-sm text-[var(--institution-primary)]">
                 <p>Proposition actuelle : <span className="font-semibold">{decisionConfig[editingStudent.decision].label}</span></p>
                 <p className="mt-1 text-xs text-gray-600">Moyenne {editingStudent.moyenne.toFixed(2)}/20 · {editingStudent.credits}/{editingStudent.creditsTotal} crédits. Ces valeurs ne sont pas modifiées par la décision.</p>
               </div>
@@ -1320,17 +1320,17 @@ export function DeliberationPage() {
               className="bg-white rounded-2xl p-6 shadow-2xl max-w-xs w-full mx-4 text-center"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="w-12 h-12 rounded-full bg-[#2d7a4f15] flex items-center justify-center mx-auto mb-3">
-                <Download className="size-6 text-[#2d7a4f]" />
+              <div className="w-12 h-12 rounded-full bg-[var(--institution-secondary-15)] flex items-center justify-center mx-auto mb-3">
+                <Download className="size-6 text-[var(--institution-secondary)]" />
               </div>
-              <h3 className="text-lg font-semibold text-[#1a2744] mb-1">PV exporté</h3>
+              <h3 className="text-lg font-semibold text-[var(--institution-primary)] mb-1">PV exporté</h3>
               <p className="text-xs text-gray-400 mb-4">Scannez ce code pour vérifier l&apos;authenticité du PV</p>
 
               <div className="flex justify-center mb-4">
                 <QrDisplay value={`${typeof window !== 'undefined' ? window.location.origin : ''}/verify?code=${qrCode}`} size={160} />
               </div>
 
-              <p className="text-xs font-mono font-bold text-[#1a2744] mb-4">{qrCode}</p>
+              <p className="text-xs font-mono font-bold text-[var(--institution-primary)] mb-4">{qrCode}</p>
 
               <div className="flex gap-2">
                 <Button
@@ -1346,7 +1346,7 @@ export function DeliberationPage() {
                 </Button>
                 <Button
                   size="sm"
-                  className="flex-1 text-xs bg-gradient-to-r from-[#2d7a4f] to-[#3da66a]"
+                  className="flex-1 text-xs bg-gradient-to-r from-[var(--institution-secondary)] to-[var(--institution-secondary-bright)]"
                   onClick={() => setQrCode(null)}
                 >
                   Fermer

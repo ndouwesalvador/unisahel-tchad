@@ -106,13 +106,13 @@ interface Program {
 }
 
 const typeConfig: Record<UEType, { label: string; className: string }> = {
-  'Fondamentale': { label: 'Fondamentale', className: 'bg-[#1a274415] text-[#1a2744] border-0' },
-  'Complémentaire': { label: 'Complémentaire', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0' },
-  'Transversale': { label: 'Transversale', className: 'bg-[#d4a85315] text-[#d4a853] border-0' },
-  'Méthodologie': { label: 'Méthodologie', className: 'bg-[#1a274415] text-[#1a2744] border-0' },
-  'Langue': { label: 'Langue', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0' },
-  'Stage': { label: 'Stage', className: 'bg-[#d4a85315] text-[#d4a853] border-0' },
-  'Mémoire': { label: 'Mémoire', className: 'bg-[#1a274415] text-[#1a2744] border-0' },
+  'Fondamentale': { label: 'Fondamentale', className: 'bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0' },
+  'Complémentaire': { label: 'Complémentaire', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0' },
+  'Transversale': { label: 'Transversale', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0' },
+  'Méthodologie': { label: 'Méthodologie', className: 'bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0' },
+  'Langue': { label: 'Langue', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0' },
+  'Stage': { label: 'Stage', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0' },
+  'Mémoire': { label: 'Mémoire', className: 'bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0' },
 }
 
 interface StructureTeacherRef {
@@ -400,12 +400,12 @@ function EditTeachingUnitDialog({ ue, teachers }: { ue: UE; teachers: TeacherOpt
     <Dialog open={open} onOpenChange={(next) => { setOpen(next); if (next) reset() }}>
       <DialogTrigger asChild>
         <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Modifier l’UE" aria-label={`Modifier l’UE ${ue.nom}`} onClick={(e) => e.stopPropagation()}>
-          <Edit3 className="size-3.5 text-[#1a2744]" />
+          <Edit3 className="size-3.5 text-[var(--institution-primary)]" />
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <DialogHeader>
-          <DialogTitle className="text-[#1a2744]">Modifier l&apos;UE</DialogTitle>
+          <DialogTitle className="text-[var(--institution-primary)]">Modifier l&apos;UE</DialogTitle>
           <DialogDescription>Code, intitulé, crédits, type, compensation et ordre d&apos;affichage.</DialogDescription>
         </DialogHeader>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4">
@@ -449,7 +449,7 @@ function EditTeachingUnitDialog({ ue, teachers }: { ue: UE; teachers: TeacherOpt
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)} disabled={busy}>Annuler</Button>
-          <Button className="bg-[#2d7a4f] hover:bg-[#236b40] text-white" onClick={handleSave} disabled={busy}>
+          <Button className="bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white" onClick={handleSave} disabled={busy}>
             {busy ? 'Enregistrement…' : 'Enregistrer'}
           </Button>
         </DialogFooter>
@@ -531,12 +531,12 @@ function EditCourseElementDialog({ ecue, teachers }: { ecue: ECUE; teachers: Tea
     <Dialog open={open} onOpenChange={(next) => { setOpen(next); if (next) reset() }}>
       <DialogTrigger asChild>
         <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Modifier la matière" aria-label={`Modifier la matière ${ecue.nom}`} onClick={(e) => e.stopPropagation()}>
-          <Edit3 className="size-3.5 text-[#1a2744]" />
+          <Edit3 className="size-3.5 text-[var(--institution-primary)]" />
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <DialogHeader>
-          <DialogTitle className="text-[#1a2744]">Modifier la matière / EC</DialogTitle>
+          <DialogTitle className="text-[var(--institution-primary)]">Modifier la matière / EC</DialogTitle>
           <DialogDescription>Intitulé, coefficient, volumes horaires et ordre d&apos;affichage.</DialogDescription>
         </DialogHeader>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4">
@@ -580,7 +580,7 @@ function EditCourseElementDialog({ ecue, teachers }: { ecue: ECUE; teachers: Tea
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)} disabled={busy}>Annuler</Button>
-          <Button className="bg-[#2d7a4f] hover:bg-[#236b40] text-white" onClick={handleSave} disabled={busy}>
+          <Button className="bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white" onClick={handleSave} disabled={busy}>
             {busy ? 'Enregistrement…' : 'Enregistrer'}
           </Button>
         </DialogFooter>
@@ -613,20 +613,20 @@ function SemesterView({ semester, canManage, teachers }: { semester: Semester; c
       {/* Semester summary */}
       <div className="flex flex-wrap gap-3">
         <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50">
-          <CreditCard className="size-4 text-[#2d7a4f]" />
+          <CreditCard className="size-4 text-[var(--institution-secondary)]" />
           <span className="text-sm text-gray-600">Total crédits :</span>
-          <span className="text-sm font-bold text-[#1a2744]">{totalCredits}</span>
+          <span className="text-sm font-bold text-[var(--institution-primary)]">{totalCredits}</span>
         </div>
         <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50">
-          <Clock className="size-4 text-[#1a2744]" />
+          <Clock className="size-4 text-[var(--institution-primary)]" />
           <span className="text-sm text-gray-600">CM :</span>
-          <span className="text-sm font-bold text-[#1a2744]">{volume.cm}h</span>
+          <span className="text-sm font-bold text-[var(--institution-primary)]">{volume.cm}h</span>
           <span className="text-sm text-gray-400 mx-1">|</span>
           <span className="text-sm text-gray-600">TD :</span>
-          <span className="text-sm font-bold text-[#2d7a4f]">{volume.td}h</span>
+          <span className="text-sm font-bold text-[var(--institution-secondary)]">{volume.td}h</span>
           <span className="text-sm text-gray-400 mx-1">|</span>
           <span className="text-sm text-gray-600">TP :</span>
-          <span className="text-sm font-bold text-[#d4a853]">{volume.tp}h</span>
+          <span className="text-sm font-bold text-[var(--institution-accent)]">{volume.tp}h</span>
           {volume.stage > 0 && (
             <>
               <span className="text-sm text-gray-400 mx-1">|</span>
@@ -636,18 +636,18 @@ function SemesterView({ semester, canManage, teachers }: { semester: Semester; c
           )}
           <span className="text-sm text-gray-400 mx-1">|</span>
           <span className="text-sm text-gray-600">Total :</span>
-          <span className="text-sm font-bold text-[#1a2744]">{volume.total}h</span>
+          <span className="text-sm font-bold text-[var(--institution-primary)]">{volume.total}h</span>
         </div>
         <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50">
-          <Layers className="size-4 text-[#d4a853]" />
+          <Layers className="size-4 text-[var(--institution-accent)]" />
           <span className="text-sm text-gray-600">UEs :</span>
-          <span className="text-sm font-bold text-[#1a2744]">{semester.ues.length}</span>
+          <span className="text-sm font-bold text-[var(--institution-primary)]">{semester.ues.length}</span>
         </div>
       </div>
 
       {/* UE Table */}
       <Card>
-        <div className="h-1 bg-gradient-to-r from-[#1a2744] via-[#2d7a4f] to-[#d4a853]" />
+        <div className="h-1 bg-gradient-to-r from-[var(--institution-primary)] via-[var(--institution-secondary)] to-[var(--institution-accent)]" />
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
@@ -683,13 +683,13 @@ function SemesterView({ semester, canManage, teachers }: { semester: Semester; c
                           )}
                         </TableCell>
                         <TableCell className="py-2">
-                          <span className="text-xs font-mono text-[#2d7a4f] font-semibold">{ue.code}</span>
+                          <span className="text-xs font-mono text-[var(--institution-secondary)] font-semibold">{ue.code}</span>
                         </TableCell>
                         <TableCell className="py-2">
-                          <span className="text-sm font-medium text-[#1a2744]">{ue.nom}</span>
+                          <span className="text-sm font-medium text-[var(--institution-primary)]">{ue.nom}</span>
                         </TableCell>
                         <TableCell className="py-2 text-center">
-                          <span className="text-sm font-bold text-[#1a2744]">{ue.credits}</span>
+                          <span className="text-sm font-bold text-[var(--institution-primary)]">{ue.credits}</span>
                         </TableCell>
                         <TableCell className="py-2">
                           <Badge className={`text-[10px] ${typeConfig[ue.type].className}`}>
@@ -698,7 +698,7 @@ function SemesterView({ semester, canManage, teachers }: { semester: Semester; c
                         </TableCell>
                         <TableCell className="py-2 text-center">
                           {ue.compensable ? (
-                            <Badge className="text-[10px] bg-[#2d7a4f15] text-[#2d7a4f] border-0">Oui</Badge>
+                            <Badge className="text-[10px] bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0">Oui</Badge>
                           ) : (
                             <Badge className="text-[10px] bg-[#c6282815] text-[#c62828] border-0">Non</Badge>
                           )}
@@ -727,9 +727,9 @@ function SemesterView({ semester, canManage, teachers }: { semester: Semester; c
                             </TableCell>
                             <TableCell className="py-1.5">
                               <div className="flex gap-1 ml-2">
-                                {ecue.cm > 0 && <Badge className="text-[9px] bg-[#1a274410] text-[#1a2744] border-0">CM {ecue.cm}h</Badge>}
-                                {ecue.td > 0 && <Badge className="text-[9px] bg-[#2d7a4f10] text-[#2d7a4f] border-0">TD {ecue.td}h</Badge>}
-                                {ecue.tp > 0 && <Badge className="text-[9px] bg-[#d4a85310] text-[#d4a853] border-0">TP {ecue.tp}h</Badge>}
+                                {ecue.cm > 0 && <Badge className="text-[9px] bg-[var(--institution-primary-10)] text-[var(--institution-primary)] border-0">CM {ecue.cm}h</Badge>}
+                                {ecue.td > 0 && <Badge className="text-[9px] bg-[var(--institution-secondary-10)] text-[var(--institution-secondary)] border-0">TD {ecue.td}h</Badge>}
+                                {ecue.tp > 0 && <Badge className="text-[9px] bg-[var(--institution-accent-10)] text-[var(--institution-accent)] border-0">TP {ecue.tp}h</Badge>}
                                 {ecue.stage > 0 && <Badge className="text-[9px] bg-[#7b1fa210] text-[#7b1fa2] border-0">Stage {ecue.stage}h</Badge>}
                               </div>
                             </TableCell>
@@ -836,10 +836,10 @@ export function MaquettePage() {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-24 text-center">
         <div>
-          <p className="text-sm font-medium text-[#1a2744]">Aucun programme pédagogique configuré</p>
+          <p className="text-sm font-medium text-[var(--institution-primary)]">Aucun programme pédagogique configuré</p>
           <p className="text-sm text-gray-500 mt-1">Créez d&apos;abord la structure académique avant d&apos;afficher une maquette.</p>
         </div>
-        {canManage && <Button className="bg-[#2d7a4f] hover:bg-[#236b40] text-white" onClick={() => setView('structure')}>
+        {canManage && <Button className="bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white" onClick={() => setView('structure')}>
           <Plus className="size-4 mr-2" />
           Gérer la structure
         </Button>}
@@ -855,7 +855,7 @@ export function MaquettePage() {
       transition={{ duration: 0.5 }}
     >
       {/* Gradient Header Banner */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-[#1a2744] via-[#1f3050] to-[#2d7a4f] p-6 md:p-8 rounded-xl">
+      <div className="relative overflow-hidden bg-gradient-to-r from-[var(--institution-primary)] via-[var(--institution-primary-light)] to-[var(--institution-secondary)] p-6 md:p-8 rounded-xl">
         {/* SVG pattern overlay */}
         <div className="absolute inset-0 opacity-20" style={{backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.15) 1px, transparent 1px)', backgroundSize: '24px 24px'}} />
         <div className="relative z-10">
@@ -910,7 +910,7 @@ export function MaquettePage() {
                 {selectedIssues.length > 0 ? <AlertTriangle className="size-5" /> : <CheckCircle2 className="size-5" />}
               </div>
               <div>
-                <p className="text-sm font-semibold text-[#1a2744]">
+                <p className="text-sm font-semibold text-[var(--institution-primary)]">
                   {selectedIssues.length > 0 ? 'Maquette à compléter avant inscription pédagogique' : 'Maquette exploitable pour l’inscription pédagogique'}
                 </p>
                 <p className="text-sm text-gray-600 mt-1">
@@ -942,15 +942,15 @@ export function MaquettePage() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <motion.div whileHover={{ scale: 1.01 }} transition={{ duration: 0.2 }}>
         <Card>
-          <div className="h-1 bg-gradient-to-r from-[#1a2744] via-[#2d7a4f] to-[#d4a853]" />
+          <div className="h-1 bg-gradient-to-r from-[var(--institution-primary)] via-[var(--institution-secondary)] to-[var(--institution-accent)]" />
           <CardContent className="p-4">
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase">Niveaux</p>
-                <p className="text-2xl font-bold text-[#1a2744] mt-1">{program.levels.length}</p>
+                <p className="text-2xl font-bold text-[var(--institution-primary)] mt-1">{program.levels.length}</p>
               </div>
-              <div className="w-10 h-10 rounded-xl bg-[#1a274415] flex items-center justify-center">
-                <Layers className="size-5 text-[#1a2744]" />
+              <div className="w-10 h-10 rounded-xl bg-[var(--institution-primary-15)] flex items-center justify-center">
+                <Layers className="size-5 text-[var(--institution-primary)]" />
               </div>
             </div>
           </CardContent>
@@ -958,15 +958,15 @@ export function MaquettePage() {
         </motion.div>
         <motion.div whileHover={{ scale: 1.01 }} transition={{ duration: 0.2 }}>
         <Card>
-          <div className="h-1 bg-gradient-to-r from-[#1a2744] via-[#2d7a4f] to-[#d4a853]" />
+          <div className="h-1 bg-gradient-to-r from-[var(--institution-primary)] via-[var(--institution-secondary)] to-[var(--institution-accent)]" />
           <CardContent className="p-4">
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase">Semestres</p>
-                <p className="text-2xl font-bold text-[#2d7a4f] mt-1">{program.levels.reduce((a, l) => a + l.semesters.length, 0)}</p>
+                <p className="text-2xl font-bold text-[var(--institution-secondary)] mt-1">{program.levels.reduce((a, l) => a + l.semesters.length, 0)}</p>
               </div>
-              <div className="w-10 h-10 rounded-xl bg-[#2d7a4f15] flex items-center justify-center">
-                <BookOpen className="size-5 text-[#2d7a4f]" />
+              <div className="w-10 h-10 rounded-xl bg-[var(--institution-secondary-15)] flex items-center justify-center">
+                <BookOpen className="size-5 text-[var(--institution-secondary)]" />
               </div>
             </div>
           </CardContent>
@@ -974,15 +974,15 @@ export function MaquettePage() {
         </motion.div>
         <motion.div whileHover={{ scale: 1.01 }} transition={{ duration: 0.2 }}>
         <Card>
-          <div className="h-1 bg-gradient-to-r from-[#1a2744] via-[#2d7a4f] to-[#d4a853]" />
+          <div className="h-1 bg-gradient-to-r from-[var(--institution-primary)] via-[var(--institution-secondary)] to-[var(--institution-accent)]" />
           <CardContent className="p-4">
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase">Total UEs</p>
-                <p className="text-2xl font-bold text-[#d4a853] mt-1">{program.levels.reduce((a, l) => a + l.semesters.reduce((b, s) => b + s.ues.length, 0), 0)}</p>
+                <p className="text-2xl font-bold text-[var(--institution-accent)] mt-1">{program.levels.reduce((a, l) => a + l.semesters.reduce((b, s) => b + s.ues.length, 0), 0)}</p>
               </div>
-              <div className="w-10 h-10 rounded-xl bg-[#d4a85315] flex items-center justify-center">
-                <GraduationCap className="size-5 text-[#d4a853]" />
+              <div className="w-10 h-10 rounded-xl bg-[var(--institution-accent-15)] flex items-center justify-center">
+                <GraduationCap className="size-5 text-[var(--institution-accent)]" />
               </div>
             </div>
           </CardContent>
@@ -990,15 +990,15 @@ export function MaquettePage() {
         </motion.div>
         <motion.div whileHover={{ scale: 1.01 }} transition={{ duration: 0.2 }}>
         <Card>
-          <div className="h-1 bg-gradient-to-r from-[#1a2744] via-[#2d7a4f] to-[#d4a853]" />
+          <div className="h-1 bg-gradient-to-r from-[var(--institution-primary)] via-[var(--institution-secondary)] to-[var(--institution-accent)]" />
           <CardContent className="p-4">
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase">Crédits totaux</p>
-                <p className="text-2xl font-bold text-[#1a2744] mt-1">{selectedProgramCredits}</p>
+                <p className="text-2xl font-bold text-[var(--institution-primary)] mt-1">{selectedProgramCredits}</p>
               </div>
-              <div className="w-10 h-10 rounded-xl bg-[#1a274415] flex items-center justify-center">
-                <CreditCard className="size-5 text-[#1a2744]" />
+              <div className="w-10 h-10 rounded-xl bg-[var(--institution-primary-15)] flex items-center justify-center">
+                <CreditCard className="size-5 text-[var(--institution-primary)]" />
               </div>
             </div>
           </CardContent>

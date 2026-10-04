@@ -29,6 +29,21 @@ describe('printed academic documents', () => {
     expect(renderArabicHeader({ headerLanguageMode: 'FR_AR', arabicCountry: 'جمهورية تشاد', arabicName: 'جامعة مونقو التقنية' })).toMatch(/^data:image\/png;base64,/)
   })
 
+  it('prints configurable institution lines in both columns on a single A4 page', async () => {
+    const arabicLines = Array.from({ length: 8 }, (_, index) => `المؤسسة التعليمية ${index + 1}`)
+    const customTenant = { ...tenant,
+      headerLinesFr: Array.from({ length: 8 }, (_, index) => `Autorité académique ${index + 1}`),
+      headerLinesAr: arabicLines,
+      arabicHeaderImage: renderArabicHeader({ headerLanguageMode: 'FR_AR', headerLinesAr: arabicLines }),
+      primaryColor: '#374151', accentColor: '#b08c37',
+    }
+    const pdf = await renderPDF(React.createElement(AttestationInscriptionPDF, {
+      tenant: customTenant, student, academicYear: '2026-2027', docNumber: 'DEV-123', verificationCode: 'DEVTEST', isSigned: false,
+    }))
+    await savePreview('header-configurable-a4.pdf', pdf)
+    expect(countPdfPages(pdf)).toBe(1)
+  })
+
   it('keeps a complete annual transcript on one A4 page', async () => {
     const ueGrades = Array.from({ length: 6 }, (_, i) => ({ ue: `Unité ${i + 1} — VALIDATION DEV`,
       code: `DEV-UE${i + 1}`, credits: 10, moyenne: 15,

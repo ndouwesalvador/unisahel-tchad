@@ -275,33 +275,33 @@ function deriveEvaluations(records: InternshipRecord[]): EvaluationResult[] {
 // ─── Status & Type Configs ────────────────────────────────────────────────────
 
 const typeConfig: Record<string, { label: string; className: string }> = {
-  professionnel: { label: 'Stage professionnel', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0' },
+  professionnel: { label: 'Stage professionnel', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0' },
   hospitalier: { label: 'Stage hospitalier', className: 'bg-[#c6282815] text-[#c62828] border-0' },
-  recherche: { label: 'Stage de recherche', className: 'bg-[#1a274415] text-[#1a2744] border-0' },
-  'fin-etudes': { label: "Stage de fin d'etudes", className: 'bg-[#d4a85315] text-[#d4a853] border-0' },
+  recherche: { label: 'Stage de recherche', className: 'bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0' },
+  'fin-etudes': { label: "Stage de fin d'etudes", className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0' },
 }
 
 const statusConfig: Record<string, { label: string; className: string; icon: React.ElementType }> = {
-  'en-cours': { label: 'En cours', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0', icon: Clock },
-  'convention-signee': { label: 'Convention signee', className: 'bg-[#1a274415] text-[#1a2744] border-0', icon: FileCheck },
-  'en-attente': { label: 'En attente', className: 'bg-[#d4a85315] text-[#d4a853] border-0', icon: AlertTriangle },
+  'en-cours': { label: 'En cours', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0', icon: Clock },
+  'convention-signee': { label: 'Convention signee', className: 'bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0', icon: FileCheck },
+  'en-attente': { label: 'En attente', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0', icon: AlertTriangle },
   termine: { label: 'Termine', className: 'bg-gray-100 text-gray-600 border-0', icon: CheckCircle2 },
   annule: { label: 'Annule', className: 'bg-[#c6282815] text-[#c62828] border-0', icon: XCircle },
 }
 
 const gradeConfig: Record<string, { className: string; bgClass: string }> = {
-  Excellent: { className: 'text-[#2d7a4f]', bgClass: 'bg-[#2d7a4f15]' },
-  'Tres bien': { className: 'text-[#1a2744]', bgClass: 'bg-[#1a274415]' },
-  Bien: { className: 'text-[#d4a853]', bgClass: 'bg-[#d4a85315]' },
+  Excellent: { className: 'text-[var(--institution-secondary)]', bgClass: 'bg-[var(--institution-secondary-15)]' },
+  'Tres bien': { className: 'text-[var(--institution-primary)]', bgClass: 'bg-[var(--institution-primary-15)]' },
+  Bien: { className: 'text-[var(--institution-accent)]', bgClass: 'bg-[var(--institution-accent-15)]' },
   'Assez bien': { className: 'text-orange-600', bgClass: 'bg-orange-50' },
   Insuffisant: { className: 'text-[#c62828]', bgClass: 'bg-[#c6282815]' },
 }
 
 const sectorConfig: Record<string, { className: string; icon: React.ElementType }> = {
   Sante: { className: 'bg-[#c6282815] text-[#c62828] border-0', icon: Building2 },
-  Telecom: { className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0', icon: Globe },
-  Finance: { className: 'bg-[#d4a85315] text-[#d4a853] border-0', icon: TrendingUp },
-  ONG: { className: 'bg-[#1a274415] text-[#1a2744] border-0', icon: Award },
+  Telecom: { className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0', icon: Globe },
+  Finance: { className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0', icon: TrendingUp },
+  ONG: { className: 'bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0', icon: Award },
   Energie: { className: 'bg-orange-50 text-orange-600 border-0', icon: Zap },
   Public: { className: 'bg-gray-100 text-gray-600 border-0', icon: Building2 },
 }
@@ -509,7 +509,7 @@ export function InternshipsPage() {
           <div
             className="absolute inset-0"
             style={{
-              background: 'linear-gradient(135deg, #1a2744 0%, #1f3050 40%, #2d7a4f 100%)',
+              background: 'linear-gradient(135deg, var(--institution-primary) 0%, var(--institution-primary-light) 40%, var(--institution-secondary) 100%)',
             }}
           />
           {/* SVG Pattern Overlay */}
@@ -576,25 +576,25 @@ export function InternshipsPage() {
         <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Stages actifs */}
           <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
-            <Card className="overflow-hidden relative border-l-4 border-l-[#2d7a4f]">
-              <div className="h-1 bg-gradient-to-r from-[#2d7a4f] to-[#3da66a]" />
-              <div className="absolute inset-0 bg-gradient-to-br from-[#2d7a4f08] to-[#2d7a4f00] pointer-events-none" />
+            <Card className="overflow-hidden relative border-l-4 border-l-[var(--institution-secondary)]">
+              <div className="h-1 bg-gradient-to-r from-[var(--institution-secondary)] to-[var(--institution-secondary-bright)]" />
+              <div className="absolute inset-0 bg-gradient-to-br from-[var(--institution-secondary-08)] to-[var(--institution-secondary-00)] pointer-events-none" />
               <CardContent className="p-4 relative">
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Stages actifs</p>
-                    <p className="text-2xl font-bold text-[#2d7a4f] mt-1">{stagesActifs}</p>
+                    <p className="text-2xl font-bold text-[var(--institution-secondary)] mt-1">{stagesActifs}</p>
                     <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
                       <Briefcase className="size-3" />
                       En cours ou convention signee
                     </p>
                   </div>
-                  <div className="w-10 h-10 rounded-xl bg-[#2d7a4f15] flex items-center justify-center">
-                    <Briefcase className="size-5 text-[#2d7a4f]" />
+                  <div className="w-10 h-10 rounded-xl bg-[var(--institution-secondary-15)] flex items-center justify-center">
+                    <Briefcase className="size-5 text-[var(--institution-secondary)]" />
                   </div>
                 </div>
                 <div className="mt-3">
-                  <Progress value={total > 0 ? (stagesActifs / total) * 100 : 0} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#2d7a4f]" />
+                  <Progress value={total > 0 ? (stagesActifs / total) * 100 : 0} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[var(--institution-secondary)]" />
                 </div>
               </CardContent>
             </Card>
@@ -602,25 +602,25 @@ export function InternshipsPage() {
 
           {/* Conventions en attente */}
           <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
-            <Card className="overflow-hidden relative border-l-4 border-l-[#1a2744]">
-              <div className="h-1 bg-gradient-to-r from-[#1a2744] to-[#2a3d5f]" />
-              <div className="absolute inset-0 bg-gradient-to-br from-[#1a274408] to-[#1a274400] pointer-events-none" />
+            <Card className="overflow-hidden relative border-l-4 border-l-[var(--institution-primary)]">
+              <div className="h-1 bg-gradient-to-r from-[var(--institution-primary)] to-[#2a3d5f]" />
+              <div className="absolute inset-0 bg-gradient-to-br from-[var(--institution-primary-08)] to-[var(--institution-primary-00)] pointer-events-none" />
               <CardContent className="p-4 relative">
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Conventions en attente</p>
-                    <p className="text-2xl font-bold text-[#1a2744] mt-1">{conventionsEnAttente}</p>
+                    <p className="text-2xl font-bold text-[var(--institution-primary)] mt-1">{conventionsEnAttente}</p>
                     <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
                       <Clock className="size-3" />
                       Stages en attente de validation
                     </p>
                   </div>
-                  <div className="w-10 h-10 rounded-xl bg-[#1a274415] flex items-center justify-center">
-                    <FileCheck className="size-5 text-[#1a2744]" />
+                  <div className="w-10 h-10 rounded-xl bg-[var(--institution-primary-15)] flex items-center justify-center">
+                    <FileCheck className="size-5 text-[var(--institution-primary)]" />
                   </div>
                 </div>
                 <div className="mt-3">
-                  <Progress value={total > 0 ? (conventionsEnAttente / total) * 100 : 0} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#1a2744]" />
+                  <Progress value={total > 0 ? (conventionsEnAttente / total) * 100 : 0} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[var(--institution-primary)]" />
                 </div>
               </CardContent>
             </Card>
@@ -628,25 +628,25 @@ export function InternshipsPage() {
 
           {/* Taux de validation */}
           <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
-            <Card className="overflow-hidden relative border-l-4 border-l-[#d4a853]">
-              <div className="h-1 bg-gradient-to-r from-[#d4a853] to-[#e6c477]" />
-              <div className="absolute inset-0 bg-gradient-to-br from-[#d4a85308] to-[#d4a85300] pointer-events-none" />
+            <Card className="overflow-hidden relative border-l-4 border-l-[var(--institution-accent)]">
+              <div className="h-1 bg-gradient-to-r from-[var(--institution-accent)] to-[var(--institution-accent-light)]" />
+              <div className="absolute inset-0 bg-gradient-to-br from-[var(--institution-accent-08)] to-[var(--institution-accent-00)] pointer-events-none" />
               <CardContent className="p-4 relative">
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Taux de validation</p>
-                    <p className="text-2xl font-bold text-[#d4a853] mt-1">{tauxValidation}%</p>
+                    <p className="text-2xl font-bold text-[var(--institution-accent)] mt-1">{tauxValidation}%</p>
                     <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
                       <CheckCircle2 className="size-3" />
                       Stages non annules
                     </p>
                   </div>
-                  <div className="w-10 h-10 rounded-xl bg-[#d4a85315] flex items-center justify-center">
-                    <CheckCircle2 className="size-5 text-[#d4a853]" />
+                  <div className="w-10 h-10 rounded-xl bg-[var(--institution-accent-15)] flex items-center justify-center">
+                    <CheckCircle2 className="size-5 text-[var(--institution-accent)]" />
                   </div>
                 </div>
                 <div className="mt-3">
-                  <Progress value={tauxValidation} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#d4a853]" />
+                  <Progress value={tauxValidation} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[var(--institution-accent)]" />
                 </div>
               </CardContent>
             </Card>
@@ -654,25 +654,25 @@ export function InternshipsPage() {
 
           {/* Stages termines */}
           <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
-            <Card className="overflow-hidden relative border-l-4 border-l-[#2d7a4f]">
-              <div className="h-1 bg-gradient-to-r from-[#2d7a4f] to-[#3da66a]" />
-              <div className="absolute inset-0 bg-gradient-to-br from-[#2d7a4f08] to-[#2d7a4f00] pointer-events-none" />
+            <Card className="overflow-hidden relative border-l-4 border-l-[var(--institution-secondary)]">
+              <div className="h-1 bg-gradient-to-r from-[var(--institution-secondary)] to-[var(--institution-secondary-bright)]" />
+              <div className="absolute inset-0 bg-gradient-to-br from-[var(--institution-secondary-08)] to-[var(--institution-secondary-00)] pointer-events-none" />
               <CardContent className="p-4 relative">
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Stages termines</p>
-                    <p className="text-2xl font-bold text-[#2d7a4f] mt-1">{stagesTermines}</p>
+                    <p className="text-2xl font-bold text-[var(--institution-secondary)] mt-1">{stagesTermines}</p>
                     <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
                       <Award className="size-3" />
                       {tauxCompletion}% des stages
                     </p>
                   </div>
-                  <div className="w-10 h-10 rounded-xl bg-[#2d7a4f15] flex items-center justify-center">
-                    <Award className="size-5 text-[#2d7a4f]" />
+                  <div className="w-10 h-10 rounded-xl bg-[var(--institution-secondary-15)] flex items-center justify-center">
+                    <Award className="size-5 text-[var(--institution-secondary)]" />
                   </div>
                 </div>
                 <div className="mt-3">
-                  <Progress value={tauxCompletion} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#2d7a4f]" />
+                  <Progress value={tauxCompletion} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[var(--institution-secondary)]" />
                 </div>
               </CardContent>
             </Card>
@@ -681,10 +681,10 @@ export function InternshipsPage() {
 
         {/* ── 3. Stage Convention Tracker Card ───────────────────────────────────── */}
         <motion.div variants={itemVariants}>
-          <Card className="border-l-4 border-l-[#1a2744]">
+          <Card className="border-l-4 border-l-[var(--institution-primary)]">
             <CardHeader className="pb-3">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <CardTitle className="text-sm font-semibold text-[#1a2744] flex items-center gap-2">
+                <CardTitle className="text-sm font-semibold text-[var(--institution-primary)] flex items-center gap-2">
                   <FileCheck className="size-4" />
                   Suivi des conventions de stage
                 </CardTitle>
@@ -770,10 +770,10 @@ export function InternshipsPage() {
                         const typeConf = typeConfig[internship.type]
                         const sConf = statusConfig[internship.status]
                         return (
-                          <TableRow key={internship.id} className="hover:bg-[#2d7a4f05] transition-colors">
+                          <TableRow key={internship.id} className="hover:bg-[var(--institution-secondary-05)] transition-colors">
                             <TableCell className="py-2.5">
                               <div>
-                                <p className="text-sm font-medium text-[#1a2744]">{internship.studentName}</p>
+                                <p className="text-sm font-medium text-[var(--institution-primary)]">{internship.studentName}</p>
                                 <p className="text-[10px] text-gray-400 font-mono">{internship.matricule}</p>
                               </div>
                             </TableCell>
@@ -854,14 +854,14 @@ export function InternshipsPage() {
 
         {/* ── 4. Convention Validation Workflow Card ─────────────────────────────── */}
         <motion.div variants={itemVariants}>
-          <Card className="border-l-4 border-l-[#d4a853]">
+          <Card className="border-l-4 border-l-[var(--institution-accent)]">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-semibold text-[#1a2744] flex items-center gap-2">
+                <CardTitle className="text-sm font-semibold text-[var(--institution-primary)] flex items-center gap-2">
                   <FileCheck className="size-4" />
                   Workflow de validation des conventions
                 </CardTitle>
-                <Badge className="bg-[#d4a85315] text-[#d4a853] border-0 text-xs">
+                <Badge className="bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0 text-xs">
                   {pendingConventions.length} en attente
                 </Badge>
               </div>
@@ -872,7 +872,7 @@ export function InternshipsPage() {
                 {workflowSteps.map((step, index) => (
                   <div key={step} className="flex items-center">
                     <div className="flex flex-col items-center">
-                      <div className="w-8 h-8 rounded-full bg-[#1a2744] text-white flex items-center justify-center text-xs font-bold">
+                      <div className="w-8 h-8 rounded-full bg-[var(--institution-primary)] text-white flex items-center justify-center text-xs font-bold">
                         {index + 1}
                       </div>
                       <p className="text-[10px] text-gray-600 mt-1 text-center max-w-[120px]">{step}</p>
@@ -899,7 +899,7 @@ export function InternshipsPage() {
                       key={conv.id}
                       className={`p-4 rounded-lg border transition-all ${
                         convStatus === 'approved'
-                          ? 'border-[#2d7a4f] bg-[#2d7a4f08]'
+                          ? 'border-[var(--institution-secondary)] bg-[var(--institution-secondary-08)]'
                           : convStatus === 'rejected'
                           ? 'border-[#c62828] bg-[#c6282808]'
                           : 'border-gray-200 bg-white'
@@ -908,7 +908,7 @@ export function InternshipsPage() {
                       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <p className="text-sm font-medium text-[#1a2744]">{conv.studentName}</p>
+                            <p className="text-sm font-medium text-[var(--institution-primary)]">{conv.studentName}</p>
                             <Badge variant="outline" className="text-[10px] border-gray-200 text-gray-500">
                               {conv.entreprise}
                             </Badge>
@@ -926,19 +926,19 @@ export function InternshipsPage() {
                                 <div key={step} className="flex items-center">
                                   <div className={`w-3 h-3 rounded-full transition-all ${
                                     isCompleted
-                                      ? 'bg-[#2d7a4f]'
+                                      ? 'bg-[var(--institution-secondary)]'
                                       : isCurrent
-                                      ? 'bg-[#d4a853] ring-2 ring-[#d4a85330]'
+                                      ? 'bg-[var(--institution-accent)] ring-2 ring-[var(--institution-accent-30)]'
                                       : 'bg-gray-200'
                                   }`} />
                                   <span className={`text-[9px] ml-1 ${
-                                    isCompleted ? 'text-[#2d7a4f] font-medium' : 'text-gray-400'
+                                    isCompleted ? 'text-[var(--institution-secondary)] font-medium' : 'text-gray-400'
                                   }`}>
                                     {step.split(' ')[0]}
                                   </span>
                                   {index < workflowSteps.length - 1 && (
                                     <div className={`w-6 h-0.5 mx-1 ${
-                                      isCompleted ? 'bg-[#2d7a4f]' : 'bg-gray-200'
+                                      isCompleted ? 'bg-[var(--institution-secondary)]' : 'bg-gray-200'
                                     }`} />
                                   )}
                                 </div>
@@ -951,7 +951,7 @@ export function InternshipsPage() {
                             <>
                               <Button
                                 size="sm"
-                                className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs h-7"
+                                className="bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white text-xs h-7"
                                 disabled={validatingId === conv.id}
                                 onClick={() => handleValidateConvention(conv.id, 'approved')}
                               >
@@ -971,7 +971,7 @@ export function InternshipsPage() {
                             </>
                           )}
                           {convStatus === 'approved' && (
-                            <Badge className="bg-[#2d7a4f15] text-[#2d7a4f] border-0 text-xs">
+                            <Badge className="bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0 text-xs">
                               <CheckCircle2 className="size-3 mr-1" />
                               Validee
                             </Badge>
@@ -995,9 +995,9 @@ export function InternshipsPage() {
         {/* ── 5. Stage Evaluation Card ───────────────────────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <motion.div variants={itemVariants}>
-            <Card className="border-l-4 border-l-[#2d7a4f] h-full">
+            <Card className="border-l-4 border-l-[var(--institution-secondary)] h-full">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold text-[#1a2744] flex items-center gap-2">
+                <CardTitle className="text-sm font-semibold text-[var(--institution-primary)] flex items-center gap-2">
                   <Star className="size-4" />
                   Evaluation de stage
                 </CardTitle>
@@ -1007,7 +1007,7 @@ export function InternshipsPage() {
                   {evalTarget ? (
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium text-[#1a2744]">{evalTarget.studentName}</p>
+                        <p className="text-sm font-medium text-[var(--institution-primary)]">{evalTarget.studentName}</p>
                         <p className="text-[10px] text-gray-400">{evalTarget.matricule} - Stage a {evalTarget.entreprise}</p>
                       </div>
                       {rawInternships.length > 1 && (
@@ -1037,7 +1037,7 @@ export function InternshipsPage() {
                   ].map((criterion) => (
                     <div key={criterion.key}>
                       <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-xs font-medium text-[#1a2744]">{criterion.label}</span>
+                        <span className="text-xs font-medium text-[var(--institution-primary)]">{criterion.label}</span>
                         <div className="flex gap-1">
                           {[1, 2, 3, 4, 5].map((star) => (
                             <button
@@ -1048,7 +1048,7 @@ export function InternshipsPage() {
                               <Star
                                 className={`size-4 ${
                                   star <= (ratings[criterion.key] || 0)
-                                    ? 'text-[#d4a853] fill-[#d4a853]'
+                                    ? 'text-[var(--institution-accent)] fill-[var(--institution-accent)]'
                                     : 'text-gray-200'
                                 }`}
                               />
@@ -1064,7 +1064,7 @@ export function InternshipsPage() {
 
                 {/* Overall appreciation */}
                 <div className="space-y-2">
-                  <label className="text-xs font-medium text-[#1a2744]">Appreciation globale</label>
+                  <label className="text-xs font-medium text-[var(--institution-primary)]">Appreciation globale</label>
                   <Select value={appreciation} onValueChange={setAppreciation}>
                     <SelectTrigger className="h-9 text-xs">
                       <SelectValue placeholder="Selectionner l'appreciation" />
@@ -1081,7 +1081,7 @@ export function InternshipsPage() {
 
                 {/* Commentaire */}
                 <div className="space-y-2 mt-3">
-                  <label className="text-xs font-medium text-[#1a2744]">Commentaire</label>
+                  <label className="text-xs font-medium text-[var(--institution-primary)]">Commentaire</label>
                   <Textarea
                     placeholder="Commentaire sur le stage de l'etudiant..."
                     className="min-h-[80px] text-xs"
@@ -1091,7 +1091,7 @@ export function InternshipsPage() {
                 </div>
 
                 <Button
-                  className="w-full mt-4 bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs"
+                  className="w-full mt-4 bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white text-xs"
                   onClick={handleSubmitEvaluation}
                   disabled={!evalTarget || isSubmittingEval}
                 >
@@ -1104,9 +1104,9 @@ export function InternshipsPage() {
 
           {/* Recent evaluation results */}
           <motion.div variants={itemVariants}>
-            <Card className="border-l-4 border-l-[#2d7a4f] h-full">
+            <Card className="border-l-4 border-l-[var(--institution-secondary)] h-full">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold text-[#1a2744] flex items-center gap-2">
+                <CardTitle className="text-sm font-semibold text-[var(--institution-primary)] flex items-center gap-2">
                   <Award className="size-4" />
                   Evaluations recentes
                 </CardTitle>
@@ -1130,7 +1130,7 @@ export function InternshipsPage() {
                       >
                         <div className="flex items-start justify-between">
                           <div>
-                            <p className="text-sm font-medium text-[#1a2744]">{evalItem.studentName}</p>
+                            <p className="text-sm font-medium text-[var(--institution-primary)]">{evalItem.studentName}</p>
                             <p className="text-[10px] text-gray-400 mt-0.5">{evalItem.date}</p>
                           </div>
                           <Badge className={`text-[10px] border-0 ${gConf ? gConf.className : 'text-gray-600'}`}>
@@ -1148,14 +1148,14 @@ export function InternshipsPage() {
 
         {/* ── 6. Stage Sites & Partenaires Card ──────────────────────────────────── */}
         <motion.div variants={itemVariants}>
-          <Card className="border-l-4 border-l-[#1a2744]">
+          <Card className="border-l-4 border-l-[var(--institution-primary)]">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-semibold text-[#1a2744] flex items-center gap-2">
+                <CardTitle className="text-sm font-semibold text-[var(--institution-primary)] flex items-center gap-2">
                   <Building2 className="size-4" />
                   Sites de stage &amp; Partenaires
                 </CardTitle>
-                <Button size="sm" className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs h-7">
+                <Button size="sm" className="bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white text-xs h-7">
                   <Plus className="size-3 mr-1" />
                   Ajouter un partenaire
                 </Button>
@@ -1179,11 +1179,11 @@ export function InternshipsPage() {
                       transition={{ duration: 0.2 }}
                     >
                       <Card className="overflow-hidden h-full">
-                        <div className="h-1 bg-gradient-to-r from-[#1a2744] to-[#2d7a4f]" />
+                        <div className="h-1 bg-gradient-to-r from-[var(--institution-primary)] to-[var(--institution-secondary)]" />
                         <CardContent className="p-4">
                           <div className="flex items-start justify-between mb-2">
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold text-[#1a2744] truncate">{partner.name}</p>
+                              <p className="text-sm font-semibold text-[var(--institution-primary)] truncate">{partner.name}</p>
                               {sConf ? (
                                 <Badge className={`text-[10px] mt-1 ${sConf.className}`}>
                                   {partner.sector}
@@ -1196,11 +1196,11 @@ export function InternshipsPage() {
                           <div className="space-y-2 mt-3">
                             <div className="flex items-center justify-between text-xs">
                               <span className="text-gray-500">Stagiaires accueillis</span>
-                              <span className="font-semibold text-[#1a2744]">{partner.hostedStudents}/{partner.capacity}</span>
+                              <span className="font-semibold text-[var(--institution-primary)]">{partner.hostedStudents}/{partner.capacity}</span>
                             </div>
                             <Progress
                               value={occupancyPercent}
-                              className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#2d7a4f]"
+                              className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[var(--institution-secondary)]"
                             />
 
                             {/* Star rating */}
@@ -1210,7 +1210,7 @@ export function InternshipsPage() {
                                   key={star}
                                   className={`size-3 ${
                                     star <= partner.rating
-                                      ? 'text-[#d4a853] fill-[#d4a853]'
+                                      ? 'text-[var(--institution-accent)] fill-[var(--institution-accent)]'
                                       : 'text-gray-200'
                                   }`}
                                 />
@@ -1237,15 +1237,15 @@ export function InternshipsPage() {
 
         {/* ── 7. Timeline de Stage Card ──────────────────────────────────────────── */}
         <motion.div variants={itemVariants}>
-          <Card className="border-l-4 border-l-[#2d7a4f]">
+          <Card className="border-l-4 border-l-[var(--institution-secondary)]">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-semibold text-[#1a2744] flex items-center gap-2">
+                <CardTitle className="text-sm font-semibold text-[var(--institution-primary)] flex items-center gap-2">
                   <Calendar className="size-4" />
                   Timeline de stage
                 </CardTitle>
                 {timelineInternship && (
-                  <Badge className="bg-[#2d7a4f15] text-[#2d7a4f] border-0 text-[10px]">
+                  <Badge className="bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0 text-[10px]">
                     {timelineInternship.studentName} - {timelineInternship.entreprise}
                   </Badge>
                 )}
@@ -1274,13 +1274,13 @@ export function InternshipsPage() {
                       {/* Dot on line */}
                       <div className="absolute -left-5 top-1">
                         {step.status === 'completed' && (
-                          <div className="w-5 h-5 rounded-full bg-[#2d7a4f] flex items-center justify-center">
+                          <div className="w-5 h-5 rounded-full bg-[var(--institution-secondary)] flex items-center justify-center">
                             <CheckCircle2 className="size-3 text-white" />
                           </div>
                         )}
                         {step.status === 'current' && (
                           <motion.div
-                            className="w-5 h-5 rounded-full bg-[#d4a853] flex items-center justify-center"
+                            className="w-5 h-5 rounded-full bg-[var(--institution-accent)] flex items-center justify-center"
                             animate={{ scale: [1, 1.2, 1], opacity: [1, 0.7, 1] }}
                             transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
                           >
@@ -1294,18 +1294,18 @@ export function InternshipsPage() {
 
                       <div className={`p-3 rounded-lg ${
                         step.status === 'completed'
-                          ? 'bg-[#2d7a4f08] border border-[#2d7a4f20]'
+                          ? 'bg-[var(--institution-secondary-08)] border border-[var(--institution-secondary-20)]'
                           : step.status === 'current'
-                          ? 'bg-[#d4a85308] border border-[#d4a85320]'
+                          ? 'bg-[var(--institution-accent-08)] border border-[var(--institution-accent-20)]'
                           : 'bg-gray-50 border border-gray-100'
                       }`}>
                         <div className="flex items-center justify-between">
                           <div>
                             <p className={`text-sm font-medium ${
                               step.status === 'completed'
-                                ? 'text-[#2d7a4f]'
+                                ? 'text-[var(--institution-secondary)]'
                                 : step.status === 'current'
-                                ? 'text-[#d4a853]'
+                                ? 'text-[var(--institution-accent)]'
                                 : 'text-gray-400'
                             }`}>
                               {step.label}
@@ -1316,12 +1316,12 @@ export function InternshipsPage() {
                             </p>
                           </div>
                           {step.status === 'current' && (
-                            <Badge className="bg-[#d4a85315] text-[#d4a853] border-0 text-[10px]">
+                            <Badge className="bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0 text-[10px]">
                               En cours
                             </Badge>
                           )}
                           {step.status === 'completed' && (
-                            <Badge className="bg-[#2d7a4f15] text-[#2d7a4f] border-0 text-[10px]">
+                            <Badge className="bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0 text-[10px]">
                               Realise
                             </Badge>
                           )}
@@ -1330,7 +1330,7 @@ export function InternshipsPage() {
 
                       {/* Connector to next step */}
                       {index < timelineSteps.length - 1 && step.status === 'completed' && (
-                        <div className="absolute -left-[13px] top-[28px] w-0.5 h-[calc(100%-4px)] bg-[#2d7a4f]" />
+                        <div className="absolute -left-[13px] top-[28px] w-0.5 h-[calc(100%-4px)] bg-[var(--institution-secondary)]" />
                       )}
                     </div>
                   ))}
@@ -1343,10 +1343,10 @@ export function InternshipsPage() {
 
         {/* ── 8. African Context Card ────────────────────────────────────────────── */}
         <motion.div variants={itemVariants}>
-          <Card className="border-l-4 border-l-[#d4a853]">
+          <Card className="border-l-4 border-l-[var(--institution-accent)]">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-semibold text-[#1a2744] flex items-center gap-2">
+                <CardTitle className="text-sm font-semibold text-[var(--institution-primary)] flex items-center gap-2">
                   <Globe className="size-4" />
                   Contexte africain - Adaptations locales
                 </CardTitle>
@@ -1355,12 +1355,12 @@ export function InternshipsPage() {
             <CardContent className="p-4 pt-0">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Convention numerique */}
-                <div className="p-4 rounded-lg bg-[#1a274408] border border-[#1a274415]">
+                <div className="p-4 rounded-lg bg-[var(--institution-primary-08)] border border-[var(--institution-primary-15)]">
                   <div className="flex items-center gap-2 mb-2">
-                    <div className="w-8 h-8 rounded-lg bg-[#1a274415] flex items-center justify-center">
-                      <FileCheck className="size-4 text-[#1a2744]" />
+                    <div className="w-8 h-8 rounded-lg bg-[var(--institution-primary-15)] flex items-center justify-center">
+                      <FileCheck className="size-4 text-[var(--institution-primary)]" />
                     </div>
-                    <span className="text-sm font-semibold text-[#1a2744]">Convention numerique</span>
+                    <span className="text-sm font-semibold text-[var(--institution-primary)]">Convention numerique</span>
                   </div>
                   <p className="text-xs text-gray-600 leading-relaxed">
                     Signature electronique des conventions pour les etudiants en zones eloignees. Plus besoin de deplacement physique pour valider les documents de stage.
@@ -1368,12 +1368,12 @@ export function InternshipsPage() {
                 </div>
 
                 {/* Stage en milieu rural */}
-                <div className="p-4 rounded-lg bg-[#2d7a4f08] border border-[#2d7a4f15]">
+                <div className="p-4 rounded-lg bg-[var(--institution-secondary-08)] border border-[var(--institution-secondary-15)]">
                   <div className="flex items-center gap-2 mb-2">
-                    <div className="w-8 h-8 rounded-lg bg-[#2d7a4f15] flex items-center justify-center">
-                      <MapPin className="size-4 text-[#2d7a4f]" />
+                    <div className="w-8 h-8 rounded-lg bg-[var(--institution-secondary-15)] flex items-center justify-center">
+                      <MapPin className="size-4 text-[var(--institution-secondary)]" />
                     </div>
-                    <span className="text-sm font-semibold text-[#1a2744]">Stage en milieu rural</span>
+                    <span className="text-sm font-semibold text-[var(--institution-primary)]">Stage en milieu rural</span>
                   </div>
                   <p className="text-xs text-gray-600 leading-relaxed">
                     Accompgnement specifique pour les stages en hopitaux et centres de sante ruraux. Suivi adapte aux contraintes de connectivite et de ressources.
@@ -1381,12 +1381,12 @@ export function InternshipsPage() {
                 </div>
 
                 {/* Verification entreprises */}
-                <div className="p-4 rounded-lg bg-[#d4a85308] border border-[#d4a85315]">
+                <div className="p-4 rounded-lg bg-[var(--institution-accent-08)] border border-[var(--institution-accent-15)]">
                   <div className="flex items-center gap-2 mb-2">
-                    <div className="w-8 h-8 rounded-lg bg-[#d4a85315] flex items-center justify-center">
-                      <UserCheck className="size-4 text-[#d4a853]" />
+                    <div className="w-8 h-8 rounded-lg bg-[var(--institution-accent-15)] flex items-center justify-center">
+                      <UserCheck className="size-4 text-[var(--institution-accent)]" />
                     </div>
-                    <span className="text-sm font-semibold text-[#1a2744]">Verification entreprises</span>
+                    <span className="text-sm font-semibold text-[var(--institution-primary)]">Verification entreprises</span>
                   </div>
                   <p className="text-xs text-gray-600 leading-relaxed">
                     Systeme de verification des entreprises partenaires pour garantir la qualite des stages et la securite des etudiants. Audit regulier des conditions d&apos;accueil.
@@ -1399,7 +1399,7 @@ export function InternshipsPage() {
                     <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center">
                       <AlertTriangle className="size-4 text-gray-500" />
                     </div>
-                    <span className="text-sm font-semibold text-[#1a2744]">Rapport simplifie</span>
+                    <span className="text-sm font-semibold text-[var(--institution-primary)]">Rapport simplifie</span>
                   </div>
                   <p className="text-xs text-gray-600 leading-relaxed">
                     Modeles de rapports de stage simplifies pour les contextes a faibles ressources. Formats adaptes pour impression et partage hors ligne.
@@ -1411,17 +1411,17 @@ export function InternshipsPage() {
               <div className="mt-4 p-4 rounded-lg border border-gray-100">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <TrendingUp className="size-4 text-[#2d7a4f]" />
-                    <span className="text-sm font-semibold text-[#1a2744]">Budget conventions</span>
+                    <TrendingUp className="size-4 text-[var(--institution-secondary)]" />
+                    <span className="text-sm font-semibold text-[var(--institution-primary)]">Budget conventions</span>
                   </div>
-                  <Badge className="bg-[#2d7a4f15] text-[#2d7a4f] border-0 text-[10px]">
+                  <Badge className="bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0 text-[10px]">
                     Exercice 2024-2025
                   </Badge>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
                   <div className="text-center p-3 bg-gray-50 rounded-lg">
                     <p className="text-[10px] text-gray-400 uppercase tracking-wide">Budget total</p>
-                    <p className="text-lg font-bold text-[#1a2744]">5,200,000</p>
+                    <p className="text-lg font-bold text-[var(--institution-primary)]">5,200,000</p>
                     <p className="text-[10px] text-gray-400">FCFA</p>
                   </div>
                   <div className="text-center p-3 bg-[#c6282808] rounded-lg">
@@ -1429,20 +1429,20 @@ export function InternshipsPage() {
                     <p className="text-lg font-bold text-[#c62828]">3,640,000</p>
                     <p className="text-[10px] text-gray-400">FCFA</p>
                   </div>
-                  <div className="text-center p-3 bg-[#2d7a4f08] rounded-lg">
+                  <div className="text-center p-3 bg-[var(--institution-secondary-08)] rounded-lg">
                     <p className="text-[10px] text-gray-400 uppercase tracking-wide">Disponible</p>
-                    <p className="text-lg font-bold text-[#2d7a4f]">1,560,000</p>
+                    <p className="text-lg font-bold text-[var(--institution-secondary)]">1,560,000</p>
                     <p className="text-[10px] text-gray-400">FCFA</p>
                   </div>
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-gray-500">Taux d&apos;execution</span>
-                    <span className="font-semibold text-[#1a2744]">70%</span>
+                    <span className="font-semibold text-[var(--institution-primary)]">70%</span>
                   </div>
                   <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
                     <motion.div
-                      className="h-full rounded-full bg-gradient-to-r from-[#2d7a4f] to-[#3da66a]"
+                      className="h-full rounded-full bg-gradient-to-r from-[var(--institution-secondary)] to-[var(--institution-secondary-bright)]"
                       initial={{ width: 0 }}
                       animate={{ width: '70%' }}
                       transition={{ duration: 1.2, ease: 'easeOut' }}
@@ -1463,7 +1463,7 @@ export function InternshipsPage() {
       <Dialog open={showNewStage} onOpenChange={(o) => { setShowNewStage(o); if (!o) setStageForm({ studentId: '', entreprise: '', type: '', period: '', tuteur: '', startDate: '', endDate: '' }) }}>
         <DialogContent className="sm:max-w-[520px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-[#1a2744]">Nouveau stage</DialogTitle>
+            <DialogTitle className="text-[var(--institution-primary)]">Nouveau stage</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
@@ -1515,7 +1515,7 @@ export function InternshipsPage() {
                 <Input type="date" value={stageForm.endDate} onChange={(e) => setStageForm((f) => ({ ...f, endDate: e.target.value }))} />
               </div>
             </div>
-            <Button className="w-full bg-[#2d7a4f] hover:bg-[#236b40] text-white" disabled={isCreatingStage} onClick={handleCreateStage}>
+            <Button className="w-full bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white" disabled={isCreatingStage} onClick={handleCreateStage}>
               {isCreatingStage ? 'Enregistrement...' : 'Enregistrer le stage'}
             </Button>
           </div>

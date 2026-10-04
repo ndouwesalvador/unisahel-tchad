@@ -239,22 +239,22 @@ function mapReservation(r: ReservationRecord): Reservation {
 // ─── Config Maps ────────────────────────────────────────────────────────────────
 
 const statusConfig: Record<RoomStatus, { label: string; color: string; pulseColor: string }> = {
-  libre: { label: 'Libre', color: '#2d7a4f', pulseColor: '#3da66a' },
-  occupee: { label: 'Occupee', color: '#d4a853', pulseColor: '#e6c477' },
+  libre: { label: 'Libre', color: 'var(--institution-secondary)', pulseColor: 'var(--institution-secondary-bright)' },
+  occupee: { label: 'Occupee', color: 'var(--institution-accent)', pulseColor: 'var(--institution-accent-light)' },
   maintenance: { label: 'En maintenance', color: '#c62828', pulseColor: '#ef5350' },
 }
 
 const purposeConfig: Record<ReservationPurpose, { color: string; bgClass: string }> = {
-  Cours: { color: '#1a2744', bgClass: 'bg-[#1a2744]' },
-  Conference: { color: '#2d7a4f', bgClass: 'bg-[#2d7a4f]' },
-  Reunion: { color: '#d4a853', bgClass: 'bg-[#d4a853]' },
+  Cours: { color: 'var(--institution-primary)', bgClass: 'bg-[var(--institution-primary)]' },
+  Conference: { color: 'var(--institution-secondary)', bgClass: 'bg-[var(--institution-secondary)]' },
+  Reunion: { color: 'var(--institution-accent)', bgClass: 'bg-[var(--institution-accent)]' },
   Examen: { color: '#c62828', bgClass: 'bg-[#c62828]' },
   Autre: { color: '#6b7280', bgClass: 'bg-gray-500' },
 }
 
 const reservationStatusConfig: Record<ReservationStatus, { label: string; className: string }> = {
-  confirmee: { label: 'Confirmee', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0 hover:bg-[#2d7a4f15]' },
-  en_attente: { label: 'En attente', className: 'bg-[#d4a85315] text-[#d4a853] border-0 hover:bg-[#d4a85315]' },
+  confirmee: { label: 'Confirmee', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0 hover:bg-[var(--institution-secondary-15)]' },
+  en_attente: { label: 'En attente', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0 hover:bg-[var(--institution-accent-15)]' },
   annulee: { label: 'Annulee', className: 'bg-[#c6282815] text-[#c62828] border-0 hover:bg-[#c6282815]' },
 }
 
@@ -531,7 +531,7 @@ export function RoomBookingPage() {
         {canManageRooms && <RoomCatalogDialog room={catalogRoom} open={catalogOpen} onOpenChange={setCatalogOpen} onSaved={() => queryClient.invalidateQueries({ queryKey: ['rooms'] })} />}
         {/* ─── Gradient Header Banner ─────────────────────────────────────────── */}
         <motion.div variants={itemVariants} className="relative overflow-hidden rounded-xl">
-          <div className="absolute inset-0 bg-gradient-to-r from-[#1a2744] via-[#1f3050] to-[#2d7a4f]" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[var(--institution-primary)] via-[var(--institution-primary-light)] to-[var(--institution-secondary)]" />
           <svg className="absolute inset-0 w-full h-full opacity-[0.07]" xmlns="http://www.w3.org/2000/svg">
             <defs>
               <pattern id="room-booking-pattern" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
@@ -548,7 +548,7 @@ export function RoomBookingPage() {
                 <p className="text-sm text-white/70 mt-1">Gestion et reservation des espaces institutionnels</p>
               </div>
               <div className="flex flex-wrap gap-3">
-                {canManageRooms && <Button type="button" className="bg-white text-[#1a2744] hover:bg-slate-100" onClick={() => { setCatalogRoom(null); setCatalogOpen(true) }}><Plus className="mr-2 size-4" />Créer une salle</Button>}
+                {canManageRooms && <Button type="button" className="bg-white text-[var(--institution-primary)] hover:bg-slate-100" onClick={() => { setCatalogRoom(null); setCatalogOpen(true) }}><Plus className="mr-2 size-4" />Créer une salle</Button>}
                 <AnimatedStat value={availableCount} label="Salles disponibles" icon={DoorOpen} />
                 <AnimatedStat value={todayReservCount} label="Reservations aujourd&apos;hui" icon={Calendar} />
                 <AnimatedStat value={occupancyRate} label="Taux occupation %" icon={BarChart3} />
@@ -560,9 +560,9 @@ export function RoomBookingPage() {
         {/* ─── 4 Stats Cards ────────────────────────────────────────────────────── */}
         <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { label: 'Salles totales', value: rooms.length, color: '#1a2744', icon: Building2 },
-            { label: 'Disponibles', value: availableCount, color: '#2d7a4f', icon: DoorOpen },
-            { label: 'Reservations ce mois', value: currentMonthReservations, color: '#d4a853', icon: Calendar },
+            { label: 'Salles totales', value: rooms.length, color: 'var(--institution-primary)', icon: Building2 },
+            { label: 'Disponibles', value: availableCount, color: 'var(--institution-secondary)', icon: DoorOpen },
+            { label: 'Reservations ce mois', value: currentMonthReservations, color: 'var(--institution-accent)', icon: Calendar },
             { label: 'En maintenance', value: maintenanceCount, color: '#c62828', icon: AlertTriangle },
           ].map((stat) => (
             <motion.div
@@ -591,8 +591,8 @@ export function RoomBookingPage() {
         {/* ─── Room Overview Grid ──────────────────────────────────────────────── */}
         <motion.div variants={itemVariants}>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-[#1a2744] uppercase tracking-wide">Apercu des salles</h2>
-            <Badge className="text-[10px] bg-[#1a274410] text-[#1a2744] border-0">{rooms.length} salles</Badge>
+            <h2 className="text-sm font-semibold text-[var(--institution-primary)] uppercase tracking-wide">Apercu des salles</h2>
+            <Badge className="text-[10px] bg-[var(--institution-primary-10)] text-[var(--institution-primary)] border-0">{rooms.length} salles</Badge>
           </div>
           {isLoading && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -623,7 +623,7 @@ export function RoomBookingPage() {
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between mb-3">
                         <div>
-                          <p className="text-sm font-bold text-[#1a2744]">{room.name}</p>
+                          <p className="text-sm font-bold text-[var(--institution-primary)]">{room.name}</p>
                           <div className="flex items-center gap-1.5 mt-0.5">
                             <Users className="size-3 text-gray-400" />
                             <span className="text-xs text-gray-500">{room.capacity} places</span>
@@ -669,7 +669,7 @@ export function RoomBookingPage() {
                                 <div key={i} className="flex items-center gap-1.5">
                                   <div className={`w-1.5 h-1.5 rounded-full ${pConfig.bgClass}`} />
                                   <span className="text-[10px] text-gray-500">{slot.start}-{slot.end}</span>
-                                  <span className="text-[10px] font-medium text-[#1a2744]">{slot.purpose}</span>
+                                  <span className="text-[10px] font-medium text-[var(--institution-primary)]">{slot.purpose}</span>
                                 </div>
                               )
                             })}
@@ -680,14 +680,14 @@ export function RoomBookingPage() {
                       {room.todaySchedule.length === 0 && room.status !== 'maintenance' && (
                         <div className="mb-3">
                           <p className="text-[9px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Aujourd&apos;hui</p>
-                          <p className="text-[10px] text-[#2d7a4f]">Aucune reservation</p>
+                          <p className="text-[10px] text-[var(--institution-secondary)]">Aucune reservation</p>
                         </div>
                       )}
 
                       {/* Reserve button */}
                       <Button
                         size="sm"
-                        className="w-full h-8 text-[10px] bg-[#1a2744] hover:bg-[#253556] text-white disabled:opacity-50"
+                        className="w-full h-8 text-[10px] bg-[var(--institution-primary)] hover:bg-[#253556] text-white disabled:opacity-50"
                         disabled={room.status === 'maintenance'}
                         onClick={() => {
                           setSelectedRoom(room.name)
@@ -709,12 +709,12 @@ export function RoomBookingPage() {
 
         {/* ─── Weekly Calendar View Card ────────────────────────────────────────── */}
         <motion.div variants={itemVariants}>
-          <Card className="border-l-4 border-l-[#1a2744]">
+          <Card className="border-l-4 border-l-[var(--institution-primary)]">
             <CardHeader className="pb-3">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <Calendar className="size-4 text-[#1a2744]" />
-                  <CardTitle className="text-sm font-semibold text-[#1a2744]">
+                  <Calendar className="size-4 text-[var(--institution-primary)]" />
+                  <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">
                     Calendrier hebdomadaire
                   </CardTitle>
                 </div>
@@ -764,7 +764,7 @@ export function RoomBookingPage() {
                         return (
                           <div
                             key={`${day}-${slot}`}
-                            className="p-1 border-r border-gray-100 last:border-r-0 min-h-[44px] cursor-pointer hover:bg-[#2d7a4f05] transition-colors"
+                            className="p-1 border-r border-gray-100 last:border-r-0 min-h-[44px] cursor-pointer hover:bg-[var(--institution-secondary-05)] transition-colors"
                             onClick={() => {
                               if (reservs.length === 0) {
                                 const d = new Date(weekStart)
@@ -823,7 +823,7 @@ export function RoomBookingPage() {
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent className="sm:max-w-[520px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="text-[#1a2744] flex items-center gap-2">
+              <DialogTitle className="text-[var(--institution-primary)] flex items-center gap-2">
                 <Calendar className="size-5" />
                 Nouvelle reservation
               </DialogTitle>
@@ -938,7 +938,7 @@ export function RoomBookingPage() {
                 </Button>
                 <Button
                   size="sm"
-                  className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs"
+                  className="bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white text-xs"
                   disabled={isSubmittingReservation || !selectedRoom || !reservDate || !reservStart || !reservEnd || !reservPurpose || !reservOrganizer.trim() || hasConflict}
                   onClick={createReservation}
                 >
@@ -952,17 +952,17 @@ export function RoomBookingPage() {
 
         {/* ─── Reservations Table Card ──────────────────────────────────────────── */}
         <motion.div variants={itemVariants}>
-          <Card className="border-l-4 border-l-[#2d7a4f]">
+          <Card className="border-l-4 border-l-[var(--institution-secondary)]">
             <CardHeader className="pb-3">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <Calendar className="size-4 text-[#2d7a4f]" />
-                  <CardTitle className="text-sm font-semibold text-[#1a2744]">Reservations</CardTitle>
-                  <Badge className="text-[10px] bg-[#2d7a4f15] text-[#2d7a4f] border-0">{filteredReservations.length}</Badge>
+                  <Calendar className="size-4 text-[var(--institution-secondary)]" />
+                  <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Reservations</CardTitle>
+                  <Badge className="text-[10px] bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0">{filteredReservations.length}</Badge>
                 </div>
                 <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button size="sm" disabled={!rooms.some((room) => room.status !== 'maintenance')} className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs">
+                    <Button size="sm" disabled={!rooms.some((room) => room.status !== 'maintenance')} className="bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white text-xs">
                       <Plus className="size-3.5 mr-1.5" />
                       Nouvelle reservation
                     </Button>
@@ -1036,7 +1036,7 @@ export function RoomBookingPage() {
                       const pConfig = purposeConfig[reserv.purpose]
                       return (
                         <TableRow key={reserv.id} className={`hover:bg-gray-50/50 transition-colors ${reserv.status === 'annulee' ? 'opacity-50' : ''}`}>
-                          <TableCell className="text-xs font-medium text-[#1a2744] py-2 whitespace-nowrap">{reserv.room}</TableCell>
+                          <TableCell className="text-xs font-medium text-[var(--institution-primary)] py-2 whitespace-nowrap">{reserv.room}</TableCell>
                           <TableCell className="text-xs text-gray-600 py-2">{reserv.date}</TableCell>
                           <TableCell className="text-xs text-gray-600 py-2 whitespace-nowrap">{reserv.startTime} - {reserv.endTime}</TableCell>
                           <TableCell className="py-2">
@@ -1045,7 +1045,7 @@ export function RoomBookingPage() {
                             </Badge>
                           </TableCell>
                           <TableCell className="text-xs text-gray-600 py-2 whitespace-nowrap max-w-[140px] truncate">{reserv.organizer}</TableCell>
-                          <TableCell className="text-xs text-center py-2 font-medium text-[#1a2744]">{reserv.participants}</TableCell>
+                          <TableCell className="text-xs text-center py-2 font-medium text-[var(--institution-primary)]">{reserv.participants}</TableCell>
                           <TableCell className="py-2">
                             <Badge className={`text-[10px] ${sConfig.className}`}>
                               {sConfig.label}
@@ -1097,18 +1097,18 @@ export function RoomBookingPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Equipment & Resources Card */}
           <motion.div variants={itemVariants}>
-            <Card className="border-l-4 border-l-[#d4a853] h-full">
+            <Card className="border-l-4 border-l-[var(--institution-accent)] h-full">
               <CardHeader className="pb-3">
                 <div className="flex items-center gap-2">
-                  <Monitor className="size-4 text-[#d4a853]" />
-                  <CardTitle className="text-sm font-semibold text-[#1a2744]">Equipements &amp; Ressources</CardTitle>
+                  <Monitor className="size-4 text-[var(--institution-accent)]" />
+                  <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Equipements &amp; Ressources</CardTitle>
                 </div>
               </CardHeader>
               <CardContent className="p-4">
                 {roomEquipmentSummary.length === 0 ? (
                   <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 p-6 text-center">
                     <Monitor className="size-8 text-gray-300 mx-auto mb-2" />
-                    <p className="text-sm font-medium text-[#1a2744]">Aucun équipement renseigné sur les salles.</p>
+                    <p className="text-sm font-medium text-[var(--institution-primary)]">Aucun équipement renseigné sur les salles.</p>
                     <p className="text-xs text-gray-500 mt-1">Ajoutez les équipements dans les fiches salles pour les voir ici.</p>
                   </div>
                 ) : (
@@ -1118,10 +1118,10 @@ export function RoomBookingPage() {
                       return (
                         <div key={equipment} className="flex items-center justify-between rounded-lg border border-gray-100 bg-gray-50/50 px-3 py-2">
                           <div className="flex items-center gap-2">
-                            <EqIcon className="size-4 text-[#d4a853]" />
-                            <span className="text-xs font-medium text-[#1a2744]">{equipment}</span>
+                            <EqIcon className="size-4 text-[var(--institution-accent)]" />
+                            <span className="text-xs font-medium text-[var(--institution-primary)]">{equipment}</span>
                           </div>
-                          <Badge className="text-[10px] bg-[#1a274410] text-[#1a2744] border-0">
+                          <Badge className="text-[10px] bg-[var(--institution-primary-10)] text-[var(--institution-primary)] border-0">
                             {count} salle{count > 1 ? 's' : ''}
                           </Badge>
                         </div>
@@ -1138,11 +1138,11 @@ export function RoomBookingPage() {
 
           {/* Reservation Statistics Card */}
           <motion.div variants={itemVariants}>
-            <Card className="border-l-4 border-l-[#1a2744] h-full">
+            <Card className="border-l-4 border-l-[var(--institution-primary)] h-full">
               <CardHeader className="pb-3">
                 <div className="flex items-center gap-2">
-                  <BarChart3 className="size-4 text-[#1a2744]" />
-                  <CardTitle className="text-sm font-semibold text-[#1a2744]">Statistiques des reservations</CardTitle>
+                  <BarChart3 className="size-4 text-[var(--institution-primary)]" />
+                  <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Statistiques des reservations</CardTitle>
                 </div>
               </CardHeader>
               <CardContent className="space-y-5">
@@ -1154,9 +1154,9 @@ export function RoomBookingPage() {
                       const heightPercent = (count / maxReservByRoom) * 80
                       return (
                         <div key={room} className="flex-1 flex flex-col items-center gap-1">
-                          <span className="text-[9px] font-medium text-[#1a2744]">{count}</span>
+                          <span className="text-[9px] font-medium text-[var(--institution-primary)]">{count}</span>
                           <motion.div
-                            className="w-full rounded-t bg-[#1a2744]"
+                            className="w-full rounded-t bg-[var(--institution-primary)]"
                             initial={{ height: 0 }}
                             animate={{ height: `${heightPercent}px` }}
                             transition={{ duration: 0.8, ease: 'easeOut' }}
@@ -1201,20 +1201,20 @@ export function RoomBookingPage() {
 
                 {/* Peak hours + Average duration */}
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="p-3 bg-[#1a274408] rounded-lg border border-[#1a274415]">
+                  <div className="p-3 bg-[var(--institution-primary-08)] rounded-lg border border-[var(--institution-primary-15)]">
                     <div className="flex items-center gap-1.5 mb-1">
-                      <Clock className="size-3.5 text-[#1a2744]" />
-                      <span className="text-[10px] font-semibold text-[#1a2744]">Heures de pointe</span>
+                      <Clock className="size-3.5 text-[var(--institution-primary)]" />
+                      <span className="text-[10px] font-semibold text-[var(--institution-primary)]">Heures de pointe</span>
                     </div>
-                    <p className="text-lg font-bold text-[#1a2744]">{peakSlot}</p>
+                    <p className="text-lg font-bold text-[var(--institution-primary)]">{peakSlot}</p>
                     <p className="text-[10px] text-gray-500">Creneau le plus demande</p>
                   </div>
-                  <div className="p-3 bg-[#2d7a4f08] rounded-lg border border-[#2d7a4f15]">
+                  <div className="p-3 bg-[var(--institution-secondary-08)] rounded-lg border border-[var(--institution-secondary-15)]">
                     <div className="flex items-center gap-1.5 mb-1">
-                      <Zap className="size-3.5 text-[#2d7a4f]" />
-                      <span className="text-[10px] font-semibold text-[#2d7a4f]">Duree moyenne</span>
+                      <Zap className="size-3.5 text-[var(--institution-secondary)]" />
+                      <span className="text-[10px] font-semibold text-[var(--institution-secondary)]">Duree moyenne</span>
                     </div>
-                    <p className="text-lg font-bold text-[#2d7a4f]">{averageDuration}</p>
+                    <p className="text-lg font-bold text-[var(--institution-secondary)]">{averageDuration}</p>
                     <p className="text-[10px] text-gray-500">Par reservation</p>
                   </div>
                 </div>
@@ -1225,21 +1225,21 @@ export function RoomBookingPage() {
 
         {/* ─── Operational Readiness Card ───────────────────────────────────────── */}
         <motion.div variants={itemVariants}>
-          <Card className="border-l-4 border-l-[#2d7a4f]">
+          <Card className="border-l-4 border-l-[var(--institution-secondary)]">
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
-                <Shield className="size-4 text-[#2d7a4f]" />
-                <CardTitle className="text-sm font-semibold text-[#1a2744]">Fonctionnalités connectées et limites</CardTitle>
+                <Shield className="size-4 text-[var(--institution-secondary)]" />
+                <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Fonctionnalités connectées et limites</CardTitle>
               </div>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <motion.div whileHover={{ scale: 1.02 }} className="p-4 rounded-lg border border-gray-100 bg-gray-50/50 hover:shadow-sm transition-all">
                   <div className="flex items-center gap-2 mb-2">
-                    <div className="p-2 rounded-lg bg-[#d4a85315]">
-                      <AlertTriangle className="size-4 text-[#d4a853]" />
+                    <div className="p-2 rounded-lg bg-[var(--institution-accent-15)]">
+                      <AlertTriangle className="size-4 text-[var(--institution-accent)]" />
                     </div>
-                    <p className="text-xs font-semibold text-[#1a2744]">Réservations en base</p>
+                    <p className="text-xs font-semibold text-[var(--institution-primary)]">Réservations en base</p>
                   </div>
                   <p className="text-[11px] text-gray-500 leading-relaxed">
                     Les créations de réservation passent par l’API et sont enregistrées avec détection de conflit sur la salle, la date et le créneau.
@@ -1248,10 +1248,10 @@ export function RoomBookingPage() {
 
                 <motion.div whileHover={{ scale: 1.02 }} className="p-4 rounded-lg border border-gray-100 bg-gray-50/50 hover:shadow-sm transition-all">
                   <div className="flex items-center gap-2 mb-2">
-                    <div className="p-2 rounded-lg bg-[#1a274415]">
-                      <Building2 className="size-4 text-[#1a2744]" />
+                    <div className="p-2 rounded-lg bg-[var(--institution-primary-15)]">
+                      <Building2 className="size-4 text-[var(--institution-primary)]" />
                     </div>
-                    <p className="text-xs font-semibold text-[#1a2744]">Salles configurées</p>
+                    <p className="text-xs font-semibold text-[var(--institution-primary)]">Salles configurées</p>
                   </div>
                   <p className="text-[11px] text-gray-500 leading-relaxed">
                     Le module utilise les salles rattachées à l’institution connectée. Aucun campus externe n’est affiché sans données enregistrées.
@@ -1260,10 +1260,10 @@ export function RoomBookingPage() {
 
                 <motion.div whileHover={{ scale: 1.02 }} className="p-4 rounded-lg border border-gray-100 bg-gray-50/50 hover:shadow-sm transition-all">
                   <div className="flex items-center gap-2 mb-2">
-                    <div className="p-2 rounded-lg bg-[#2d7a4f15]">
-                      <AlertTriangle className="size-4 text-[#2d7a4f]" />
+                    <div className="p-2 rounded-lg bg-[var(--institution-secondary-15)]">
+                      <AlertTriangle className="size-4 text-[var(--institution-secondary)]" />
                     </div>
-                    <p className="text-xs font-semibold text-[#1a2744]">Hors connexion</p>
+                    <p className="text-xs font-semibold text-[var(--institution-primary)]">Hors connexion</p>
                   </div>
                   <p className="text-[11px] text-gray-500 leading-relaxed">
                     Le mode hors connexion n’est pas activé. Une réservation nécessite une connexion afin d’éviter les doublons et conflits.
@@ -1272,10 +1272,10 @@ export function RoomBookingPage() {
 
                 <motion.div whileHover={{ scale: 1.02 }} className="p-4 rounded-lg border border-gray-100 bg-gray-50/50 hover:shadow-sm transition-all">
                   <div className="flex items-center gap-2 mb-2">
-                    <div className="p-2 rounded-lg bg-[#d4a85315]">
-                      <Signal className="size-4 text-[#d4a853]" />
+                    <div className="p-2 rounded-lg bg-[var(--institution-accent-15)]">
+                      <Signal className="size-4 text-[var(--institution-accent)]" />
                     </div>
-                    <p className="text-xs font-semibold text-[#1a2744]">Bande passante faible</p>
+                    <p className="text-xs font-semibold text-[var(--institution-primary)]">Bande passante faible</p>
                   </div>
                   <p className="text-[11px] text-gray-500 leading-relaxed">
                     Les données sont chargées depuis l’API standard. Aucun mode léger distinct n’est annoncé tant qu’il n’est pas implémenté.

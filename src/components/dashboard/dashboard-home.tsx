@@ -43,32 +43,32 @@ import {
 // ─── Quick actions (navigation shortcuts, not data — fine to stay static) ─────
 
 const quickActions = [
-  { label: 'Gerer les inscriptions', icon: UserPlus, color: '#2d7a4f', bgColor: '#2d7a4f15', view: 'students' as const },
-  { label: 'Ouvrir les notes', icon: FileCheck, color: '#1a2744', bgColor: '#1a274415', view: 'grades' as const },
-  { label: 'Documents officiels', icon: FileText, color: '#d4a853', bgColor: '#d4a85315', view: 'documents' as const },
-  { label: 'Suivi des paiements', icon: CreditCard, color: '#2d7a4f', bgColor: '#2d7a4f15', view: 'payments' as const },
-  { label: 'Sessions de jury', icon: Gavel, color: '#1a2744', bgColor: '#1a274415', view: 'deliberation' as const },
-  { label: 'Annonces', icon: Megaphone, color: '#d4a853', bgColor: '#d4a85315', view: 'announcements' as const },
+  { label: 'Gerer les inscriptions', icon: UserPlus, color: 'var(--institution-secondary)', bgColor: 'var(--institution-secondary-15)', view: 'students' as const },
+  { label: 'Ouvrir les notes', icon: FileCheck, color: 'var(--institution-primary)', bgColor: 'var(--institution-primary-15)', view: 'grades' as const },
+  { label: 'Documents officiels', icon: FileText, color: 'var(--institution-accent)', bgColor: 'var(--institution-accent-15)', view: 'documents' as const },
+  { label: 'Suivi des paiements', icon: CreditCard, color: 'var(--institution-secondary)', bgColor: 'var(--institution-secondary-15)', view: 'payments' as const },
+  { label: 'Sessions de jury', icon: Gavel, color: 'var(--institution-primary)', bgColor: 'var(--institution-primary-15)', view: 'deliberation' as const },
+  { label: 'Annonces', icon: Megaphone, color: 'var(--institution-accent)', bgColor: 'var(--institution-accent-15)', view: 'announcements' as const },
 ]
 
 // ─── Real-data label/color mappings (matches students-list.tsx conventions) ──
 
 const statusLabels: Record<string, { label: string; color: string }> = {
-  INSCRIT: { label: 'Inscrits', color: '#2d7a4f' },
-  PRE_INSCRIT: { label: 'Pré-inscrits', color: '#d4a853' },
+  INSCRIT: { label: 'Inscrits', color: 'var(--institution-secondary)' },
+  PRE_INSCRIT: { label: 'Pré-inscrits', color: 'var(--institution-accent)' },
   SUSPENDU: { label: 'Suspendus', color: '#ef6c00' },
   EXCLU: { label: 'Exclus', color: '#c62828' },
-  DIPLOME: { label: 'Diplômés', color: '#1a2744' },
+  DIPLOME: { label: 'Diplômés', color: 'var(--institution-primary)' },
 }
 
 const cycleLabels: Record<string, { label: string; color: string }> = {
-  LICENCE: { label: 'Licence', color: '#2d7a4f' },
-  MASTER: { label: 'Master', color: '#1a2744' },
-  DOCTORAT: { label: 'Doctorat', color: '#d4a853' },
+  LICENCE: { label: 'Licence', color: 'var(--institution-secondary)' },
+  MASTER: { label: 'Master', color: 'var(--institution-primary)' },
+  DOCTORAT: { label: 'Doctorat', color: 'var(--institution-accent)' },
   AUTRE: { label: 'Non classé', color: '#9ca3af' },
 }
 
-const chartPalette = ['#2d7a4f', '#1a2744', '#d4a853', '#5b8c5a', '#4a6fa5', '#c62828', '#8d6e63', '#0ea5e9']
+const chartPalette = ['var(--institution-secondary)', 'var(--institution-primary)', 'var(--institution-accent)', '#5b8c5a', '#4a6fa5', '#c62828', '#8d6e63', '#0ea5e9']
 
 const alertConfig = {
   unvalidatedGrades: {
@@ -168,10 +168,10 @@ function RoleDashboardHome({ data }: { data: RoleDashboardResponse }) {
 // ─── Quick actions for a student's own dashboard ───────────────────────────────
 
 const studentQuickActions = [
-  { label: 'Mes Notes', icon: FileCheck, color: '#2d7a4f', bgColor: '#2d7a4f15', view: 'grades' as const },
-  { label: 'Mes Documents', icon: FileText, color: '#1a2744', bgColor: '#1a274415', view: 'documents' as const },
-  { label: 'Mes Paiements', icon: CreditCard, color: '#d4a853', bgColor: '#d4a85315', view: 'payments' as const },
-  { label: 'Emploi du temps', icon: Calendar, color: '#2d7a4f', bgColor: '#2d7a4f15', view: 'timetable' as const },
+  { label: 'Mes Notes', icon: FileCheck, color: 'var(--institution-secondary)', bgColor: 'var(--institution-secondary-15)', view: 'grades' as const },
+  { label: 'Mes Documents', icon: FileText, color: 'var(--institution-primary)', bgColor: 'var(--institution-primary-15)', view: 'documents' as const },
+  { label: 'Mes Paiements', icon: CreditCard, color: 'var(--institution-accent)', bgColor: 'var(--institution-accent-15)', view: 'payments' as const },
+  { label: 'Emploi du temps', icon: Calendar, color: 'var(--institution-secondary)', bgColor: 'var(--institution-secondary-15)', view: 'timetable' as const },
 ]
 
 function StudentDashboardHome({ data }: { data: StudentDashboardResponse }) {
@@ -222,7 +222,7 @@ function StudentDashboardHome({ data }: { data: StudentDashboardResponse }) {
             </div>
           </div>
           <CardContent className="p-4 pt-3">
-            <h3 className="text-sm font-semibold text-[#1a2744] mb-3">Actions rapides</h3>
+            <h3 className="text-sm font-semibold text-[var(--institution-primary)] mb-3">Actions rapides</h3>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {studentQuickActions.map((action) => (
                 <Button
@@ -246,7 +246,7 @@ function StudentDashboardHome({ data }: { data: StudentDashboardResponse }) {
         <Card>
           <CardContent className="p-4">
             <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Moyenne des notes publiées</p>
-            <p className="text-2xl font-bold text-[#1a2744] mt-1.5">
+            <p className="text-2xl font-bold text-[var(--institution-primary)] mt-1.5">
               {data.stats.moyenneGenerale !== null ? `${data.stats.moyenneGenerale.toFixed(2)}/20` : 'Aucune note'}
             </p>
             <p className="text-xs text-slate-600 mt-1">Session normale · seuil : {data.stats.passingGrade}/20</p>
@@ -262,7 +262,7 @@ function StudentDashboardHome({ data }: { data: StudentDashboardResponse }) {
         <Card>
           <CardContent className="p-4">
             <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Statut administratif</p>
-            <p className="text-lg font-bold text-[#1a2744] mt-1.5">{statusLabels[data.student?.status ?? '']?.label ?? data.student?.status ?? '—'}</p>
+            <p className="text-lg font-bold text-[var(--institution-primary)] mt-1.5">{statusLabels[data.student?.status ?? '']?.label ?? data.student?.status ?? '—'}</p>
             {data.stats.pendingPaymentsCount > 0 && (
               <p className="text-xs font-medium text-amber-900 mt-1">{data.stats.pendingPaymentsCount} paiement(s) en attente de validation</p>
             )}
@@ -273,7 +273,7 @@ function StudentDashboardHome({ data }: { data: StudentDashboardResponse }) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold text-[#1a2744]">Annonces recentes</CardTitle>
+            <CardTitle className="text-base font-semibold text-[var(--institution-primary)]">Annonces recentes</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             {data.recentActivity.length === 0 ? (
@@ -282,11 +282,11 @@ function StudentDashboardHome({ data }: { data: StudentDashboardResponse }) {
               <div className="max-h-80 overflow-y-auto">
                 {data.recentActivity.map((activity, i) => (
                   <div key={activity.id} className={`flex items-start gap-3 px-6 py-3 ${i < data.recentActivity.length - 1 ? 'border-b border-gray-100' : ''}`}>
-                    <div className="w-8 h-8 rounded-lg bg-[#1a274415] flex items-center justify-center shrink-0">
-                      <Megaphone className="size-4 text-[#1a2744]" />
+                    <div className="w-8 h-8 rounded-lg bg-[var(--institution-primary-15)] flex items-center justify-center shrink-0">
+                      <Megaphone className="size-4 text-[var(--institution-primary)]" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-[#1a2744] truncate">{activity.description}</p>
+                      <p className="text-sm text-[var(--institution-primary)] truncate">{activity.description}</p>
                       <span className="text-sm text-slate-700">{formatDateShort(activity.time)}</span>
                     </div>
                   </div>
@@ -298,8 +298,8 @@ function StudentDashboardHome({ data }: { data: StudentDashboardResponse }) {
 
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold text-[#1a2744] flex items-center gap-2">
-              <Timer className="size-4 text-[#d4a853]" />
+            <CardTitle className="text-base font-semibold text-[var(--institution-primary)] flex items-center gap-2">
+              <Timer className="size-4 text-[var(--institution-accent)]" />
               Examens a venir
             </CardTitle>
           </CardHeader>
@@ -310,12 +310,12 @@ function StudentDashboardHome({ data }: { data: StudentDashboardResponse }) {
               <div className="max-h-80 overflow-y-auto">
                 {data.upcomingEvents.map((event, i) => (
                   <div key={event.id} className={`flex items-start gap-3 px-6 py-3 ${i < data.upcomingEvents.length - 1 ? 'border-b border-gray-100' : ''}`}>
-                    <div className="w-10 h-10 rounded-lg bg-[#1a274408] flex flex-col items-center justify-center shrink-0">
-                      <Calendar className="size-3 text-[#1a2744]" />
-                      <span className="text-xs font-bold text-[#1a2744] mt-0.5">{formatDateShort(event.date)}</span>
+                    <div className="w-10 h-10 rounded-lg bg-[var(--institution-primary-08)] flex flex-col items-center justify-center shrink-0">
+                      <Calendar className="size-3 text-[var(--institution-primary)]" />
+                      <span className="text-xs font-bold text-[var(--institution-primary)] mt-0.5">{formatDateShort(event.date)}</span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-[#1a2744] font-medium truncate">{event.title}</p>
+                      <p className="text-sm text-[var(--institution-primary)] font-medium truncate">{event.title}</p>
                       <span className="text-sm font-medium text-amber-900">{formatCountdown(event.date)}</span>
                     </div>
                   </div>
@@ -476,7 +476,7 @@ function FloatingShape({ className, delay = 0, children }: { className?: string;
 
 // ─── Pulsing Dot Component ────────────────────────────────────────────────────
 
-function PulsingDot({ color = '#2d7a4f' }: { color?: string }) {
+function PulsingDot({ color = 'var(--institution-secondary)' }: { color?: string }) {
   return (
     <span className="relative flex size-2.5">
       <span
@@ -506,8 +506,8 @@ export function DashboardHome() {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="animate-pulse flex flex-col items-center">
-          <div className="h-12 w-12 rounded-full border-4 border-t-[#2d7a4f] border-[#2d7a4f20] animate-spin mb-4" />
-          <p className="text-[#1a2744] font-medium">Chargement du tableau de bord...</p>
+          <div className="h-12 w-12 rounded-full border-4 border-t-[var(--institution-secondary)] border-[var(--institution-secondary-20)] animate-spin mb-4" />
+          <p className="text-[var(--institution-primary)] font-medium">Chargement du tableau de bord...</p>
         </div>
       </div>
     )
@@ -524,10 +524,10 @@ export function DashboardHome() {
   if ('isRoleView' in data) return <RoleDashboardHome data={data} />
 
   const statsCards = [
-    { title: 'Dossiers étudiants', value: data.statsCards.totalStudents.toLocaleString('fr-FR'), icon: Users, color: '#2d7a4f', bgColor: '#2d7a4f15' },
-    { title: 'Enseignants', value: data.statsCards.totalTeachers.toLocaleString('fr-FR'), icon: GraduationCap, color: '#1a2744', bgColor: '#1a274415' },
-    { title: 'Programmes', value: data.statsCards.totalPrograms.toLocaleString('fr-FR'), icon: BookOpen, color: '#d4a853', bgColor: '#d4a85315' },
-    { title: 'Paiements recus', value: `${data.statsCards.totalPaymentsAmount.toLocaleString('fr-FR')} FCFA`, icon: CreditCard, color: '#2d7a4f', bgColor: '#2d7a4f15' },
+    { title: 'Dossiers étudiants', value: data.statsCards.totalStudents.toLocaleString('fr-FR'), icon: Users, color: 'var(--institution-secondary)', bgColor: 'var(--institution-secondary-15)' },
+    { title: 'Enseignants', value: data.statsCards.totalTeachers.toLocaleString('fr-FR'), icon: GraduationCap, color: 'var(--institution-primary)', bgColor: 'var(--institution-primary-15)' },
+    { title: 'Programmes', value: data.statsCards.totalPrograms.toLocaleString('fr-FR'), icon: BookOpen, color: 'var(--institution-accent)', bgColor: 'var(--institution-accent-15)' },
+    { title: 'Paiements recus', value: `${data.statsCards.totalPaymentsAmount.toLocaleString('fr-FR')} FCFA`, icon: CreditCard, color: 'var(--institution-secondary)', bgColor: 'var(--institution-secondary-15)' },
   ]
 
   const filiereData = data.chartData.studentsByProgram.map((p, i) => ({
@@ -559,34 +559,34 @@ export function DashboardHome() {
 
   const getActivityIcon = (type: string) => {
     switch (type) {
-      case 'inscription': return <UserPlus className="size-4 text-[#2d7a4f]" />
-      case 'paiement': return <CreditCard className="size-4 text-[#d4a853]" />
-      case 'annonce': return <Megaphone className="size-4 text-[#1a2744]" />
+      case 'inscription': return <UserPlus className="size-4 text-[var(--institution-secondary)]" />
+      case 'paiement': return <CreditCard className="size-4 text-[var(--institution-accent)]" />
+      case 'annonce': return <Megaphone className="size-4 text-[var(--institution-primary)]" />
       default: return <div className="size-4 rounded-full bg-gray-300" />
     }
   }
 
   const getActivityBgColor = (type: string) => {
     switch (type) {
-      case 'inscription': return 'bg-[#2d7a4f15]'
-      case 'paiement': return 'bg-[#d4a85315]'
-      case 'annonce': return 'bg-[#1a274415]'
+      case 'inscription': return 'bg-[var(--institution-secondary-15)]'
+      case 'paiement': return 'bg-[var(--institution-accent-15)]'
+      case 'annonce': return 'bg-[var(--institution-primary-15)]'
       default: return 'bg-gray-100'
     }
   }
 
   const getActivityBadge = (type: string) => {
     switch (type) {
-      case 'inscription': return <Badge className="bg-[#2d7a4f15] text-[#2d7a4f] text-[10px] border-0 hover:bg-[#2d7a4f15]">Inscription</Badge>
-      case 'paiement': return <Badge className="bg-[#d4a85315] text-[#d4a853] text-[10px] border-0 hover:bg-[#d4a85315]">Paiement</Badge>
-      case 'annonce': return <Badge className="bg-[#1a274415] text-[#1a2744] text-[10px] border-0 hover:bg-[#1a274415]">Annonce</Badge>
+      case 'inscription': return <Badge className="bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] text-[10px] border-0 hover:bg-[var(--institution-secondary-15)]">Inscription</Badge>
+      case 'paiement': return <Badge className="bg-[var(--institution-accent-15)] text-[var(--institution-accent)] text-[10px] border-0 hover:bg-[var(--institution-accent-15)]">Paiement</Badge>
+      case 'annonce': return <Badge className="bg-[var(--institution-primary-15)] text-[var(--institution-primary)] text-[10px] border-0 hover:bg-[var(--institution-primary-15)]">Annonce</Badge>
       default: return null
     }
   }
 
   const getEventBadge = (type: string) => {
     switch (type) {
-      case 'deliberation': return <Badge className="bg-[#1a274415] text-[#1a2744] text-[10px] border-0 hover:bg-[#1a274415]">Deliberation</Badge>
+      case 'deliberation': return <Badge className="bg-[var(--institution-primary-15)] text-[var(--institution-primary)] text-[10px] border-0 hover:bg-[var(--institution-primary-15)]">Deliberation</Badge>
       case 'exam': return <Badge className="bg-[#c6282815] text-[#c62828] text-[10px] border-0 hover:bg-[#c6282815]">Examen</Badge>
       default: return null
     }
@@ -595,7 +595,7 @@ export function DashboardHome() {
   const getAlertStyle = (severity: 'high' | 'medium') => {
     return severity === 'high'
       ? { border: 'border-l-[#c62828]', iconBg: 'bg-[#c6282815]', iconColor: 'text-[#c62828]', countColor: 'text-[#c62828]', shimmerFrom: '#c62828', shimmerTo: '#ef5350' }
-      : { border: 'border-l-[#d4a853]', iconBg: 'bg-[#d4a85315]', iconColor: 'text-[#d4a853]', countColor: 'text-[#d4a853]', shimmerFrom: '#d4a853', shimmerTo: '#f0c674' }
+      : { border: 'border-l-[var(--institution-accent)]', iconBg: 'bg-[var(--institution-accent-15)]', iconColor: 'text-[var(--institution-accent)]', countColor: 'text-[var(--institution-accent)]', shimmerFrom: 'var(--institution-accent)', shimmerTo: '#f0c674' }
   }
 
   return (
@@ -610,7 +610,7 @@ export function DashboardHome() {
           className="hidden"
         >
           <Card className="h-full overflow-hidden">
-            <div className="bg-gradient-to-br from-[#1a2744] via-[#1f3050] to-[#2d7a4f] p-4 text-white flex flex-col items-center justify-center text-center h-full min-h-[120px] relative">
+            <div className="bg-gradient-to-br from-[var(--institution-primary)] via-[var(--institution-primary-light)] to-[var(--institution-secondary)] p-4 text-white flex flex-col items-center justify-center text-center h-full min-h-[120px] relative">
               {/* Decorative hexagons */}
               <div className="absolute top-2 right-2 opacity-[0.06]">
                 <svg width="40" height="40" viewBox="0 0 40 40">
@@ -624,7 +624,7 @@ export function DashboardHome() {
               </div>
               {/* Shield / Logo placeholder */}
               <div className="w-14 h-14 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center mb-2 border border-white/20">
-                <Shield className="size-7 text-[#d4a853]" />
+                <Shield className="size-7 text-[var(--institution-accent)]" />
               </div>
               <h3 className="text-sm font-bold leading-tight">{user?.tenantName || 'Votre établissement'}</h3>
             </div>
@@ -644,7 +644,7 @@ export function DashboardHome() {
               <div
                 className="absolute inset-0"
                 style={{
-                  background: 'linear-gradient(135deg, #1a2744 0%, #1f3050 25%, #2d7a4f 50%, #1f3050 75%, #1a2744 100%)',
+                  background: 'linear-gradient(135deg, var(--institution-primary) 0%, var(--institution-primary-light) 25%, var(--institution-secondary) 50%, var(--institution-primary-light) 75%, var(--institution-primary) 100%)',
                   backgroundSize: '300% 300%',
                   animation: 'gradientShift 8s ease infinite',
                 }}
@@ -729,7 +729,7 @@ export function DashboardHome() {
 
             {/* Enhanced Quick Actions */}
             <CardContent className="p-4 pt-2">
-              <h3 className="text-sm font-semibold text-[#1a2744] mb-3">Actions rapides</h3>
+              <h3 className="text-sm font-semibold text-[var(--institution-primary)] mb-3">Actions rapides</h3>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {quickActions.map((action) => (
                   <motion.div
@@ -796,7 +796,7 @@ export function DashboardHome() {
                       <PulsingDot color={stat.color} />
                       <p className="text-sm font-semibold text-slate-700">{stat.title}</p>
                     </div>
-                    <p className="text-2xl font-bold text-[#1a2744] mt-1.5">{stat.value}</p>
+                    <p className="text-2xl font-bold text-[var(--institution-primary)] mt-1.5">{stat.value}</p>
                   </div>
                   <div
                     className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
@@ -816,7 +816,7 @@ export function DashboardHome() {
         {/* Bar Chart - Filiere */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold text-[#1a2744]">
+            <CardTitle className="text-base font-semibold text-[var(--institution-primary)]">
               Repartition par filiere
             </CardTitle>
             <p className="text-sm text-slate-700">Effectif étudiant par programme. Les noms complets figurent sous le graphique.</p>
@@ -857,7 +857,7 @@ export function DashboardHome() {
         {/* Donut Chart - Statut */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold text-[#1a2744]">
+            <CardTitle className="text-base font-semibold text-[var(--institution-primary)]">
               Statut des étudiants
             </CardTitle>
             <p className="text-sm text-slate-700">Répartition par statut administratif</p>
@@ -907,7 +907,7 @@ export function DashboardHome() {
         {/* Donut - Cycle */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold text-[#1a2744]">
+            <CardTitle className="text-base font-semibold text-[var(--institution-primary)]">
               Repartition par cycle
             </CardTitle>
             <p className="text-sm text-slate-700">Licence, Master, Doctorat</p>
@@ -954,7 +954,7 @@ export function DashboardHome() {
         {/* Horizontal Bar - Taux de reussite par filiere */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold text-[#1a2744]">
+            <CardTitle className="text-base font-semibold text-[var(--institution-primary)]">
               Notes au-dessus du seuil par programme
             </CardTitle>
             <p className="text-sm text-slate-700">Part des notes saisies au-dessus du seuil de passage, par programme. Ce n’est pas un taux de diplomation.</p>
@@ -995,8 +995,8 @@ export function DashboardHome() {
 
       {/* ── Alerts Section ── */}
       <div>
-        <h2 className="text-base font-semibold text-[#1a2744] mb-3 flex items-center gap-2">
-          <AlertTriangle className="size-4 text-[#d4a853]" />
+        <h2 className="text-base font-semibold text-[var(--institution-primary)] mb-3 flex items-center gap-2">
+          <AlertTriangle className="size-4 text-[var(--institution-accent)]" />
           Alertes et notifications
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -1026,7 +1026,7 @@ export function DashboardHome() {
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
-                          <p className="text-sm font-semibold text-[#1a2744]">{alert.title}</p>
+                          <p className="text-sm font-semibold text-[var(--institution-primary)]">{alert.title}</p>
                           <motion.span
                             className={`text-2xl font-bold ${style.countColor}`}
                             animate={alert.count > 0 && alert.severity === 'high' ? { scale: [1, 1.08, 1] } : {}}
@@ -1056,8 +1056,8 @@ export function DashboardHome() {
         >
           <Card className="h-full">
             <CardHeader className="pb-3">
-              <CardTitle className="text-base font-semibold text-[#1a2744] flex items-center gap-2">
-                <Server className="size-4 text-[#2d7a4f]" />
+              <CardTitle className="text-base font-semibold text-[var(--institution-primary)] flex items-center gap-2">
+                <Server className="size-4 text-[var(--institution-secondary)]" />
                 Etat du systeme
               </CardTitle>
             </CardHeader>
@@ -1069,8 +1069,8 @@ export function DashboardHome() {
                   <span className="text-sm text-gray-600">Serveur</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <PulsingDot color="#2d7a4f" />
-                  <span className="text-xs font-medium text-[#2d7a4f]">En ligne</span>
+                  <PulsingDot color="var(--institution-secondary)" />
+                  <span className="text-xs font-medium text-[var(--institution-secondary)]">En ligne</span>
                 </div>
               </div>
 
@@ -1081,8 +1081,8 @@ export function DashboardHome() {
                   <span className="text-sm text-gray-600">Base de donnees</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <PulsingDot color="#2d7a4f" />
-                  <span className="text-xs font-medium text-[#2d7a4f]">Connecte</span>
+                  <PulsingDot color="var(--institution-secondary)" />
+                  <span className="text-xs font-medium text-[var(--institution-secondary)]">Connecte</span>
                 </div>
               </div>
 
@@ -1096,7 +1096,7 @@ export function DashboardHome() {
         {/* Enhanced Recent Activity */}
         <Card className="lg:col-span-2">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold text-[#1a2744]">Activite recente</CardTitle>
+            <CardTitle className="text-base font-semibold text-[var(--institution-primary)]">Activite recente</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             {data.recentActivity.length === 0 ? (
@@ -1104,7 +1104,7 @@ export function DashboardHome() {
             ) : (
               <div className="max-h-96 overflow-y-auto relative">
                 {/* Timeline connecting line */}
-                <div className="absolute left-[33px] top-4 bottom-4 w-px bg-gradient-to-b from-[#1a274415] via-[#2d7a4f20] to-[#d4a85315]" />
+                <div className="absolute left-[33px] top-4 bottom-4 w-px bg-gradient-to-b from-[var(--institution-primary-15)] via-[var(--institution-secondary-20)] to-[var(--institution-accent-15)]" />
                 {data.recentActivity.map((activity, i) => (
                   <motion.div
                     key={activity.id}
@@ -1114,12 +1114,12 @@ export function DashboardHome() {
                     className={`flex items-start gap-3 px-6 py-3 hover:bg-gray-50/80 transition-colors relative ${i < data.recentActivity.length - 1 ? 'border-b border-gray-100' : ''}`}
                   >
                     {/* Timeline dot */}
-                    <div className="absolute left-[30px] top-4 w-2 h-2 rounded-full bg-white border-2 border-[#1a274430] z-10" />
+                    <div className="absolute left-[30px] top-4 w-2 h-2 rounded-full bg-white border-2 border-[var(--institution-primary-30)] z-10" />
                     <div className={`w-8 h-8 rounded-lg ${getActivityBgColor(activity.type)} flex items-center justify-center shrink-0 mt-0.5 ml-6`}>
                       {getActivityIcon(activity.type)}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-[#1a2744] truncate">{activity.description}</p>
+                      <p className="text-sm text-[var(--institution-primary)] truncate">{activity.description}</p>
                       <div className="flex items-center gap-2 mt-1">
                         {getActivityBadge(activity.type)}
                         <span className="text-sm text-slate-700">{activity.user}</span>
@@ -1137,8 +1137,8 @@ export function DashboardHome() {
         {/* Enhanced Upcoming Events with slide-in */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold text-[#1a2744] flex items-center gap-2">
-              <Timer className="size-4 text-[#d4a853]" />
+            <CardTitle className="text-base font-semibold text-[var(--institution-primary)] flex items-center gap-2">
+              <Timer className="size-4 text-[var(--institution-accent)]" />
               Evenements a venir
             </CardTitle>
           </CardHeader>
@@ -1155,12 +1155,12 @@ export function DashboardHome() {
                     transition={{ duration: 0.3, delay: i * 0.08 }}
                     className={`flex items-start gap-3 px-6 py-3 hover:bg-gray-50/80 transition-colors ${i < data.upcomingEvents.length - 1 ? 'border-b border-gray-100' : ''}`}
                   >
-                    <div className="w-10 h-10 rounded-lg bg-[#1a274408] flex flex-col items-center justify-center shrink-0">
-                      <Calendar className="size-3 text-[#1a2744]" />
-                          <span className="text-xs font-bold text-[#1a2744] mt-0.5">{formatDateShort(event.date)}</span>
+                    <div className="w-10 h-10 rounded-lg bg-[var(--institution-primary-08)] flex flex-col items-center justify-center shrink-0">
+                      <Calendar className="size-3 text-[var(--institution-primary)]" />
+                          <span className="text-xs font-bold text-[var(--institution-primary)] mt-0.5">{formatDateShort(event.date)}</span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-[#1a2744] font-medium truncate">{event.title}</p>
+                      <p className="text-sm text-[var(--institution-primary)] font-medium truncate">{event.title}</p>
                       <div className="flex items-center gap-2 mt-1">
                         {getEventBadge(event.type)}
                         <span className="flex items-center gap-1 text-sm font-medium text-amber-900">

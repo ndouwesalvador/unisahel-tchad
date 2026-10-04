@@ -214,22 +214,22 @@ const initialStaffForm: StaffForm = {
 }
 
 const statusConfig: Record<string, { label: string; className: string }> = {
-  actif: { label: 'Actif', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0' },
-  en_conge: { label: 'En conge', className: 'bg-[#d4a85315] text-[#d4a853] border-0' },
+  actif: { label: 'Actif', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0' },
+  en_conge: { label: 'En conge', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0' },
   suspendu: { label: 'Suspendu', className: 'bg-[#c6282815] text-[#c62828] border-0' },
   depart: { label: 'Depart', className: 'bg-[#6b728015] text-[#6b7280] border-0' },
 }
 
 const contractConfig: Record<string, { label: string; className: string }> = {
-  cdi: { label: 'CDI', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0' },
-  cdd: { label: 'CDD', className: 'bg-[#1a274415] text-[#1a2744] border-0' },
-  vacataire: { label: 'Vacataire', className: 'bg-[#d4a85315] text-[#d4a853] border-0' },
+  cdi: { label: 'CDI', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0' },
+  cdd: { label: 'CDD', className: 'bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0' },
+  vacataire: { label: 'Vacataire', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0' },
   stagiaire: { label: 'Stagiaire', className: 'bg-[#6366f115] text-[#6366f1] border-0' },
 }
 
 const leaveStatusConfig: Record<string, { label: string; className: string }> = {
-  en_attente: { label: 'En attente', className: 'bg-[#d4a85315] text-[#d4a853] border-0' },
-  approuve: { label: 'Approuve', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0' },
+  en_attente: { label: 'En attente', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0' },
+  approuve: { label: 'Approuve', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0' },
   refuse: { label: 'Refuse', className: 'bg-[#c6282815] text-[#c62828] border-0' },
 }
 
@@ -322,7 +322,7 @@ export function HrPage() {
     type,
     used,
     total: Math.max(used, 1),
-    color: ['#2d7a4f', '#d4a853', '#1a2744'][index % 3],
+    color: ['var(--institution-secondary)', 'var(--institution-accent)', 'var(--institution-primary)'][index % 3],
   }))
 
   const upcomingLeaves = leaveRequests
@@ -337,7 +337,7 @@ export function HrPage() {
         start: Number(startDay),
         end: Number(endDay),
         month: startDate.toLocaleDateString('fr-FR', { month: 'short', year: startYear ? 'numeric' : undefined }).replace('.', ''),
-        color: ['#2d7a4f', '#d4a853', '#1a2744'][index % 3],
+        color: ['var(--institution-secondary)', 'var(--institution-accent)', 'var(--institution-primary)'][index % 3],
       }
     })
 
@@ -423,18 +423,18 @@ export function HrPage() {
           </DialogHeader>
           {selectedStaff && (
             <div className="space-y-4">
-              <div className="rounded-xl border border-gray-100 bg-[#1a274408] p-4">
-                <p className="text-lg font-bold text-[#1a2744]">{selectedStaff.name}</p>
+              <div className="rounded-xl border border-gray-100 bg-[var(--institution-primary-08)] p-4">
+                <p className="text-lg font-bold text-[var(--institution-primary)]">{selectedStaff.name}</p>
                 <p className="text-sm text-gray-600">{selectedStaff.position}</p>
               </div>
               <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
                 <div>
                   <p className="text-xs uppercase text-gray-400">Département</p>
-                  <p className="font-medium text-[#1a2744]">{selectedStaff.department}</p>
+                  <p className="font-medium text-[var(--institution-primary)]">{selectedStaff.department}</p>
                 </div>
                 <div>
                   <p className="text-xs uppercase text-gray-400">Contrat</p>
-                  <p className="font-medium text-[#1a2744]">{contractConfig[selectedStaff.contract]?.label || selectedStaff.contract}</p>
+                  <p className="font-medium text-[var(--institution-primary)]">{contractConfig[selectedStaff.contract]?.label || selectedStaff.contract}</p>
                 </div>
                 <div>
                   <p className="text-xs uppercase text-gray-400">Statut</p>
@@ -442,11 +442,11 @@ export function HrPage() {
                 </div>
                 <div>
                   <p className="text-xs uppercase text-gray-400">Date d&apos;entrée</p>
-                  <p className="font-medium text-[#1a2744]">{selectedStaff.joinDate}</p>
+                  <p className="font-medium text-[var(--institution-primary)]">{selectedStaff.joinDate}</p>
                 </div>
                 <div className="sm:col-span-2">
                   <p className="text-xs uppercase text-gray-400">Contact</p>
-                  <p className="font-medium text-[#1a2744]">{selectedStaff.email}</p>
+                  <p className="font-medium text-[var(--institution-primary)]">{selectedStaff.email}</p>
                   {selectedStaff.phone && <p className="text-gray-600">{selectedStaff.phone}</p>}
                 </div>
               </div>
@@ -519,7 +519,7 @@ export function HrPage() {
           </div>
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => setShowAddStaff(false)}>Annuler</Button>
-            <Button disabled={isSubmittingStaff} onClick={createStaff} className="bg-[#2d7a4f] hover:bg-[#236b40] text-white">
+            <Button disabled={isSubmittingStaff} onClick={createStaff} className="bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white">
               {isSubmittingStaff ? 'Ajout...' : 'Ajouter'}
             </Button>
           </div>
@@ -534,7 +534,7 @@ export function HrPage() {
       >
       {/* ── Gradient Header Banner ──────────────────────────────────────────── */}
       <motion.div variants={itemVariants} className="relative overflow-hidden rounded-xl">
-        <div className="absolute inset-0 bg-gradient-to-r from-[#1a2744] via-[#1f3050] to-[#2d7a4f]" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[var(--institution-primary)] via-[var(--institution-primary-light)] to-[var(--institution-secondary)]" />
         <svg className="absolute inset-0 w-full h-full opacity-[0.07]" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <pattern id="hr-grid" width="40" height="40" patternUnits="userSpaceOnUse">
@@ -572,16 +572,16 @@ export function HrPage() {
       <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Personnel administratif */}
         <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
-          <Card className="overflow-hidden relative border-l-4 border-l-[#1a2744]">
-            <div className="h-1 bg-gradient-to-r from-[#1a2744] to-[#2d4a6f]" />
+          <Card className="overflow-hidden relative border-l-4 border-l-[var(--institution-primary)]">
+            <div className="h-1 bg-gradient-to-r from-[var(--institution-primary)] to-[#2d4a6f]" />
             <CardContent className="p-4">
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Personnel administratif</p>
-                  <p className="text-xl font-bold text-[#1a2744] mt-1">{adminCount}</p>
+                  <p className="text-xl font-bold text-[var(--institution-primary)] mt-1">{adminCount}</p>
                 </div>
-                <div className="w-10 h-10 rounded-xl bg-[#1a274415] flex items-center justify-center">
-                  <Building2 className="size-5 text-[#1a2744]" />
+                <div className="w-10 h-10 rounded-xl bg-[var(--institution-primary-15)] flex items-center justify-center">
+                  <Building2 className="size-5 text-[var(--institution-primary)]" />
                 </div>
               </div>
             </CardContent>
@@ -590,16 +590,16 @@ export function HrPage() {
 
         {/* Contrats CDI */}
         <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
-          <Card className="overflow-hidden relative border-l-4 border-l-[#2d7a4f]">
-            <div className="h-1 bg-gradient-to-r from-[#2d7a4f] to-[#3da66a]" />
+          <Card className="overflow-hidden relative border-l-4 border-l-[var(--institution-secondary)]">
+            <div className="h-1 bg-gradient-to-r from-[var(--institution-secondary)] to-[var(--institution-secondary-bright)]" />
             <CardContent className="p-4">
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Contrats CDI</p>
-                  <p className="text-xl font-bold text-[#2d7a4f] mt-1">{permCount}</p>
+                  <p className="text-xl font-bold text-[var(--institution-secondary)] mt-1">{permCount}</p>
                 </div>
-                <div className="w-10 h-10 rounded-xl bg-[#2d7a4f15] flex items-center justify-center">
-                  <GraduationCap className="size-5 text-[#2d7a4f]" />
+                <div className="w-10 h-10 rounded-xl bg-[var(--institution-secondary-15)] flex items-center justify-center">
+                  <GraduationCap className="size-5 text-[var(--institution-secondary)]" />
                 </div>
               </div>
             </CardContent>
@@ -608,16 +608,16 @@ export function HrPage() {
 
         {/* Vacataires */}
         <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
-          <Card className="overflow-hidden relative border-l-4 border-l-[#d4a853]">
-            <div className="h-1 bg-gradient-to-r from-[#d4a853] to-[#e6c477]" />
+          <Card className="overflow-hidden relative border-l-4 border-l-[var(--institution-accent)]">
+            <div className="h-1 bg-gradient-to-r from-[var(--institution-accent)] to-[var(--institution-accent-light)]" />
             <CardContent className="p-4">
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Vacataires</p>
-                  <p className="text-xl font-bold text-[#d4a853] mt-1">{vacCount}</p>
+                  <p className="text-xl font-bold text-[var(--institution-accent)] mt-1">{vacCount}</p>
                 </div>
-                <div className="w-10 h-10 rounded-xl bg-[#d4a85315] flex items-center justify-center">
-                  <UserCheck className="size-5 text-[#d4a853]" />
+                <div className="w-10 h-10 rounded-xl bg-[var(--institution-accent-15)] flex items-center justify-center">
+                  <UserCheck className="size-5 text-[var(--institution-accent)]" />
                 </div>
               </div>
             </CardContent>
@@ -634,8 +634,8 @@ export function HrPage() {
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Personnel en conge</p>
                   <p className="text-xl font-bold text-[#c62828] mt-1">{enCongeCount}</p>
                   <div className="flex items-center gap-1 mt-1">
-                    <Clock className="size-3 text-[#d4a853]" />
-                    <span className="text-[10px] text-[#d4a853] font-medium">{pendingLeaveCount} demande(s) en attente</span>
+                    <Clock className="size-3 text-[var(--institution-accent)]" />
+                    <span className="text-[10px] text-[var(--institution-accent)] font-medium">{pendingLeaveCount} demande(s) en attente</span>
                   </div>
                 </div>
                 <div className="w-10 h-10 rounded-xl bg-[#c6282815] flex items-center justify-center">
@@ -652,13 +652,13 @@ export function HrPage() {
         <Card>
           <CardHeader className="pb-3">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-              <CardTitle className="text-sm font-semibold text-[#1a2744]">Repertoire du personnel</CardTitle>
+              <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Repertoire du personnel</CardTitle>
               <div className="flex items-center gap-2">
-                <Button size="sm" className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs" onClick={() => setShowAddStaff(true)}>
+                <Button size="sm" className="bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white text-xs" onClick={() => setShowAddStaff(true)}>
                   <Plus className="size-3.5 mr-1.5" />
                   Ajouter
                 </Button>
-                <Button size="sm" variant="outline" className="text-xs border-[#1a274430] text-[#1a2744] hover:bg-[#1a274408]" onClick={() => exportToExcel(filteredStaff, 'personnel')}>
+                <Button size="sm" variant="outline" className="text-xs border-[var(--institution-primary-30)] text-[var(--institution-primary)] hover:bg-[var(--institution-primary-08)]" onClick={() => exportToExcel(filteredStaff, 'personnel')}>
                   Exporter
                 </Button>
               </div>
@@ -743,11 +743,11 @@ export function HrPage() {
                       return (
                         <TableRow
                           key={staff.id}
-                          className="hover:bg-[#2d7a4f05] transition-colors cursor-pointer"
+                          className="hover:bg-[var(--institution-secondary-05)] transition-colors cursor-pointer"
                         >
                           <TableCell className="py-2.5">
                             <div>
-                              <p className="text-sm font-medium text-[#1a2744]">{staff.name}</p>
+                              <p className="text-sm font-medium text-[var(--institution-primary)]">{staff.name}</p>
                               <p className="text-[10px] text-gray-400">{staff.email}</p>
                             </div>
                           </TableCell>
@@ -826,14 +826,14 @@ export function HrPage() {
 
       {/* ── Leave Management Card ───────────────────────────────────────────── */}
       <motion.div variants={itemVariants}>
-        <Card className="border-l-4 border-l-[#d4a853]">
+        <Card className="border-l-4 border-l-[var(--institution-accent)]">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <CalendarDays className="size-4 text-[#d4a853]" />
-                <CardTitle className="text-sm font-semibold text-[#1a2744]">Gestion des conges</CardTitle>
+                <CalendarDays className="size-4 text-[var(--institution-accent)]" />
+                <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Gestion des conges</CardTitle>
               </div>
-              <Badge className="text-[10px] bg-[#d4a85315] text-[#d4a853] border-0">
+              <Badge className="text-[10px] bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0">
                 {leaveRequests.filter(l => l.status === 'en_attente').length} en attente
               </Badge>
             </div>
@@ -858,8 +858,8 @@ export function HrPage() {
                     const lsConf = leaveStatusConfig[req.status]
                     const isPending = req.status === 'en_attente'
                     return (
-                      <TableRow key={req.id} className="hover:bg-[#d4a85305] transition-colors">
-                        <TableCell className="text-sm font-medium text-[#1a2744] py-2.5">{req.name}</TableCell>
+                      <TableRow key={req.id} className="hover:bg-[var(--institution-accent-05)] transition-colors">
+                        <TableCell className="text-sm font-medium text-[var(--institution-primary)] py-2.5">{req.name}</TableCell>
                         <TableCell className="text-xs text-gray-600 py-2.5">{req.type}</TableCell>
                         <TableCell className="text-xs text-gray-500 py-2.5">{req.startDate}</TableCell>
                         <TableCell className="text-xs text-gray-500 py-2.5">{req.endDate}</TableCell>
@@ -874,7 +874,7 @@ export function HrPage() {
                             <div className="flex items-center gap-1 justify-end">
                               <Button
                                 size="sm"
-                                className="h-7 text-[10px] px-2 bg-[#2d7a4f] hover:bg-[#236b40] text-white"
+                                className="h-7 text-[10px] px-2 bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white"
                                 onClick={() => handleLeaveAction(req.id, 'approuve')}
                               >
                                 <CheckCircle2 className="size-3 mr-0.5" />
@@ -919,12 +919,12 @@ export function HrPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {/* Leave balance summary */}
               <div className="space-y-3">
-                <p className="text-xs font-semibold text-[#1a2744] uppercase tracking-wide">Solde de conges</p>
+                <p className="text-xs font-semibold text-[var(--institution-primary)] uppercase tracking-wide">Solde de conges</p>
                 {leaveBalance.map((lb) => (
                   <div key={lb.type} className="space-y-1">
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-gray-600">{lb.type}</span>
-                      <span className="text-xs font-semibold text-[#1a2744]">{lb.used}/{lb.total} jours</span>
+                      <span className="text-xs font-semibold text-[var(--institution-primary)]">{lb.used}/{lb.total} jours</span>
                     </div>
                     <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                       <motion.div
@@ -941,7 +941,7 @@ export function HrPage() {
 
               {/* Calendar strip */}
               <div className="space-y-3">
-                <p className="text-xs font-semibold text-[#1a2744] uppercase tracking-wide">Prochains conges</p>
+                <p className="text-xs font-semibold text-[var(--institution-primary)] uppercase tracking-wide">Prochains conges</p>
                 <div className="space-y-2">
                   {upcomingLeaves.map((leave, idx) => (
                     <motion.div
@@ -956,7 +956,7 @@ export function HrPage() {
                         style={{ backgroundColor: leave.color }}
                       />
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium text-[#1a2744]">{leave.name}</p>
+                        <p className="text-xs font-medium text-[var(--institution-primary)]">{leave.name}</p>
                         <p className="text-[10px] text-gray-400">{leave.month} {leave.start}-{leave.end}</p>
                       </div>
                       <ChevronRight className="size-3.5 text-gray-400 shrink-0" />
@@ -971,14 +971,14 @@ export function HrPage() {
 
       {/* ── Recruitment & Vacancies Card ────────────────────────────────────── */}
       <motion.div variants={itemVariants}>
-        <Card className="border-l-4 border-l-[#1a2744]">
+        <Card className="border-l-4 border-l-[var(--institution-primary)]">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Briefcase className="size-4 text-[#1a2744]" />
-                <CardTitle className="text-sm font-semibold text-[#1a2744]">Recrutement & Postes vacants</CardTitle>
+                <Briefcase className="size-4 text-[var(--institution-primary)]" />
+                <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Recrutement & Postes vacants</CardTitle>
               </div>
-              <Button size="sm" className="bg-[#1a2744] hover:bg-[#2d4a6f] text-white text-xs" onClick={() => setShowAddStaff(true)}>
+              <Button size="sm" className="bg-[var(--institution-primary)] hover:bg-[#2d4a6f] text-white text-xs" onClick={() => setShowAddStaff(true)}>
                 <Plus className="size-3.5 mr-1.5" />
                 Ajouter au personnel
               </Button>
@@ -987,7 +987,7 @@ export function HrPage() {
           <CardContent>
             <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 p-6 text-center">
               <Briefcase className="size-8 text-gray-300 mx-auto mb-2" />
-              <p className="text-sm font-medium text-[#1a2744]">Aucune offre de recrutement réelle n&apos;est enregistrée.</p>
+              <p className="text-sm font-medium text-[var(--institution-primary)]">Aucune offre de recrutement réelle n&apos;est enregistrée.</p>
               <p className="text-xs text-gray-500 mt-1">
                 Le schéma actuel expose le personnel et les congés, mais pas encore une table d&apos;offres/candidatures RH. Les anciennes offres fictives ont été retirées.
               </p>
@@ -1001,31 +1001,31 @@ export function HrPage() {
 
       {/* ── Workforce Structure Card ────────────────────────────────────────── */}
       <motion.div variants={itemVariants}>
-        <Card className="border-l-4 border-l-[#2d7a4f]">
+        <Card className="border-l-4 border-l-[var(--institution-secondary)]">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Banknote className="size-4 text-[#2d7a4f]" />
-                <CardTitle className="text-sm font-semibold text-[#1a2744]">Structure du personnel</CardTitle>
+                <Banknote className="size-4 text-[var(--institution-secondary)]" />
+                <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Structure du personnel</CardTitle>
               </div>
-              <Badge className="text-[10px] bg-[#2d7a4f15] text-[#2d7a4f] border-0">
+              <Badge className="text-[10px] bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0">
                 Données réelles
               </Badge>
             </div>
           </CardHeader>
           <CardContent className="space-y-5">
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-              <div className="p-3 rounded-lg bg-[#2d7a4f08] border border-[#2d7a4f15]">
+              <div className="p-3 rounded-lg bg-[var(--institution-secondary-08)] border border-[var(--institution-secondary-15)]">
                 <p className="text-[10px] text-gray-500 uppercase tracking-wide">CDI</p>
-                <p className="text-lg font-bold text-[#2d7a4f]">{contractBreakdown.cdi}</p>
+                <p className="text-lg font-bold text-[var(--institution-secondary)]">{contractBreakdown.cdi}</p>
               </div>
-              <div className="p-3 rounded-lg bg-[#d4a85308] border border-[#d4a85315]">
+              <div className="p-3 rounded-lg bg-[var(--institution-accent-08)] border border-[var(--institution-accent-15)]">
                 <p className="text-[10px] text-gray-500 uppercase tracking-wide">CDD</p>
-                <p className="text-lg font-bold text-[#d4a853]">{contractBreakdown.cdd}</p>
+                <p className="text-lg font-bold text-[var(--institution-accent)]">{contractBreakdown.cdd}</p>
               </div>
-              <div className="p-3 rounded-lg bg-[#1a274408] border border-[#1a274415]">
+              <div className="p-3 rounded-lg bg-[var(--institution-primary-08)] border border-[var(--institution-primary-15)]">
                 <p className="text-[10px] text-gray-500 uppercase tracking-wide">Vacataires</p>
-                <p className="text-lg font-bold text-[#1a2744]">{contractBreakdown.vacataire}</p>
+                <p className="text-lg font-bold text-[var(--institution-primary)]">{contractBreakdown.vacataire}</p>
               </div>
               <div className="p-3 rounded-lg bg-[#6366f108] border border-[#6366f115]">
                 <p className="text-[10px] text-gray-500 uppercase tracking-wide">Stagiaires</p>
@@ -1034,14 +1034,14 @@ export function HrPage() {
             </div>
 
             <div className="space-y-3">
-              <p className="text-xs font-semibold text-[#1a2744] uppercase tracking-wide">Evolution des effectifs</p>
+              <p className="text-xs font-semibold text-[var(--institution-primary)] uppercase tracking-wide">Evolution des effectifs</p>
               <div className="flex items-end gap-1.5 h-32">
                 {monthlyStaffTrend.map((m, idx) => {
                   const heightPercent = (m.count / maxStaffTrend) * 100
                   return (
                     <div key={m.month} className="flex-1 flex flex-col items-center gap-1">
                       <motion.div
-                        className="w-full rounded-t bg-gradient-to-t from-[#2d7a4f] to-[#3da66a] min-h-[4px]"
+                        className="w-full rounded-t bg-gradient-to-t from-[var(--institution-secondary)] to-[var(--institution-secondary-bright)] min-h-[4px]"
                         initial={{ height: 0 }}
                         animate={{ height: `${heightPercent}%` }}
                         transition={{ duration: 0.6, delay: 0.05 * idx, ease: 'easeOut' }}
@@ -1056,7 +1056,7 @@ export function HrPage() {
             </div>
 
             <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 p-4">
-              <p className="text-xs font-semibold text-[#1a2744]">Paie non affichée</p>
+              <p className="text-xs font-semibold text-[var(--institution-primary)]">Paie non affichée</p>
               <p className="text-xs text-gray-500 mt-1">
                 Le modèle de données actuel ne contient pas de salaire ni de mode de paiement personnel. Les montants FCFA et pourcentages inventés ont été retirés.
               </p>
@@ -1067,14 +1067,14 @@ export function HrPage() {
 
       {/* ── Performance Evaluation Card ─────────────────────────────────────── */}
       <motion.div variants={itemVariants}>
-        <Card className="border-l-4 border-l-[#d4a853]">
+        <Card className="border-l-4 border-l-[var(--institution-accent)]">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Award className="size-4 text-[#d4a853]" />
-                <CardTitle className="text-sm font-semibold text-[#1a2744]">Evaluation des performances</CardTitle>
+                <Award className="size-4 text-[var(--institution-accent)]" />
+                <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Evaluation des performances</CardTitle>
               </div>
-              <Button size="sm" className="bg-[#d4a853] hover:bg-[#c49a48] text-white text-xs" onClick={() => exportToExcel(staff, 'personnel_a_evaluer')}>
+              <Button size="sm" className="bg-[var(--institution-accent)] hover:bg-[#c49a48] text-white text-xs" onClick={() => exportToExcel(staff, 'personnel_a_evaluer')}>
                 <Star className="size-3.5 mr-1.5" />
                 Exporter liste
               </Button>
@@ -1083,7 +1083,7 @@ export function HrPage() {
           <CardContent className="space-y-5">
             <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 p-6 text-center">
               <Award className="size-8 text-gray-300 mx-auto mb-2" />
-              <p className="text-sm font-medium text-[#1a2744]">Aucune évaluation RH réelle enregistrée.</p>
+              <p className="text-sm font-medium text-[var(--institution-primary)]">Aucune évaluation RH réelle enregistrée.</p>
               <p className="text-xs text-gray-500 mt-1">
                 Les anciennes notes nominatives codées en dur ont été retirées. Cette section attend une vraie API d’évaluations avant d’afficher des scores.
               </p>
@@ -1097,60 +1097,60 @@ export function HrPage() {
 
       {/* ── Compliance Readiness Card ───────────────────────────────────────── */}
       <motion.div variants={itemVariants}>
-        <Card className="border-l-4 border-l-[#2d7a4f]">
+        <Card className="border-l-4 border-l-[var(--institution-secondary)]">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Shield className="size-4 text-[#2d7a4f]" />
-                <CardTitle className="text-sm font-semibold text-[#1a2744]">Conformité RH à configurer</CardTitle>
+                <Shield className="size-4 text-[var(--institution-secondary)]" />
+                <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Conformité RH à configurer</CardTitle>
               </div>
             </div>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="p-3 rounded-lg bg-[#2d7a4f08] border border-[#2d7a4f15]">
+              <div className="p-3 rounded-lg bg-[var(--institution-secondary-08)] border border-[var(--institution-secondary-15)]">
                 <div className="flex items-center gap-2 mb-2">
-                  <Shield className="size-4 text-[#2d7a4f]" />
-                  <span className="text-sm font-semibold text-[#1a2744]">Sécurité sociale</span>
+                  <Shield className="size-4 text-[var(--institution-secondary)]" />
+                  <span className="text-sm font-semibold text-[var(--institution-primary)]">Sécurité sociale</span>
                 </div>
                 <p className="text-xs text-gray-600 leading-relaxed">
                   Aucun calcul de cotisations n’est exécuté sans barème officiel configuré. Les intégrations sociales seront activées quand l’institution aura renseigné ses règles et justificatifs.
                 </p>
                 <div className="flex items-center gap-2 mt-2">
                   <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-white border border-gray-100 text-[10px] text-gray-600">
-                    <Clock className="size-3 text-[#d4a853]" />
+                    <Clock className="size-3 text-[var(--institution-accent)]" />
                     Barèmes non configurés
                   </div>
                 </div>
               </div>
 
-              <div className="p-3 rounded-lg bg-[#1a274408] border border-[#1a274415]">
+              <div className="p-3 rounded-lg bg-[var(--institution-primary-08)] border border-[var(--institution-primary-15)]">
                 <div className="flex items-center gap-2 mb-2">
-                  <Globe className="size-4 text-[#1a2744]" />
-                  <span className="text-sm font-semibold text-[#1a2744]">Règles de travail</span>
+                  <Globe className="size-4 text-[var(--institution-primary)]" />
+                  <span className="text-sm font-semibold text-[var(--institution-primary)]">Règles de travail</span>
                 </div>
                 <p className="text-xs text-gray-600 leading-relaxed">
                   Les contrats, dates d’entrée et statuts du personnel sont réels. Les durées légales, préavis et indemnités restent à paramétrer avant toute automatisation réglementaire.
                 </p>
                 <div className="flex items-center gap-2 mt-2 flex-wrap">
                   <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-white border border-gray-100 text-[10px] text-gray-600">
-                    <CheckCircle2 className="size-3 text-[#2d7a4f]" />
+                    <CheckCircle2 className="size-3 text-[var(--institution-secondary)]" />
                     {staff.length} dossier{staff.length > 1 ? 's' : ''} personnel réel{staff.length > 1 ? 's' : ''}
                   </div>
                 </div>
               </div>
 
-              <div className="p-3 rounded-lg bg-[#d4a85308] border border-[#d4a85315]">
+              <div className="p-3 rounded-lg bg-[var(--institution-accent-08)] border border-[var(--institution-accent-15)]">
                 <div className="flex items-center gap-2 mb-2">
-                  <Smartphone className="size-4 text-[#d4a853]" />
-                  <span className="text-sm font-semibold text-[#1a2744]">Paiement des salaires</span>
+                  <Smartphone className="size-4 text-[var(--institution-accent)]" />
+                  <span className="text-sm font-semibold text-[var(--institution-primary)]">Paiement des salaires</span>
                 </div>
                 <p className="text-xs text-gray-600 leading-relaxed">
                   Aucun virement ni envoi Mobile Money n’est déclenché depuis cet onglet. Les données bancaires et opérateurs pourront être ajoutés dans un module paie sécurisé.
                 </p>
                 <div className="flex items-center gap-2 mt-2">
                   <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-white border border-gray-100 text-[10px] text-gray-600">
-                    <Clock className="size-3 text-[#d4a853]" />
+                    <Clock className="size-3 text-[var(--institution-accent)]" />
                     Module paie non connecté
                   </div>
                 </div>
@@ -1159,14 +1159,14 @@ export function HrPage() {
               <div className="p-3 rounded-lg bg-[#6366f108] border border-[#6366f115]">
                 <div className="flex items-center gap-2 mb-2">
                   <WifiOff className="size-4 text-[#6366f1]" />
-                  <span className="text-sm font-semibold text-[#1a2744]">Connectivité</span>
+                  <span className="text-sm font-semibold text-[var(--institution-primary)]">Connectivité</span>
                 </div>
                 <p className="text-xs text-gray-600 leading-relaxed">
                   L’onglet fonctionne avec les données enregistrées en base. Le mode hors connexion n’est pas activé afin d’éviter une fausse promesse de synchronisation locale.
                 </p>
                 <div className="flex items-center gap-2 mt-2">
                   <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-white border border-gray-100 text-[10px] text-gray-600">
-                    <WifiOff className="size-3 text-[#d4a853]" />
+                    <WifiOff className="size-3 text-[var(--institution-accent)]" />
                     Synchronisation locale désactivée
                   </div>
                 </div>

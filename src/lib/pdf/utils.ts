@@ -63,6 +63,11 @@ export interface TenantInfo {
   arabicHeaderImage?: string
   arabicCountry?: string
   headerLanguageMode?: string
+  headerLinesFr?: string[]
+  headerLinesAr?: string[]
+  primaryColor?: string
+  secondaryColor?: string
+  accentColor?: string
   rectorName?: string
   rectorTitle?: string
   motto?: string

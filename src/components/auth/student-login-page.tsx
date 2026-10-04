@@ -54,11 +54,11 @@ export function StudentLoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[#1a2744] via-[#1f3158] to-[#2d7a4f] relative overflow-hidden px-4 py-8">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[var(--institution-primary)] via-[#1f3158] to-[var(--institution-secondary)] relative overflow-hidden px-4 py-8">
       {/* Background decoration */}
       <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-white/5 rounded-full -translate-y-1/2 translate-x-1/3" />
       <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-white/5 rounded-full translate-y-1/3 -translate-x-1/3" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#2d7a4f10] rounded-full" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[var(--institution-secondary-10)] rounded-full" />
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -78,14 +78,14 @@ export function StudentLoginPage() {
         <Card className="border-gray-200/50 shadow-2xl">
           <CardHeader className="text-center pb-2">
             <div className="flex items-center justify-center gap-2 mb-2">
-              <div className="p-2 rounded-lg bg-[#2d7a4f]">
+              <div className="p-2 rounded-lg bg-[var(--institution-secondary)]">
                 <GraduationCap className="size-5 text-white" />
               </div>
-              <span className="text-lg font-bold text-[#1a2744]">
-                Uni<span className="text-[#2d7a4f]">Sahel</span>
+              <span className="text-lg font-bold text-[var(--institution-primary)]">
+                Uni<span className="text-[var(--institution-secondary)]">Sahel</span>
               </span>
             </div>
-            <CardTitle className="text-xl font-bold text-[#1a2744]">Espace Étudiant</CardTitle>
+            <CardTitle className="text-xl font-bold text-[var(--institution-primary)]">Espace Étudiant</CardTitle>
             <CardDescription className="text-gray-500">
               Consultez vos notes, documents et informations academiques
             </CardDescription>
@@ -130,15 +130,15 @@ export function StudentLoginPage() {
 
               <Button
                 type="submit"
-                className="w-full bg-[#2d7a4f] hover:bg-[#236b40] text-white h-10"
+                className="w-full bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white h-10"
               >
                 Connexion
               </Button>
             </form>
 
             {/* Info notice */}
-            <div className="mt-4 flex items-start gap-2 p-3 rounded-lg bg-[#1a274408] border border-[#1a274410]">
-              <Info className="size-4 text-[#1a2744] mt-0.5 shrink-0" />
+            <div className="mt-4 flex items-start gap-2 p-3 rounded-lg bg-[var(--institution-primary-08)] border border-[var(--institution-primary-10)]">
+              <Info className="size-4 text-[var(--institution-primary)] mt-0.5 shrink-0" />
               <p className="text-xs text-gray-600 leading-relaxed">
                 Votre login a ete imprime sur votre fiche d&apos;inscription. Si vous l&apos;avez perdu, veuillez vous adresser au service de la scolarite.
               </p>
@@ -153,10 +153,10 @@ export function StudentLoginPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="w-full justify-center text-xs h-9 border-gray-200 hover:border-[#2d7a4f40] hover:bg-[#2d7a4f08]"
+                  className="w-full justify-center text-xs h-9 border-gray-200 hover:border-[var(--institution-secondary-40)] hover:bg-[var(--institution-secondary-08)]"
                   onClick={handleDemoLogin}
                 >
-                  <GraduationCap className="size-3.5 mr-1.5 text-[#2d7a4f]" />
+                  <GraduationCap className="size-3.5 mr-1.5 text-[var(--institution-secondary)]" />
                   Connexion en tant qu&apos;étudiant
                 </Button>
               </div>
@@ -165,7 +165,7 @@ export function StudentLoginPage() {
             {/* Back to landing */}
             <button
               onClick={() => setView('landing')}
-              className="w-full mt-4 text-center text-xs text-gray-400 hover:text-[#2d7a4f] transition-colors"
+              className="w-full mt-4 text-center text-xs text-gray-400 hover:text-[var(--institution-secondary)] transition-colors"
             >
               Retour à l&apos;accueil
             </button>

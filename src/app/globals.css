@@ -3,6 +3,50 @@
 
 @custom-variant dark (&:is(.dark *));
 
+:root {
+  --institution-primary: #1a2744;
+  --institution-secondary: #2d7a4f;
+  --institution-accent: #d4a853;
+  --institution-primary-dark: color-mix(in srgb, var(--institution-primary) 90%, black);
+  --institution-primary-light: color-mix(in srgb, var(--institution-primary) 90%, white);
+  --institution-secondary-dark: color-mix(in srgb, var(--institution-secondary) 88%, black);
+  --institution-secondary-bright: color-mix(in srgb, var(--institution-secondary) 78%, white);
+  --institution-accent-light: color-mix(in srgb, var(--institution-accent) 70%, white);
+  --institution-primary-00: transparent;
+  --institution-secondary-00: transparent;
+  --institution-accent-00: transparent;
+  --institution-primary-05: color-mix(in srgb, var(--institution-primary) 2%, transparent);
+  --institution-primary-08: color-mix(in srgb, var(--institution-primary) 3%, transparent);
+  --institution-primary-10: color-mix(in srgb, var(--institution-primary) 6%, transparent);
+  --institution-primary-12: color-mix(in srgb, var(--institution-primary) 7%, transparent);
+  --institution-primary-15: color-mix(in srgb, var(--institution-primary) 8%, transparent);
+  --institution-primary-18: color-mix(in srgb, var(--institution-primary) 9%, transparent);
+  --institution-primary-20: color-mix(in srgb, var(--institution-primary) 13%, transparent);
+  --institution-primary-30: color-mix(in srgb, var(--institution-primary) 19%, transparent);
+  --institution-secondary-03: color-mix(in srgb, var(--institution-secondary) 1%, transparent);
+  --institution-secondary-04: color-mix(in srgb, var(--institution-secondary) 2%, transparent);
+  --institution-secondary-05: color-mix(in srgb, var(--institution-secondary) 2%, transparent);
+  --institution-secondary-08: color-mix(in srgb, var(--institution-secondary) 3%, transparent);
+  --institution-secondary-10: color-mix(in srgb, var(--institution-secondary) 6%, transparent);
+  --institution-secondary-12: color-mix(in srgb, var(--institution-secondary) 7%, transparent);
+  --institution-secondary-15: color-mix(in srgb, var(--institution-secondary) 8%, transparent);
+  --institution-secondary-18: color-mix(in srgb, var(--institution-secondary) 9%, transparent);
+  --institution-secondary-20: color-mix(in srgb, var(--institution-secondary) 13%, transparent);
+  --institution-secondary-30: color-mix(in srgb, var(--institution-secondary) 19%, transparent);
+  --institution-secondary-40: color-mix(in srgb, var(--institution-secondary) 25%, transparent);
+  --institution-secondary-50: color-mix(in srgb, var(--institution-secondary) 31%, transparent);
+  --institution-accent-05: color-mix(in srgb, var(--institution-accent) 2%, transparent);
+  --institution-accent-08: color-mix(in srgb, var(--institution-accent) 3%, transparent);
+  --institution-accent-10: color-mix(in srgb, var(--institution-accent) 6%, transparent);
+  --institution-accent-12: color-mix(in srgb, var(--institution-accent) 7%, transparent);
+  --institution-accent-15: color-mix(in srgb, var(--institution-accent) 8%, transparent);
+  --institution-accent-18: color-mix(in srgb, var(--institution-accent) 9%, transparent);
+  --institution-accent-20: color-mix(in srgb, var(--institution-accent) 13%, transparent);
+  --institution-accent-30: color-mix(in srgb, var(--institution-accent) 19%, transparent);
+  --institution-accent-40: color-mix(in srgb, var(--institution-accent) 25%, transparent);
+  --institution-accent-55: color-mix(in srgb, var(--institution-accent) 33%, transparent);
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -41,12 +85,12 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  --color-sahel: #d4a853;
-  --color-sahel-light: #f0d68a;
-  --color-night: #1a2744;
-  --color-night-light: #2a3f6a;
-  --color-institutional: #2d7a4f;
-  --color-institutional-light: #3da66a;
+  --color-sahel: var(--institution-accent);
+  --color-sahel-light: var(--institution-accent-light);
+  --color-night: var(--institution-primary);
+  --color-night-light: var(--institution-primary-light);
+  --color-institutional: var(--institution-secondary);
+  --color-institutional-light: var(--institution-secondary-bright);
   --animate-marquee: marquee var(--duration) infinite linear;
   --animate-marquee-vertical: marquee-vertical var(--duration) linear infinite;
   --animate-aurora: aurora 8s ease-in-out infinite alternate;
@@ -247,7 +291,7 @@
 
 /* Gradient text */
 .gradient-text {
-  background: linear-gradient(135deg, #1a2744, #2d7a4f, #d4a853);
+  background: linear-gradient(135deg, var(--institution-primary), var(--institution-secondary), var(--institution-accent));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;

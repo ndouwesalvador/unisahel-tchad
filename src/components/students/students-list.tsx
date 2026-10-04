@@ -80,13 +80,13 @@ interface StudentRow {
 }
 
 const statusConfig: Record<StudentStatus, { label: string; className: string }> = {
-  INSCRIT: { label: 'Inscrit', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0 hover:bg-[#2d7a4f15]' },
-  PRE_INSCRIT: { label: 'Pré-inscrit', className: 'bg-[#d4a85315] text-[#d4a853] border-0 hover:bg-[#d4a85315]' },
+  INSCRIT: { label: 'Inscrit', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0 hover:bg-[var(--institution-secondary-15)]' },
+  PRE_INSCRIT: { label: 'Pré-inscrit', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0 hover:bg-[var(--institution-accent-15)]' },
   SUSPENDU: { label: 'Suspendu', className: 'bg-[#ef6c0015] text-[#ef6c00] border-0 hover:bg-[#ef6c0015]' },
   EXCLU: { label: 'Exclu', className: 'bg-[#c6282815] text-[#c62828] border-0 hover:bg-[#c6282815]' },
-  DIPLOME: { label: 'Diplômé', className: 'bg-[#1a274415] text-[#1a2744] border-0 hover:bg-[#1a274415]' },
+  DIPLOME: { label: 'Diplômé', className: 'bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0 hover:bg-[var(--institution-primary-15)]' },
   ABANDON: { label: 'Abandon', className: 'bg-[#6b728015] text-gray-600 border-0 hover:bg-[#6b728015]' },
-  TRANSFERE: { label: 'Transféré', className: 'bg-[#1a274415] text-[#1a2744] border-0 hover:bg-[#1a274415]' },
+  TRANSFERE: { label: 'Transféré', className: 'bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0 hover:bg-[var(--institution-primary-15)]' },
 }
 
 const ITEMS_PER_PAGE = 10
@@ -477,7 +477,7 @@ export function StudentsList() {
     <div className="space-y-4">
       {/* Gradient Header Banner */}
       <Card className="overflow-hidden">
-        <div className="bg-gradient-to-r from-[#1a2744] via-[#1f3050] to-[#2d7a4f] p-6 text-white relative">
+        <div className="bg-gradient-to-r from-[var(--institution-primary)] via-[var(--institution-primary-light)] to-[var(--institution-secondary)] p-6 text-white relative">
           <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PHBhdGggZD0iTTM2IDE0YzAtMi4yMS0xLjc5LTQtNC00cy00IDEuNzktNCA0IDEuNzkgNCA0IDQgNC0xLjc5IDQtNHptLTQgMmMtMS4xIDAtMi0uOS0yLTJzLjktMiAyLTIgMiAuOSAyIDItLjkgMi0yIDJ6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-50" />
           <div className="relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
@@ -521,7 +521,7 @@ export function StudentsList() {
                 <FileText className="size-3.5 mr-1.5" />
                 {isExportingPDF ? 'Préparation…' : 'PDF'}
               </Button>
-              <Button size="sm" className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs border border-white/20" onClick={() => setShowCreate(true)}>
+              <Button size="sm" className="bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white text-xs border border-white/20" onClick={() => setShowCreate(true)}>
                 <UserPlus className="size-3.5 mr-1.5" />
                 Nouvel etudiant
               </Button>
@@ -539,10 +539,10 @@ export function StudentsList() {
         <Card>
           <CardContent className="p-4">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <StatIndicator value={totalStudents} label="Total etudiants" icon={Users} color="#1a2744" />
-              <StatIndicator value={maleCount} label="Hommes" icon={UserCheck} color="#2d7a4f" />
-              <StatIndicator value={femaleCount} label="Femmes" icon={UserCheck} color="#d4a853" />
-              <StatIndicator value={averageAge} label="Age moyen" icon={Calendar} color="#1a2744" />
+              <StatIndicator value={totalStudents} label="Total etudiants" icon={Users} color="var(--institution-primary)" />
+              <StatIndicator value={maleCount} label="Hommes" icon={UserCheck} color="var(--institution-secondary)" />
+              <StatIndicator value={femaleCount} label="Femmes" icon={UserCheck} color="var(--institution-accent)" />
+              <StatIndicator value={averageAge} label="Age moyen" icon={Calendar} color="var(--institution-primary)" />
             </div>
           </CardContent>
         </Card>
@@ -627,11 +627,11 @@ export function StudentsList() {
                     animate="visible"
                     className={`cursor-pointer transition-all duration-200 border-b border-gray-50 group ${
                       i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'
-                    } hover:bg-gradient-to-r hover:from-[#2d7a4f08] hover:via-[#2d7a4f04] hover:to-[#1a274408]`}
+                    } hover:bg-gradient-to-r hover:from-[var(--institution-secondary-08)] hover:via-[var(--institution-secondary-04)] hover:to-[var(--institution-primary-08)]`}
                     onClick={() => handleRowClick(student.id)}
                   >
                     <TableCell className="text-xs font-mono text-gray-600 py-3">{student.matricule}</TableCell>
-                    <TableCell className="text-sm font-medium text-[#1a2744] py-3">{student.nom}</TableCell>
+                    <TableCell className="text-sm font-medium text-[var(--institution-primary)] py-3">{student.nom}</TableCell>
                     <TableCell className="text-sm text-gray-700 py-3">{student.prenom}</TableCell>
                     <TableCell className="text-sm text-gray-600 py-3">{student.filiere}</TableCell>
                     <TableCell className="text-sm text-gray-600 py-3">{student.niveau}</TableCell>
@@ -640,7 +640,7 @@ export function StudentsList() {
                         {status.label}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-sm text-center font-medium text-[#1a2744] py-3">{student.credits}</TableCell>
+                    <TableCell className="text-sm text-center font-medium text-[var(--institution-primary)] py-3">{student.credits}</TableCell>
                     <TableCell className="text-right py-3 whitespace-nowrap">
                       <Button
                         variant="ghost"
@@ -669,7 +669,7 @@ export function StudentsList() {
                           onClick={(e) => { e.stopPropagation(); handleReactivateStudent(student) }}
                           title="Réactiver"
                         >
-                          <RotateCcw className="size-3.5 text-[#2d7a4f]" />
+                          <RotateCcw className="size-3.5 text-[var(--institution-secondary)]" />
                         </Button>
                       ) : (
                         <Button
@@ -720,7 +720,7 @@ export function StudentsList() {
                   key={page}
                   variant={page === currentPage ? 'default' : 'outline'}
                   size="sm"
-                  className={`h-8 w-8 p-0 text-xs ${page === currentPage ? 'bg-[#2d7a4f] hover:bg-[#236b40]' : ''}`}
+                  className={`h-8 w-8 p-0 text-xs ${page === currentPage ? 'bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)]' : ''}`}
                   onClick={() => setCurrentPage(page)}
                 >
                   {page}
@@ -744,7 +744,7 @@ export function StudentsList() {
       <Dialog open={showCreate} onOpenChange={(o) => { setShowCreate(o); if (!o) setForm(emptyStudentForm) }}>
         <DialogContent className="sm:max-w-[560px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-[#1a2744]">Nouvel etudiant</DialogTitle>
+            <DialogTitle className="text-[var(--institution-primary)]">Nouvel etudiant</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="grid grid-cols-2 gap-3">
@@ -834,7 +834,7 @@ export function StudentsList() {
               <Input id="new-student-photo" type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => handlePhotoSelection(event.target.files?.[0])} />
               {form.photo && <p className="text-xs text-emerald-700">Photo prête à enregistrer.</p>}
             </div>
-            <Button className="w-full bg-[#2d7a4f] hover:bg-[#236b40] text-white" disabled={isCreating} onClick={handleCreateStudent}>
+            <Button className="w-full bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white" disabled={isCreating} onClick={handleCreateStudent}>
               {isCreating ? 'Enregistrement...' : "Enregistrer l'etudiant"}
             </Button>
           </div>
@@ -845,7 +845,7 @@ export function StudentsList() {
       <Dialog open={Boolean(editingStudent)} onOpenChange={(o) => { if (!o) closeEditDialog() }}>
         <DialogContent className="sm:max-w-[560px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-[#1a2744]">Modifier le dossier etudiant</DialogTitle>
+            <DialogTitle className="text-[var(--institution-primary)]">Modifier le dossier etudiant</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="grid grid-cols-2 gap-3">
@@ -947,7 +947,7 @@ export function StudentsList() {
               <p className="text-xs text-slate-700">Sans nouveau fichier, la photo existante est conservée. Elle figure sur le relevé de notes.</p>
               {form.photo && <p className="text-xs text-emerald-700">Nouvelle photo prête à enregistrer.</p>}
             </div>
-            <Button className="w-full bg-[#2d7a4f] hover:bg-[#236b40] text-white" disabled={isUpdating} onClick={handleUpdateStudent}>
+            <Button className="w-full bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white" disabled={isUpdating} onClick={handleUpdateStudent}>
               {isUpdating ? 'Mise a jour...' : 'Enregistrer les modifications'}
             </Button>
           </div>
@@ -963,18 +963,18 @@ export function StudentsList() {
           {createdCredentials && (
             <div className="space-y-4 py-2">
               <p className="text-sm text-gray-600">
-                Le compte Espace Etudiant de <span className="font-semibold text-[#1a2744]">{createdCredentials.name}</span> est pret.
+                Le compte Espace Etudiant de <span className="font-semibold text-[var(--institution-primary)]">{createdCredentials.name}</span> est pret.
                 Transmettez ces identifiants — le code PIN ne sera plus jamais affiche.
               </p>
               <div className="rounded-lg border bg-gray-50 p-3 space-y-2">
                 <div>
                   <p className="text-[10px] text-gray-400">Matricule / Identifiant</p>
-                  <p className="text-sm font-mono text-[#1a2744]">{createdCredentials.login}</p>
+                  <p className="text-sm font-mono text-[var(--institution-primary)]">{createdCredentials.login}</p>
                 </div>
                 <div>
                   <p className="text-[10px] text-gray-400">Code PIN</p>
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-mono font-semibold text-[#2d7a4f]">{createdCredentials.pin}</p>
+                    <p className="text-sm font-mono font-semibold text-[var(--institution-secondary)]">{createdCredentials.pin}</p>
                     <Button variant="ghost" size="sm" className="h-6 px-1.5" onClick={copyPin}>
                       <Copy className="size-3.5" />
                     </Button>

@@ -208,10 +208,10 @@ export function StaffUsersPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-[#1a2744]">Gestion des utilisateurs</h1>
+          <h1 className="text-2xl font-bold text-[var(--institution-primary)]">Gestion des utilisateurs</h1>
           <p className="text-sm text-gray-500 mt-1">Cree et gere les comptes du personnel de votre institution</p>
         </div>
-        <Button className="bg-[#2d7a4f] hover:bg-[#236b40] text-white" onClick={() => setShowCreate(true)}>
+        <Button className="bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white" onClick={() => setShowCreate(true)}>
           <Plus className="size-4 mr-1.5" />
           Nouveau compte
         </Button>
@@ -220,33 +220,33 @@ export function StaffUsersPage() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-[#1a274415] flex items-center justify-center shrink-0">
-              <Users className="size-5 text-[#1a2744]" />
+            <div className="w-10 h-10 rounded-lg bg-[var(--institution-primary-15)] flex items-center justify-center shrink-0">
+              <Users className="size-5 text-[var(--institution-primary)]" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-[#1a2744]">{staffCount}</p>
+              <p className="text-2xl font-bold text-[var(--institution-primary)]">{staffCount}</p>
               <p className="text-[11px] text-gray-500">Comptes administratifs</p>
             </div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-[#2d7a4f15] flex items-center justify-center shrink-0">
-              <ShieldAlert className="size-5 text-[#2d7a4f]" />
+            <div className="w-10 h-10 rounded-lg bg-[var(--institution-secondary-15)] flex items-center justify-center shrink-0">
+              <ShieldAlert className="size-5 text-[var(--institution-secondary)]" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-[#2d7a4f]">{activeCount}</p>
+              <p className="text-2xl font-bold text-[var(--institution-secondary)]">{activeCount}</p>
               <p className="text-[11px] text-gray-500">Comptes actifs</p>
             </div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-[#d4a85315] flex items-center justify-center shrink-0">
-              <KeyRound className="size-5 text-[#d4a853]" />
+            <div className="w-10 h-10 rounded-lg bg-[var(--institution-accent-15)] flex items-center justify-center shrink-0">
+              <KeyRound className="size-5 text-[var(--institution-accent)]" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-[#1a2744]">{pendingPasswordCount}</p>
+              <p className="text-2xl font-bold text-[var(--institution-primary)]">{pendingPasswordCount}</p>
               <p className="text-[11px] text-gray-500">Mot de passe temporaire non change</p>
             </div>
           </CardContent>
@@ -255,12 +255,12 @@ export function StaffUsersPage() {
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold text-[#1a2744]">Comptes du personnel</CardTitle>
+          <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Comptes du personnel</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="size-6 animate-spin text-[#2d7a4f]" />
+              <Loader2 className="size-6 animate-spin text-[var(--institution-secondary)]" />
             </div>
           ) : users.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-10">Aucun compte cree pour le moment.</p>
@@ -281,12 +281,12 @@ export function StaffUsersPage() {
                 <TableBody>
                   {users.map((u) => (
                     <TableRow key={u.id}>
-                      <TableCell className="text-sm font-medium text-[#1a2744]">{u.firstName} {u.lastName}</TableCell>
+                      <TableCell className="text-sm font-medium text-[var(--institution-primary)]">{u.firstName} {u.lastName}</TableCell>
                       <TableCell className="text-sm text-gray-500">{u.email || '—'}</TableCell>
                       <TableCell>
-                        <Badge className="text-[10px] bg-[#1a274415] text-[#1a2744] border-0">{roleLabels[u.role] || u.role}</Badge>
+                        <Badge className="text-[10px] bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0">{roleLabels[u.role] || u.role}</Badge>
                         {u.mustChangePassword && (
-                          <Badge className="text-[10px] ml-1 bg-[#d4a85315] text-[#d4a853] border-0">Temp.</Badge>
+                          <Badge className="text-[10px] ml-1 bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0">Temp.</Badge>
                         )}
                       </TableCell>
                       <TableCell className="text-xs text-gray-600">
@@ -295,7 +295,7 @@ export function StaffUsersPage() {
                             u.role === 'FACULTE' || u.role === 'DEPARTEMENT' ? 'À affecter' : 'Institution'}
                       </TableCell>
                       <TableCell>
-                        <Badge className={`text-[10px] border-0 ${u.isActive ? 'bg-[#2d7a4f15] text-[#2d7a4f]' : 'bg-[#c6282815] text-[#c62828]'}`}>
+                        <Badge className={`text-[10px] border-0 ${u.isActive ? 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)]' : 'bg-[#c6282815] text-[#c62828]'}`}>
                           {u.isActive ? 'Actif' : 'Suspendu'}
                         </Badge>
                       </TableCell>
@@ -388,7 +388,7 @@ export function StaffUsersPage() {
               </Select>
             </div>}
             <p className="text-[11px] text-gray-400">Un mot de passe temporaire sera genere et affiche une seule fois apres la creation.</p>
-            <Button className="w-full bg-[#2d7a4f] hover:bg-[#236b40] text-white" disabled={isCreating} onClick={handleCreate}>
+            <Button className="w-full bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white" disabled={isCreating} onClick={handleCreate}>
               {isCreating ? 'Creation...' : 'Creer le compte'}
             </Button>
           </div>
@@ -421,25 +421,25 @@ export function StaffUsersPage() {
           {createdCredentials && (
             <div className="space-y-4 py-2">
               <p className="text-sm text-gray-600">
-                Le compte de <span className="font-semibold text-[#1a2744]">{createdCredentials.name}</span> est pret.
+                Le compte de <span className="font-semibold text-[var(--institution-primary)]">{createdCredentials.name}</span> est pret.
                 Transmettez ces identifiants — ce mot de passe ne sera plus jamais affiche.
               </p>
               <div className="rounded-lg border bg-gray-50 p-3 space-y-2">
                 <div>
                   <p className="text-[10px] text-gray-400">Email</p>
-                  <p className="text-sm font-mono text-[#1a2744]">{createdCredentials.email}</p>
+                  <p className="text-sm font-mono text-[var(--institution-primary)]">{createdCredentials.email}</p>
                 </div>
                 <div>
                   <p className="text-[10px] text-gray-400">Mot de passe temporaire</p>
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-mono font-semibold text-[#2d7a4f]">{createdCredentials.tempPassword}</p>
+                    <p className="text-sm font-mono font-semibold text-[var(--institution-secondary)]">{createdCredentials.tempPassword}</p>
                     <Button variant="ghost" size="sm" className="h-6 px-1.5" onClick={copyPassword}>
                       <Copy className="size-3.5" />
                     </Button>
                   </div>
                 </div>
               </div>
-              <p className="text-[11px] text-[#d4a853]">Un changement de mot de passe sera demande a la premiere connexion.</p>
+              <p className="text-[11px] text-[var(--institution-accent)]">Un changement de mot de passe sera demande a la premiere connexion.</p>
               <Button className="w-full" variant="outline" onClick={() => setCreatedCredentials(null)}>Fermer</Button>
             </div>
           )}

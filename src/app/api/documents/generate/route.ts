@@ -12,6 +12,7 @@ import { parseJuryMembers } from '@/lib/deliberations/jury'
 import { buildPvMatrix, expectedPvSheetCount, PvMatrixError, type PvSection } from '@/lib/pdf/pv-matrix'
 import { countPdfPages } from '@/lib/pdf/utils'
 import { renderArabicHeader } from '@/lib/pdf/arabic-header'
+import { parseHeaderLines } from '@/lib/institution-branding'
 import { prepareDocumentArtwork, prepareDocumentPhoto } from '@/lib/pdf/artwork'
 
 const SIGNING_ROLES = new Set(['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'RECTORAT', 'SCOLARITE', 'JURY', 'FACULTE', 'DEPARTEMENT'])
@@ -69,7 +70,7 @@ export async function POST(request: NextRequest) {
     // Fetch real tenant data
     const tenantDb = await db.tenant.findUnique({
       where: { id: tenantId },
-      select: { id: true, name: true, shortName: true, address: true, city: true, country: true, ministry: true, phone: true, email: true, logo: true, stamp: true, signature: true, secondarySignature: true, thirdSignature: true, secondarySignerName: true, secondarySignerTitle: true, thirdSignerName: true, thirdSignerTitle: true, headerLanguageMode: true, arabicCountry: true, arabicName: true, arabicMinistry: true, rectorName: true, rectorTitle: true, motto: true },
+      select: { id: true, name: true, shortName: true, address: true, city: true, country: true, ministry: true, phone: true, email: true, logo: true, stamp: true, signature: true, secondarySignature: true, thirdSignature: true, secondarySignerName: true, secondarySignerTitle: true, thirdSignerName: true, thirdSignerTitle: true, headerLanguageMode: true, arabicCountry: true, arabicName: true, arabicMinistry: true, headerLinesFr: true, headerLinesAr: true, settings: { select: { primaryColor: true, secondaryColor: true, accentColor: true } }, rectorName: true, rectorTitle: true, motto: true },
     })
 
     if (!tenantDb) {
@@ -109,7 +110,12 @@ export async function POST(request: NextRequest) {
       arabicMinistry: tenantDb.arabicMinistry || '',
       arabicCountry: tenantDb.arabicCountry || '',
       headerLanguageMode: tenantDb.headerLanguageMode,
-      arabicHeaderImage: renderArabicHeader({ headerLanguageMode: tenantDb.headerLanguageMode, arabicCountry: tenantDb.arabicCountry || '', arabicMinistry: tenantDb.arabicMinistry || '', arabicName: tenantDb.arabicName || '' }),
+      headerLinesFr: parseHeaderLines(tenantDb.headerLinesFr) ?? undefined,
+      headerLinesAr: parseHeaderLines(tenantDb.headerLinesAr) ?? undefined,
+      primaryColor: tenantDb.settings?.primaryColor || undefined,
+      secondaryColor: tenantDb.settings?.secondaryColor || undefined,
+      accentColor: tenantDb.settings?.accentColor || undefined,
+      arabicHeaderImage: renderArabicHeader({ headerLanguageMode: tenantDb.headerLanguageMode, headerLinesAr: parseHeaderLines(tenantDb.headerLinesAr) ?? undefined, arabicCountry: tenantDb.arabicCountry || '', arabicMinistry: tenantDb.arabicMinistry || '', arabicName: tenantDb.arabicName || '', primaryColor: tenantDb.settings?.primaryColor }),
       rectorName: tenantDb.rectorName || '',
       rectorTitle: tenantDb.rectorTitle || 'Recteur',
       motto: tenantDb.motto || '',

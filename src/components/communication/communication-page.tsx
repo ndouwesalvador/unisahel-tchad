@@ -59,7 +59,7 @@ const channelLabels: Record<CommunicationChannel, string> = {
 
 const statusConfig: Record<CommunicationStatus, { label: string; className: string }> = {
   PENDING: { label: 'En attente', className: 'bg-amber-50 text-amber-700 border-0' },
-  SENT: { label: 'Envoyée', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0' },
+  SENT: { label: 'Envoyée', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0' },
   FAILED: { label: 'Échouée', className: 'bg-red-50 text-red-700 border-0' },
 }
 
@@ -203,7 +203,7 @@ export function CommunicationPage() {
   return (
     <div className="space-y-6">
       <Card className="overflow-hidden">
-        <div className="bg-gradient-to-r from-[#1a2744] via-[#1f3050] to-[#2d7a4f] p-6 text-white">
+        <div className="bg-gradient-to-r from-[var(--institution-primary)] via-[var(--institution-primary-light)] to-[var(--institution-secondary)] p-6 text-white">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
               <h1 className="text-2xl font-bold">Messages & diffusions</h1>
@@ -212,7 +212,7 @@ export function CommunicationPage() {
             <div className="flex flex-wrap gap-2">
               <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button className="bg-[#d4a853] hover:bg-[#c59745] text-white">
+                  <Button className="bg-[var(--institution-accent)] hover:bg-[#c59745] text-white">
                     <Plus className="mr-2 size-4" />
                     Nouvelle diffusion
                   </Button>
@@ -271,12 +271,12 @@ export function CommunicationPage() {
                       <Label htmlFor="communication-content">Message</Label>
                       <Textarea id="communication-content" rows={5} value={form.content} onChange={(event) => updateForm({ content: event.target.value })} placeholder="Contenu de la diffusion..." />
                     </div>
-                    <p className="rounded-lg bg-[#1a274408] px-3 py-2 text-xs text-gray-600">
+                    <p className="rounded-lg bg-[var(--institution-primary-08)] px-3 py-2 text-xs text-gray-600">
                       Le canal choisi est enregistré comme mode prévu. L&apos;envoi externe email/SMS/push n&apos;est pas simulé depuis cet écran.
                     </p>
                     <div className="flex justify-end gap-2">
                       <Button variant="outline" onClick={() => setDialogOpen(false)}>Annuler</Button>
-                      <Button className="bg-[#2d7a4f] hover:bg-[#236b40] text-white" disabled={isSubmitting} onClick={createCommunication}>
+                      <Button className="bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white" disabled={isSubmitting} onClick={createCommunication}>
                         <Send className="mr-2 size-4" />
                         {isSubmitting ? 'Enregistrement...' : 'Enregistrer'}
                       </Button>
@@ -294,15 +294,15 @@ export function CommunicationPage() {
       </Card>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <Card><CardContent className="p-4"><p className="text-xs text-gray-500">Total</p><p className="text-2xl font-bold text-[#1a2744]">{stats.total}</p></CardContent></Card>
-        <Card><CardContent className="p-4"><p className="text-xs text-gray-500">Envoyées</p><p className="text-2xl font-bold text-[#2d7a4f]">{stats.sent}</p></CardContent></Card>
+        <Card><CardContent className="p-4"><p className="text-xs text-gray-500">Total</p><p className="text-2xl font-bold text-[var(--institution-primary)]">{stats.total}</p></CardContent></Card>
+        <Card><CardContent className="p-4"><p className="text-xs text-gray-500">Envoyées</p><p className="text-2xl font-bold text-[var(--institution-secondary)]">{stats.sent}</p></CardContent></Card>
         <Card><CardContent className="p-4"><p className="text-xs text-gray-500">En attente</p><p className="text-2xl font-bold text-amber-600">{stats.pending}</p></CardContent></Card>
         <Card><CardContent className="p-4"><p className="text-xs text-gray-500">Échouées</p><p className="text-2xl font-bold text-red-600">{stats.failed}</p></CardContent></Card>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-[#1a2744]">
+          <CardTitle className="flex items-center gap-2 text-[var(--institution-primary)]">
             <Inbox className="size-5" />
             Historique des diffusions
           </CardTitle>
@@ -313,7 +313,7 @@ export function CommunicationPage() {
           ) : sortedCommunications.length === 0 ? (
             <div className="py-12 text-center">
               <MessageSquare className="mx-auto mb-3 size-10 text-gray-300" />
-              <p className="text-sm font-medium text-[#1a2744]">Aucune communication enregistrée</p>
+              <p className="text-sm font-medium text-[var(--institution-primary)]">Aucune communication enregistrée</p>
               <p className="mt-1 text-xs text-gray-500">Créez une diffusion pour alimenter cet onglet avec de vraies données.</p>
             </div>
           ) : (
@@ -336,19 +336,19 @@ export function CommunicationPage() {
                     <TableRow key={item.id}>
                       <TableCell>
                         <div>
-                          <p className="font-medium text-[#1a2744]">{item.subject}</p>
+                          <p className="font-medium text-[var(--institution-primary)]">{item.subject}</p>
                           {item.content && <p className="line-clamp-1 text-xs text-gray-500">{item.content}</p>}
                         </div>
                       </TableCell>
                       <TableCell>{item.audience}</TableCell>
                       <TableCell>
                         <span className="inline-flex items-center gap-1 text-sm">
-                          <Icon className="size-4 text-[#2d7a4f]" />
+                          <Icon className="size-4 text-[var(--institution-secondary)]" />
                           {channelLabels[item.channel]}
                         </span>
                       </TableCell>
                       <TableCell>
-                        <Badge className="border-0 bg-[#1a274410] text-[#1a2744]">{typeLabels[item.type]}</Badge>
+                        <Badge className="border-0 bg-[var(--institution-primary-10)] text-[var(--institution-primary)]">{typeLabels[item.type]}</Badge>
                       </TableCell>
                       <TableCell>
                         <Badge className={statusConfig[item.status]?.className}>{statusConfig[item.status]?.label || item.status}</Badge>
@@ -360,7 +360,7 @@ export function CommunicationPage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-8 px-2 text-xs text-[#2d7a4f]"
+                              className="h-8 px-2 text-xs text-[var(--institution-secondary)]"
                               disabled={busyId === item.id}
                               onClick={() => updateCommunicationStatus(item.id, 'SENT')}
                             >

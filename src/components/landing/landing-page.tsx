@@ -29,7 +29,7 @@ const steps = [
 function Brand({ light = false }: { light?: boolean }) {
   return <span className="inline-flex items-center gap-2.5" aria-label="UniSahel">
     <span className={`flex size-9 items-center justify-center rounded-xl ${light ? 'bg-white/10 ring-1 ring-white/20' : 'bg-[#e5f2eb]'}`}>
-      <GraduationCap className={`size-5 ${light ? 'text-white' : 'text-[#146a48]'}`} aria-hidden="true" />
+      <GraduationCap className={`size-5 ${light ? 'text-white' : 'text-[var(--institution-secondary-dark)]'}`} aria-hidden="true" />
     </span>
     <span className={`text-xl font-extrabold tracking-[-0.055em] ${light ? 'text-white' : 'text-[#142b35]'}`}>Uni<span className={light ? 'text-[#88dfab]' : 'text-[#137247]'}>Sahel</span></span>
   </span>
@@ -47,7 +47,7 @@ function Header() {
       </nav>
       <div className="hidden items-center gap-3 md:flex">
         <button type="button" onClick={() => setView('login')} className="rounded-xl px-4 py-3 text-sm font-bold text-[#17313a] transition-colors hover:bg-[#eef4f1] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#137247]">Se connecter</button>
-        <button type="button" onClick={() => setView('signup')} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#146a48] px-5 text-sm font-bold text-white shadow-[0_8px_20px_rgba(20,106,72,.18)] transition-colors hover:bg-[#0e5438] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#137247]">Créer un établissement <ArrowRight className="size-4" aria-hidden="true" /></button>
+        <button type="button" onClick={() => setView('signup')} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[var(--institution-secondary-dark)] px-5 text-sm font-bold text-white shadow-[0_8px_20px_rgba(20,106,72,.18)] transition-colors hover:bg-[#0e5438] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#137247]">Créer un établissement <ArrowRight className="size-4" aria-hidden="true" /></button>
       </div>
       <button type="button" className="inline-flex size-11 items-center justify-center rounded-xl border border-[#dce5e5] text-[#17313a] md:hidden" aria-label={menuOpen ? 'Fermer le menu' : 'Ouvrir le menu'} aria-expanded={menuOpen} aria-controls="menu-mobile" onClick={() => setMenuOpen((open) => !open)}>{menuOpen ? <X className="size-5" /> : <Menu className="size-5" />}</button>
     </div>
@@ -55,7 +55,7 @@ function Header() {
       {navigation.map((item) => <a key={item.href} href={item.href} onClick={() => setMenuOpen(false)} className="block rounded-lg px-3 py-3 text-sm font-semibold text-[#17313a] hover:bg-[#eef4f1]">{item.label}</a>)}
       <div className="mt-3 grid gap-2 border-t border-[#dce5e5] pt-4">
         <button type="button" onClick={() => { setMenuOpen(false); setView('login') }} className="min-h-11 rounded-xl border border-[#cbd9d3] text-sm font-bold text-[#17313a]">Se connecter</button>
-        <button type="button" onClick={() => { setMenuOpen(false); setView('signup') }} className="min-h-11 rounded-xl bg-[#146a48] px-4 text-sm font-bold text-white">Créer un établissement</button>
+        <button type="button" onClick={() => { setMenuOpen(false); setView('signup') }} className="min-h-11 rounded-xl bg-[var(--institution-secondary-dark)] px-4 text-sm font-bold text-white">Créer un établissement</button>
       </div>
     </nav>}
   </header>
@@ -66,12 +66,12 @@ function ProductIllustration() {
     <div className="absolute -inset-5 rounded-[2rem] bg-[#71c99d]/10 blur-3xl" aria-hidden="true" />
     <div className="relative overflow-hidden rounded-[22px] border border-white/20 bg-[#f7faf8] shadow-[0_28px_80px_rgba(1,17,24,.34)]">
       <div className="flex h-12 items-center justify-between border-b border-[#dce6e0] bg-white px-5">
-        <span className="flex items-center gap-2 text-xs font-extrabold tracking-tight text-[#14373c]"><span className="flex size-6 items-center justify-center rounded-md bg-[#e6f3eb]"><GraduationCap className="size-3.5 text-[#146a48]" /></span> UniSahel</span>
-        <span className="rounded-full bg-[#e5f2eb] px-2.5 py-1 text-[10px] font-bold text-[#146a48]">Espace établissement</span>
+        <span className="flex items-center gap-2 text-xs font-extrabold tracking-tight text-[#14373c]"><span className="flex size-6 items-center justify-center rounded-md bg-[#e6f3eb]"><GraduationCap className="size-3.5 text-[var(--institution-secondary-dark)]" /></span> UniSahel</span>
+        <span className="rounded-full bg-[#e5f2eb] px-2.5 py-1 text-[10px] font-bold text-[var(--institution-secondary-dark)]">Espace établissement</span>
       </div>
       <div className="grid grid-cols-[94px_1fr] sm:grid-cols-[138px_1fr]">
         <div className="space-y-2 border-r border-[#e2ebe6] bg-[#edf4f0] p-3 sm:p-4" aria-hidden="true">
-          {['Vue d’ensemble', 'Structure', 'Étudiants', 'Notes', 'Documents'].map((label, index) => <div key={label} className={`rounded-md px-2 py-2 text-[9px] font-bold sm:text-[11px] ${index === 1 ? 'bg-white text-[#146a48] shadow-sm' : 'text-[#647b76]'}`}>{label}</div>)}
+          {['Vue d’ensemble', 'Structure', 'Étudiants', 'Notes', 'Documents'].map((label, index) => <div key={label} className={`rounded-md px-2 py-2 text-[9px] font-bold sm:text-[11px] ${index === 1 ? 'bg-white text-[var(--institution-secondary-dark)] shadow-sm' : 'text-[#647b76]'}`}>{label}</div>)}
         </div>
         <div className="min-w-0 p-4 sm:p-6">
           <div className="mb-1 text-[9px] font-bold uppercase tracking-[.18em] text-[#557169] sm:text-[10px]">Parcours académique</div>
@@ -83,7 +83,7 @@ function ProductIllustration() {
               { icon: ClipboardCheck, name: 'Notes et délibérations', tag: 'Évaluer' },
               { icon: FileText, name: 'Documents académiques', tag: 'Éditer' },
             ].map((row, index) => <div key={row.name} className="flex items-center gap-2 rounded-lg border border-[#e4ebe7] bg-white p-2.5 sm:gap-3 sm:p-3">
-              <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-[#e8f4ed] text-[#146a48]"><row.icon className="size-4" /></div>
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-[#e8f4ed] text-[var(--institution-secondary-dark)]"><row.icon className="size-4" /></div>
               <span className="min-w-0 flex-1 text-[10px] font-bold leading-tight text-[#19363a] sm:text-xs">{row.name}</span>
               <span className="hidden text-[10px] font-semibold text-[#607c70] sm:block">{row.tag}</span>
               {index < 3 && <Check className="size-3.5 text-[#258b59]" aria-hidden="true" />}
@@ -118,7 +118,7 @@ function Hero() {
 
 function SectionHeading({ eyebrow, title, description }: { eyebrow: string; title: string; description: string }) {
   return <div className="max-w-2xl">
-    <p className="mb-4 text-xs font-extrabold uppercase tracking-[.18em] text-[#146a48]">{eyebrow}</p>
+    <p className="mb-4 text-xs font-extrabold uppercase tracking-[.18em] text-[var(--institution-secondary-dark)]">{eyebrow}</p>
     <h2 className="text-3xl font-extrabold leading-tight tracking-[-.045em] text-[#16343a] sm:text-4xl lg:text-[2.8rem]">{title}</h2>
     <p className="mt-5 text-base leading-relaxed text-[#475f63] sm:text-lg">{description}</p>
   </div>
@@ -130,7 +130,7 @@ function Platform() {
       <SectionHeading eyebrow="La plateforme" title="Les opérations essentielles, dans le bon ordre." description="Chaque étape s’appuie sur la précédente. Vos équipes travaillent à partir des données réelles de votre établissement, dans un cadre partagé." />
       <div className="mt-12 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {capabilities.map((item) => <article key={item.number} className="rounded-2xl border border-[#dce8e1] bg-white p-6 shadow-[0_8px_30px_rgba(13,48,37,.035)]">
-          <div className="mb-9 flex items-start justify-between"><span className="flex size-12 items-center justify-center rounded-xl bg-[#e5f3ea] text-[#146a48]"><item.icon className="size-6" aria-hidden="true" /></span><span className="text-xs font-extrabold tracking-widest text-[#789187]">{item.number}</span></div>
+          <div className="mb-9 flex items-start justify-between"><span className="flex size-12 items-center justify-center rounded-xl bg-[#e5f3ea] text-[var(--institution-secondary-dark)]"><item.icon className="size-6" aria-hidden="true" /></span><span className="text-xs font-extrabold tracking-widest text-[#789187]">{item.number}</span></div>
           <h3 className="text-xl font-extrabold tracking-tight text-[#17363b]">{item.title}</h3><p className="mt-3 text-sm leading-relaxed text-[#52686a]">{item.description}</p>
         </article>)}
       </div>
@@ -159,8 +159,8 @@ function Security() {
     <div className="mx-auto grid max-w-7xl gap-10 px-5 sm:px-8 lg:grid-cols-[1fr_1.1fr] lg:items-center lg:gap-20">
       <SectionHeading eyebrow="Accès et sécurité" title="Chacun travaille dans son périmètre." description="Les espaces et les actions dépendent du rôle de l’utilisateur. Les informations sont rattachées à l’établissement concerné." />
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="rounded-2xl border border-[#cce3d3] bg-white p-6"><ShieldCheck className="size-7 text-[#146a48]" aria-hidden="true" /><h3 className="mt-5 font-extrabold text-[#17363b]">Droits par rôle</h3><p className="mt-2 text-sm leading-relaxed text-[#52686a]">Administration, scolarité, enseignement et étudiants disposent d’espaces adaptés à leurs tâches.</p></div>
-        <div className="rounded-2xl border border-[#cce3d3] bg-white p-6"><LockKeyhole className="size-7 text-[#146a48]" aria-hidden="true" /><h3 className="mt-5 font-extrabold text-[#17363b]">Données de l’établissement</h3><p className="mt-2 text-sm leading-relaxed text-[#52686a]">Les dossiers sont consultés dans le contexte de l’établissement auquel ils appartiennent.</p></div>
+        <div className="rounded-2xl border border-[#cce3d3] bg-white p-6"><ShieldCheck className="size-7 text-[var(--institution-secondary-dark)]" aria-hidden="true" /><h3 className="mt-5 font-extrabold text-[#17363b]">Droits par rôle</h3><p className="mt-2 text-sm leading-relaxed text-[#52686a]">Administration, scolarité, enseignement et étudiants disposent d’espaces adaptés à leurs tâches.</p></div>
+        <div className="rounded-2xl border border-[#cce3d3] bg-white p-6"><LockKeyhole className="size-7 text-[var(--institution-secondary-dark)]" aria-hidden="true" /><h3 className="mt-5 font-extrabold text-[#17363b]">Données de l’établissement</h3><p className="mt-2 text-sm leading-relaxed text-[#52686a]">Les dossiers sont consultés dans le contexte de l’établissement auquel ils appartiennent.</p></div>
       </div>
     </div>
   </section>
@@ -169,10 +169,10 @@ function Security() {
 function Closing() {
   const setView = useAppStore((state) => state.setView)
   return <section className="bg-white py-20 sm:py-28"><div className="mx-auto max-w-4xl px-5 text-center sm:px-8">
-    <p className="mb-4 text-xs font-extrabold uppercase tracking-[.18em] text-[#146a48]">Commencer</p>
+    <p className="mb-4 text-xs font-extrabold uppercase tracking-[.18em] text-[var(--institution-secondary-dark)]">Commencer</p>
     <h2 className="text-3xl font-extrabold leading-tight tracking-[-.045em] text-[#16343a] sm:text-5xl">Votre établissement mérite une gestion plus claire.</h2>
     <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-[#475f63] sm:text-lg">Créez votre espace et configurez la structure qui correspond réellement à votre organisation.</p>
-    <button type="button" onClick={() => setView('signup')} className="mt-8 inline-flex min-h-13 items-center justify-center gap-2 rounded-xl bg-[#146a48] px-7 py-3.5 text-sm font-extrabold text-white transition-colors hover:bg-[#0e5438] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#137247]">Créer mon établissement <ArrowRight className="size-4" aria-hidden="true" /></button>
+    <button type="button" onClick={() => setView('signup')} className="mt-8 inline-flex min-h-13 items-center justify-center gap-2 rounded-xl bg-[var(--institution-secondary-dark)] px-7 py-3.5 text-sm font-extrabold text-white transition-colors hover:bg-[#0e5438] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#137247]">Créer mon établissement <ArrowRight className="size-4" aria-hidden="true" /></button>
   </div></section>
 }
 

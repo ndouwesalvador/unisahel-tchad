@@ -66,8 +66,8 @@ interface Payment {
 }
 
 const statutConfig: Record<string, { label: string; className: string }> = {
-  paye: { label: 'Paye', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0' },
-  en_attente: { label: 'En attente', className: 'bg-[#d4a85315] text-[#d4a853] border-0' },
+  paye: { label: 'Paye', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0' },
+  en_attente: { label: 'En attente', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0' },
   annule: { label: 'Annule', className: 'bg-[#c6282815] text-[#c62828] border-0' },
 }
 
@@ -287,10 +287,12 @@ export function PaymentsPage() {
         return
       }
       const student = payment.student
+      const receiptColor = getComputedStyle(document.documentElement).getPropertyValue('--institution-primary').trim()
       win.document.write(`
         <html><head><title>Recu ${payment.receiptNumber || payment.id}</title>
         <style>
-          body { font-family: Arial, sans-serif; padding: 40px; color: #1a2744; }
+          :root { --institution-primary: ${/^#[0-9a-fA-F]{6}$/.test(receiptColor) ? receiptColor : '#1a2744'}; }
+          body { font-family: Arial, sans-serif; padding: 40px; color: var(--institution-primary); }
           h1 { font-size: 18px; margin-bottom: 4px; }
           .muted { color: #6b7280; font-size: 12px; }
           table { width: 100%; margin-top: 24px; border-collapse: collapse; }
@@ -363,7 +365,7 @@ export function PaymentsPage() {
       {/* Gradient Hero Section - Revenue du jour / Revenue du mois */}
       <motion.div variants={itemVariants}>
         <Card className="overflow-hidden">
-          <div className="bg-gradient-to-r from-[#1a2744] via-[#1f3050] to-[#2d7a4f] p-6 text-white relative">
+          <div className="bg-gradient-to-r from-[var(--institution-primary)] via-[var(--institution-primary-light)] to-[var(--institution-secondary)] p-6 text-white relative">
             <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PHBhdGggZD0iTTM2IDE0YzAtMi4yMS0xLjc5LTQtNC00cy00IDEuNzktNCA0IDEuNzkgNCA0IDQgNC0xLjc5IDQtNHptLTQgMmMtMS4xIDAtMi0uOS0yLTJzLjktMiAyLTIgMiAuOSAyIDItLjkgMi0yIDJ6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-50" />
             <div className="relative">
               <div className="flex items-center justify-between mb-6">
@@ -390,7 +392,7 @@ export function PaymentsPage() {
                             <span>{newPayment.studentLabel}</span>
                             <button
                               type="button"
-                              className="text-xs text-[#2d7a4f] hover:underline"
+                              className="text-xs text-[var(--institution-secondary)] hover:underline"
                               onClick={() => setNewPayment((p) => ({ ...p, studentId: '', studentLabel: '' }))}
                             >
                               Changer
@@ -455,7 +457,7 @@ export function PaymentsPage() {
                         <Label className="text-sm">Reference</Label>
                         <Input placeholder="MM-2024-XXX" value={newPayment.reference} onChange={(e) => setNewPayment(p => ({ ...p, reference: e.target.value }))} />
                       </div>
-                      <Button className="w-full bg-[#2d7a4f] hover:bg-[#236b40] text-white" disabled={isSubmittingPayment} onClick={handleCreatePayment}>
+                      <Button className="w-full bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white" disabled={isSubmittingPayment} onClick={handleCreatePayment}>
                         {isSubmittingPayment ? 'Enregistrement...' : 'Enregistrer le paiement'}
                       </Button>
                     </div>
@@ -468,7 +470,7 @@ export function PaymentsPage() {
                 <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10">
                   <div className="flex items-center gap-2 mb-2">
                     <div className="w-8 h-8 rounded-lg bg-white/15 flex items-center justify-center">
-                      <Zap className="size-4 text-[#d4a853]" />
+                      <Zap className="size-4 text-[var(--institution-accent)]" />
                     </div>
                     <span className="text-xs text-white/70 uppercase tracking-wide font-medium">Revenue du jour</span>
                   </div>
@@ -476,7 +478,7 @@ export function PaymentsPage() {
                     {animatedJour.toLocaleString('fr-FR')} <span className="text-base font-normal text-white/60">FCFA</span>
                   </p>
                   <div className="flex items-center gap-1 mt-2">
-                    <ArrowUpRight className="size-3 text-[#2d7a4f]" />
+                    <ArrowUpRight className="size-3 text-[var(--institution-secondary)]" />
                     <span className="text-[10px] font-medium text-[#4ade80]">+8.3%</span>
                     <span className="text-[10px] text-white/50">vs hier</span>
                   </div>
@@ -484,7 +486,7 @@ export function PaymentsPage() {
                 <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10">
                   <div className="flex items-center gap-2 mb-2">
                     <div className="w-8 h-8 rounded-lg bg-white/15 flex items-center justify-center">
-                      <CalendarDays className="size-4 text-[#d4a853]" />
+                      <CalendarDays className="size-4 text-[var(--institution-accent)]" />
                     </div>
                     <span className="text-xs text-white/70 uppercase tracking-wide font-medium">Revenue du mois</span>
                   </div>
@@ -492,7 +494,7 @@ export function PaymentsPage() {
                     {animatedMois.toLocaleString('fr-FR')} <span className="text-base font-normal text-white/60">FCFA</span>
                   </p>
                   <div className="flex items-center gap-1 mt-2">
-                    <ArrowUpRight className="size-3 text-[#2d7a4f]" />
+                    <ArrowUpRight className="size-3 text-[var(--institution-secondary)]" />
                     <span className="text-[10px] font-medium text-[#4ade80]">+12.5%</span>
                     <span className="text-[10px] text-white/50">vs mois dernier</span>
                   </div>
@@ -506,11 +508,11 @@ export function PaymentsPage() {
       {/* Recent Payments Ticker */}
       <motion.div variants={itemVariants}>
         <Card className="overflow-hidden">
-          <div className="bg-gradient-to-r from-[#2d7a4f08] via-transparent to-[#d4a85308] border-b border-gray-100 p-3">
+          <div className="bg-gradient-to-r from-[var(--institution-secondary-08)] via-transparent to-[var(--institution-accent-08)] border-b border-gray-100 p-3">
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-1.5 shrink-0">
-                <div className="w-2 h-2 rounded-full bg-[#2d7a4f] animate-pulse" />
-                <span className="text-[10px] font-semibold text-[#1a2744] uppercase tracking-wide">Derniers paiements</span>
+                <div className="w-2 h-2 rounded-full bg-[var(--institution-secondary)] animate-pulse" />
+                <span className="text-[10px] font-semibold text-[var(--institution-primary)] uppercase tracking-wide">Derniers paiements</span>
               </div>
               <div className="flex items-center gap-3 overflow-x-auto">
                 {recentPayments.map((p: Payment, i: number) => {
@@ -523,10 +525,10 @@ export function PaymentsPage() {
                       transition={{ duration: 0.4, delay: 0.1 * i }}
                       className="flex items-center gap-2 bg-white rounded-lg px-3 py-1.5 border border-gray-100 shrink-0"
                     >
-                      <Receipt className="size-3 text-[#2d7a4f]" />
-                      <span className="text-xs font-medium text-[#1a2744] truncate max-w-[120px]">{p.etudiant.split(' ')[0]}</span>
-                      <span className="text-xs font-bold text-[#2d7a4f]">{formatFCFA(p.montant)}</span>
-                      <Badge className="text-[8px] px-1.5 py-0 bg-[#2d7a4f15] text-[#2d7a4f] border-0">
+                      <Receipt className="size-3 text-[var(--institution-secondary)]" />
+                      <span className="text-xs font-medium text-[var(--institution-primary)] truncate max-w-[120px]">{p.etudiant.split(' ')[0]}</span>
+                      <span className="text-xs font-bold text-[var(--institution-secondary)]">{formatFCFA(p.montant)}</span>
+                      <Badge className="text-[8px] px-1.5 py-0 bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0">
                         {methode?.label || 'N/A'}
                       </Badge>
                     </motion.div>
@@ -543,21 +545,21 @@ export function PaymentsPage() {
         {/* Total encaisse */}
         <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
           <Card className="overflow-hidden relative h-full">
-            <div className="absolute inset-0 bg-gradient-to-br from-[#2d7a4f08] to-[#2d7a4f00] pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-br from-[var(--institution-secondary-08)] to-[var(--institution-secondary-00)] pointer-events-none" />
             <CardContent className="p-4 relative">
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Total encaisse</p>
-                  <p className="text-xl font-bold text-[#2d7a4f] mt-1">{formatFCFA(totalEncaisse)}</p>
+                  <p className="text-xl font-bold text-[var(--institution-secondary)] mt-1">{formatFCFA(totalEncaisse)}</p>
                   <p className="text-xs text-gray-400 mt-1">{realPayments.filter((p: Payment) => p.statut === 'paye').length} paiements</p>
                 </div>
-                <div className="w-10 h-10 rounded-xl bg-[#2d7a4f15] flex items-center justify-center">
-                  <TrendingUp className="size-5 text-[#2d7a4f]" />
+                <div className="w-10 h-10 rounded-xl bg-[var(--institution-secondary-15)] flex items-center justify-center">
+                  <TrendingUp className="size-5 text-[var(--institution-secondary)]" />
                 </div>
               </div>
               <div className="flex items-center gap-1 mt-2">
-                <ArrowUpRight className="size-3 text-[#2d7a4f]" />
-                <span className="text-[10px] font-medium text-[#2d7a4f]">+12.5%</span>
+                <ArrowUpRight className="size-3 text-[var(--institution-secondary)]" />
+                <span className="text-[10px] font-medium text-[var(--institution-secondary)]">+12.5%</span>
                 <span className="text-[10px] text-gray-400">vs mois dernier</span>
               </div>
             </CardContent>
@@ -567,21 +569,21 @@ export function PaymentsPage() {
         {/* En attente */}
         <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
           <Card className="overflow-hidden relative h-full">
-            <div className="absolute inset-0 bg-gradient-to-br from-[#d4a85308] to-[#d4a85300] pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-br from-[var(--institution-accent-08)] to-[var(--institution-accent-00)] pointer-events-none" />
             <CardContent className="p-4 relative">
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">En attente</p>
-                  <p className="text-xl font-bold text-[#d4a853] mt-1">{formatFCFA(totalEnAttente)}</p>
+                  <p className="text-xl font-bold text-[var(--institution-accent)] mt-1">{formatFCFA(totalEnAttente)}</p>
                   <p className="text-xs text-gray-400 mt-1">{realPayments.filter((p: Payment) => p.statut === 'en_attente').length} paiements</p>
                 </div>
-                <div className="w-10 h-10 rounded-xl bg-[#d4a85315] flex items-center justify-center">
-                  <Clock className="size-5 text-[#d4a853]" />
+                <div className="w-10 h-10 rounded-xl bg-[var(--institution-accent-15)] flex items-center justify-center">
+                  <Clock className="size-5 text-[var(--institution-accent)]" />
                 </div>
               </div>
               <div className="flex items-center gap-1 mt-2">
-                <ArrowUpRight className="size-3 text-[#d4a853]" />
-                <span className="text-[10px] font-medium text-[#d4a853]">+3.2%</span>
+                <ArrowUpRight className="size-3 text-[var(--institution-accent)]" />
+                <span className="text-[10px] font-medium text-[var(--institution-accent)]">+3.2%</span>
                 <span className="text-[10px] text-gray-400">vs mois dernier</span>
               </div>
             </CardContent>
@@ -604,8 +606,8 @@ export function PaymentsPage() {
                 </div>
               </div>
               <div className="flex items-center gap-1 mt-2">
-                <ArrowDownRight className="size-3 text-[#2d7a4f]" />
-                <span className="text-[10px] font-medium text-[#2d7a4f]">-8.1%</span>
+                <ArrowDownRight className="size-3 text-[var(--institution-secondary)]" />
+                <span className="text-[10px] font-medium text-[var(--institution-secondary)]">-8.1%</span>
                 <span className="text-[10px] text-gray-400">vs mois dernier</span>
               </div>
             </CardContent>
@@ -615,21 +617,21 @@ export function PaymentsPage() {
         {/* Mobile Money */}
         <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
           <Card className="overflow-hidden relative h-full">
-            <div className="absolute inset-0 bg-gradient-to-br from-[#d4a85308] to-[#2d7a4f05] pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-br from-[var(--institution-accent-08)] to-[var(--institution-secondary-05)] pointer-events-none" />
             <CardContent className="p-4 relative">
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Mobile Money</p>
-                  <p className="text-xl font-bold text-[#d4a853] mt-1">{formatFCFA(totalMobileMoney)}</p>
+                  <p className="text-xl font-bold text-[var(--institution-accent)] mt-1">{formatFCFA(totalMobileMoney)}</p>
                   <p className="text-xs text-gray-400 mt-1">{realPayments.filter((p: Payment) => p.statut === 'paye' && p.methode === 'mobile_money').length} transactions</p>
                 </div>
-                <div className="w-10 h-10 rounded-xl bg-[#d4a85315] flex items-center justify-center">
-                  <Smartphone className="size-5 text-[#d4a853]" />
+                <div className="w-10 h-10 rounded-xl bg-[var(--institution-accent-15)] flex items-center justify-center">
+                  <Smartphone className="size-5 text-[var(--institution-accent)]" />
                 </div>
               </div>
               <div className="flex items-center gap-1 mt-2">
-                <ArrowUpRight className="size-3 text-[#2d7a4f]" />
-                <span className="text-[10px] font-medium text-[#2d7a4f]">+22.0%</span>
+                <ArrowUpRight className="size-3 text-[var(--institution-secondary)]" />
+                <span className="text-[10px] font-medium text-[var(--institution-secondary)]">+22.0%</span>
                 <span className="text-[10px] text-gray-400">vs mois dernier</span>
               </div>
             </CardContent>
@@ -643,7 +645,7 @@ export function PaymentsPage() {
         <motion.div variants={itemVariants}>
           <Card className="h-full">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold text-[#1a2744]">Repartition par methode de paiement</CardTitle>
+              <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Repartition par methode de paiement</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Mobile Money - 40% */}
@@ -651,17 +653,17 @@ export function PaymentsPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <motion.div whileHover={{ scale: 1.1 }} transition={{ duration: 0.15 }}>
-                      <div className="w-7 h-7 rounded-lg bg-[#d4a85315] flex items-center justify-center">
-                        <Smartphone className="size-3.5 text-[#d4a853]" />
+                      <div className="w-7 h-7 rounded-lg bg-[var(--institution-accent-15)] flex items-center justify-center">
+                        <Smartphone className="size-3.5 text-[var(--institution-accent)]" />
                       </div>
                     </motion.div>
-                    <span className="text-sm font-medium text-[#1a2744]">Mobile Money</span>
+                    <span className="text-sm font-medium text-[var(--institution-primary)]">Mobile Money</span>
                   </div>
-                  <span className="text-sm font-semibold text-[#1a2744]">{mobileMoneyPercent}%</span>
+                  <span className="text-sm font-semibold text-[var(--institution-primary)]">{mobileMoneyPercent}%</span>
                 </div>
                 <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
                   <motion.div
-                    className="h-full rounded-full bg-gradient-to-r from-[#d4a853] to-[#e0be72]"
+                    className="h-full rounded-full bg-gradient-to-r from-[var(--institution-accent)] to-[#e0be72]"
                     initial={{ width: 0 }}
                     animate={{ width: `${mobileMoneyPercent}%` }}
                     transition={{ duration: 1.0, delay: 0.2, ease: 'easeOut' }}
@@ -674,17 +676,17 @@ export function PaymentsPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <motion.div whileHover={{ scale: 1.1 }} transition={{ duration: 0.15 }}>
-                      <div className="w-7 h-7 rounded-lg bg-[#2d7a4f15] flex items-center justify-center">
-                        <Banknote className="size-3.5 text-[#2d7a4f]" />
+                      <div className="w-7 h-7 rounded-lg bg-[var(--institution-secondary-15)] flex items-center justify-center">
+                        <Banknote className="size-3.5 text-[var(--institution-secondary)]" />
                       </div>
                     </motion.div>
-                    <span className="text-sm font-medium text-[#1a2744]">Especes</span>
+                    <span className="text-sm font-medium text-[var(--institution-primary)]">Especes</span>
                   </div>
-                  <span className="text-sm font-semibold text-[#1a2744]">{cashPercent}%</span>
+                  <span className="text-sm font-semibold text-[var(--institution-primary)]">{cashPercent}%</span>
                 </div>
                 <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
                   <motion.div
-                    className="h-full rounded-full bg-gradient-to-r from-[#2d7a4f] to-[#3da66a]"
+                    className="h-full rounded-full bg-gradient-to-r from-[var(--institution-secondary)] to-[var(--institution-secondary-bright)]"
                     initial={{ width: 0 }}
                     animate={{ width: `${cashPercent}%` }}
                     transition={{ duration: 1.0, delay: 0.35, ease: 'easeOut' }}
@@ -697,17 +699,17 @@ export function PaymentsPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <motion.div whileHover={{ scale: 1.1 }} transition={{ duration: 0.15 }}>
-                      <div className="w-7 h-7 rounded-lg bg-[#1a274415] flex items-center justify-center">
-                        <Building className="size-3.5 text-[#1a2744]" />
+                      <div className="w-7 h-7 rounded-lg bg-[var(--institution-primary-15)] flex items-center justify-center">
+                        <Building className="size-3.5 text-[var(--institution-primary)]" />
                       </div>
                     </motion.div>
-                    <span className="text-sm font-medium text-[#1a2744]">Virement</span>
+                    <span className="text-sm font-medium text-[var(--institution-primary)]">Virement</span>
                   </div>
-                  <span className="text-sm font-semibold text-[#1a2744]">{bankPercent}%</span>
+                  <span className="text-sm font-semibold text-[var(--institution-primary)]">{bankPercent}%</span>
                 </div>
                 <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
                   <motion.div
-                    className="h-full rounded-full bg-gradient-to-r from-[#1a2744] to-[#3a4d6e]"
+                    className="h-full rounded-full bg-gradient-to-r from-[var(--institution-primary)] to-[#3a4d6e]"
                     initial={{ width: 0 }}
                     animate={{ width: `${bankPercent}%` }}
                     transition={{ duration: 1.0, delay: 0.5, ease: 'easeOut' }}
@@ -724,11 +726,11 @@ export function PaymentsPage() {
 
         {/* Mobile Money Integration Card */}
         <motion.div variants={itemVariants}>
-          <Card className="h-full border-l-4 border-l-[#d4a853]">
+          <Card className="h-full border-l-4 border-l-[var(--institution-accent)]">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-semibold text-[#1a2744]">Integration Mobile Money</CardTitle>
-                <Button size="sm" variant="outline" className="h-7 text-xs border-[#d4a853] text-[#d4a853] hover:bg-[#d4a85310]" onClick={openMobileMoneyPaymentForm}>
+                <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Integration Mobile Money</CardTitle>
+                <Button size="sm" variant="outline" className="h-7 text-xs border-[var(--institution-accent)] text-[var(--institution-accent)] hover:bg-[var(--institution-accent-10)]" onClick={openMobileMoneyPaymentForm}>
                   <Plus className="size-3 mr-1" />
                   Enregistrer
                 </Button>
@@ -736,9 +738,9 @@ export function PaymentsPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center gap-2 text-sm">
-                <Wallet className="size-4 text-[#d4a853]" />
+                <Wallet className="size-4 text-[var(--institution-accent)]" />
                 <span className="text-gray-600">Paiements Mobile Money ce mois:</span>
-                <span className="font-bold text-[#1a2744]">{formatFCFA(totalMobileMoney)}</span>
+                <span className="font-bold text-[var(--institution-primary)]">{formatFCFA(totalMobileMoney)}</span>
               </div>
 
               <div className="space-y-2">
@@ -760,7 +762,7 @@ export function PaymentsPage() {
                           style={{ backgroundColor: op.color }}
                         />
                       </div>
-                      <span className="text-xs font-medium text-[#1a2744] truncate">{op.name}</span>
+                      <span className="text-xs font-medium text-[var(--institution-primary)] truncate">{op.name}</span>
                     </motion.div>
                   ))}
                 </div>
@@ -768,7 +770,7 @@ export function PaymentsPage() {
 
               <div className="pt-2 border-t border-gray-100 flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
-                  <div className="w-2 h-2 rounded-full bg-[#2d7a4f]" />
+                  <div className="w-2 h-2 rounded-full bg-[var(--institution-secondary)]" />
                   <span className="text-[10px] text-gray-500">Saisie manuelle active</span>
                 </div>
                 <span className="text-[10px] text-gray-400">Aucun prélèvement automatique n&apos;est déclenché</span>
@@ -783,7 +785,7 @@ export function PaymentsPage() {
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-semibold text-[#1a2744]">Evolution des revenus</CardTitle>
+              <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Evolution des revenus</CardTitle>
               <span className="text-xs text-gray-400">6 derniers mois</span>
             </div>
           </CardHeader>
@@ -793,10 +795,10 @@ export function PaymentsPage() {
                 const heightPercent = (item.value / maxRevenue) * 100
                 return (
                   <div key={item.month} className="flex-1 flex flex-col items-center gap-1.5">
-                    <span className="text-[10px] font-semibold text-[#1a2744]">{formatShort(item.value)}</span>
+                    <span className="text-[10px] font-semibold text-[var(--institution-primary)]">{formatShort(item.value)}</span>
                     <div className="w-full relative" style={{ height: '100px' }}>
                       <motion.div
-                        className="absolute bottom-0 w-full rounded-t-md bg-gradient-to-t from-[#2d7a4f] to-[#3da66a]"
+                        className="absolute bottom-0 w-full rounded-t-md bg-gradient-to-t from-[var(--institution-secondary)] to-[var(--institution-secondary-bright)]"
                         initial={{ height: 0 }}
                         animate={{ height: `${heightPercent}%` }}
                         transition={{ duration: 0.8, delay: 0.1 * index, ease: 'easeOut' }}
@@ -809,7 +811,7 @@ export function PaymentsPage() {
             </div>
             <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
               <span className="text-xs text-gray-500">Total 6 mois</span>
-              <span className="text-sm font-bold text-[#2d7a4f]">
+              <span className="text-sm font-bold text-[var(--institution-secondary)]">
                 {formatFCFA(revenueData.reduce((acc, r) => acc + r.value, 0))}
               </span>
             </div>
@@ -862,7 +864,7 @@ export function PaymentsPage() {
 
       {/* ── Payments Table with Gradient Border Top ─────────────────────────── */}
       <motion.div variants={itemVariants}>
-        <Card className="overflow-hidden" style={{ borderTop: '3px solid #2d7a4f' }}>
+        <Card className="overflow-hidden" style={{ borderTop: '3px solid var(--institution-secondary)' }}>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <Table>
@@ -884,16 +886,16 @@ export function PaymentsPage() {
                     return (
                       <TableRow
                         key={payment.id}
-                        className={`hover:bg-[#2d7a4f05] transition-colors cursor-pointer ${idx % 2 === 1 ? 'bg-gray-50/30' : ''}`}
+                        className={`hover:bg-[var(--institution-secondary-05)] transition-colors cursor-pointer ${idx % 2 === 1 ? 'bg-gray-50/30' : ''}`}
                       >
                         <TableCell className="py-2.5">
                           <div>
-                            <p className="text-sm font-medium text-[#1a2744]">{payment.etudiant}</p>
+                            <p className="text-sm font-medium text-[var(--institution-primary)]">{payment.etudiant}</p>
                             <p className="text-[10px] text-gray-400 font-mono">{payment.matricule}</p>
                           </div>
                         </TableCell>
                         <TableCell className="text-sm text-gray-600 py-2.5">{payment.description}</TableCell>
-                        <TableCell className="text-sm text-right font-semibold text-[#1a2744] py-2.5">{formatFCFA(payment.montant)}</TableCell>
+                        <TableCell className="text-sm text-right font-semibold text-[var(--institution-primary)] py-2.5">{formatFCFA(payment.montant)}</TableCell>
                         <TableCell className="py-2.5">
                           {methode ? (
                             <div className="flex items-center gap-1.5">
@@ -914,7 +916,7 @@ export function PaymentsPage() {
                         <TableCell className="text-right py-2.5">
                           <div className="flex items-center justify-end gap-1">
                             {payment.statut === 'paye' && (
-                              <Button variant="ghost" size="sm" className="h-7 text-xs text-[#2d7a4f] hover:bg-[#2d7a4f10]" onClick={() => handlePrintReceipt(payment.id)}>
+                              <Button variant="ghost" size="sm" className="h-7 text-xs text-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-10)]" onClick={() => handlePrintReceipt(payment.id)}>
                                 <Printer className="size-3 mr-1" />
                                 Imprimer recu
                               </Button>
@@ -952,30 +954,30 @@ export function PaymentsPage() {
 
       {/* ── Payment Summary Footer ─────────────────────────────────────────── */}
       <motion.div variants={itemVariants}>
-        <Card className="border-t-2 border-t-[#2d7a4f]">
+        <Card className="border-t-2 border-t-[var(--institution-secondary)]">
           <CardContent className="p-4">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-4">
               <div>
                 <p className="text-xs text-gray-500 uppercase tracking-wide">Total frais attendus</p>
-                <p className="text-lg font-bold text-[#1a2744] mt-0.5">{formatFCFA(totalAttendu)}</p>
+                <p className="text-lg font-bold text-[var(--institution-primary)] mt-0.5">{formatFCFA(totalAttendu)}</p>
               </div>
               <div>
                 <p className="text-xs text-gray-500 uppercase tracking-wide">Total encaisse</p>
-                <p className="text-lg font-bold text-[#2d7a4f] mt-0.5">{formatFCFA(totalEncaisse)}</p>
+                <p className="text-lg font-bold text-[var(--institution-secondary)] mt-0.5">{formatFCFA(totalEncaisse)}</p>
               </div>
               <div>
                 <p className="text-xs text-gray-500 uppercase tracking-wide">Taux de recouvrement</p>
-                <p className="text-lg font-bold text-[#d4a853] mt-0.5">{tauxRecouvrement}%</p>
+                <p className="text-lg font-bold text-[var(--institution-accent)] mt-0.5">{tauxRecouvrement}%</p>
               </div>
             </div>
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-gray-500">Progression du recouvrement</span>
-                <span className="text-xs font-semibold text-[#2d7a4f]">{tauxRecouvrement}%</span>
+                <span className="text-xs font-semibold text-[var(--institution-secondary)]">{tauxRecouvrement}%</span>
               </div>
               <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
                 <motion.div
-                  className="h-full rounded-full bg-gradient-to-r from-[#2d7a4f] to-[#3da66a]"
+                  className="h-full rounded-full bg-gradient-to-r from-[var(--institution-secondary)] to-[var(--institution-secondary-bright)]"
                   initial={{ width: 0 }}
                   animate={{ width: `${tauxRecouvrement}%` }}
                   transition={{ duration: 1.2, delay: 0.5, ease: 'easeOut' }}

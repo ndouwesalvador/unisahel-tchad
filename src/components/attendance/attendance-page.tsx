@@ -202,14 +202,14 @@ const initialAttendanceForm: AttendanceForm = {
 // ─── Config Maps ──────────────────────────────────────────────────────────────
 
 const statusConfig: Record<string, { label: string; className: string; icon: React.ElementType; bgColor: string }> = {
-  'Present': { label: 'Present', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0', icon: CheckCircle2, bgColor: 'bg-[#2d7a4f05]' },
+  'Present': { label: 'Present', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0', icon: CheckCircle2, bgColor: 'bg-[var(--institution-secondary-05)]' },
   'Absent': { label: 'Absent', className: 'bg-[#c6282815] text-[#c62828] border-0', icon: XCircle, bgColor: 'bg-[#c6282808]' },
-  'Justifie': { label: 'Justifie', className: 'bg-[#d4a85315] text-[#d4a853] border-0', icon: FileCheck, bgColor: 'bg-[#d4a85308]' },
-  'Retard': { label: 'Retard', className: 'bg-[#1a274415] text-[#1a2744] border-0', icon: Clock, bgColor: 'bg-[#1a274408]' },
+  'Justifie': { label: 'Justifie', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0', icon: FileCheck, bgColor: 'bg-[var(--institution-accent-08)]' },
+  'Retard': { label: 'Retard', className: 'bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0', icon: Clock, bgColor: 'bg-[var(--institution-primary-08)]' },
 }
 
 const sanctionConfig: Record<string, { label: string; className: string; pulseColor: string }> = {
-  'avertissement': { label: 'Avertissement', className: 'bg-[#d4a85315] text-[#d4a853] border-0', pulseColor: '#d4a853' },
+  'avertissement': { label: 'Avertissement', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0', pulseColor: 'var(--institution-accent)' },
   'mise_en_demeure': { label: 'Mise en demeure', className: 'bg-[#ea580c15] text-[#ea580c] border-0', pulseColor: '#ea580c' },
   'exclusion': { label: 'Exclusion', className: 'bg-[#c6282815] text-[#c62828] border-0', pulseColor: '#c62828' },
 }
@@ -462,7 +462,7 @@ export function AttendancePage() {
       return {
         course,
         rate,
-        color: rate >= 90 ? '#2d7a4f' : rate >= 80 ? '#d4a853' : '#c62828',
+        color: rate >= 90 ? 'var(--institution-secondary)' : rate >= 80 ? 'var(--institution-accent)' : '#c62828',
         students: data.students.size,
       }
     }).sort((a, b) => b.students - a.students).slice(0, 8)
@@ -619,7 +619,7 @@ export function AttendancePage() {
           </div>
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => setShowSignalementDialog(false)}>Annuler</Button>
-            <Button disabled={isSubmitting} onClick={() => createAttendanceRecord(false)} className="bg-[#2d7a4f] hover:bg-[#236b40] text-white">
+            <Button disabled={isSubmitting} onClick={() => createAttendanceRecord(false)} className="bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white">
               {isSubmitting ? 'Enregistrement...' : 'Enregistrer'}
             </Button>
           </div>
@@ -655,7 +655,7 @@ export function AttendancePage() {
           </div>
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => setShowJustificationDialog(false)}>Annuler</Button>
-            <Button disabled={isSubmitting} onClick={() => createAttendanceRecord(true)} className="bg-[#2d7a4f] hover:bg-[#236b40] text-white">
+            <Button disabled={isSubmitting} onClick={() => createAttendanceRecord(true)} className="bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white">
               {isSubmitting ? 'Enregistrement...' : 'Soumettre la justification'}
             </Button>
           </div>
@@ -670,7 +670,7 @@ export function AttendancePage() {
       >
         {/* ── Gradient Header Banner ───────────────────────────────────────────── */}
         <motion.div variants={itemVariants}>
-          <div className="relative overflow-hidden bg-gradient-to-r from-[#1a2744] via-[#1f3050] to-[#2d7a4f] p-6 md:p-8 rounded-xl mb-2">
+          <div className="relative overflow-hidden bg-gradient-to-r from-[var(--institution-primary)] via-[var(--institution-primary-light)] to-[var(--institution-secondary)] p-6 md:p-8 rounded-xl mb-2">
             {/* SVG pattern overlay */}
             <div className="absolute inset-0 opacity-20" style={{backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.15) 1px, transparent 1px)', backgroundSize: '24px 24px'}} />
             <div className="relative z-10">
@@ -713,25 +713,25 @@ export function AttendancePage() {
         <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Presences aujourd'hui */}
           <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
-          <Card className="overflow-hidden relative border-l-4 border-l-[#2d7a4f] hover:shadow-lg transition-shadow">
-            <div className="h-1 bg-gradient-to-r from-[#2d7a4f] to-[#3da66a]" />
-            <div className="absolute inset-0 bg-gradient-to-br from-[#2d7a4f08] to-[#2d7a4f00] pointer-events-none" />
+          <Card className="overflow-hidden relative border-l-4 border-l-[var(--institution-secondary)] hover:shadow-lg transition-shadow">
+            <div className="h-1 bg-gradient-to-r from-[var(--institution-secondary)] to-[var(--institution-secondary-bright)]" />
+            <div className="absolute inset-0 bg-gradient-to-br from-[var(--institution-secondary-08)] to-[var(--institution-secondary-00)] pointer-events-none" />
             <CardContent className="p-4 relative">
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Presences aujourd&apos;hui</p>
-                  <p className="text-xl font-bold text-[#2d7a4f] mt-1">1,247</p>
-                  <p className="text-xs text-[#2d7a4f] mt-1 font-medium flex items-center gap-1">
+                  <p className="text-xl font-bold text-[var(--institution-secondary)] mt-1">1,247</p>
+                  <p className="text-xs text-[var(--institution-secondary)] mt-1 font-medium flex items-center gap-1">
                     <TrendingUp className="size-3" />
                     +2.3% vs hier
                   </p>
                 </div>
-                <div className="w-10 h-10 rounded-xl bg-[#2d7a4f15] flex items-center justify-center">
-                  <ClipboardCheck className="size-5 text-[#2d7a4f]" />
+                <div className="w-10 h-10 rounded-xl bg-[var(--institution-secondary-15)] flex items-center justify-center">
+                  <ClipboardCheck className="size-5 text-[var(--institution-secondary)]" />
                 </div>
               </div>
               <div className="mt-3">
-                <Progress value={93} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#2d7a4f]" />
+                <Progress value={93} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[var(--institution-secondary)]" />
               </div>
             </CardContent>
           </Card>
@@ -739,25 +739,25 @@ export function AttendancePage() {
 
           {/* Absences signalees */}
           <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
-          <Card className="overflow-hidden relative border-l-4 border-l-[#1a2744] hover:shadow-lg transition-shadow">
-            <div className="h-1 bg-gradient-to-r from-[#1a2744] to-[#2d3e5e]" />
-            <div className="absolute inset-0 bg-gradient-to-br from-[#1a274408] to-[#1a274400] pointer-events-none" />
+          <Card className="overflow-hidden relative border-l-4 border-l-[var(--institution-primary)] hover:shadow-lg transition-shadow">
+            <div className="h-1 bg-gradient-to-r from-[var(--institution-primary)] to-[#2d3e5e]" />
+            <div className="absolute inset-0 bg-gradient-to-br from-[var(--institution-primary-08)] to-[var(--institution-primary-00)] pointer-events-none" />
             <CardContent className="p-4 relative">
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Absences signalees</p>
-                  <p className="text-xl font-bold text-[#1a2744] mt-1">89</p>
-                  <p className="text-xs text-[#2d7a4f] mt-1 font-medium flex items-center gap-1">
+                  <p className="text-xl font-bold text-[var(--institution-primary)] mt-1">89</p>
+                  <p className="text-xs text-[var(--institution-secondary)] mt-1 font-medium flex items-center gap-1">
                     <TrendingUp className="size-3 rotate-180" />
                     -5% vs hier
                   </p>
                 </div>
-                <div className="w-10 h-10 rounded-xl bg-[#1a274415] flex items-center justify-center">
-                  <UserX className="size-5 text-[#1a2744]" />
+                <div className="w-10 h-10 rounded-xl bg-[var(--institution-primary-15)] flex items-center justify-center">
+                  <UserX className="size-5 text-[var(--institution-primary)]" />
                 </div>
               </div>
               <div className="mt-3">
-                <Progress value={7} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#1a2744]" />
+                <Progress value={7} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[var(--institution-primary)]" />
               </div>
             </CardContent>
           </Card>
@@ -765,25 +765,25 @@ export function AttendancePage() {
 
           {/* Taux de presence */}
           <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
-          <Card className="overflow-hidden relative border-l-4 border-l-[#d4a853] hover:shadow-lg transition-shadow">
-            <div className="h-1 bg-gradient-to-r from-[#d4a853] to-[#e6c477]" />
-            <div className="absolute inset-0 bg-gradient-to-br from-[#d4a85308] to-[#d4a85300] pointer-events-none" />
+          <Card className="overflow-hidden relative border-l-4 border-l-[var(--institution-accent)] hover:shadow-lg transition-shadow">
+            <div className="h-1 bg-gradient-to-r from-[var(--institution-accent)] to-[var(--institution-accent-light)]" />
+            <div className="absolute inset-0 bg-gradient-to-br from-[var(--institution-accent-08)] to-[var(--institution-accent-00)] pointer-events-none" />
             <CardContent className="p-4 relative">
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Taux de presence</p>
-                  <p className="text-xl font-bold text-[#d4a853] mt-1">93%</p>
-                  <p className="text-xs text-[#2d7a4f] mt-1 font-medium flex items-center gap-1">
+                  <p className="text-xl font-bold text-[var(--institution-accent)] mt-1">93%</p>
+                  <p className="text-xs text-[var(--institution-secondary)] mt-1 font-medium flex items-center gap-1">
                     <TrendingUp className="size-3" />
                     +1% vs precedent
                   </p>
                 </div>
-                <div className="w-10 h-10 rounded-xl bg-[#d4a85315] flex items-center justify-center">
-                  <BarChart3 className="size-5 text-[#d4a853]" />
+                <div className="w-10 h-10 rounded-xl bg-[var(--institution-accent-15)] flex items-center justify-center">
+                  <BarChart3 className="size-5 text-[var(--institution-accent)]" />
                 </div>
               </div>
               <div className="mt-3">
-                <Progress value={93} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#d4a853]" />
+                <Progress value={93} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[var(--institution-accent)]" />
               </div>
             </CardContent>
           </Card>
@@ -897,13 +897,13 @@ export function AttendancePage() {
 
         {/* ── Daily Attendance Table ──────────────────────────────────────────────── */}
         <motion.div variants={itemVariants}>
-          <Card className="border-l-4 border-l-[#2d7a4f]">
-            <div className="h-1 bg-gradient-to-r from-[#1a2744] via-[#2d7a4f] to-[#d4a853]" />
+          <Card className="border-l-4 border-l-[var(--institution-secondary)]">
+            <div className="h-1 bg-gradient-to-r from-[var(--institution-primary)] via-[var(--institution-secondary)] to-[var(--institution-accent)]" />
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-semibold text-[#1a2744]">Presences du jour - {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</CardTitle>
+                <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Presences du jour - {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</CardTitle>
                 <div className="flex items-center gap-2">
-                  <Badge className="text-[10px] bg-[#2d7a4f15] text-[#2d7a4f] border-0">
+                  <Badge className="text-[10px] bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0">
                     <CheckCircle2 className="size-3 mr-1" />
                     {presentCount} presents
                   </Badge>
@@ -911,11 +911,11 @@ export function AttendancePage() {
                     <XCircle className="size-3 mr-1" />
                     {absentCount} absents
                   </Badge>
-                  <Badge className="text-[10px] bg-[#d4a85315] text-[#d4a853] border-0">
+                  <Badge className="text-[10px] bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0">
                     <FileCheck className="size-3 mr-1" />
                     {justifieCount} justifies
                   </Badge>
-                  <Badge className="text-[10px] bg-[#1a274415] text-[#1a2744] border-0">
+                  <Badge className="text-[10px] bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0">
                     <Clock className="size-3 mr-1" />
                     {retardCount} retards
                   </Badge>
@@ -945,12 +945,12 @@ export function AttendancePage() {
                           initial={{ opacity: 0, x: -12 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: rIdx * 0.04, duration: 0.3, ease: 'easeOut' }}
-                          className={`hover:bg-[#2d7a4f05] transition-colors cursor-pointer ${sConf ? sConf.bgColor : ''}`}
+                          className={`hover:bg-[var(--institution-secondary-05)] transition-colors cursor-pointer ${sConf ? sConf.bgColor : ''}`}
                           onClick={() => toggleStatus(record.id)}
                         >
                           <TableCell className="py-2.5">
                             <div>
-                              <p className="text-sm font-medium text-[#1a2744]">{record.studentName}</p>
+                              <p className="text-sm font-medium text-[var(--institution-primary)]">{record.studentName}</p>
                               <p className="text-[10px] text-gray-400 font-mono">{record.matricule}</p>
                             </div>
                           </TableCell>
@@ -1054,8 +1054,8 @@ export function AttendancePage() {
             <Card>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-semibold text-[#1a2744]">Vue hebdomadaire</CardTitle>
-                  <Badge className="text-[10px] bg-[#2d7a4f15] text-[#2d7a4f] border-0">
+                  <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Vue hebdomadaire</CardTitle>
+                  <Badge className="text-[10px] bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0">
                     {weekLabel}
                   </Badge>
                 </div>
@@ -1075,8 +1075,8 @@ export function AttendancePage() {
                         <motion.div
                           className="h-12 rounded-lg flex items-center justify-center cursor-default text-xs font-bold"
                           style={{
-                            backgroundColor: d.rate >= 90 ? '#2d7a4f20' : d.rate >= 75 ? '#d4a85320' : '#c6282820',
-                            color: d.rate >= 90 ? '#2d7a4f' : d.rate >= 75 ? '#d4a853' : '#c62828',
+                            backgroundColor: d.rate >= 90 ? 'var(--institution-secondary-20)' : d.rate >= 75 ? 'var(--institution-accent-20)' : '#c6282820',
+                            color: d.rate >= 90 ? 'var(--institution-secondary)' : d.rate >= 75 ? 'var(--institution-accent)' : '#c62828',
                           }}
                           whileHover={{ scale: 1.05 }}
                           initial={{ opacity: 0, scale: 0.8 }}
@@ -1103,11 +1103,11 @@ export function AttendancePage() {
                 {/* Color legend */}
                 <div className="flex items-center gap-4 text-[10px]">
                   <div className="flex items-center gap-1">
-                    <div className="w-3 h-3 rounded bg-[#2d7a4f20] border border-[#2d7a4f40]" />
+                    <div className="w-3 h-3 rounded bg-[var(--institution-secondary-20)] border border-[var(--institution-secondary-40)]" />
                     <span className="text-gray-500">&ge;90%</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <div className="w-3 h-3 rounded bg-[#d4a85320] border border-[#d4a85340]" />
+                    <div className="w-3 h-3 rounded bg-[var(--institution-accent-20)] border border-[var(--institution-accent-40)]" />
                     <span className="text-gray-500">75-90%</span>
                   </div>
                   <div className="flex items-center gap-1">
@@ -1120,11 +1120,11 @@ export function AttendancePage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="p-3 rounded-lg bg-gray-50 border border-gray-100">
                     <p className="text-[10px] text-gray-400 uppercase">Total heures</p>
-                    <p className="text-lg font-bold text-[#1a2744]">{totalWeeklyHours}h</p>
+                    <p className="text-lg font-bold text-[var(--institution-primary)]">{totalWeeklyHours}h</p>
                   </div>
                   <div className="p-3 rounded-lg bg-gray-50 border border-gray-100">
                     <p className="text-[10px] text-gray-400 uppercase">Taux moyen</p>
-                    <p className="text-lg font-bold text-[#2d7a4f]">{avgWeeklyRate}%</p>
+                    <p className="text-lg font-bold text-[var(--institution-secondary)]">{avgWeeklyRate}%</p>
                   </div>
                 </div>
               </CardContent>
@@ -1133,15 +1133,15 @@ export function AttendancePage() {
 
           {/* Absence Justification Card */}
           <motion.div variants={itemVariants}>
-            <Card className="border-l-4 border-l-[#d4a853]">
+            <Card className="border-l-4 border-l-[var(--institution-accent)]">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-semibold text-[#1a2744]">Justifications d&apos;absences</CardTitle>
+                  <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Justifications d&apos;absences</CardTitle>
                   <div className="flex items-center gap-2">
-                    <Badge className="text-[10px] bg-[#d4a85315] text-[#d4a853] border-0">
+                    <Badge className="text-[10px] bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0">
                       {justEnAttente} en attente
                     </Badge>
-                    <Badge className="text-[10px] bg-[#2d7a4f15] text-[#2d7a4f] border-0">
+                    <Badge className="text-[10px] bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0">
                       {justValidees} justifiees
                     </Badge>
                   </div>
@@ -1163,8 +1163,8 @@ export function AttendancePage() {
                       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <p className="text-sm font-medium text-[#1a2744] truncate">{just.studentName}</p>
-                            <Badge className="text-[10px] shrink-0 bg-[#d4a85315] text-[#d4a853] border-0">En attente</Badge>
+                            <p className="text-sm font-medium text-[var(--institution-primary)] truncate">{just.studentName}</p>
+                            <Badge className="text-[10px] shrink-0 bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0">En attente</Badge>
                           </div>
                           <p className="text-[10px] text-gray-400 font-mono">{just.matricule}</p>
                           <div className="flex items-center gap-3 mt-1">
@@ -1182,7 +1182,7 @@ export function AttendancePage() {
                         <div className="flex items-center gap-1.5 shrink-0">
                           <Button
                             size="sm"
-                            className="h-7 text-[10px] bg-[#2d7a4f] hover:bg-[#236b40] text-white px-2.5"
+                            className="h-7 text-[10px] bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white px-2.5"
                             onClick={() => approveJustification(just.id)}
                           >
                             <CheckCircle2 className="size-3 mr-1" />
@@ -1213,7 +1213,7 @@ export function AttendancePage() {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <CardTitle className="text-sm font-semibold text-[#1a2744]">Alertes & Sanctions</CardTitle>
+                  <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Alertes & Sanctions</CardTitle>
                   <Badge className="text-[10px] bg-[#ef444415] text-[#ef4444] border-0">
                     <Bell className="size-3 mr-1" />
                     {sanctions.length} alertes actives
@@ -1227,7 +1227,7 @@ export function AttendancePage() {
                 <div className="flex items-center gap-1.5">
                   <motion.div
                     className="w-2.5 h-2.5 rounded-full"
-                    style={{ backgroundColor: '#d4a853' }}
+                    style={{ backgroundColor: 'var(--institution-accent)' }}
                     animate={{ scale: [1, 1.3, 1], opacity: [1, 0.6, 1] }}
                     transition={{ duration: 2, repeat: Infinity }}
                   />
@@ -1273,7 +1273,7 @@ export function AttendancePage() {
                         <TableRow key={sanction.id} className="hover:bg-[#ef444405] transition-colors">
                           <TableCell className="py-2.5">
                             <div>
-                              <p className="text-sm font-medium text-[#1a2744]">{sanction.studentName}</p>
+                              <p className="text-sm font-medium text-[var(--institution-primary)]">{sanction.studentName}</p>
                               <p className="text-[10px] text-gray-400 font-mono">{sanction.matricule}</p>
                             </div>
                           </TableCell>
@@ -1356,7 +1356,7 @@ export function AttendancePage() {
 
               {/* Sanction history timeline */}
               <div>
-                <p className="text-xs font-semibold text-[#1a2744] mb-3">Historique des sanctions recentes</p>
+                <p className="text-xs font-semibold text-[var(--institution-primary)] mb-3">Historique des sanctions recentes</p>
                 <div className="relative pl-6 space-y-3">
                   <div className="absolute left-2 top-1 bottom-1 w-0.5 bg-gray-200" />
                   {sanctions.slice(0, 3).map((entry, idx) => {
@@ -1388,11 +1388,11 @@ export function AttendancePage() {
           <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-semibold text-[#1a2744]">Statistiques de presence par cours</CardTitle>
+                <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Statistiques de presence par cours</CardTitle>
                 <div className="flex items-center gap-2">
                   {courseStats.length > 0 ? (
                     <>
-                      <Badge className="text-[10px] bg-[#2d7a4f15] text-[#2d7a4f] border-0">
+                      <Badge className="text-[10px] bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0">
                         Meilleur: {courseStats.reduce((best, item) => item.rate > best.rate ? item : best, courseStats[0]).course}
                       </Badge>
                       <Badge className="text-[10px] bg-[#c6282815] text-[#c62828] border-0">
@@ -1412,7 +1412,7 @@ export function AttendancePage() {
                   <div key={course.course} className="space-y-1.5">
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-gray-600 truncate">{course.course}</span>
-                      <span className="text-xs font-semibold" style={{ color: course.rate >= 90 ? '#2d7a4f' : course.rate >= 80 ? '#d4a853' : '#c62828' }}>
+                      <span className="text-xs font-semibold" style={{ color: course.rate >= 90 ? 'var(--institution-secondary)' : course.rate >= 80 ? 'var(--institution-accent)' : '#c62828' }}>
                         {course.rate}% ({course.students} etu.)
                       </span>
                     </div>
@@ -1438,14 +1438,14 @@ export function AttendancePage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Monthly trend */}
                 <div className="p-4 rounded-lg bg-gray-50 border border-gray-100">
-                  <p className="text-xs font-semibold text-[#1a2744] mb-3">Tendance mensuelle</p>
+                  <p className="text-xs font-semibold text-[var(--institution-primary)] mb-3">Tendance mensuelle</p>
                   <div className="flex items-end gap-2 h-28">
                     {monthlyTrend.map((m, idx) => (
                       <div key={m.month} className="flex-1 flex flex-col items-center gap-1">
                         <motion.div
                           className="w-full rounded-t-sm min-h-[4px]"
                           style={{
-                            background: `linear-gradient(to top, #1a2744, #2d7a4f)`,
+                            background: `linear-gradient(to top, var(--institution-primary), var(--institution-secondary))`,
                           }}
                           initial={{ height: 0 }}
                           animate={{ height: `${(m.rate / 100) * 100}%` }}
@@ -1463,19 +1463,19 @@ export function AttendancePage() {
 
                 {/* Time slot analysis */}
                 <div className="p-4 rounded-lg bg-gray-50 border border-gray-100">
-                  <p className="text-xs font-semibold text-[#1a2744] mb-3">Analyse par creneau</p>
+                  <p className="text-xs font-semibold text-[var(--institution-primary)] mb-3">Analyse par creneau</p>
                   <div className="space-y-4">
                     <div>
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-xs text-gray-600 flex items-center gap-1.5">
-                          <Sun className="size-3.5 text-[#d4a853]" />
+                          <Sun className="size-3.5 text-[var(--institution-accent)]" />
                           Matin (08h - 12h)
                         </span>
-                        <span className="text-sm font-bold text-[#2d7a4f]">{morningRate}%</span>
+                        <span className="text-sm font-bold text-[var(--institution-secondary)]">{morningRate}%</span>
                       </div>
                       <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
                         <motion.div
-                          className="h-full rounded-full bg-gradient-to-r from-[#d4a853] to-[#2d7a4f]"
+                          className="h-full rounded-full bg-gradient-to-r from-[var(--institution-accent)] to-[var(--institution-secondary)]"
                           initial={{ width: 0 }}
                           animate={{ width: `${morningRate}%` }}
                           transition={{ duration: 0.8, ease: 'easeOut' }}
@@ -1485,14 +1485,14 @@ export function AttendancePage() {
                     <div>
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-xs text-gray-600 flex items-center gap-1.5">
-                          <Moon className="size-3.5 text-[#1a2744]" />
+                          <Moon className="size-3.5 text-[var(--institution-primary)]" />
                           Apres-midi (14h - 18h)
                         </span>
-                        <span className="text-sm font-bold text-[#1a2744]">{afternoonRate}%</span>
+                        <span className="text-sm font-bold text-[var(--institution-primary)]">{afternoonRate}%</span>
                       </div>
                       <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
                         <motion.div
-                          className="h-full rounded-full bg-gradient-to-r from-[#1a2744] to-[#2d7a4f]"
+                          className="h-full rounded-full bg-gradient-to-r from-[var(--institution-primary)] to-[var(--institution-secondary)]"
                           initial={{ width: 0 }}
                           animate={{ width: `${afternoonRate}%` }}
                           transition={{ duration: 0.8, delay: 0.2, ease: 'easeOut' }}
@@ -1500,7 +1500,7 @@ export function AttendancePage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 p-2 rounded bg-white border border-gray-100">
-                      <TrendingUp className="size-3.5 text-[#2d7a4f]" />
+                      <TrendingUp className="size-3.5 text-[var(--institution-secondary)]" />
                       <span className="text-[10px] text-gray-500">Les cours du matin ont un taux de presence superieur de {morningRate - afternoonRate}%</span>
                     </div>
                   </div>
@@ -1512,11 +1512,11 @@ export function AttendancePage() {
 
         {/* ── African Context Card ──────────────────────────────────────────────── */}
         <motion.div variants={itemVariants}>
-          <Card className="border-l-4 border-l-[#1a2744]">
+          <Card className="border-l-4 border-l-[var(--institution-primary)]">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-semibold text-[#1a2744]">Contexte africain & Fonctionnalites specifiques</CardTitle>
-                <Badge className="text-[10px] bg-[#1a274415] text-[#1a2744] border-0">Adapte</Badge>
+                <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Contexte africain & Fonctionnalites specifiques</CardTitle>
+                <Badge className="text-[10px] bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0">Adapte</Badge>
               </div>
             </CardHeader>
             <CardContent className="p-4 pt-0">
@@ -1528,22 +1528,22 @@ export function AttendancePage() {
                   onClick={() => setOfflineMode(!offlineMode)}
                 >
                   <div className="flex items-center gap-2 mb-2">
-                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${offlineMode ? 'bg-[#2d7a4f15]' : 'bg-gray-100'}`}>
+                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${offlineMode ? 'bg-[var(--institution-secondary-15)]' : 'bg-gray-100'}`}>
                       {offlineMode ? (
-                        <WifiOff className="size-5 text-[#2d7a4f]" />
+                        <WifiOff className="size-5 text-[var(--institution-secondary)]" />
                       ) : (
                         <Wifi className="size-5 text-gray-400" />
                       )}
                     </div>
                     <div>
-                      <p className="text-xs font-semibold text-[#1a2744]">Mode hors-ligne</p>
+                      <p className="text-xs font-semibold text-[var(--institution-primary)]">Mode hors-ligne</p>
                       <p className="text-[10px] text-gray-400">Connectivite limitee</p>
                     </div>
                   </div>
                   <p className="text-[10px] text-gray-500 mb-2">
                     Basculer l&apos;écran en mode terrain lorsque la connexion est faible. Les enregistrements restent saisis via l&apos;API dès que la connexion est disponible.
                   </p>
-                  <Badge className={`text-[10px] border-0 ${offlineMode ? 'bg-[#2d7a4f15] text-[#2d7a4f]' : 'bg-gray-100 text-gray-400'}`}>
+                  <Badge className={`text-[10px] border-0 ${offlineMode ? 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)]' : 'bg-gray-100 text-gray-400'}`}>
                     {offlineMode ? 'Active' : 'Desactive'}
                   </Badge>
                 </motion.div>
@@ -1554,18 +1554,18 @@ export function AttendancePage() {
                   whileHover={{ scale: 1.02 }}
                 >
                   <div className="flex items-center gap-2 mb-2">
-                    <div className="w-9 h-9 rounded-lg bg-[#d4a85315] flex items-center justify-center">
-                      <Printer className="size-5 text-[#d4a853]" />
+                    <div className="w-9 h-9 rounded-lg bg-[var(--institution-accent-15)] flex items-center justify-center">
+                      <Printer className="size-5 text-[var(--institution-accent)]" />
                     </div>
                     <div>
-                      <p className="text-xs font-semibold text-[#1a2744]">Sauvegarde papier</p>
+                      <p className="text-xs font-semibold text-[var(--institution-primary)]">Sauvegarde papier</p>
                       <p className="text-[10px] text-gray-400">Feuille de presence</p>
                     </div>
                   </div>
                   <p className="text-[10px] text-gray-500 mb-2">
                     Imprimer les feuilles de presence pour saisie manuelle, puis numerisation
                   </p>
-                  <Button size="sm" variant="outline" className="h-7 text-[10px] w-full border-[#d4a85330] text-[#d4a853] hover:bg-[#d4a85308]" onClick={() => window.print()}>
+                  <Button size="sm" variant="outline" className="h-7 text-[10px] w-full border-[var(--institution-accent-30)] text-[var(--institution-accent)] hover:bg-[var(--institution-accent-08)]" onClick={() => window.print()}>
                     <Printer className="size-3 mr-1" />
                     Imprimer
                   </Button>
@@ -1577,18 +1577,18 @@ export function AttendancePage() {
                   whileHover={{ scale: 1.02 }}
                 >
                   <div className="flex items-center gap-2 mb-2">
-                    <div className="w-9 h-9 rounded-lg bg-[#1a274415] flex items-center justify-center">
-                      <Smartphone className="size-5 text-[#1a2744]" />
+                    <div className="w-9 h-9 rounded-lg bg-[var(--institution-primary-15)] flex items-center justify-center">
+                      <Smartphone className="size-5 text-[var(--institution-primary)]" />
                     </div>
                     <div>
-                      <p className="text-xs font-semibold text-[#1a2744]">Notification SMS</p>
+                      <p className="text-xs font-semibold text-[var(--institution-primary)]">Notification SMS</p>
                       <p className="text-[10px] text-gray-400">Alerte parents</p>
                     </div>
                   </div>
                   <p className="text-[10px] text-gray-500 mb-2">
                     Envoi automatique de SMS aux parents en cas d&apos;absence repetee (Airtel, Moov, Orange)
                   </p>
-                  <Badge className="text-[10px] bg-[#2d7a4f15] text-[#2d7a4f] border-0">
+                  <Badge className="text-[10px] bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0">
                     {sanctions.length} alerte(s) à notifier
                   </Badge>
                 </motion.div>
@@ -1599,18 +1599,18 @@ export function AttendancePage() {
                   whileHover={{ scale: 1.02 }}
                 >
                   <div className="flex items-center gap-2 mb-2">
-                    <div className="w-9 h-9 rounded-lg bg-[#2d7a4f15] flex items-center justify-center">
-                      <FileText className="size-5 text-[#2d7a4f]" />
+                    <div className="w-9 h-9 rounded-lg bg-[var(--institution-secondary-15)] flex items-center justify-center">
+                      <FileText className="size-5 text-[var(--institution-secondary)]" />
                     </div>
                     <div>
-                      <p className="text-xs font-semibold text-[#1a2744]">Rapport hebdomadaire</p>
+                      <p className="text-xs font-semibold text-[var(--institution-primary)]">Rapport hebdomadaire</p>
                       <p className="text-[10px] text-gray-400">Chefs de departement</p>
                     </div>
                   </div>
                   <p className="text-[10px] text-gray-500 mb-2">
                     Generation automatique du rapport de presence hebdomadaire pour chaque departement
                   </p>
-                  <Button size="sm" variant="outline" className="h-7 text-[10px] w-full border-[#2d7a4f30] text-[#2d7a4f] hover:bg-[#2d7a4f08]" onClick={() => exportToExcel(filteredRecords, 'rapport_presences_hebdomadaire')}>
+                  <Button size="sm" variant="outline" className="h-7 text-[10px] w-full border-[var(--institution-secondary-30)] text-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-08)]" onClick={() => exportToExcel(filteredRecords, 'rapport_presences_hebdomadaire')}>
                     <Download className="size-3 mr-1" />
                     Generer rapport
                   </Button>

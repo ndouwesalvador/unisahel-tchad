@@ -7,16 +7,19 @@ function escapeXml(value: string) {
   return value.replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' })[character]!)
 }
 
-export function renderArabicHeader(input: { headerLanguageMode?: string; arabicCountry?: string; arabicMinistry?: string; arabicName?: string }): string | undefined {
+export function renderArabicHeader(input: { headerLanguageMode?: string; arabicCountry?: string; arabicMinistry?: string; arabicName?: string; headerLinesAr?: string[]; primaryColor?: string }): string | undefined {
   if (input.headerLanguageMode !== 'FR_AR') return undefined
-  const lines = [
+  const lines = (input.headerLinesAr ?? [
     input.arabicCountry?.trim() || '',
     input.arabicMinistry?.trim() || '',
     input.arabicName?.trim() || '',
-  ]
+  ]).filter(Boolean).slice(0, 10)
   if (!lines.some(Boolean)) return undefined
+  const fontSize = Math.min(27, Math.floor(150 / lines.length * 0.95))
+  const step = 150 / lines.length
+  const color = /^#[0-9a-fA-F]{6}$/.test(input.primaryColor || '') ? input.primaryColor : '#1a2744'
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="560" height="160" viewBox="0 0 560 160">
-    ${lines.map((line, index) => `<text x="280" y="${32 + index * 59}" text-anchor="middle" direction="rtl" font-family="Noto Naskh Arabic" font-size="27" fill="#1a2744">${escapeXml(line.slice(0, 130))}</text>`).join('')}
+    ${lines.map((line, index) => `<text x="280" y="${8 + step * (index + 0.75)}" text-anchor="middle" direction="rtl" font-family="Noto Naskh Arabic" font-size="${fontSize}" fill="${color}">${escapeXml(line.slice(0, 130))}</text>`).join('')}
   </svg>`
   const png = new Resvg(svg, { font: { loadSystemFonts: false, fontFiles: [fontFile], defaultFontFamily: 'Noto Naskh Arabic' } }).render().asPng()
   return `data:image/png;base64,${png.toString('base64')}`

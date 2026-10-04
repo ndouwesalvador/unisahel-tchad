@@ -87,8 +87,8 @@ interface RoomInfo {
 
 const statusConfig: Record<ExamStatus, { label: string; className: string }> = {
   planifie: { label: 'Planifie', className: 'bg-sky-100 text-sky-700 border-0 hover:bg-sky-100' },
-  confirme: { label: 'Confirme', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0 hover:bg-[#2d7a4f15]' },
-  en_cours: { label: 'En cours', className: 'bg-[#d4a85315] text-[#d4a853] border-0 hover:bg-[#d4a85315]' },
+  confirme: { label: 'Confirme', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0 hover:bg-[var(--institution-secondary-15)]' },
+  en_cours: { label: 'En cours', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0 hover:bg-[var(--institution-accent-15)]' },
   termine: { label: 'Termine', className: 'bg-gray-100 text-gray-500 border-0 hover:bg-gray-100' },
   annule: { label: 'Annule', className: 'bg-[#c6282815] text-[#c62828] border-0 hover:bg-[#c6282815]' },
 }
@@ -234,11 +234,11 @@ export function ExamSchedulingPage() {
         className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
       >
         <div>
-          <h1 className="text-xl font-bold text-[#1a2744]">Planification des Examens</h1>
+          <h1 className="text-xl font-bold text-[var(--institution-primary)]">Planification des Examens</h1>
           <p className="text-sm text-gray-500">Gestion des sessions et planification des examens</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button size="sm" className="text-xs bg-[#2d7a4f] hover:bg-[#236b40] text-white" onClick={() => setShowNewExamDialog(true)}>
+          <Button size="sm" className="text-xs bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white" onClick={() => setShowNewExamDialog(true)}>
             <Calendar className="size-3.5 mr-1.5" />
             Planifier un examen
           </Button>
@@ -256,38 +256,38 @@ export function ExamSchedulingPage() {
         transition={{ duration: 0.3, delay: 0.05 }}
       >
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <Card className="relative overflow-hidden border-l-4 border-l-[#1a2744]">
+          <Card className="relative overflow-hidden border-l-4 border-l-[var(--institution-primary)]">
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-2">
-                <div className="p-2 rounded-lg bg-[#1a274410]">
-                  <Calendar className="size-4 text-[#1a2744]" />
+                <div className="p-2 rounded-lg bg-[var(--institution-primary-10)]">
+                  <Calendar className="size-4 text-[var(--institution-primary)]" />
                 </div>
               </div>
-              <p className="text-2xl font-bold text-[#1a2744]">{stats.total}</p>
+              <p className="text-2xl font-bold text-[var(--institution-primary)]">{stats.total}</p>
               <p className="text-xs text-gray-500 mt-1">Examens planifies</p>
             </CardContent>
           </Card>
 
-          <Card className="relative overflow-hidden border-l-4 border-l-[#d4a853]">
+          <Card className="relative overflow-hidden border-l-4 border-l-[var(--institution-accent)]">
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-2">
-                <div className="p-2 rounded-lg bg-[#d4a85310]">
-                  <Clock className="size-4 text-[#d4a853]" />
+                <div className="p-2 rounded-lg bg-[var(--institution-accent-10)]">
+                  <Clock className="size-4 text-[var(--institution-accent)]" />
                 </div>
               </div>
-              <p className="text-2xl font-bold text-[#d4a853]">{stats.enCours}</p>
+              <p className="text-2xl font-bold text-[var(--institution-accent)]">{stats.enCours}</p>
               <p className="text-xs text-gray-500 mt-1">En cours</p>
             </CardContent>
           </Card>
 
-          <Card className="relative overflow-hidden border-l-4 border-l-[#2d7a4f]">
+          <Card className="relative overflow-hidden border-l-4 border-l-[var(--institution-secondary)]">
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-2">
-                <div className="p-2 rounded-lg bg-[#2d7a4f10]">
-                  <CheckCircle2 className="size-4 text-[#2d7a4f]" />
+                <div className="p-2 rounded-lg bg-[var(--institution-secondary-10)]">
+                  <CheckCircle2 className="size-4 text-[var(--institution-secondary)]" />
                 </div>
               </div>
-              <p className="text-2xl font-bold text-[#2d7a4f]">{stats.termines}</p>
+              <p className="text-2xl font-bold text-[var(--institution-secondary)]">{stats.termines}</p>
               <p className="text-xs text-gray-500 mt-1">Termines</p>
             </CardContent>
           </Card>
@@ -312,11 +312,11 @@ export function ExamSchedulingPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: 0.1 }}
       >
-        <Card className="border-l-4 border-l-[#1a2744]">
+        <Card className="border-l-4 border-l-[var(--institution-primary)]">
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
-              <BookOpen className="size-4 text-[#1a2744]" />
-              <CardTitle className="text-sm font-semibold text-[#1a2744]">
+              <BookOpen className="size-4 text-[var(--institution-primary)]" />
+              <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">
                 Configuration de la session
               </CardTitle>
             </div>
@@ -377,7 +377,7 @@ export function ExamSchedulingPage() {
             <div className="flex flex-wrap items-center gap-2 pt-1">
               <Button
                 size="sm"
-                className="bg-[#1a2744] hover:bg-[#253556] text-white text-xs"
+                className="bg-[var(--institution-primary)] hover:bg-[#253556] text-white text-xs"
               >
                 <Sparkles className="size-3.5 mr-1.5" />
                 Generer le planning automatiquement
@@ -401,8 +401,8 @@ export function ExamSchedulingPage() {
           <CardHeader className="pb-3">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div className="flex items-center gap-2">
-                <Calendar className="size-4 text-[#1a2744]" />
-                <CardTitle className="text-sm font-semibold text-[#1a2744]">
+                <Calendar className="size-4 text-[var(--institution-primary)]" />
+                <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">
                   Calendrier des examens
                 </CardTitle>
               </div>
@@ -505,11 +505,11 @@ export function ExamSchedulingPage() {
           <CardHeader className="pb-3">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div className="flex items-center gap-2">
-                <GraduationCap className="size-4 text-[#1a2744]" />
-                <CardTitle className="text-sm font-semibold text-[#1a2744]">
+                <GraduationCap className="size-4 text-[var(--institution-primary)]" />
+                <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">
                   Planning des examens
                 </CardTitle>
-                <Badge className="text-[10px] bg-[#1a274410] text-[#1a2744] border-0">
+                <Badge className="text-[10px] bg-[var(--institution-primary-10)] text-[var(--institution-primary)] border-0">
                   {filteredExams.length} examens
                 </Badge>
               </div>
@@ -599,7 +599,7 @@ export function ExamSchedulingPage() {
                       <TableRow key={exam.id} className={`hover:bg-gray-50/50 ${exam.statut === 'annule' ? 'opacity-60' : ''}`}>
                         <TableCell className="text-xs text-gray-600 py-2 whitespace-nowrap">{exam.date}</TableCell>
                         <TableCell className="text-xs text-gray-600 py-2 whitespace-nowrap">{exam.heure}</TableCell>
-                        <TableCell className="text-sm font-medium text-[#1a2744] py-2 whitespace-nowrap">{exam.ue}</TableCell>
+                        <TableCell className="text-sm font-medium text-[var(--institution-primary)] py-2 whitespace-nowrap">{exam.ue}</TableCell>
                         <TableCell className="text-xs font-mono text-gray-500 py-2">{exam.code}</TableCell>
                         <TableCell className="py-2">
                           <Badge className={`text-[10px] border-0 ${colors?.bg || 'bg-gray-50'} ${colors?.text || 'text-gray-700'}`}>
@@ -609,7 +609,7 @@ export function ExamSchedulingPage() {
                         <TableCell className="text-xs text-gray-600 py-2">{exam.niveau}</TableCell>
                         <TableCell className="text-xs text-gray-600 py-2 whitespace-nowrap">{exam.salle}</TableCell>
                         <TableCell className="text-xs text-gray-600 py-2 whitespace-nowrap max-w-[140px] truncate">{exam.surveillant}</TableCell>
-                        <TableCell className="text-xs text-center py-2 font-medium text-[#1a2744]">{exam.effectif}</TableCell>
+                        <TableCell className="text-xs text-center py-2 font-medium text-[var(--institution-primary)]">{exam.effectif}</TableCell>
                         <TableCell className="py-2">
                           <Badge className={`text-[10px] ${statusConfig[exam.statut].className}`}>
                             {statusConfig[exam.statut].label}
@@ -627,7 +627,7 @@ export function ExamSchedulingPage() {
                                 <Pencil className="size-3.5 mr-2" />
                                 Modifier
                               </DropdownMenuItem>
-                              <DropdownMenuItem className="text-xs text-[#2d7a4f]" onClick={() => updateExamStatus(exam.id, 'CONFIRME')}>
+                              <DropdownMenuItem className="text-xs text-[var(--institution-secondary)]" onClick={() => updateExamStatus(exam.id, 'CONFIRME')}>
                                 <CheckCircle2 className="size-3.5 mr-2" />
                                 Confirmer
                               </DropdownMenuItem>
@@ -663,8 +663,8 @@ export function ExamSchedulingPage() {
           <Card className="h-full">
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
-                <Building2 className="size-4 text-[#1a2744]" />
-                <CardTitle className="text-sm font-semibold text-[#1a2744]">
+                <Building2 className="size-4 text-[var(--institution-primary)]" />
+                <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">
                   Attribution des salles
                 </CardTitle>
               </div>
@@ -685,7 +685,7 @@ export function ExamSchedulingPage() {
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <MapPin className={`size-3.5 ${room.hasConflict ? 'text-[#c62828]' : 'text-gray-400'}`} />
-                        <span className="text-sm font-medium text-[#1a2744]">{room.name}</span>
+                        <span className="text-sm font-medium text-[var(--institution-primary)]">{room.name}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         {room.hasConflict && (
@@ -696,8 +696,8 @@ export function ExamSchedulingPage() {
                         )}
                         <Badge className={`text-[10px] border-0 ${
                           isOverCapacity
-                            ? 'bg-[#d4a85315] text-[#d4a853]'
-                            : 'bg-[#2d7a4f15] text-[#2d7a4f]'
+                            ? 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)]'
+                            : 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)]'
                         }`}>
                           {occupancyPercent}%
                         </Badge>
@@ -731,8 +731,8 @@ export function ExamSchedulingPage() {
           <Card className="h-full">
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
-                <BarChart3 className="size-4 text-[#1a2744]" />
-                <CardTitle className="text-sm font-semibold text-[#1a2744]">
+                <BarChart3 className="size-4 text-[var(--institution-primary)]" />
+                <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">
                   Statistiques des examens
                 </CardTitle>
               </div>
@@ -747,12 +747,12 @@ export function ExamSchedulingPage() {
                 <div className="flex items-end gap-1.5 h-28 px-1">
                   {examsPerDay.map(day => (
                     <div key={day.label} className="flex-1 flex flex-col items-center gap-1">
-                      <span className="text-[9px] font-medium text-[#1a2744]">{day.count}</span>
+                      <span className="text-[9px] font-medium text-[var(--institution-primary)]">{day.count}</span>
                       <div
                         className={`w-full rounded-t transition-all ${
                           day.count >= 4 ? 'bg-[#c62828]' :
-                          day.count >= 3 ? 'bg-[#d4a853]' :
-                          'bg-[#2d7a4f]'
+                          day.count >= 3 ? 'bg-[var(--institution-accent)]' :
+                          'bg-[var(--institution-secondary)]'
                         }`}
                         style={{ height: `${(day.count / maxExamsPerDay) * 80}px` }}
                       />
@@ -771,14 +771,14 @@ export function ExamSchedulingPage() {
                     <Building2 className="size-3.5 text-gray-400" />
                     <span className="text-xs font-medium text-gray-600">Taux de couverture des salles</span>
                   </div>
-                  <span className="text-sm font-bold text-[#2d7a4f]">72%</span>
+                  <span className="text-sm font-bold text-[var(--institution-secondary)]">72%</span>
                 </div>
                 <Progress value={72} className="h-3" />
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] text-gray-400">4 salles sur 6 utilisees</span>
                   <div className="flex items-center gap-2">
                     <div className="flex items-center gap-1">
-                      <div className="w-2.5 h-2.5 rounded-sm bg-[#2d7a4f]" />
+                      <div className="w-2.5 h-2.5 rounded-sm bg-[var(--institution-secondary)]" />
                       <span className="text-[10px] text-gray-400">Occupees</span>
                     </div>
                     <div className="flex items-center gap-1">
@@ -800,23 +800,23 @@ export function ExamSchedulingPage() {
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="p-3 bg-[#2d7a4f08] rounded-lg border border-[#2d7a4f15]">
-                    <p className="text-lg font-bold text-[#2d7a4f]">{supervisorStats.assigned}</p>
+                  <div className="p-3 bg-[var(--institution-secondary-08)] rounded-lg border border-[var(--institution-secondary-15)]">
+                    <p className="text-lg font-bold text-[var(--institution-secondary)]">{supervisorStats.assigned}</p>
                     <p className="text-[10px] text-gray-500">Assignes</p>
                   </div>
-                  <div className="p-3 bg-[#1a274408] rounded-lg border border-[#1a274415]">
-                    <p className="text-lg font-bold text-[#1a2744]">{supervisorStats.needed}</p>
+                  <div className="p-3 bg-[var(--institution-primary-08)] rounded-lg border border-[var(--institution-primary-15)]">
+                    <p className="text-lg font-bold text-[var(--institution-primary)]">{supervisorStats.needed}</p>
                     <p className="text-[10px] text-gray-500">Besoins total</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <Progress value={supervisorStats.needed > 0 ? Math.round((supervisorStats.assigned / supervisorStats.needed) * 100) : 0} className="h-2.5 flex-1" />
-                  <span className="text-[10px] font-medium text-[#2d7a4f]">
+                  <span className="text-[10px] font-medium text-[var(--institution-secondary)]">
                     {supervisorStats.needed > 0 ? Math.round((supervisorStats.assigned / supervisorStats.needed) * 100) : 0}%
                   </span>
                 </div>
                 {supervisorStats.needed - supervisorStats.assigned > 0 && (
-                  <p className="text-[10px] text-[#d4a853] flex items-center gap-1">
+                  <p className="text-[10px] text-[var(--institution-accent)] flex items-center gap-1">
                     <AlertTriangle className="size-3" />
                     {supervisorStats.needed - supervisorStats.assigned} surveillants encore necessaires
                   </p>
@@ -830,7 +830,7 @@ export function ExamSchedulingPage() {
       {showNewExamDialog && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowNewExamDialog(false)}>
           <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-lg font-bold text-[#1a2744] mb-4">Planifier un examen</h3>
+            <h3 className="text-lg font-bold text-[var(--institution-primary)] mb-4">Planifier un examen</h3>
             <div className="space-y-3">
               <Input
                 type="date"
@@ -877,7 +877,7 @@ export function ExamSchedulingPage() {
             </div>
             <div className="flex gap-2 mt-5">
               <Button variant="outline" className="flex-1 text-xs" onClick={() => setShowNewExamDialog(false)}>Annuler</Button>
-              <Button className="flex-1 text-xs bg-[#2d7a4f] hover:bg-[#236b40] text-white" onClick={handleCreateExam} disabled={isCreatingExam}>
+              <Button className="flex-1 text-xs bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white" onClick={handleCreateExam} disabled={isCreatingExam}>
                 {isCreatingExam ? 'Creation...' : 'Planifier'}
               </Button>
             </div>

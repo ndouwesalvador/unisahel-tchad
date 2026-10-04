@@ -120,7 +120,7 @@ export function SettingsPage() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-xl font-bold text-[#1a2744]">Paramètres</h1>
+          <h1 className="text-xl font-bold text-[var(--institution-primary)]">Paramètres</h1>
           <p className="text-sm text-gray-500">Notifications, sécurité et maintenance du système</p>
         </div>
         <div className="flex gap-2">
@@ -141,15 +141,15 @@ export function SettingsPage() {
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="bg-gray-100 h-10 p-1 flex-wrap">
-          <TabsTrigger value="notifications" className="text-xs data-[state=active]:bg-white data-[state=active]:text-[#1a2744]">
+          <TabsTrigger value="notifications" className="text-xs data-[state=active]:bg-white data-[state=active]:text-[var(--institution-primary)]">
             <Mail className="size-3.5 mr-1.5" />
             Notifications
           </TabsTrigger>
-          <TabsTrigger value="securite" className="text-xs data-[state=active]:bg-white data-[state=active]:text-[#1a2744]">
+          <TabsTrigger value="securite" className="text-xs data-[state=active]:bg-white data-[state=active]:text-[var(--institution-primary)]">
             <Shield className="size-3.5 mr-1.5" />
             Sécurité
           </TabsTrigger>
-          <TabsTrigger value="maintenance" className="text-xs data-[state=active]:bg-white data-[state=active]:text-[#1a2744]">
+          <TabsTrigger value="maintenance" className="text-xs data-[state=active]:bg-white data-[state=active]:text-[var(--institution-primary)]">
             <Database className="size-3.5 mr-1.5" />
             Maintenance
           </TabsTrigger>
@@ -158,10 +158,10 @@ export function SettingsPage() {
         {/* ─────────────────── Notifications Tab ─────────────────── */}
         <TabsContent value="notifications" className="mt-4">
           <div className="space-y-4">
-            <Card className="border-l-4 border-l-[#2d7a4f]">
+            <Card className="border-l-4 border-l-[var(--institution-secondary)]">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold text-[#1a2744] flex items-center gap-2">
-                  <Bell className="size-4 text-[#2d7a4f]" />
+                <CardTitle className="text-sm font-semibold text-[var(--institution-primary)] flex items-center gap-2">
+                  <Bell className="size-4 text-[var(--institution-secondary)]" />
                   Canaux de notification
                 </CardTitle>
                 <CardDescription className="text-xs">Ces préférences s&apos;appliquent à toute l&apos;institution</CardDescription>
@@ -173,11 +173,11 @@ export function SettingsPage() {
                   <>
                     <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50 border border-gray-100">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-lg bg-[#2d7a4f10] flex items-center justify-center shrink-0">
-                          <Mail className="size-4 text-[#2d7a4f]" />
+                        <div className="w-9 h-9 rounded-lg bg-[var(--institution-secondary-10)] flex items-center justify-center shrink-0">
+                          <Mail className="size-4 text-[var(--institution-secondary)]" />
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-[#1a2744]">Email</p>
+                          <p className="text-sm font-medium text-[var(--institution-primary)]">Email</p>
                           <p className="text-xs text-gray-400">Reçus de paiement, relances, confirmations</p>
                         </div>
                       </div>
@@ -189,11 +189,11 @@ export function SettingsPage() {
                     </div>
                     <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50 border border-gray-100">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-lg bg-[#1a274410] flex items-center justify-center shrink-0">
-                          <Smartphone className="size-4 text-[#1a2744]" />
+                        <div className="w-9 h-9 rounded-lg bg-[var(--institution-primary-10)] flex items-center justify-center shrink-0">
+                          <Smartphone className="size-4 text-[var(--institution-primary)]" />
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-[#1a2744]">SMS</p>
+                          <p className="text-sm font-medium text-[var(--institution-primary)]">SMS</p>
                           <p className="text-xs text-gray-400">Nécessite un opérateur SMS — non connecté pour le moment</p>
                         </div>
                       </div>
@@ -205,11 +205,11 @@ export function SettingsPage() {
                     </div>
                     <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50 border border-gray-100">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-lg bg-[#d4a85310] flex items-center justify-center shrink-0">
-                          <MessageCircle className="size-4 text-[#d4a853]" />
+                        <div className="w-9 h-9 rounded-lg bg-[var(--institution-accent-10)] flex items-center justify-center shrink-0">
+                          <MessageCircle className="size-4 text-[var(--institution-accent)]" />
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-[#1a2744]">WhatsApp</p>
+                          <p className="text-sm font-medium text-[var(--institution-primary)]">WhatsApp</p>
                           <p className="text-xs text-gray-400">Nécessite l&apos;API WhatsApp Business — non connecté pour le moment</p>
                         </div>
                       </div>
@@ -224,17 +224,17 @@ export function SettingsPage() {
               </CardContent>
             </Card>
 
-            <Card className="border-l-4 border-l-[#2d7a4f]">
+            <Card className="border-l-4 border-l-[var(--institution-secondary)]">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold text-[#1a2744] flex items-center gap-2">
-                  <MailCheck className="size-4 text-[#2d7a4f]" />
+                <CardTitle className="text-sm font-semibold text-[var(--institution-primary)] flex items-center gap-2">
+                  <MailCheck className="size-4 text-[var(--institution-secondary)]" />
                   Envoi d&apos;emails
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center gap-3">
                   {emailStatus?.resendConfigured ? (
-                    <Badge variant="secondary" className="text-[10px] bg-[#2d7a4f10] text-[#2d7a4f] border-[#2d7a4f20]">
+                    <Badge variant="secondary" className="text-[10px] bg-[var(--institution-secondary-10)] text-[var(--institution-secondary)] border-[var(--institution-secondary-20)]">
                       <CheckCircle2 className="size-3 mr-1" />
                       Service d&apos;envoi connecté (Resend)
                     </Badge>
@@ -254,11 +254,11 @@ export function SettingsPage() {
                     { label: 'Relance de paiement', desc: 'Envoyé manuellement par la caisse depuis la page Paiements' },
                   ].map((tpl) => (
                     <div key={tpl.label} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 border border-gray-100">
-                      <div className="w-9 h-9 rounded-lg bg-[#2d7a4f10] flex items-center justify-center shrink-0">
-                        <Mail className="size-4 text-[#2d7a4f]" />
+                      <div className="w-9 h-9 rounded-lg bg-[var(--institution-secondary-10)] flex items-center justify-center shrink-0">
+                        <Mail className="size-4 text-[var(--institution-secondary)]" />
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-[#1a2744]">{tpl.label}</p>
+                        <p className="text-sm font-medium text-[var(--institution-primary)]">{tpl.label}</p>
                         <p className="text-xs text-gray-400">{tpl.desc}</p>
                       </div>
                     </div>
@@ -272,35 +272,35 @@ export function SettingsPage() {
         {/* ─────────────────── Security Tab ─────────────────── */}
         <TabsContent value="securite" className="mt-4">
           <div className="space-y-4">
-            <Card className="border-l-4 border-l-[#1a2744]">
+            <Card className="border-l-4 border-l-[var(--institution-primary)]">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold text-[#1a2744] flex items-center gap-2">
-                  <Lock className="size-4 text-[#1a2744]" />
+                <CardTitle className="text-sm font-semibold text-[var(--institution-primary)] flex items-center gap-2">
+                  <Lock className="size-4 text-[var(--institution-primary)]" />
                   Politique de mot de passe
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50 border border-gray-100">
                   <div>
-                    <p className="text-sm font-medium text-[#1a2744]">Longueur minimale</p>
+                    <p className="text-sm font-medium text-[var(--institution-primary)]">Longueur minimale</p>
                     <p className="text-xs text-gray-400">Appliquée à la création de compte et à tout changement de mot de passe</p>
                   </div>
-                  <Badge className="text-[10px] bg-[#1a274415] text-[#1a2744] border-0">8 caractères</Badge>
+                  <Badge className="text-[10px] bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0">8 caractères</Badge>
                 </div>
                 <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50 border border-gray-100">
                   <div>
-                    <p className="text-sm font-medium text-[#1a2744]">Mot de passe temporaire à la création</p>
+                    <p className="text-sm font-medium text-[var(--institution-primary)]">Mot de passe temporaire à la création</p>
                     <p className="text-xs text-gray-400">Tout compte créé par un administrateur (institution, enseignant, personnel) reçoit un mot de passe temporaire à usage unique</p>
                   </div>
-                  <Badge className="text-[10px] bg-[#2d7a4f15] text-[#2d7a4f] border-0">Changement forcé à la 1ère connexion</Badge>
+                  <Badge className="text-[10px] bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0">Changement forcé à la 1ère connexion</Badge>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="border-l-4 border-l-[#1a2744]">
+            <Card className="border-l-4 border-l-[var(--institution-primary)]">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold text-[#1a2744] flex items-center gap-2">
-                  <ScrollText className="size-4 text-[#1a2744]" />
+                <CardTitle className="text-sm font-semibold text-[var(--institution-primary)] flex items-center gap-2">
+                  <ScrollText className="size-4 text-[var(--institution-primary)]" />
                   Journal d&apos;audit
                 </CardTitle>
                 <CardDescription className="text-xs">Chaque connexion et chaque création/modification/suppression est tracée</CardDescription>
@@ -311,11 +311,11 @@ export function SettingsPage() {
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="p-3 rounded-lg bg-gray-50 border border-gray-100 text-center">
-                      <p className="text-xl font-bold text-[#1a2744]">{stats?.auditLogCount ?? 0}</p>
+                      <p className="text-xl font-bold text-[var(--institution-primary)]">{stats?.auditLogCount ?? 0}</p>
                       <p className="text-[10px] text-gray-400">Événements enregistrés</p>
                     </div>
                     <div className="p-3 rounded-lg bg-gray-50 border border-gray-100 text-center">
-                      <p className="text-sm font-semibold text-[#1a2744]">{formatDateFr(stats?.oldestAuditLogDate ?? null)}</p>
+                      <p className="text-sm font-semibold text-[var(--institution-primary)]">{formatDateFr(stats?.oldestAuditLogDate ?? null)}</p>
                       <p className="text-[10px] text-gray-400">Premier événement enregistré</p>
                     </div>
                   </div>
@@ -328,10 +328,10 @@ export function SettingsPage() {
         {/* ─────────────────── Maintenance Tab ─────────────────── */}
         <TabsContent value="maintenance" className="mt-4">
           <div className="space-y-4">
-            <Card className="border-l-4 border-l-[#2d7a4f]">
+            <Card className="border-l-4 border-l-[var(--institution-secondary)]">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold text-[#1a2744] flex items-center gap-2">
-                  <Activity className="size-4 text-[#2d7a4f]" />
+                <CardTitle className="text-sm font-semibold text-[var(--institution-primary)] flex items-center gap-2">
+                  <Activity className="size-4 text-[var(--institution-secondary)]" />
                   Utilisation de la plateforme
                 </CardTitle>
                 <CardDescription className="text-xs">{tenant?.name ? `Chiffres réels pour ${tenant.name}` : 'Chiffres réels de votre institution'}</CardDescription>
@@ -342,15 +342,15 @@ export function SettingsPage() {
                 ) : (
                   <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                     {[
-                      { icon: Users, label: 'Étudiants', value: stats?.students ?? 0, color: '#2d7a4f' },
-                      { icon: GraduationCap, label: 'Enseignants', value: stats?.teachers ?? 0, color: '#1a2744' },
-                      { icon: UserCog, label: 'Personnel', value: stats?.staffUsers ?? 0, color: '#d4a853' },
-                      { icon: CreditCard, label: 'Paiements', value: stats?.payments ?? 0, color: '#2d7a4f' },
-                      { icon: FileText, label: 'Documents générés', value: stats?.documentsGenerated ?? 0, color: '#1a2744' },
+                      { icon: Users, label: 'Étudiants', value: stats?.students ?? 0, color: 'var(--institution-secondary)' },
+                      { icon: GraduationCap, label: 'Enseignants', value: stats?.teachers ?? 0, color: 'var(--institution-primary)' },
+                      { icon: UserCog, label: 'Personnel', value: stats?.staffUsers ?? 0, color: 'var(--institution-accent)' },
+                      { icon: CreditCard, label: 'Paiements', value: stats?.payments ?? 0, color: 'var(--institution-secondary)' },
+                      { icon: FileText, label: 'Documents générés', value: stats?.documentsGenerated ?? 0, color: 'var(--institution-primary)' },
                     ].map((s) => (
                       <div key={s.label} className="p-3 rounded-lg bg-gray-50 border border-gray-100 text-center">
                         <s.icon className="size-4 mx-auto mb-1" style={{ color: s.color }} />
-                        <p className="text-xl font-bold text-[#1a2744]">{s.value.toLocaleString('fr-FR')}</p>
+                        <p className="text-xl font-bold text-[var(--institution-primary)]">{s.value.toLocaleString('fr-FR')}</p>
                         <p className="text-[10px] text-gray-400">{s.label}</p>
                       </div>
                     ))}
@@ -359,10 +359,10 @@ export function SettingsPage() {
               </CardContent>
             </Card>
 
-            <Card className="border-l-4 border-l-[#d4a853]">
+            <Card className="border-l-4 border-l-[var(--institution-accent)]">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold text-[#1a2744] flex items-center gap-2">
-                  <Database className="size-4 text-[#d4a853]" />
+                <CardTitle className="text-sm font-semibold text-[var(--institution-primary)] flex items-center gap-2">
+                  <Database className="size-4 text-[var(--institution-accent)]" />
                   Sauvegardes &amp; export de données
                 </CardTitle>
               </CardHeader>
@@ -370,7 +370,7 @@ export function SettingsPage() {
                 <p className="text-xs text-gray-400">
                   La base de données est hébergée chez un fournisseur PostgreSQL géré, qui assure les sauvegardes et la récupération au niveau infrastructure. Pour exporter vos propres données (étudiants, notes, paiements...), utilisez le module Import/Export déjà disponible dans le menu.
                 </p>
-                <Button size="sm" className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs" onClick={() => setView('import-export')}>
+                <Button size="sm" className="bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white text-xs" onClick={() => setView('import-export')}>
                   <Download className="size-3.5 mr-1.5" />
                   Aller à Import/Export
                   <ArrowRight className="size-3.5 ml-1.5" />

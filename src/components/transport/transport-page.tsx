@@ -274,31 +274,31 @@ function mapAlertEntry(a: ApiAlertEntry): AlertEntry {
 // ─── Config Maps ────────────────────────────────────────────────────────────────
 
 const busStatusConfig: Record<BusStatus, { label: string; color: string; pulseColor: string }> = {
-  en_service: { label: 'En service', color: '#2d7a4f', pulseColor: '#3da66a' },
+  en_service: { label: 'En service', color: 'var(--institution-secondary)', pulseColor: 'var(--institution-secondary-bright)' },
   en_panne: { label: 'En panne', color: '#c62828', pulseColor: '#ef5350' },
-  en_maintenance: { label: 'En maintenance', color: '#d4a853', pulseColor: '#e6c477' },
+  en_maintenance: { label: 'En maintenance', color: 'var(--institution-accent)', pulseColor: 'var(--institution-accent-light)' },
 }
 
 const scheduleStatusConfig: Record<ScheduleEntry['status'], { label: string; className: string }> = {
-  a_l_heure: { label: 'A l\'heure', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0 hover:bg-[#2d7a4f15]' },
-  en_retard: { label: 'En retard', className: 'bg-[#d4a85315] text-[#d4a853] border-0 hover:bg-[#d4a85315]' },
+  a_l_heure: { label: 'A l\'heure', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0 hover:bg-[var(--institution-secondary-15)]' },
+  en_retard: { label: 'En retard', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0 hover:bg-[var(--institution-accent-15)]' },
   annule: { label: 'Annule', className: 'bg-[#c6282815] text-[#c62828] border-0 hover:bg-[#c6282815]' },
-  complet: { label: 'Complet', className: 'bg-[#1a274415] text-[#1a2744] border-0 hover:bg-[#1a274415]' },
+  complet: { label: 'Complet', className: 'bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0 hover:bg-[var(--institution-primary-15)]' },
 }
 
 const frequencyConfig: Record<string, { className: string }> = {
-  Quotidien: { className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0' },
-  Semaine: { className: 'bg-[#1a274415] text-[#1a2744] border-0' },
-  'Week-end': { className: 'bg-[#d4a85315] text-[#d4a853] border-0' },
+  Quotidien: { className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0' },
+  Semaine: { className: 'bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0' },
+  'Week-end': { className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0' },
 }
 
 const severityConfig: Record<string, { className: string; dotColor: string }> = {
   critique: { className: 'bg-[#c6282815] text-[#c62828] border-0', dotColor: '#c62828' },
-  avertissement: { className: 'bg-[#d4a85315] text-[#d4a853] border-0', dotColor: '#d4a853' },
-  info: { className: 'bg-[#1a274415] text-[#1a2744] border-0', dotColor: '#1a2744' },
+  avertissement: { className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0', dotColor: 'var(--institution-accent)' },
+  info: { className: 'bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0', dotColor: 'var(--institution-primary)' },
 }
 
-const routeColors = ['#1a2744', '#2d7a4f', '#d4a853', '#3da66a', '#c62828', '#6b7280']
+const routeColors = ['var(--institution-primary)', 'var(--institution-secondary)', 'var(--institution-accent)', 'var(--institution-secondary-bright)', '#c62828', '#6b7280']
 
 // ─── Animated Stat Component ────────────────────────────────────────────────────
 
@@ -414,7 +414,7 @@ export function TransportPage() {
       >
         {/* ─── 1. Gradient Header Banner ─────────────────────────────────────────── */}
         <motion.div variants={itemVariants} className="relative overflow-hidden rounded-xl">
-          <div className="absolute inset-0 bg-gradient-to-r from-[#1a2744] via-[#1f3050] to-[#2d7a4f]" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[var(--institution-primary)] via-[var(--institution-primary-light)] to-[var(--institution-secondary)]" />
           <svg className="absolute inset-0 w-full h-full opacity-[0.07]" xmlns="http://www.w3.org/2000/svg">
             <defs>
               <pattern id="transport-pattern" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
@@ -442,10 +442,10 @@ export function TransportPage() {
         {/* ─── 2. 4 Stats Cards ────────────────────────────────────────────────────── */}
         <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { label: 'Bus actifs', value: activeBuses, color: '#1a2744', icon: Bus, trend: '', trendUp: true },
-            { label: 'Trajets du jour', value: todayTrips, color: '#2d7a4f', icon: Route, trend: '', trendUp: true },
-            { label: 'Etudiants transportes', value: studentsTransported, color: '#d4a853', icon: Users, trend: '', trendUp: true },
-            { label: 'Taux remplissage', value: occupancyRate, color: '#2d7a4f', icon: TrendingUp, trend: `${occupancyRate}%`, trendUp: true },
+            { label: 'Bus actifs', value: activeBuses, color: 'var(--institution-primary)', icon: Bus, trend: '', trendUp: true },
+            { label: 'Trajets du jour', value: todayTrips, color: 'var(--institution-secondary)', icon: Route, trend: '', trendUp: true },
+            { label: 'Etudiants transportes', value: studentsTransported, color: 'var(--institution-accent)', icon: Users, trend: '', trendUp: true },
+            { label: 'Taux remplissage', value: occupancyRate, color: 'var(--institution-secondary)', icon: TrendingUp, trend: `${occupancyRate}%`, trendUp: true },
           ].map((stat) => (
             <motion.div
               key={stat.label}
@@ -462,11 +462,11 @@ export function TransportPage() {
                       {stat.trend && (
                         <div className="flex items-center gap-1 mt-1">
                           {stat.trendUp ? (
-                            <TrendingUp className="size-3 text-[#2d7a4f]" />
+                            <TrendingUp className="size-3 text-[var(--institution-secondary)]" />
                           ) : (
                             <TrendingDown className="size-3 text-[#c62828]" />
                           )}
-                          <span className={`text-xs font-medium ${stat.trendUp ? 'text-[#2d7a4f]' : 'text-[#c62828]'}`}>{stat.trend}</span>
+                          <span className={`text-xs font-medium ${stat.trendUp ? 'text-[var(--institution-secondary)]' : 'text-[#c62828]'}`}>{stat.trend}</span>
                         </div>
                       )}
                     </div>
@@ -483,8 +483,8 @@ export function TransportPage() {
         {/* ─── 3. Bus Fleet Grid ──────────────────────────────────────────────────── */}
         <motion.div variants={itemVariants}>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-[#1a2744] uppercase tracking-wide">Parc de bus</h2>
-            <Badge className="text-[10px] bg-[#1a274410] text-[#1a2744] border-0">{buses.length} vehicules</Badge>
+            <h2 className="text-sm font-semibold text-[var(--institution-primary)] uppercase tracking-wide">Parc de bus</h2>
+            <Badge className="text-[10px] bg-[var(--institution-primary-10)] text-[var(--institution-primary)] border-0">{buses.length} vehicules</Badge>
           </div>
           {isLoading && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -520,7 +520,7 @@ export function TransportPage() {
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between mb-2">
                         <div>
-                          <p className="text-sm font-bold text-[#1a2744]">{bus.name}</p>
+                          <p className="text-sm font-bold text-[var(--institution-primary)]">{bus.name}</p>
                           <div className="flex items-center gap-1.5 mt-0.5">
                             <Bus className="size-3 text-gray-400" />
                             <span className="text-[10px] text-gray-500 font-mono">{bus.plate}</span>
@@ -553,12 +553,12 @@ export function TransportPage() {
                       <div className="mb-2">
                         <div className="flex items-center justify-between mb-0.5">
                           <span className="text-[9px] text-gray-400 font-medium">Remplissage</span>
-                          <span className="text-[9px] font-semibold" style={{ color: occupancyPercent > 80 ? '#c62828' : occupancyPercent > 50 ? '#d4a853' : '#2d7a4f' }}>{occupancyPercent}%</span>
+                          <span className="text-[9px] font-semibold" style={{ color: occupancyPercent > 80 ? '#c62828' : occupancyPercent > 50 ? 'var(--institution-accent)' : 'var(--institution-secondary)' }}>{occupancyPercent}%</span>
                         </div>
                         <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
                           <motion.div
                             className="h-full rounded-full"
-                            style={{ backgroundColor: occupancyPercent > 80 ? '#c62828' : occupancyPercent > 50 ? '#d4a853' : '#2d7a4f' }}
+                            style={{ backgroundColor: occupancyPercent > 80 ? '#c62828' : occupancyPercent > 50 ? 'var(--institution-accent)' : 'var(--institution-secondary)' }}
                             initial={{ width: 0 }}
                             animate={{ width: `${occupancyPercent}%` }}
                             transition={{ duration: 0.8, ease: 'easeOut' }}
@@ -573,9 +573,9 @@ export function TransportPage() {
                           <div className="space-y-0.5">
                             {bus.schedule.map((slot, i) => (
                               <div key={i} className="flex items-center gap-1.5">
-                                <div className="w-1.5 h-1.5 rounded-full bg-[#2d7a4f]" />
+                                <div className="w-1.5 h-1.5 rounded-full bg-[var(--institution-secondary)]" />
                                 <span className="text-[10px] text-gray-500">{slot.start}-{slot.end}</span>
-                                <span className="text-[10px] font-medium text-[#1a2744]">{slot.label}</span>
+                                <span className="text-[10px] font-medium text-[var(--institution-primary)]">{slot.label}</span>
                               </div>
                             ))}
                           </div>
@@ -598,7 +598,7 @@ export function TransportPage() {
                       {/* Voir details button */}
                       <Button
                         size="sm"
-                        className="w-full h-8 text-[10px] bg-[#1a2744] hover:bg-[#253556] text-white disabled:opacity-50"
+                        className="w-full h-8 text-[10px] bg-[var(--institution-primary)] hover:bg-[#253556] text-white disabled:opacity-50"
                         disabled={bus.status === 'en_panne'}
                       >
                         Voir details
@@ -614,12 +614,12 @@ export function TransportPage() {
 
         {/* ─── 4. Route Management Card ─────────────────────────────────────────── */}
         <motion.div variants={itemVariants}>
-          <Card className="border-l-4 border-l-[#1a2744]">
+          <Card className="border-l-4 border-l-[var(--institution-primary)]">
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
-                <Route className="size-4 text-[#1a2744]" />
-                <CardTitle className="text-sm font-semibold text-[#1a2744]">Gestion des trajets</CardTitle>
-                <Badge className="text-[10px] bg-[#1a274415] text-[#1a2744] border-0">{routes.length} trajets</Badge>
+                <Route className="size-4 text-[var(--institution-primary)]" />
+                <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Gestion des trajets</CardTitle>
+                <Badge className="text-[10px] bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0">{routes.length} trajets</Badge>
               </div>
             </CardHeader>
             <CardContent>
@@ -651,7 +651,7 @@ export function TransportPage() {
                       <div className="border border-gray-100 rounded-lg p-3 hover:shadow-sm transition-shadow">
                         <div className="flex items-start justify-between mb-2">
                           <div>
-                            <p className="text-xs font-bold text-[#1a2744]">{route.name}</p>
+                            <p className="text-xs font-bold text-[var(--institution-primary)]">{route.name}</p>
                             <div className="flex items-center gap-1 mt-0.5">
                               <MapPin className="size-3 text-gray-400" />
                               <span className="text-[10px] text-gray-500">{route.departure}</span>
@@ -725,15 +725,15 @@ export function TransportPage() {
 
         {/* ─── 5. Daily Schedule Table ───────────────────────────────────────────── */}
         <motion.div variants={itemVariants}>
-          <Card className="border-l-4 border-l-[#2d7a4f]">
+          <Card className="border-l-4 border-l-[var(--institution-secondary)]">
             <CardHeader className="pb-3">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <Calendar className="size-4 text-[#2d7a4f]" />
-                  <CardTitle className="text-sm font-semibold text-[#1a2744]">Programmation du jour</CardTitle>
-                  <Badge className="text-[10px] bg-[#2d7a4f15] text-[#2d7a4f] border-0">{filteredSchedule.length} trajets</Badge>
+                  <Calendar className="size-4 text-[var(--institution-secondary)]" />
+                  <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Programmation du jour</CardTitle>
+                  <Badge className="text-[10px] bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0">{filteredSchedule.length} trajets</Badge>
                 </div>
-                <Badge className="text-[10px] bg-[#1a274410] text-[#1a2744] border-0">
+                <Badge className="text-[10px] bg-[var(--institution-primary-10)] text-[var(--institution-primary)] border-0">
                   Reservations non configurees
                 </Badge>
               </div>
@@ -810,12 +810,12 @@ export function TransportPage() {
                       const sConfig = scheduleStatusConfig[entry.status]
                       return (
                         <TableRow key={entry.id} className="hover:bg-gray-50/50">
-                          <TableCell className="text-xs font-medium text-[#1a2744]">{entry.departure}</TableCell>
+                          <TableCell className="text-xs font-medium text-[var(--institution-primary)]">{entry.departure}</TableCell>
                           <TableCell className="text-xs text-gray-700">{entry.bus}</TableCell>
                           <TableCell className="text-xs text-gray-600 max-w-[200px] truncate">{entry.route}</TableCell>
                           <TableCell className="text-xs text-gray-600">{entry.driver}</TableCell>
                           <TableCell>
-                            <span className={`text-xs font-semibold ${entry.availableSeats === 0 ? 'text-[#c62828]' : 'text-[#2d7a4f]'}`}>
+                            <span className={`text-xs font-semibold ${entry.availableSeats === 0 ? 'text-[#c62828]' : 'text-[var(--institution-secondary)]'}`}>
                               {entry.availableSeats === 0 ? 'Complet' : entry.availableSeats}
                             </span>
                           </TableCell>
@@ -850,11 +850,11 @@ export function TransportPage() {
 
         {/* ─── 6. Transport Statistics Card ──────────────────────────────────────── */}
         <motion.div variants={itemVariants}>
-          <Card className="border-l-4 border-l-[#d4a853]">
+          <Card className="border-l-4 border-l-[var(--institution-accent)]">
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
-                <TrendingUp className="size-4 text-[#d4a853]" />
-                <CardTitle className="text-sm font-semibold text-[#1a2744]">Statistiques de transport</CardTitle>
+                <TrendingUp className="size-4 text-[var(--institution-accent)]" />
+                <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Statistiques de transport</CardTitle>
               </div>
             </CardHeader>
             <CardContent>
@@ -874,7 +874,7 @@ export function TransportPage() {
                         return (
                           <div key={route.id}>
                             <div className="flex items-center justify-between mb-1">
-                              <span className="text-[11px] font-medium text-[#1a2744] truncate max-w-[200px]">{route.name}</span>
+                              <span className="text-[11px] font-medium text-[var(--institution-primary)] truncate max-w-[200px]">{route.name}</span>
                               <span className="text-[11px] font-bold" style={{ color: routeColor }}>{route.avgOccupancy}%</span>
                             </div>
                             <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
@@ -902,21 +902,21 @@ export function TransportPage() {
                   {/* Departures by period of day */}
                   <div className="border border-gray-100 rounded-lg p-3">
                     <div className="flex items-center gap-2 mb-2">
-                      <Zap className="size-3.5 text-[#d4a853]" />
+                      <Zap className="size-3.5 text-[var(--institution-accent)]" />
                       <p className="text-xs font-semibold text-gray-600">Repartition des departs</p>
                     </div>
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] text-gray-500">Matin (avant 12h)</span>
-                        <span className="text-[10px] font-bold text-[#1a2744]">{morningDepartures}</span>
+                        <span className="text-[10px] font-bold text-[var(--institution-primary)]">{morningDepartures}</span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] text-gray-500">Apres-midi (12h-18h)</span>
-                        <span className="text-[10px] font-bold text-[#1a2744]">{afternoonDepartures}</span>
+                        <span className="text-[10px] font-bold text-[var(--institution-primary)]">{afternoonDepartures}</span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] text-gray-500">Soir (apres 18h)</span>
-                        <span className="text-[10px] font-bold text-[#1a2744]">{eveningDepartures}</span>
+                        <span className="text-[10px] font-bold text-[var(--institution-primary)]">{eveningDepartures}</span>
                       </div>
                     </div>
                   </div>
@@ -924,17 +924,17 @@ export function TransportPage() {
                   {/* Fleet status breakdown */}
                   <div className="border border-gray-100 rounded-lg p-3">
                     <div className="flex items-center gap-2 mb-2">
-                      <Bus className="size-3.5 text-[#2d7a4f]" />
+                      <Bus className="size-3.5 text-[var(--institution-secondary)]" />
                       <p className="text-xs font-semibold text-gray-600">Etat du parc</p>
                     </div>
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] text-gray-500">En service</span>
-                        <span className="text-[10px] font-bold text-[#2d7a4f]">{activeBuses}</span>
+                        <span className="text-[10px] font-bold text-[var(--institution-secondary)]">{activeBuses}</span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] text-gray-500">En maintenance</span>
-                        <span className="text-[10px] font-bold text-[#d4a853]">{maintenanceBuses}</span>
+                        <span className="text-[10px] font-bold text-[var(--institution-accent)]">{maintenanceBuses}</span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] text-gray-500">En panne</span>
@@ -946,16 +946,16 @@ export function TransportPage() {
                   {/* Route coverage + cumulative maintenance cost */}
                   <div className="border border-gray-100 rounded-lg p-3">
                     <div className="flex items-center gap-2 mb-2">
-                      <Route className="size-3.5 text-[#d4a853]" />
+                      <Route className="size-3.5 text-[var(--institution-accent)]" />
                       <p className="text-xs font-semibold text-gray-600">Couverture des trajets</p>
                     </div>
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-[10px] text-gray-500">Trajets avec vehicule assigne</span>
-                      <span className="text-xs font-bold text-[#1a2744]">{routesWithVehicle}/{routes.length}</span>
+                      <span className="text-xs font-bold text-[var(--institution-primary)]">{routesWithVehicle}/{routes.length}</span>
                     </div>
                     <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden mb-1">
                       <motion.div
-                        className="h-full rounded-full bg-[#d4a853]"
+                        className="h-full rounded-full bg-[var(--institution-accent)]"
                         initial={{ width: 0 }}
                         animate={{ width: `${routes.length > 0 ? Math.round((routesWithVehicle / routes.length) * 100) : 0}%` }}
                         transition={{ duration: 0.8, ease: 'easeOut' }}
@@ -963,7 +963,7 @@ export function TransportPage() {
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-[9px] text-gray-400">Cout maintenance cumule</span>
-                      <span className="text-[9px] text-[#d4a853] font-medium">{totalMaintenanceCost.toLocaleString('fr-FR')} FCFA</span>
+                      <span className="text-[9px] text-[var(--institution-accent)] font-medium">{totalMaintenanceCost.toLocaleString('fr-FR')} FCFA</span>
                     </div>
                   </div>
                 </div>
@@ -974,11 +974,11 @@ export function TransportPage() {
 
         {/* ─── 7. Maintenance & Alerts Card ──────────────────────────────────────── */}
         <motion.div variants={itemVariants}>
-          <Card className="border-l-4 border-l-[#1a2744]">
+          <Card className="border-l-4 border-l-[var(--institution-primary)]">
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
-                <AlertTriangle className="size-4 text-[#1a2744]" />
-                <CardTitle className="text-sm font-semibold text-[#1a2744]">Maintenance &amp; Alertes</CardTitle>
+                <AlertTriangle className="size-4 text-[var(--institution-primary)]" />
+                <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Maintenance &amp; Alertes</CardTitle>
               </div>
             </CardHeader>
             <CardContent>
@@ -995,15 +995,15 @@ export function TransportPage() {
                       {maintenance.map((entry) => (
                         <div key={entry.id} className="flex items-center justify-between border border-gray-100 rounded-lg p-3 hover:bg-gray-50/50 transition-colors">
                           <div className="flex items-center gap-3">
-                            <div className="p-2 rounded-lg bg-[#1a274410]">
-                              <Bus className="size-4 text-[#1a2744]" />
+                            <div className="p-2 rounded-lg bg-[var(--institution-primary-10)]">
+                              <Bus className="size-4 text-[var(--institution-primary)]" />
                             </div>
                             <div>
-                              <p className="text-xs font-medium text-[#1a2744]">{entry.bus}</p>
+                              <p className="text-xs font-medium text-[var(--institution-primary)]">{entry.bus}</p>
                               <p className="text-[10px] text-gray-500">{entry.type} - {entry.date}</p>
                             </div>
                           </div>
-                          <span className="text-xs font-bold text-[#1a2744]">{entry.cost.toLocaleString('fr-FR')} FCFA</span>
+                          <span className="text-xs font-bold text-[var(--institution-primary)]">{entry.cost.toLocaleString('fr-FR')} FCFA</span>
                         </div>
                       ))}
                     </div>
@@ -1014,10 +1014,10 @@ export function TransportPage() {
                       completed interventions with a performedAt date - so
                       this shows the real latest record instead of a
                       fabricated upcoming date. */}
-                  <div className="mt-3 p-3 rounded-lg bg-[#2d7a4f08] border border-[#2d7a4f20]">
+                  <div className="mt-3 p-3 rounded-lg bg-[var(--institution-secondary-08)] border border-[var(--institution-secondary-20)]">
                     <div className="flex items-center gap-2">
-                      <Clock className="size-3.5 text-[#2d7a4f]" />
-                      <p className="text-xs font-medium text-[#2d7a4f]">Derniere maintenance enregistree</p>
+                      <Clock className="size-3.5 text-[var(--institution-secondary)]" />
+                      <p className="text-xs font-medium text-[var(--institution-secondary)]">Derniere maintenance enregistree</p>
                     </div>
                     <p className="text-[10px] text-gray-600 mt-1">
                       {lastMaintenance
@@ -1062,9 +1062,9 @@ export function TransportPage() {
                   )}
 
                   {/* Maintenance cost summary */}
-                  <div className="mt-3 p-3 rounded-lg bg-[#1a274408] border border-[#1a274420]">
-                    <p className="text-xs font-medium text-[#1a2744] mb-1">Cout total maintenance</p>
-                    <p className="text-lg font-bold text-[#1a2744]">{totalMaintenanceCost.toLocaleString('fr-FR')} <span className="text-xs font-normal text-gray-400">FCFA</span></p>
+                  <div className="mt-3 p-3 rounded-lg bg-[var(--institution-primary-08)] border border-[var(--institution-primary-20)]">
+                    <p className="text-xs font-medium text-[var(--institution-primary)] mb-1">Cout total maintenance</p>
+                    <p className="text-lg font-bold text-[var(--institution-primary)]">{totalMaintenanceCost.toLocaleString('fr-FR')} <span className="text-xs font-normal text-gray-400">FCFA</span></p>
                   </div>
                 </div>
               </div>
@@ -1074,19 +1074,19 @@ export function TransportPage() {
 
         {/* ─── 8. Operational Limits Card ─────────────────────────────────────────── */}
         <motion.div variants={itemVariants}>
-          <Card className="border-l-4 border-l-[#2d7a4f]">
+          <Card className="border-l-4 border-l-[var(--institution-secondary)]">
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
-                <Globe className="size-4 text-[#2d7a4f]" />
-                <CardTitle className="text-sm font-semibold text-[#1a2744]">Capacites et limites du module transport</CardTitle>
+                <Globe className="size-4 text-[var(--institution-secondary)]" />
+                <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Capacites et limites du module transport</CardTitle>
               </div>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div className="border border-gray-100 rounded-lg p-3">
                   <div className="flex items-center gap-2 mb-2">
-                    <Bus className="size-3.5 text-[#1a2744]" />
-                    <p className="text-xs font-semibold text-[#1a2744]">Donnees gerees</p>
+                    <Bus className="size-3.5 text-[var(--institution-primary)]" />
+                    <p className="text-xs font-semibold text-[var(--institution-primary)]">Donnees gerees</p>
                   </div>
                   <p className="text-[10px] text-gray-600 leading-relaxed">
                     Le module affiche les vehicules, trajets, departs, maintenances et alertes enregistres pour l&apos;institution.
@@ -1096,8 +1096,8 @@ export function TransportPage() {
 
                 <div className="border border-gray-100 rounded-lg p-3">
                   <div className="flex items-center gap-2 mb-2">
-                    <Users className="size-3.5 text-[#2d7a4f]" />
-                    <p className="text-xs font-semibold text-[#1a2744]">Reservations individuelles</p>
+                    <Users className="size-3.5 text-[var(--institution-secondary)]" />
+                    <p className="text-xs font-semibold text-[var(--institution-primary)]">Reservations individuelles</p>
                   </div>
                   <p className="text-[10px] text-gray-600 leading-relaxed">
                     Aucune reservation ad-hoc n&apos;est exposee ici, car le modele actuel gere les departs et abonnements par trajet.
@@ -1107,8 +1107,8 @@ export function TransportPage() {
 
                 <div className="border border-gray-100 rounded-lg p-3">
                   <div className="flex items-center gap-2 mb-2">
-                    <AlertTriangle className="size-3.5 text-[#d4a853]" />
-                    <p className="text-xs font-semibold text-[#1a2744]">Connectivite</p>
+                    <AlertTriangle className="size-3.5 text-[var(--institution-accent)]" />
+                    <p className="text-xs font-semibold text-[var(--institution-primary)]">Connectivite</p>
                   </div>
                   <p className="text-[10px] text-gray-600 leading-relaxed">
                     Les horaires sont lus depuis le serveur. Aucun mode de synchronisation hors connexion n&apos;est annonce tant
@@ -1118,8 +1118,8 @@ export function TransportPage() {
 
                 <div className="border border-gray-100 rounded-lg p-3">
                   <div className="flex items-center gap-2 mb-2">
-                    <Navigation className="size-3.5 text-[#1a2744]" />
-                    <p className="text-xs font-semibold text-[#1a2744]">Suivi vehicule</p>
+                    <Navigation className="size-3.5 text-[var(--institution-primary)]" />
+                    <p className="text-xs font-semibold text-[var(--institution-primary)]">Suivi vehicule</p>
                   </div>
                   <p className="text-[10px] text-gray-600 leading-relaxed">
                     Les positions en direct ne sont pas collectees par ce module. Les informations affichees sont les affectations
@@ -1129,8 +1129,8 @@ export function TransportPage() {
 
                 <div className="border border-gray-100 rounded-lg p-3">
                   <div className="flex items-center gap-2 mb-2">
-                    <Route className="size-3.5 text-[#d4a853]" />
-                    <p className="text-xs font-semibold text-[#1a2744]">Couverture</p>
+                    <Route className="size-3.5 text-[var(--institution-accent)]" />
+                    <p className="text-xs font-semibold text-[var(--institution-primary)]">Couverture</p>
                   </div>
                   <p className="text-[10px] text-gray-600 leading-relaxed">
                     {routes.length > 0
@@ -1141,8 +1141,8 @@ export function TransportPage() {
 
                 <div className="border border-gray-100 rounded-lg p-3">
                   <div className="flex items-center gap-2 mb-2">
-                    <Timer className="size-3.5 text-[#2d7a4f]" />
-                    <p className="text-xs font-semibold text-[#1a2744]">Maintenance</p>
+                    <Timer className="size-3.5 text-[var(--institution-secondary)]" />
+                    <p className="text-xs font-semibold text-[var(--institution-primary)]">Maintenance</p>
                   </div>
                   <p className="text-[10px] text-gray-600 leading-relaxed">
                     Les couts et historiques affiches proviennent des maintenances enregistrees. Le module ne predit pas encore

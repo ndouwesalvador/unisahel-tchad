@@ -163,30 +163,30 @@ interface BankQuestion {
 // ─── Config Maps ──────────────────────────────────────────────────────────────
 
 const examTypeConfig: Record<string, { label: string; className: string }> = {
-  'QCM': { label: 'QCM', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0' },
-  'Dissertation': { label: 'Dissertation', className: 'bg-[#1a274415] text-[#1a2744] border-0' },
-  'Mixte': { label: 'Mixte', className: 'bg-[#d4a85315] text-[#d4a853] border-0' },
+  'QCM': { label: 'QCM', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0' },
+  'Dissertation': { label: 'Dissertation', className: 'bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0' },
+  'Mixte': { label: 'Mixte', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0' },
   'Vrai-Faux': { label: 'Vrai-Faux', className: 'bg-[#6366f115] text-[#6366f1] border-0' },
 }
 
 const examStatusConfig: Record<string, { label: string; className: string; icon: React.ElementType }> = {
-  'Planifie': { label: 'Planifie', className: 'bg-[#d4a85315] text-[#d4a853] border-0', icon: Clock },
-  'En cours': { label: 'En cours', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0', icon: Zap },
-  'Termine': { label: 'Termine', className: 'bg-[#1a274415] text-[#1a2744] border-0', icon: CheckCircle2 },
+  'Planifie': { label: 'Planifie', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0', icon: Clock },
+  'En cours': { label: 'En cours', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0', icon: Zap },
+  'Termine': { label: 'Termine', className: 'bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0', icon: CheckCircle2 },
 }
 
 const resultStatusConfig: Record<string, { label: string; className: string }> = {
-  'Reussi': { label: 'Reussi', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0' },
+  'Reussi': { label: 'Reussi', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0' },
   'Echoue': { label: 'Echoue', className: 'bg-[#c6282815] text-[#c62828] border-0' },
-  'En correction': { label: 'En correction', className: 'bg-[#d4a85315] text-[#d4a853] border-0' },
+  'En correction': { label: 'En correction', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0' },
 }
 
 const gradeConfig: Record<string, { className: string }> = {
-  'Excellent': { className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0' },
-  'Tres Bien': { className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0' },
-  'Bien': { className: 'bg-[#1a274415] text-[#1a2744] border-0' },
-  'Assez Bien': { className: 'bg-[#d4a85315] text-[#d4a853] border-0' },
-  'Passable': { className: 'bg-[#d4a85315] text-[#d4a853] border-0' },
+  'Excellent': { className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0' },
+  'Tres Bien': { className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0' },
+  'Bien': { className: 'bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0' },
+  'Assez Bien': { className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0' },
+  'Passable': { className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0' },
   'Insuffisant': { className: 'bg-[#c6282815] text-[#c62828] border-0' },
   '-': { className: 'bg-gray-100 text-gray-400 border-0' },
 }
@@ -194,12 +194,12 @@ const gradeConfig: Record<string, { className: string }> = {
 const severityConfig: Record<string, { label: string; className: string }> = {
   'Critique': { label: 'Critique', className: 'bg-[#c6282815] text-[#c62828] border-0' },
   'Elevee': { label: 'Elevee', className: 'bg-[#ea580c15] text-[#ea580c] border-0' },
-  'Moyenne': { label: 'Moyenne', className: 'bg-[#d4a85315] text-[#d4a853] border-0' },
+  'Moyenne': { label: 'Moyenne', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0' },
 }
 
 const difficultyConfig: Record<string, { label: string; className: string }> = {
-  'Facile': { label: 'Facile', className: 'bg-[#2d7a4f15] text-[#2d7a4f] border-0' },
-  'Moyen': { label: 'Moyen', className: 'bg-[#d4a85315] text-[#d4a853] border-0' },
+  'Facile': { label: 'Facile', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0' },
+  'Moyen': { label: 'Moyen', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0' },
   'Difficile': { label: 'Difficile', className: 'bg-[#c6282815] text-[#c62828] border-0' },
 }
 
@@ -368,11 +368,11 @@ export function OnlineExamPage() {
   const distBuckets = [
     { range: '0-4', min: 0, max: 4, color: '#c62828' },
     { range: '4-8', min: 4, max: 8, color: '#ea580c' },
-    { range: '8-10', min: 8, max: 10, color: '#d4a853' },
-    { range: '10-12', min: 10, max: 12, color: '#1a2744' },
-    { range: '12-14', min: 12, max: 14, color: '#2d7a4f' },
-    { range: '14-16', min: 14, max: 16, color: '#2d7a4f' },
-    { range: '16-20', min: 16, max: 20.01, color: '#1a2744' },
+    { range: '8-10', min: 8, max: 10, color: 'var(--institution-accent)' },
+    { range: '10-12', min: 10, max: 12, color: 'var(--institution-primary)' },
+    { range: '12-14', min: 12, max: 14, color: 'var(--institution-secondary)' },
+    { range: '14-16', min: 14, max: 16, color: 'var(--institution-secondary)' },
+    { range: '16-20', min: 16, max: 20.01, color: 'var(--institution-primary)' },
   ]
   const gradeDistribution = distBuckets.map(b => ({
     range: b.range,
@@ -423,7 +423,7 @@ export function OnlineExamPage() {
       >
         {/* ── Gradient Header Banner ───────────────────────────────────────────── */}
         <motion.div variants={itemVariants}>
-          <div className="relative overflow-hidden bg-gradient-to-r from-[#1a2744] via-[#1f3050] to-[#2d7a4f] p-6 md:p-8 rounded-xl mb-2">
+          <div className="relative overflow-hidden bg-gradient-to-r from-[var(--institution-primary)] via-[var(--institution-primary-light)] to-[var(--institution-secondary)] p-6 md:p-8 rounded-xl mb-2">
             {/* SVG pattern overlay */}
             <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.15) 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
             <div className="relative z-10">
@@ -465,25 +465,25 @@ export function OnlineExamPage() {
         <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Examens en cours */}
           <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
-            <Card className="overflow-hidden relative border-l-4 border-l-[#2d7a4f] hover:shadow-lg transition-shadow">
-              <div className="h-1 bg-gradient-to-r from-[#2d7a4f] to-[#3da66a]" />
-              <div className="absolute inset-0 bg-gradient-to-br from-[#2d7a4f08] to-[#2d7a4f00] pointer-events-none" />
+            <Card className="overflow-hidden relative border-l-4 border-l-[var(--institution-secondary)] hover:shadow-lg transition-shadow">
+              <div className="h-1 bg-gradient-to-r from-[var(--institution-secondary)] to-[var(--institution-secondary-bright)]" />
+              <div className="absolute inset-0 bg-gradient-to-br from-[var(--institution-secondary-08)] to-[var(--institution-secondary-00)] pointer-events-none" />
               <CardContent className="p-4 relative">
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Examens en cours</p>
-                    <p className="text-xl font-bold text-[#2d7a4f] mt-1">{inProgressCount}</p>
-                    <p className="text-xs text-[#2d7a4f] mt-1 font-medium flex items-center gap-1">
+                    <p className="text-xl font-bold text-[var(--institution-secondary)] mt-1">{inProgressCount}</p>
+                    <p className="text-xs text-[var(--institution-secondary)] mt-1 font-medium flex items-center gap-1">
                       <TrendingUp className="size-3" />
                       Actifs maintenant
                     </p>
                   </div>
-                  <div className="w-10 h-10 rounded-xl bg-[#2d7a4f15] flex items-center justify-center">
-                    <Monitor className="size-5 text-[#2d7a4f]" />
+                  <div className="w-10 h-10 rounded-xl bg-[var(--institution-secondary-15)] flex items-center justify-center">
+                    <Monitor className="size-5 text-[var(--institution-secondary)]" />
                   </div>
                 </div>
                 <div className="mt-3">
-                  <Progress value={upcomingExams.length > 0 ? Math.round((inProgressCount / upcomingExams.length) * 100) : 0} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#2d7a4f]" />
+                  <Progress value={upcomingExams.length > 0 ? Math.round((inProgressCount / upcomingExams.length) * 100) : 0} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[var(--institution-secondary)]" />
                 </div>
               </CardContent>
             </Card>
@@ -491,22 +491,22 @@ export function OnlineExamPage() {
 
           {/* Examens termines */}
           <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
-            <Card className="overflow-hidden relative border-l-4 border-l-[#1a2744] hover:shadow-lg transition-shadow">
-              <div className="h-1 bg-gradient-to-r from-[#1a2744] to-[#2d3e5e]" />
-              <div className="absolute inset-0 bg-gradient-to-br from-[#1a274408] to-[#1a274400] pointer-events-none" />
+            <Card className="overflow-hidden relative border-l-4 border-l-[var(--institution-primary)] hover:shadow-lg transition-shadow">
+              <div className="h-1 bg-gradient-to-r from-[var(--institution-primary)] to-[#2d3e5e]" />
+              <div className="absolute inset-0 bg-gradient-to-br from-[var(--institution-primary-08)] to-[var(--institution-primary-00)] pointer-events-none" />
               <CardContent className="p-4 relative">
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Examens termines</p>
-                    <p className="text-xl font-bold text-[#1a2744] mt-1">{completedCount}</p>
+                    <p className="text-xl font-bold text-[var(--institution-primary)] mt-1">{completedCount}</p>
                     <p className="text-xs text-gray-400 mt-1">Sessions finalisees</p>
                   </div>
-                  <div className="w-10 h-10 rounded-xl bg-[#1a274415] flex items-center justify-center">
-                    <CheckCircle2 className="size-5 text-[#1a2744]" />
+                  <div className="w-10 h-10 rounded-xl bg-[var(--institution-primary-15)] flex items-center justify-center">
+                    <CheckCircle2 className="size-5 text-[var(--institution-primary)]" />
                   </div>
                 </div>
                 <div className="mt-3">
-                  <Progress value={upcomingExams.length > 0 ? Math.round((completedCount / upcomingExams.length) * 100) : 0} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#1a2744]" />
+                  <Progress value={upcomingExams.length > 0 ? Math.round((completedCount / upcomingExams.length) * 100) : 0} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[var(--institution-primary)]" />
                 </div>
               </CardContent>
             </Card>
@@ -514,22 +514,22 @@ export function OnlineExamPage() {
 
           {/* Notes moyennes */}
           <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
-            <Card className="overflow-hidden relative border-l-4 border-l-[#d4a853] hover:shadow-lg transition-shadow">
-              <div className="h-1 bg-gradient-to-r from-[#d4a853] to-[#e6c477]" />
-              <div className="absolute inset-0 bg-gradient-to-br from-[#d4a85308] to-[#d4a85300] pointer-events-none" />
+            <Card className="overflow-hidden relative border-l-4 border-l-[var(--institution-accent)] hover:shadow-lg transition-shadow">
+              <div className="h-1 bg-gradient-to-r from-[var(--institution-accent)] to-[var(--institution-accent-light)]" />
+              <div className="absolute inset-0 bg-gradient-to-br from-[var(--institution-accent-08)] to-[var(--institution-accent-00)] pointer-events-none" />
               <CardContent className="p-4 relative">
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Notes moyennes</p>
-                    <p className="text-xl font-bold text-[#d4a853] mt-1">{averageScore.toFixed(1)}/20</p>
+                    <p className="text-xl font-bold text-[var(--institution-accent)] mt-1">{averageScore.toFixed(1)}/20</p>
                     <p className="text-xs text-gray-400 mt-1">Résultats corrigés</p>
                   </div>
-                  <div className="w-10 h-10 rounded-xl bg-[#d4a85315] flex items-center justify-center">
-                    <BarChart3 className="size-5 text-[#d4a853]" />
+                  <div className="w-10 h-10 rounded-xl bg-[var(--institution-accent-15)] flex items-center justify-center">
+                    <BarChart3 className="size-5 text-[var(--institution-accent)]" />
                   </div>
                 </div>
                 <div className="mt-3">
-                  <Progress value={Math.min(100, Math.round((averageScore / 20) * 100))} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#d4a853]" />
+                  <Progress value={Math.min(100, Math.round((averageScore / 20) * 100))} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[var(--institution-accent)]" />
                 </div>
               </CardContent>
             </Card>
@@ -537,22 +537,22 @@ export function OnlineExamPage() {
 
           {/* Taux de reussite */}
           <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
-            <Card className="overflow-hidden relative border-l-4 border-l-[#2d7a4f] hover:shadow-lg transition-shadow">
-              <div className="h-1 bg-gradient-to-r from-[#2d7a4f] to-[#3da66a]" />
-              <div className="absolute inset-0 bg-gradient-to-br from-[#2d7a4f08] to-[#2d7a4f00] pointer-events-none" />
+            <Card className="overflow-hidden relative border-l-4 border-l-[var(--institution-secondary)] hover:shadow-lg transition-shadow">
+              <div className="h-1 bg-gradient-to-r from-[var(--institution-secondary)] to-[var(--institution-secondary-bright)]" />
+              <div className="absolute inset-0 bg-gradient-to-br from-[var(--institution-secondary-08)] to-[var(--institution-secondary-00)] pointer-events-none" />
               <CardContent className="p-4 relative">
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Taux de reussite</p>
-                    <p className="text-xl font-bold text-[#2d7a4f] mt-1">{successRate}%</p>
+                    <p className="text-xl font-bold text-[var(--institution-secondary)] mt-1">{successRate}%</p>
                     <p className="text-xs text-gray-400 mt-1">Sur les copies corrigees</p>
                   </div>
-                  <div className="w-10 h-10 rounded-xl bg-[#2d7a4f15] flex items-center justify-center">
-                    <TrendingUp className="size-5 text-[#2d7a4f]" />
+                  <div className="w-10 h-10 rounded-xl bg-[var(--institution-secondary-15)] flex items-center justify-center">
+                    <TrendingUp className="size-5 text-[var(--institution-secondary)]" />
                   </div>
                 </div>
                 <div className="mt-3">
-                  <Progress value={successRate} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#2d7a4f]" />
+                  <Progress value={successRate} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[var(--institution-secondary)]" />
                 </div>
               </CardContent>
             </Card>
@@ -561,19 +561,19 @@ export function OnlineExamPage() {
 
         {/* ── Exam Calendar Card ──────────────────────────────────────────────── */}
         <motion.div variants={itemVariants}>
-          <Card className="border-l-4 border-l-[#1a2744]">
-            <div className="h-1 bg-gradient-to-r from-[#1a2744] via-[#2d7a4f] to-[#d4a853]" />
+          <Card className="border-l-4 border-l-[var(--institution-primary)]">
+            <div className="h-1 bg-gradient-to-r from-[var(--institution-primary)] via-[var(--institution-secondary)] to-[var(--institution-accent)]" />
             <CardHeader className="pb-3">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <CardTitle className="text-sm font-semibold text-[#1a2744] flex items-center gap-2">
+                <CardTitle className="text-sm font-semibold text-[var(--institution-primary)] flex items-center gap-2">
                   <Calendar className="size-4" />
                   Calendrier des examens
                 </CardTitle>
                 <div className="flex items-center gap-2">
-                  <Badge className="text-[10px] bg-[#2d7a4f15] text-[#2d7a4f] border-0">
+                  <Badge className="text-[10px] bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0">
                     {examsQuery?.stats?.inProgress ?? upcomingExams.filter(e => e.status === 'En cours').length} en cours
                   </Badge>
-                  <Badge className="text-[10px] bg-[#d4a85315] text-[#d4a853] border-0">
+                  <Badge className="text-[10px] bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0">
                     {examsQuery?.stats?.planned ?? upcomingExams.filter(e => e.status === 'Planifie').length} planifies
                   </Badge>
                 </div>
@@ -600,9 +600,9 @@ export function OnlineExamPage() {
                       const statusConf = examStatusConfig[exam.status]
                       const StatusIcon = statusConf?.icon
                       return (
-                        <TableRow key={exam.id} className="hover:bg-[#2d7a4f05] transition-colors">
+                        <TableRow key={exam.id} className="hover:bg-[var(--institution-secondary-05)] transition-colors">
                           <TableCell className="py-2.5">
-                            <p className="text-sm font-medium text-[#1a2744]">{exam.name}</p>
+                            <p className="text-sm font-medium text-[var(--institution-primary)]">{exam.name}</p>
                           </TableCell>
                           <TableCell className="text-xs text-gray-600 py-2.5">{exam.course}</TableCell>
                           <TableCell className="py-2.5">
@@ -616,7 +616,7 @@ export function OnlineExamPage() {
                             </div>
                           </TableCell>
                           <TableCell className="text-center text-xs text-gray-600 py-2.5">{exam.duration}</TableCell>
-                          <TableCell className="text-center text-xs font-medium text-[#1a2744] py-2.5">{exam.questions}</TableCell>
+                          <TableCell className="text-center text-xs font-medium text-[var(--institution-primary)] py-2.5">{exam.questions}</TableCell>
                           <TableCell className="py-2.5">
                             {typeConf ? (
                               <Badge className={`text-[10px] ${typeConf.className}`}>{typeConf.label}</Badge>
@@ -632,18 +632,18 @@ export function OnlineExamPage() {
                               ) : null}
                               {exam.status === 'En cours' && exam.progress !== undefined && (
                                 <div className="w-16">
-                                  <Progress value={exam.progress} className="h-1 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#2d7a4f]" />
+                                  <Progress value={exam.progress} className="h-1 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[var(--institution-secondary)]" />
                                 </div>
                               )}
                             </div>
                           </TableCell>
                           <TableCell className="py-2.5 text-right">
                             {exam.status === 'Planifie' ? (
-                              <Button size="sm" variant="outline" className="h-7 text-[10px] border-[#2d7a4f30] text-[#2d7a4f]" disabled>
+                              <Button size="sm" variant="outline" className="h-7 text-[10px] border-[var(--institution-secondary-30)] text-[var(--institution-secondary)]" disabled>
                                 Disponible cote etudiant
                               </Button>
                             ) : exam.status === 'En cours' ? (
-                              <Button size="sm" variant="outline" className="h-7 text-[10px] border-[#d4a85330] text-[#d4a853]" disabled>
+                              <Button size="sm" variant="outline" className="h-7 text-[10px] border-[var(--institution-accent-30)] text-[var(--institution-accent)]" disabled>
                                 Session etudiant active
                               </Button>
                             ) : (
@@ -678,23 +678,23 @@ export function OnlineExamPage() {
 
         {/* ── Student Exam Runtime Status ──────────────────────────────────────── */}
         <motion.div variants={itemVariants}>
-          <Card className="border-l-4 border-l-[#2d7a4f]">
-            <div className="h-1 bg-gradient-to-r from-[#2d7a4f] to-[#3da66a]" />
+          <Card className="border-l-4 border-l-[var(--institution-secondary)]">
+            <div className="h-1 bg-gradient-to-r from-[var(--institution-secondary)] to-[var(--institution-secondary-bright)]" />
             <CardHeader className="pb-3">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <CardTitle className="text-sm font-semibold text-[#1a2744] flex items-center gap-2">
-                  <Monitor className="size-4 text-[#2d7a4f]" />
+                <CardTitle className="text-sm font-semibold text-[var(--institution-primary)] flex items-center gap-2">
+                  <Monitor className="size-4 text-[var(--institution-secondary)]" />
                   Interface etudiant reelle
                 </CardTitle>
-                <Badge className="text-[10px] bg-[#2d7a4f15] text-[#2d7a4f] border-0">
+                <Badge className="text-[10px] bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0">
                   Donnees connectees
                 </Badge>
               </div>
             </CardHeader>
             <CardContent className="p-4 pt-0">
               <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-4">
-                <div className="p-4 rounded-lg bg-[#1a274408] border border-[#1a274415]">
-                  <h3 className="text-sm font-bold text-[#1a2744] mb-2">Passation côte étudiant, gestion côte admin</h3>
+                <div className="p-4 rounded-lg bg-[var(--institution-primary-08)] border border-[var(--institution-primary-15)]">
+                  <h3 className="text-sm font-bold text-[var(--institution-primary)] mb-2">Passation côte étudiant, gestion côte admin</h3>
                   <p className="text-xs text-gray-600 leading-relaxed">
                     Ce panneau admin ne simule plus une copie d&apos;examen. Il prepare les examens, gere la banque de questions,
                     affiche les résultats enregistrés et liste les incidents remontés par les sessions étudiantes réelles.
@@ -702,31 +702,31 @@ export function OnlineExamPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
                     <div className="p-3 rounded-lg bg-white border border-gray-100">
                       <p className="text-[10px] text-gray-500">Examens planifies</p>
-                      <p className="text-xl font-bold text-[#1a2744]">{upcomingExams.filter((exam) => exam.status === 'Planifie').length}</p>
+                      <p className="text-xl font-bold text-[var(--institution-primary)]">{upcomingExams.filter((exam) => exam.status === 'Planifie').length}</p>
                     </div>
                     <div className="p-3 rounded-lg bg-white border border-gray-100">
                       <p className="text-[10px] text-gray-500">Sessions en cours</p>
-                      <p className="text-xl font-bold text-[#2d7a4f]">{inProgressCount}</p>
+                      <p className="text-xl font-bold text-[var(--institution-secondary)]">{inProgressCount}</p>
                     </div>
                     <div className="p-3 rounded-lg bg-white border border-gray-100">
                       <p className="text-[10px] text-gray-500">Resultats enregistres</p>
-                      <p className="text-xl font-bold text-[#d4a853]">{studentResults.length}</p>
+                      <p className="text-xl font-bold text-[var(--institution-accent)]">{studentResults.length}</p>
                     </div>
                   </div>
                 </div>
 
-                <div className="p-4 rounded-lg bg-[#2d7a4f08] border border-[#2d7a4f15]">
-                  <h4 className="text-xs font-semibold text-[#1a2744] mb-3">Actions admin disponibles</h4>
+                <div className="p-4 rounded-lg bg-[var(--institution-secondary-08)] border border-[var(--institution-secondary-15)]">
+                  <h4 className="text-xs font-semibold text-[var(--institution-primary)] mb-3">Actions admin disponibles</h4>
                   <div className="space-y-2">
-                    <Button size="sm" className="w-full justify-start h-8 text-xs bg-[#2d7a4f] hover:bg-[#236b40] text-white" onClick={() => setShowNewExam(true)}>
+                    <Button size="sm" className="w-full justify-start h-8 text-xs bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white" onClick={() => setShowNewExam(true)}>
                       <Plus className="size-3.5 mr-2" />
                       Creer un examen
                     </Button>
-                    <Button size="sm" variant="outline" className="w-full justify-start h-8 text-xs border-[#1a274430] text-[#1a2744]" onClick={() => setShowAddQuestionForm(true)}>
+                    <Button size="sm" variant="outline" className="w-full justify-start h-8 text-xs border-[var(--institution-primary-30)] text-[var(--institution-primary)]" onClick={() => setShowAddQuestionForm(true)}>
                       <BookOpen className="size-3.5 mr-2" />
                       Ajouter une question
                     </Button>
-                    <Button size="sm" variant="outline" className="w-full justify-start h-8 text-xs border-[#d4a85330] text-[#d4a853]" onClick={() => exportToExcel(filteredResults, 'export_resultats_examens_en_ligne')}>
+                    <Button size="sm" variant="outline" className="w-full justify-start h-8 text-xs border-[var(--institution-accent-30)] text-[var(--institution-accent)]" onClick={() => exportToExcel(filteredResults, 'export_resultats_examens_en_ligne')}>
                       <Download className="size-3.5 mr-2" />
                       Exporter les resultats
                     </Button>
@@ -742,11 +742,11 @@ export function OnlineExamPage() {
 
         {/* ── Results & Grading Card ──────────────────────────────────────────── */}
         <motion.div variants={itemVariants}>
-          <Card className="border-l-4 border-l-[#d4a853]">
-            <div className="h-1 bg-gradient-to-r from-[#d4a853] to-[#e6c477]" />
+          <Card className="border-l-4 border-l-[var(--institution-accent)]">
+            <div className="h-1 bg-gradient-to-r from-[var(--institution-accent)] to-[var(--institution-accent-light)]" />
             <CardHeader className="pb-3">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <CardTitle className="text-sm font-semibold text-[#1a2744] flex items-center gap-2">
+                <CardTitle className="text-sm font-semibold text-[var(--institution-primary)] flex items-center gap-2">
                   <BarChart3 className="size-4" />
                   Resultats & Correction automatique
                 </CardTitle>
@@ -760,7 +760,7 @@ export function OnlineExamPage() {
                       onChange={(e) => setResultSearch(e.target.value)}
                     />
                   </div>
-                  <Button size="sm" variant="outline" className="text-xs border-[#1a274430] text-[#1a2744] hover:bg-[#1a274408]" onClick={() => exportToExcel(filteredResults, 'export_resultats_examens_en_ligne')}>
+                  <Button size="sm" variant="outline" className="text-xs border-[var(--institution-primary-30)] text-[var(--institution-primary)] hover:bg-[var(--institution-primary-08)]" onClick={() => exportToExcel(filteredResults, 'export_resultats_examens_en_ligne')}>
                     <Download className="size-3.5 mr-1.5" />
                     Exporter
                   </Button>
@@ -794,15 +794,15 @@ export function OnlineExamPage() {
                       const rsc = resultStatusConfig[result.status]
                       const gc = gradeConfig[result.grade]
                       return (
-                        <TableRow key={result.id} className="hover:bg-[#2d7a4f05] transition-colors">
+                        <TableRow key={result.id} className="hover:bg-[var(--institution-secondary-05)] transition-colors">
                           <TableCell className="py-2">
-                            <span className="text-sm font-medium text-[#1a2744]">{result.name}</span>
+                            <span className="text-sm font-medium text-[var(--institution-primary)]">{result.name}</span>
                           </TableCell>
                           <TableCell className="text-xs text-gray-500 font-mono py-2">{result.matricule}</TableCell>
                           <TableCell className="text-center py-2">
                             <span className={`text-sm font-bold ${
-                              result.score >= 12 ? 'text-[#2d7a4f]' :
-                              result.score >= 10 ? 'text-[#d4a853]' :
+                              result.score >= 12 ? 'text-[var(--institution-secondary)]' :
+                              result.score >= 10 ? 'text-[var(--institution-accent)]' :
                               'text-[#c62828]'
                             }`}>
                               {result.score}/{result.maxScore}
@@ -830,11 +830,11 @@ export function OnlineExamPage() {
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                 <div className="p-3 rounded-lg bg-gray-50 text-center">
                   <p className="text-[10px] text-gray-500 uppercase tracking-wide">Moyenne</p>
-                  <p className="text-lg font-bold text-[#1a2744]">{moyenne.toFixed(1)}</p>
+                  <p className="text-lg font-bold text-[var(--institution-primary)]">{moyenne.toFixed(1)}</p>
                 </div>
                 <div className="p-3 rounded-lg bg-gray-50 text-center">
                   <p className="text-[10px] text-gray-500 uppercase tracking-wide">Mediane</p>
-                  <p className="text-lg font-bold text-[#2d7a4f]">{mediane.toFixed(1)}</p>
+                  <p className="text-lg font-bold text-[var(--institution-secondary)]">{mediane.toFixed(1)}</p>
                 </div>
                 <div className="p-3 rounded-lg bg-gray-50 text-center">
                   <p className="text-[10px] text-gray-500 uppercase tracking-wide">Min</p>
@@ -842,21 +842,21 @@ export function OnlineExamPage() {
                 </div>
                 <div className="p-3 rounded-lg bg-gray-50 text-center">
                   <p className="text-[10px] text-gray-500 uppercase tracking-wide">Max</p>
-                  <p className="text-lg font-bold text-[#2d7a4f]">{maxScore.toFixed(1)}</p>
+                  <p className="text-lg font-bold text-[var(--institution-secondary)]">{maxScore.toFixed(1)}</p>
                 </div>
                 <div className="p-3 rounded-lg bg-gray-50 text-center">
                   <p className="text-[10px] text-gray-500 uppercase tracking-wide">Ecart-type</p>
-                  <p className="text-lg font-bold text-[#d4a853]">{ecartType.toFixed(1)}</p>
+                  <p className="text-lg font-bold text-[var(--institution-accent)]">{ecartType.toFixed(1)}</p>
                 </div>
               </div>
 
               {/* Grade distribution bar chart */}
               <div>
-                <h4 className="text-xs font-semibold text-[#1a2744] mb-3">Distribution des notes</h4>
+                <h4 className="text-xs font-semibold text-[var(--institution-primary)] mb-3">Distribution des notes</h4>
                 <div className="flex items-end gap-2 h-32">
                   {gradeDistribution.map((bar, idx) => (
                     <div key={bar.range} className="flex-1 flex flex-col items-center gap-1">
-                      <span className="text-[10px] font-semibold text-[#1a2744]">{bar.count}</span>
+                      <span className="text-[10px] font-semibold text-[var(--institution-primary)]">{bar.count}</span>
                       <div className="w-full relative" style={{ height: '80px' }}>
                         <div className="absolute inset-x-0 bottom-0">
                           <motion.div
@@ -885,7 +885,7 @@ export function OnlineExamPage() {
               <div className="h-1 bg-gradient-to-r from-red-500 to-red-400" />
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-semibold text-[#1a2744] flex items-center gap-2">
+                  <CardTitle className="text-sm font-semibold text-[var(--institution-primary)] flex items-center gap-2">
                     <Shield className="size-4 text-red-500" />
                     Surveillance connectee et limites
                   </CardTitle>
@@ -903,17 +903,17 @@ export function OnlineExamPage() {
                     { icon: Timer, text: 'Duree issue de l examen' },
                     { icon: FileCheck, text: 'Soumission finale enregistree' },
                   ].map((feature, idx) => (
-                    <div key={idx} className="flex items-center gap-2 p-2 rounded bg-[#2d7a4f08] border border-[#2d7a4f15]">
-                      <feature.icon className="size-3.5 text-[#2d7a4f] shrink-0" />
+                    <div key={idx} className="flex items-center gap-2 p-2 rounded bg-[var(--institution-secondary-08)] border border-[var(--institution-secondary-15)]">
+                      <feature.icon className="size-3.5 text-[var(--institution-secondary)] shrink-0" />
                       <span className="text-[10px] text-gray-700 leading-tight">{feature.text}</span>
-                      <CheckCircle2 className="size-3 text-[#2d7a4f] ml-auto shrink-0" />
+                      <CheckCircle2 className="size-3 text-[var(--institution-secondary)] ml-auto shrink-0" />
                     </div>
                   ))}
                 </div>
 
                 {/* Operational limits */}
-                <div className="p-3 rounded-lg bg-[#d4a85308] border border-[#d4a85315]">
-                  <p className="text-xs font-semibold text-[#1a2744] mb-1">Limites operationnelles</p>
+                <div className="p-3 rounded-lg bg-[var(--institution-accent-08)] border border-[var(--institution-accent-15)]">
+                  <p className="text-xs font-semibold text-[var(--institution-primary)] mb-1">Limites operationnelles</p>
                   <p className="text-[10px] text-gray-600 leading-relaxed">
                     Les incidents sont journalises et consultables ici. Ce panneau n&apos;annonce plus de sanction automatique
                     tant qu&apos;une regle de blocage ou de soumission forcee n&apos;est pas configuree cote serveur.
@@ -922,7 +922,7 @@ export function OnlineExamPage() {
 
                 {/* Flagged incidents */}
                 <div>
-                  <p className="text-xs font-semibold text-[#1a2744] mb-2">Incidents signales</p>
+                  <p className="text-xs font-semibold text-[var(--institution-primary)] mb-2">Incidents signales</p>
                   <div className="space-y-2 max-h-48 overflow-y-auto">
                     {incidents.length === 0 && (
                       <p className="text-xs text-gray-400 text-center py-4">Aucun incident signale</p>
@@ -934,11 +934,11 @@ export function OnlineExamPage() {
                           <AlertTriangle className={`size-3.5 mt-0.5 shrink-0 ${
                             incident.severity === 'Critique' ? 'text-red-500' :
                             incident.severity === 'Elevee' ? 'text-orange-500' :
-                            'text-[#d4a853]'
+                            'text-[var(--institution-accent)]'
                           }`} />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              <span className="text-xs font-medium text-[#1a2744]">{incident.studentName}</span>
+                              <span className="text-xs font-medium text-[var(--institution-primary)]">{incident.studentName}</span>
                               {sevConf ? (
                                 <Badge className={`text-[9px] ${sevConf.className}`}>{sevConf.label}</Badge>
                               ) : null}
@@ -958,16 +958,16 @@ export function OnlineExamPage() {
           {/* Question Bank Card */}
           <motion.div variants={itemVariants}>
             <Card className="h-full">
-              <div className="h-1 bg-gradient-to-r from-[#1a2744] to-[#2d7a4f]" />
+              <div className="h-1 bg-gradient-to-r from-[var(--institution-primary)] to-[var(--institution-secondary)]" />
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-semibold text-[#1a2744] flex items-center gap-2">
+                  <CardTitle className="text-sm font-semibold text-[var(--institution-primary)] flex items-center gap-2">
                     <BookOpen className="size-4" />
                     Banque de questions
                   </CardTitle>
                   <Button
                     size="sm"
-                    className="h-7 text-[10px] bg-[#2d7a4f] hover:bg-[#236b40] text-white"
+                    className="h-7 text-[10px] bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white"
                     onClick={() => setShowAddQuestionForm((v) => !v)}
                   >
                     <Plus className="size-3 mr-1" />
@@ -1022,7 +1022,7 @@ export function OnlineExamPage() {
                               name="correct-answer"
                               checked={newQuestionCorrectAnswer === idx}
                               onChange={() => setNewQuestionCorrectAnswer(idx)}
-                              className="accent-[#2d7a4f]"
+                              className="accent-[var(--institution-secondary)]"
                             />
                             <Input
                               placeholder={`Option ${idx + 1}`}
@@ -1034,7 +1034,7 @@ export function OnlineExamPage() {
                         ))}
                       </div>
                     )}
-                    <Button size="sm" className="h-7 text-[10px] bg-[#1a2744] hover:bg-[#1a2744]/90 text-white" onClick={handleAddQuestion} disabled={isAddingQuestion}>
+                    <Button size="sm" className="h-7 text-[10px] bg-[var(--institution-primary)] hover:bg-[var(--institution-primary)]/90 text-white" onClick={handleAddQuestion} disabled={isAddingQuestion}>
                       {isAddingQuestion ? 'Ajout...' : 'Enregistrer'}
                     </Button>
                   </div>
@@ -1098,7 +1098,7 @@ export function OnlineExamPage() {
                     return (
                       <div key={q.id} className="p-3 rounded-lg border border-gray-100 hover:border-gray-200 hover:bg-gray-50/50 transition-colors">
                         <div className="flex items-start justify-between gap-2">
-                          <p className="text-xs text-[#1a2744] font-medium leading-relaxed flex-1">{q.text}</p>
+                          <p className="text-xs text-[var(--institution-primary)] font-medium leading-relaxed flex-1">{q.text}</p>
                           <div className="flex items-center gap-1 shrink-0">
                             {tc ? (
                               <Badge className={`text-[9px] ${tc.className}`}>{tc.label}</Badge>
@@ -1133,99 +1133,99 @@ export function OnlineExamPage() {
 
         {/* ── Connectivity and Operational Limits Card ────────────────────────── */}
         <motion.div variants={itemVariants}>
-          <Card className="border-l-4 border-l-[#2d7a4f]">
-            <div className="h-1 bg-gradient-to-r from-[#1a2744] via-[#2d7a4f] to-[#d4a853]" />
+          <Card className="border-l-4 border-l-[var(--institution-secondary)]">
+            <div className="h-1 bg-gradient-to-r from-[var(--institution-primary)] via-[var(--institution-secondary)] to-[var(--institution-accent)]" />
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-semibold text-[#1a2744] flex items-center gap-2">
-                  <Globe className="size-4 text-[#2d7a4f]" />
+                <CardTitle className="text-sm font-semibold text-[var(--institution-primary)] flex items-center gap-2">
+                  <Globe className="size-4 text-[var(--institution-secondary)]" />
                   Connectivite et limites operationnelles
                 </CardTitle>
-                <Badge className="text-[10px] bg-[#d4a85315] text-[#d4a853] border-0">Transparent</Badge>
+                <Badge className="text-[10px] bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0">Transparent</Badge>
               </div>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div className="p-4 rounded-lg bg-[#2d7a4f08] border border-[#2d7a4f15]">
+                <div className="p-4 rounded-lg bg-[var(--institution-secondary-08)] border border-[var(--institution-secondary-15)]">
                   <div className="flex items-center gap-2 mb-2">
-                    <Wifi className="size-4 text-[#2d7a4f]" />
-                    <span className="text-sm font-semibold text-[#1a2744]">Connexion requise</span>
+                    <Wifi className="size-4 text-[var(--institution-secondary)]" />
+                    <span className="text-sm font-semibold text-[var(--institution-primary)]">Connexion requise</span>
                   </div>
                   <p className="text-xs text-gray-600 leading-relaxed">
                     La passation utilise les API du serveur pour demarrer une session, enregistrer les reponses et finaliser la copie.
                     Aucune promesse de fonctionnement hors connexion n&apos;est affichee ici.
                   </p>
                   <div className="mt-2 flex items-center gap-2">
-                    <Badge className="text-[9px] bg-[#2d7a4f15] text-[#2d7a4f] border-0">Serveur requis</Badge>
+                    <Badge className="text-[9px] bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0">Serveur requis</Badge>
                   </div>
                 </div>
 
-                <div className="p-4 rounded-lg bg-[#1a274408] border border-[#1a274415]">
+                <div className="p-4 rounded-lg bg-[var(--institution-primary-08)] border border-[var(--institution-primary-15)]">
                   <div className="flex items-center gap-2 mb-2">
-                    <Save className="size-4 text-[#1a2744]" />
-                    <span className="text-sm font-semibold text-[#1a2744]">Sauvegarde des reponses</span>
+                    <Save className="size-4 text-[var(--institution-primary)]" />
+                    <span className="text-sm font-semibold text-[var(--institution-primary)]">Sauvegarde des reponses</span>
                   </div>
                   <p className="text-xs text-gray-600 leading-relaxed">
                     Les reponses envoyees par l&apos;interface etudiante sont persistees par l&apos;API. En cas d&apos;echec reseau,
                     l&apos;etudiant doit voir l&apos;erreur et relancer l&apos;enregistrement.
                   </p>
                   <div className="mt-2 flex items-center gap-2">
-                    <Badge className="text-[9px] bg-[#1a274415] text-[#1a2744] border-0">API connectee</Badge>
+                    <Badge className="text-[9px] bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0">API connectee</Badge>
                   </div>
                 </div>
 
-                <div className="p-4 rounded-lg bg-[#d4a85308] border border-[#d4a85315]">
+                <div className="p-4 rounded-lg bg-[var(--institution-accent-08)] border border-[var(--institution-accent-15)]">
                   <div className="flex items-center gap-2 mb-2">
-                    <AlertTriangle className="size-4 text-[#d4a853]" />
-                    <span className="text-sm font-semibold text-[#1a2744]">Pas de mode deconnecte annonce</span>
+                    <AlertTriangle className="size-4 text-[var(--institution-accent)]" />
+                    <span className="text-sm font-semibold text-[var(--institution-primary)]">Pas de mode deconnecte annonce</span>
                   </div>
                   <p className="text-xs text-gray-600 leading-relaxed">
                     Les questions ne sont pas presentees comme stockees localement. Ce choix evite de promettre une synchronisation
                     automatique qui n&apos;est pas garantie par le panneau admin.
                   </p>
                   <div className="mt-2 flex items-center gap-2">
-                    <Badge className="text-[9px] bg-[#d4a85315] text-[#d4a853] border-0">Limite affichee</Badge>
+                    <Badge className="text-[9px] bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0">Limite affichee</Badge>
                   </div>
                 </div>
 
-                <div className="p-4 rounded-lg bg-[#2d7a4f08] border border-[#2d7a4f15]">
+                <div className="p-4 rounded-lg bg-[var(--institution-secondary-08)] border border-[var(--institution-secondary-15)]">
                   <div className="flex items-center gap-2 mb-2">
-                    <Smartphone className="size-4 text-[#2d7a4f]" />
-                    <span className="text-sm font-semibold text-[#1a2744]">Notifications externes</span>
+                    <Smartphone className="size-4 text-[var(--institution-secondary)]" />
+                    <span className="text-sm font-semibold text-[var(--institution-primary)]">Notifications externes</span>
                   </div>
                   <p className="text-xs text-gray-600 leading-relaxed">
                     Aucun operateur de messages mobiles n&apos;est annonce depuis cet onglet. Les rappels externes devront etre ajoutes via une integration dediee
                     avant d&apos;etre presentes aux administrateurs.
                   </p>
                   <div className="mt-2 flex items-center gap-2">
-                    <Badge className="text-[9px] bg-[#2d7a4f15] text-[#2d7a4f] border-0">Non connecte</Badge>
+                    <Badge className="text-[9px] bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0">Non connecte</Badge>
                   </div>
                 </div>
 
-                <div className="p-4 rounded-lg bg-[#1a274408] border border-[#1a274415]">
+                <div className="p-4 rounded-lg bg-[var(--institution-primary-08)] border border-[var(--institution-primary-15)]">
                   <div className="flex items-center gap-2 mb-2">
-                    <FileText className="size-4 text-[#1a2744]" />
-                    <span className="text-sm font-semibold text-[#1a2744]">Support papier</span>
+                    <FileText className="size-4 text-[var(--institution-primary)]" />
+                    <span className="text-sm font-semibold text-[var(--institution-primary)]">Support papier</span>
                   </div>
                   <p className="text-xs text-gray-600 leading-relaxed">
                     Une copie papier peut etre geree administrativement hors systeme, mais cet onglet ne genere pas automatiquement de sujets
                     ou de copies papier.
                   </p>
                   <div className="mt-2">
-                    <Badge className="text-[9px] bg-[#1a274415] text-[#1a2744] border-0">Hors systeme</Badge>
+                    <Badge className="text-[9px] bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0">Hors systeme</Badge>
                   </div>
                 </div>
 
-                <div className="p-4 rounded-lg bg-[#d4a85308] border border-[#d4a85315]">
+                <div className="p-4 rounded-lg bg-[var(--institution-accent-08)] border border-[var(--institution-accent-15)]">
                   <div className="flex items-center gap-2 mb-2">
-                    <Timer className="size-4 text-[#d4a853]" />
-                    <span className="text-sm font-semibold text-[#1a2744]">Temps d&apos;examen</span>
+                    <Timer className="size-4 text-[var(--institution-accent)]" />
+                    <span className="text-sm font-semibold text-[var(--institution-primary)]">Temps d&apos;examen</span>
                   </div>
                   <p className="text-xs text-gray-600 leading-relaxed">
                     La duree appliquee est celle configuree dans l&apos;examen. Aucun bonus automatique de temps n&apos;est affiche sans regle explicite.
                   </p>
                   <div className="mt-2">
-                    <Badge className="text-[9px] bg-[#d4a85315] text-[#d4a853] border-0">Duree configuree</Badge>
+                    <Badge className="text-[9px] bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0">Duree configuree</Badge>
                   </div>
                 </div>
               </div>
@@ -1237,7 +1237,7 @@ export function OnlineExamPage() {
       {showNewExam && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowNewExam(false)}>
           <div className="bg-white rounded-xl p-6 max-w-lg w-full shadow-2xl max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-lg font-bold text-[#1a2744] mb-4">Creer un examen</h3>
+            <h3 className="text-lg font-bold text-[var(--institution-primary)] mb-4">Creer un examen</h3>
             <div className="space-y-3">
               <Input
                 placeholder="Nom de l'examen"
@@ -1293,7 +1293,7 @@ export function OnlineExamPage() {
                           onChange={() => setNewExamQuestionIds((prev) =>
                             prev.includes(q.id) ? prev.filter((id) => id !== q.id) : [...prev, q.id]
                           )}
-                          className="mt-0.5 accent-[#2d7a4f]"
+                          className="mt-0.5 accent-[var(--institution-secondary)]"
                         />
                         <span className="text-xs text-gray-700">{q.text}</span>
                       </label>
@@ -1304,7 +1304,7 @@ export function OnlineExamPage() {
             </div>
             <div className="flex gap-2 mt-5">
               <Button variant="outline" className="flex-1 text-xs" onClick={() => setShowNewExam(false)}>Annuler</Button>
-              <Button className="flex-1 text-xs bg-[#1a2744] hover:bg-[#1a2744]/90 text-white" onClick={handleCreateExam} disabled={isCreatingExam}>
+              <Button className="flex-1 text-xs bg-[var(--institution-primary)] hover:bg-[var(--institution-primary)]/90 text-white" onClick={handleCreateExam} disabled={isCreatingExam}>
                 {isCreatingExam ? 'Creation...' : "Creer l'examen"}
               </Button>
             </div>

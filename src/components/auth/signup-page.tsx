@@ -122,29 +122,29 @@ export function SignupPage() {
         <div
           className="absolute inset-0"
           style={{
-            backgroundImage: 'radial-gradient(circle, #1a2744 1px, transparent 1px)',
+            backgroundImage: 'radial-gradient(circle, var(--institution-primary) 1px, transparent 1px)',
             backgroundSize: '40px 40px',
           }}
         />
       </div>
 
       <FloatingShape
-        className="absolute top-[10%] left-[8%] w-24 h-24 rounded-full border border-[#1a2744] opacity-[0.04]"
+        className="absolute top-[10%] left-[8%] w-24 h-24 rounded-full border border-[var(--institution-primary)] opacity-[0.04]"
         duration={25}
         delay={0}
       />
       <FloatingShape
-        className="absolute top-[60%] right-[12%] w-32 h-32 rounded-full border border-[#2d7a4f] opacity-[0.03]"
+        className="absolute top-[60%] right-[12%] w-32 h-32 rounded-full border border-[var(--institution-secondary)] opacity-[0.03]"
         duration={30}
         delay={2}
       />
       <FloatingShape
-        className="absolute top-[30%] right-[25%] w-16 h-16 border border-[#d4a853] opacity-[0.05] rotate-45"
+        className="absolute top-[30%] right-[25%] w-16 h-16 border border-[var(--institution-accent)] opacity-[0.05] rotate-45"
         duration={22}
         delay={1}
       />
 
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#2d7a4f05] rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[var(--institution-secondary-05)] rounded-full blur-3xl pointer-events-none" />
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -154,24 +154,24 @@ export function SignupPage() {
       >
         <button
           onClick={() => setView('landing')}
-          className="flex items-center gap-2 text-gray-500 hover:text-[#1a2744] text-sm mb-6 transition-colors"
+          className="flex items-center gap-2 text-gray-500 hover:text-[var(--institution-primary)] text-sm mb-6 transition-colors"
         >
           <ArrowLeft className="size-4" />
           Retour à l&apos;accueil
         </button>
 
-        <div className="bg-gradient-to-br from-[#1a2744] via-[#2d7a4f] to-[#d4a853] p-[2px] rounded-2xl shadow-xl shadow-[#1a274420]">
+        <div className="bg-gradient-to-br from-[var(--institution-primary)] via-[var(--institution-secondary)] to-[var(--institution-accent)] p-[2px] rounded-2xl shadow-xl shadow-[var(--institution-primary-20)]">
           <Card className="border-0 bg-white rounded-[14px]">
             <CardHeader className="text-center pb-2">
               <div className="flex items-center justify-center gap-2 mb-2">
-                <div className="p-2 rounded-lg bg-[#1a2744]">
+                <div className="p-2 rounded-lg bg-[var(--institution-primary)]">
                   <ShieldCheck className="size-5 text-white" />
                 </div>
-                <span className="text-lg font-bold text-[#1a2744]">
-                  Uni<span className="text-[#2d7a4f]">Sahel</span>
+                <span className="text-lg font-bold text-[var(--institution-primary)]">
+                  Uni<span className="text-[var(--institution-secondary)]">Sahel</span>
                 </span>
               </div>
-              <CardTitle className="text-xl font-bold text-[#1a2744]">Creer votre compte</CardTitle>
+              <CardTitle className="text-xl font-bold text-[var(--institution-primary)]">Creer votre compte</CardTitle>
               <CardDescription className="text-gray-500">
                 Configurez votre établissement en quelques minutes
               </CardDescription>
@@ -329,7 +329,7 @@ export function SignupPage() {
 
                 <Button
                   type="submit"
-                  className="w-full bg-[#2d7a4f] hover:bg-[#236b40] text-white h-10"
+                  className="w-full bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white h-10"
                   disabled={isLoading}
                 >
                   {isLoading ? (
@@ -347,7 +347,7 @@ export function SignupPage() {
                 Deja un compte ?{' '}
                 <button
                   onClick={() => setView('login')}
-                  className="text-[#2d7a4f] font-medium hover:underline"
+                  className="text-[var(--institution-secondary)] font-medium hover:underline"
                 >
                   Se connecter
                 </button>

@@ -104,7 +104,7 @@ export function StatisticsPage() {
     <div className="space-y-4">
       {/* Gradient Header Banner */}
       <Card className="overflow-hidden">
-        <div className="bg-gradient-to-r from-[#1a2744] via-[#1f3050] to-[#2d7a4f] p-6 text-white relative">
+        <div className="bg-gradient-to-r from-[var(--institution-primary)] via-[var(--institution-primary-light)] to-[var(--institution-secondary)] p-6 text-white relative">
           <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PHBhdGggZD0iTTM2IDE0YzAtMi4yMS0xLjc5LTQtNC00cy00IDEuNzktNCA0IDEuNzkgNCA0IDQgNC0xLjc5IDQtNHptLTQgMmMtMS4xIDAtMi0uOS0yLTJzLjktMiAyLTIgMiAuOSAyIDItLjkgMi0yIDJ6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-50" />
           <div className="relative">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-5">
@@ -166,10 +166,10 @@ export function StatisticsPage() {
       {/* Key Metrics - Staggered fade-in */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { title: 'Étudiants totaux', value: totalStudents.toLocaleString('fr-FR'), icon: Users, color: '#2d7a4f', bgColor: '#2d7a4f15' },
-          { title: 'Taux de réussite', value: `${globalSuccessRate}%`, icon: TrendingUp, color: '#1a2744', bgColor: '#1a274415' },
-          { title: 'Taux féminin', value: `${Math.round((totalFemmes / totalStudents) * 100)}%`, icon: GraduationCap, color: '#d4a853', bgColor: '#d4a85315' },
-          { title: 'Encaissement', value: '45.2M FCFA', icon: CreditCard, color: '#2d7a4f', bgColor: '#2d7a4f15' },
+          { title: 'Étudiants totaux', value: totalStudents.toLocaleString('fr-FR'), icon: Users, color: 'var(--institution-secondary)', bgColor: 'var(--institution-secondary-15)' },
+          { title: 'Taux de réussite', value: `${globalSuccessRate}%`, icon: TrendingUp, color: 'var(--institution-primary)', bgColor: 'var(--institution-primary-15)' },
+          { title: 'Taux féminin', value: `${Math.round((totalFemmes / totalStudents) * 100)}%`, icon: GraduationCap, color: 'var(--institution-accent)', bgColor: 'var(--institution-accent-15)' },
+          { title: 'Encaissement', value: '45.2M FCFA', icon: CreditCard, color: 'var(--institution-secondary)', bgColor: 'var(--institution-secondary-15)' },
         ].map((metric, i) => (
           <motion.div
             key={metric.title}
@@ -182,7 +182,7 @@ export function StatisticsPage() {
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-xs font-medium text-gray-500 uppercase">{metric.title}</p>
-                    <p className="text-xl font-bold text-[#1a2744] mt-1">{metric.value}</p>
+                    <p className="text-xl font-bold text-[var(--institution-primary)] mt-1">{metric.value}</p>
                   </div>
                   <div
                     className="w-10 h-10 rounded-xl flex items-center justify-center"
@@ -202,9 +202,9 @@ export function StatisticsPage() {
         {/* Students by Faculty */}
         <motion.div whileHover={{ scale: 1.01 }} transition={{ duration: 0.2 }}>
           <Card className="overflow-hidden">
-            <div className="h-1 bg-gradient-to-r from-[#1a2744] to-[#2d7a4f]" />
+            <div className="h-1 bg-gradient-to-r from-[var(--institution-primary)] to-[var(--institution-secondary)]" />
             <CardHeader className="pb-2">
-              <CardTitle className="text-base font-semibold text-[#1a2744]">
+              <CardTitle className="text-base font-semibold text-[var(--institution-primary)]">
                 Étudiants par faculté
               </CardTitle>
             </CardHeader>
@@ -224,8 +224,8 @@ export function StatisticsPage() {
                       }}
                     />
                     <Legend />
-                    <Bar dataKey="hommes" name="Hommes" fill="#1a2744" radius={[2, 2, 0, 0]} />
-                    <Bar dataKey="femmes" name="Femmes" fill="#2d7a4f" radius={[2, 2, 0, 0]} />
+                    <Bar dataKey="hommes" name="Hommes" fill="var(--institution-primary)" radius={[2, 2, 0, 0]} />
+                    <Bar dataKey="femmes" name="Femmes" fill="var(--institution-secondary)" radius={[2, 2, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -236,9 +236,9 @@ export function StatisticsPage() {
         {/* Success Rate Line Chart */}
         <motion.div whileHover={{ scale: 1.01 }} transition={{ duration: 0.2 }}>
           <Card className="overflow-hidden">
-            <div className="h-1 bg-gradient-to-r from-[#2d7a4f] to-[#3da66a]" />
+            <div className="h-1 bg-gradient-to-r from-[var(--institution-secondary)] to-[var(--institution-secondary-bright)]" />
             <CardHeader className="pb-2">
-              <CardTitle className="text-base font-semibold text-[#1a2744]">
+              <CardTitle className="text-base font-semibold text-[var(--institution-primary)]">
                 Taux de réussite par année
               </CardTitle>
             </CardHeader>
@@ -261,10 +261,10 @@ export function StatisticsPage() {
                     <Line
                       type="monotone"
                       dataKey="taux"
-                      stroke="#2d7a4f"
+                      stroke="var(--institution-secondary)"
                       strokeWidth={3}
-                      dot={{ fill: '#2d7a4f', strokeWidth: 2, r: 5 }}
-                      activeDot={{ r: 7, fill: '#2d7a4f' }}
+                      dot={{ fill: 'var(--institution-secondary)', strokeWidth: 2, r: 5 }}
+                      activeDot={{ r: 7, fill: 'var(--institution-secondary)' }}
                     />
                   </LineChart>
                 </ResponsiveContainer>
@@ -279,9 +279,9 @@ export function StatisticsPage() {
         {/* Payment Collection Donut */}
         <motion.div whileHover={{ scale: 1.01 }} transition={{ duration: 0.2 }}>
           <Card className="overflow-hidden">
-            <div className="h-1 bg-gradient-to-r from-[#d4a853] to-[#e6c477]" />
+            <div className="h-1 bg-gradient-to-r from-[var(--institution-accent)] to-[var(--institution-accent-light)]" />
             <CardHeader className="pb-2">
-              <CardTitle className="text-base font-semibold text-[#1a2744]">
+              <CardTitle className="text-base font-semibold text-[var(--institution-primary)]">
                 Taux d&apos;encaissement
               </CardTitle>
             </CardHeader>
@@ -323,9 +323,9 @@ export function StatisticsPage() {
         {/* Grade Distribution */}
         <motion.div whileHover={{ scale: 1.01 }} transition={{ duration: 0.2 }}>
           <Card className="overflow-hidden">
-            <div className="h-1 bg-gradient-to-r from-[#1a2744] via-[#2d7a4f] to-[#d4a853]" />
+            <div className="h-1 bg-gradient-to-r from-[var(--institution-primary)] via-[var(--institution-secondary)] to-[var(--institution-accent)]" />
             <CardHeader className="pb-2">
-              <CardTitle className="text-base font-semibold text-[#1a2744]">
+              <CardTitle className="text-base font-semibold text-[var(--institution-primary)]">
                 Distribution des notes
               </CardTitle>
             </CardHeader>
@@ -348,7 +348,7 @@ export function StatisticsPage() {
                     <Bar dataKey="count" name="Étudiants" radius={[4, 4, 0, 0]}>
                       {gradeDistribution.map((entry, index) => {
                         const mid = parseFloat(entry.range.split('-')[0])
-                        const color = mid >= 10 ? '#2d7a4f' : mid >= 8 ? '#d4a853' : '#c62828'
+                        const color = mid >= 10 ? 'var(--institution-secondary)' : mid >= 8 ? 'var(--institution-accent)' : '#c62828'
                         return <Cell key={`cell-${index}`} fill={color} />
                       })}
                     </Bar>
@@ -363,9 +363,9 @@ export function StatisticsPage() {
       {/* Success by Program Table */}
       <motion.div whileHover={{ scale: 1.005 }} transition={{ duration: 0.2 }}>
         <Card className="overflow-hidden">
-          <div className="h-1 bg-gradient-to-r from-[#1a2744] via-[#2d7a4f] to-[#d4a853]" />
+          <div className="h-1 bg-gradient-to-r from-[var(--institution-primary)] via-[var(--institution-secondary)] to-[var(--institution-accent)]" />
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold text-[#1a2744]">
+            <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">
               Taux de réussite par programme et niveau (%)
             </CardTitle>
           </CardHeader>
@@ -390,19 +390,19 @@ export function StatisticsPage() {
                     const l1 = Number(row.L1 ?? 0), l2 = Number(row.L2 ?? 0), l3 = Number(row.L3 ?? 0)
                     return (
                     <tr key={String(row.program)} className="border-b border-gray-50 hover:bg-gray-50/50">
-                      <td className="px-4 py-2 font-medium text-[#1a2744]">{row.program}</td>
+                      <td className="px-4 py-2 font-medium text-[var(--institution-primary)]">{row.program}</td>
                       <td className="px-4 py-2 text-center">
-                        <span className={`font-semibold ${l1 >= 60 ? 'text-[#2d7a4f]' : 'text-[#c62828]'}`}>
+                        <span className={`font-semibold ${l1 >= 60 ? 'text-[var(--institution-secondary)]' : 'text-[#c62828]'}`}>
                           {row.L1 ?? '—'}{row.L1 !== undefined ? '%' : ''}
                         </span>
                       </td>
                       <td className="px-4 py-2 text-center">
-                        <span className={`font-semibold ${l2 >= 60 ? 'text-[#2d7a4f]' : 'text-[#c62828]'}`}>
+                        <span className={`font-semibold ${l2 >= 60 ? 'text-[var(--institution-secondary)]' : 'text-[#c62828]'}`}>
                           {row.L2 ?? '—'}{row.L2 !== undefined ? '%' : ''}
                         </span>
                       </td>
                       <td className="px-4 py-2 text-center">
-                        <span className={`font-semibold ${l3 >= 60 ? 'text-[#2d7a4f]' : 'text-[#c62828]'}`}>
+                        <span className={`font-semibold ${l3 >= 60 ? 'text-[var(--institution-secondary)]' : 'text-[#c62828]'}`}>
                           {row.L3 ?? '—'}{row.L3 !== undefined ? '%' : ''}
                         </span>
                       </td>

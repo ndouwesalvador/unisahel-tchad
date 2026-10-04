@@ -149,20 +149,20 @@ const defaultDocs: RequiredDoc[] = [
 ]
 
 const statutConfig: Record<CandidatureStatut, { label: string; className: string }> = {
-  en_attente: { label: 'En attente', className: 'bg-[#d4a85318] text-[#d4a853] border-0' },
-  en_examen: { label: 'En examen', className: 'bg-[#1a274418] text-[#1a2744] border-0' },
-  admis: { label: 'Admis', className: 'bg-[#2d7a4f18] text-[#2d7a4f] border-0' },
+  en_attente: { label: 'En attente', className: 'bg-[var(--institution-accent-18)] text-[var(--institution-accent)] border-0' },
+  en_examen: { label: 'En examen', className: 'bg-[var(--institution-primary-18)] text-[var(--institution-primary)] border-0' },
+  admis: { label: 'Admis', className: 'bg-[var(--institution-secondary-18)] text-[var(--institution-secondary)] border-0' },
   refuse: { label: 'Refusé', className: 'bg-[#c6282818] text-[#c62828] border-0' },
   en_attente_pieces: { label: 'En attente de pièces', className: 'bg-[#e6510018] text-[#e65100] border-0' },
 }
 
 const docStatusConfig: Record<string, { label: string; className: string; icon: React.ElementType }> = {
-  recu: { label: 'Reçu', className: 'text-[#2d7a4f] bg-[#2d7a4f12]', icon: CheckCircle2 },
+  recu: { label: 'Reçu', className: 'text-[var(--institution-secondary)] bg-[var(--institution-secondary-12)]', icon: CheckCircle2 },
   manquant: { label: 'Manquant', className: 'text-[#c62828] bg-[#c6282812]', icon: XCircle },
-  en_verification: { label: 'En vérification', className: 'text-[#d4a853] bg-[#d4a85312]', icon: Clock },
+  en_verification: { label: 'En vérification', className: 'text-[var(--institution-accent)] bg-[var(--institution-accent-12)]', icon: Clock },
 }
 
-const PROGRAM_CHART_COLORS = ['#2d7a4f', '#1a2744', '#d4a853', '#e65100']
+const PROGRAM_CHART_COLORS = ['var(--institution-secondary)', 'var(--institution-primary)', 'var(--institution-accent)', '#e65100']
 
 interface ApiProgram {
   id: string
@@ -179,7 +179,7 @@ function TrendBadge({ pct }: { pct: number }) {
   if (pct === 0) return <span className="text-xs text-gray-400">stable vs mois dernier</span>
   const positive = pct > 0
   const Icon = positive ? ArrowUpRight : ArrowDownRight
-  const color = positive ? 'text-[#2d7a4f]' : 'text-[#c62828]'
+  const color = positive ? 'text-[var(--institution-secondary)]' : 'text-[#c62828]'
   return (
     <>
       <Icon className={`size-3 ${color}`} />
@@ -395,7 +395,7 @@ export function CandidaturePage() {
       transition={{ duration: 0.5 }}
     >
       {/* Gradient Header Banner */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-[#1a2744] via-[#1f3050] to-[#2d7a4f] p-6 md:p-8 rounded-xl">
+      <div className="relative overflow-hidden bg-gradient-to-r from-[var(--institution-primary)] via-[var(--institution-primary-light)] to-[var(--institution-secondary)] p-6 md:p-8 rounded-xl">
         {/* SVG pattern overlay */}
         <div className="absolute inset-0 opacity-20" style={{backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.15) 1px, transparent 1px)', backgroundSize: '24px 24px'}} />
         <div className="relative z-10">
@@ -475,18 +475,18 @@ export function CandidaturePage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
         <Card>
-          <div className="h-1 bg-gradient-to-r from-[#1a2744] to-[#2d7a4f]" />
+          <div className="h-1 bg-gradient-to-r from-[var(--institution-primary)] to-[var(--institution-secondary)]" />
           <CardContent className="p-4">
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase">Candidatures reçues</p>
-                <p className="text-2xl font-bold text-[#1a2744] mt-1">{totalRecues}</p>
+                <p className="text-2xl font-bold text-[var(--institution-primary)] mt-1">{totalRecues}</p>
                 <div className="flex items-center gap-1 mt-1">
                   <TrendBadge pct={trends.total} />
                 </div>
               </div>
-              <div className="w-10 h-10 rounded-xl bg-[#1a274412] flex items-center justify-center">
-                <FileText className="size-5 text-[#1a2744]" />
+              <div className="w-10 h-10 rounded-xl bg-[var(--institution-primary-12)] flex items-center justify-center">
+                <FileText className="size-5 text-[var(--institution-primary)]" />
               </div>
             </div>
           </CardContent>
@@ -494,18 +494,18 @@ export function CandidaturePage() {
         </motion.div>
         <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
         <Card>
-          <div className="h-1 bg-gradient-to-r from-[#d4a853] to-[#e6c477]" />
+          <div className="h-1 bg-gradient-to-r from-[var(--institution-accent)] to-[var(--institution-accent-light)]" />
           <CardContent className="p-4">
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase">En cours d&apos;examen</p>
-                <p className="text-2xl font-bold text-[#1a2744] mt-1">{enExamen}</p>
+                <p className="text-2xl font-bold text-[var(--institution-primary)] mt-1">{enExamen}</p>
                 <div className="flex items-center gap-1 mt-1">
                   <TrendBadge pct={trends.enExamen} />
                 </div>
               </div>
-              <div className="w-10 h-10 rounded-xl bg-[#d4a85315] flex items-center justify-center">
-                <ClipboardCheck className="size-5 text-[#d4a853]" />
+              <div className="w-10 h-10 rounded-xl bg-[var(--institution-accent-15)] flex items-center justify-center">
+                <ClipboardCheck className="size-5 text-[var(--institution-accent)]" />
               </div>
             </div>
           </CardContent>
@@ -513,18 +513,18 @@ export function CandidaturePage() {
         </motion.div>
         <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
         <Card>
-          <div className="h-1 bg-gradient-to-r from-[#2d7a4f] to-[#3da66a]" />
+          <div className="h-1 bg-gradient-to-r from-[var(--institution-secondary)] to-[var(--institution-secondary-bright)]" />
           <CardContent className="p-4">
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase">Admis</p>
-                <p className="text-2xl font-bold text-[#2d7a4f] mt-1">{admis}</p>
+                <p className="text-2xl font-bold text-[var(--institution-secondary)] mt-1">{admis}</p>
                 <div className="flex items-center gap-1 mt-1">
                   <TrendBadge pct={trends.admis} />
                 </div>
               </div>
-              <div className="w-10 h-10 rounded-xl bg-[#2d7a4f15] flex items-center justify-center">
-                <CheckCircle2 className="size-5 text-[#2d7a4f]" />
+              <div className="w-10 h-10 rounded-xl bg-[var(--institution-secondary-15)] flex items-center justify-center">
+                <CheckCircle2 className="size-5 text-[var(--institution-secondary)]" />
               </div>
             </div>
           </CardContent>
@@ -556,11 +556,11 @@ export function CandidaturePage() {
         {/* Left Column - Form + Documents */}
         <div className="lg:col-span-1 space-y-6">
           {/* Candidature Form Card */}
-          <Card className="border-l-4 border-l-[#2d7a4f]">
-            <div className="h-1 bg-gradient-to-r from-[#1a2744] via-[#2d7a4f] to-[#d4a853]" />
+          <Card className="border-l-4 border-l-[var(--institution-secondary)]">
+            <div className="h-1 bg-gradient-to-r from-[var(--institution-primary)] via-[var(--institution-secondary)] to-[var(--institution-accent)]" />
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold text-[#1a2744] flex items-center gap-2">
-                <FileText className="size-4 text-[#2d7a4f]" />
+              <CardTitle className="text-sm font-semibold text-[var(--institution-primary)] flex items-center gap-2">
+                <FileText className="size-4 text-[var(--institution-secondary)]" />
                 Nouveau dossier
               </CardTitle>
             </CardHeader>
@@ -571,20 +571,20 @@ export function CandidaturePage() {
               <div className="space-y-2 rounded-lg bg-gray-50 p-3 text-xs text-gray-600">
                 <div className="flex items-center justify-between">
                   <span>Année académique active</span>
-                  <Badge className={currentYear ? 'bg-[#2d7a4f18] text-[#2d7a4f] border-0' : 'bg-[#c6282818] text-[#c62828] border-0'}>
+                  <Badge className={currentYear ? 'bg-[var(--institution-secondary-18)] text-[var(--institution-secondary)] border-0' : 'bg-[#c6282818] text-[#c62828] border-0'}>
                     {currentYear ? currentYear.name : 'Non configurée'}
                   </Badge>
                 </div>
                 <div className="flex items-center justify-between">
                   <span>Filières disponibles</span>
-                  <Badge className={hasPrograms ? 'bg-[#2d7a4f18] text-[#2d7a4f] border-0' : 'bg-[#c6282818] text-[#c62828] border-0'}>
+                  <Badge className={hasPrograms ? 'bg-[var(--institution-secondary-18)] text-[var(--institution-secondary)] border-0' : 'bg-[#c6282818] text-[#c62828] border-0'}>
                     {realPrograms.length}
                   </Badge>
                 </div>
               </div>
               <div className="flex gap-2 pt-1">
                 <Button
-                  className="flex-1 bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs h-9"
+                  className="flex-1 bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white text-xs h-9"
                   onClick={() => setShowForm(true)}
                   disabled={!currentYear || !hasPrograms}
                 >
@@ -593,7 +593,7 @@ export function CandidaturePage() {
                 </Button>
                 <Button
                   variant="outline"
-                  className="text-xs h-9 border-[#d4a853] text-[#d4a853] hover:bg-[#d4a85312]"
+                  className="text-xs h-9 border-[var(--institution-accent)] text-[var(--institution-accent)] hover:bg-[var(--institution-accent-12)]"
                   onClick={() => setShowDocsDialog(true)}
                 >
                   <FileCheck className="size-3.5 mr-1" />
@@ -611,10 +611,10 @@ export function CandidaturePage() {
           {/* Required Documents Checklist Card */}
           <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
           <Card>
-            <div className="h-1 bg-gradient-to-r from-[#1a2744] to-[#2d7a4f]" />
+            <div className="h-1 bg-gradient-to-r from-[var(--institution-primary)] to-[var(--institution-secondary)]" />
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold text-[#1a2744] flex items-center gap-2">
-                <FileCheck className="size-4 text-[#d4a853]" />
+              <CardTitle className="text-sm font-semibold text-[var(--institution-primary)] flex items-center gap-2">
+                <FileCheck className="size-4 text-[var(--institution-accent)]" />
                 Pièces requises
               </CardTitle>
             </CardHeader>
@@ -639,7 +639,7 @@ export function CandidaturePage() {
                         }}
                         className="shrink-0"
                       />
-                      <span className={`text-sm truncate ${doc.status === 'recu' ? 'line-through text-gray-400' : 'text-[#1a2744]'}`}>
+                      <span className={`text-sm truncate ${doc.status === 'recu' ? 'line-through text-gray-400' : 'text-[var(--institution-primary)]'}`}>
                         {doc.label}
                       </span>
                     </div>
@@ -664,11 +664,11 @@ export function CandidaturePage() {
           {/* Applications Table */}
           <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
           <Card>
-            <div className="h-1 bg-gradient-to-r from-[#1a2744] to-[#2d7a4f]" />
+            <div className="h-1 bg-gradient-to-r from-[var(--institution-primary)] to-[var(--institution-secondary)]" />
             <CardHeader className="pb-3">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <CardTitle className="text-sm font-semibold text-[#1a2744] flex items-center gap-2">
-                  <Users className="size-4 text-[#2d7a4f]" />
+                <CardTitle className="text-sm font-semibold text-[var(--institution-primary)] flex items-center gap-2">
+                  <Users className="size-4 text-[var(--institution-secondary)]" />
                   Liste des candidatures
                   <Badge variant="secondary" className="text-[10px] bg-gray-100 text-gray-500 ml-1">
                     {filteredCandidatures.length}
@@ -727,7 +727,7 @@ export function CandidaturePage() {
                         </TableCell>
                         <TableCell className="py-2">
                           <div>
-                            <p className="text-sm font-medium text-[#1a2744]">{c.candidat}</p>
+                            <p className="text-sm font-medium text-[var(--institution-primary)]">{c.candidat}</p>
                             <p className="text-[10px] text-gray-400">{c.type}</p>
                           </div>
                         </TableCell>
@@ -756,11 +756,11 @@ export function CandidaturePage() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-44">
                               <DropdownMenuItem className="text-xs" onClick={() => handleStatusChange(c.id, 'en_examen')}>
-                                <Eye className="size-3.5 mr-2 text-[#1a2744]" />
+                                <Eye className="size-3.5 mr-2 text-[var(--institution-primary)]" />
                                 Examiner
                               </DropdownMenuItem>
                               <DropdownMenuItem className="text-xs" onClick={() => handleStatusChange(c.id, 'admis')}>
-                                <CheckCircle className="size-3.5 mr-2 text-[#2d7a4f]" />
+                                <CheckCircle className="size-3.5 mr-2 text-[var(--institution-secondary)]" />
                                 Valider
                               </DropdownMenuItem>
                               <DropdownMenuItem className="text-xs" onClick={() => handleStatusChange(c.id, 'refuse')}>
@@ -770,7 +770,7 @@ export function CandidaturePage() {
                               <DropdownMenuItem className="text-xs" disabled={!c.email} asChild={Boolean(c.email)}>
                                 {c.email ? (
                                   <a href={`mailto:${c.email}`}>
-                                    <Mail className="size-3.5 mr-2 text-[#d4a853]" />
+                                    <Mail className="size-3.5 mr-2 text-[var(--institution-accent)]" />
                                     Contacter
                                   </a>
                                 ) : (
@@ -808,10 +808,10 @@ export function CandidaturePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Admission Calendar/Timeline */}
             <Card>
-              <div className="h-1 bg-gradient-to-r from-[#2d7a4f] to-[#3da66a]" />
+              <div className="h-1 bg-gradient-to-r from-[var(--institution-secondary)] to-[var(--institution-secondary-bright)]" />
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold text-[#1a2744] flex items-center gap-2">
-                  <CalendarDays className="size-4 text-[#2d7a4f]" />
+                <CardTitle className="text-sm font-semibold text-[var(--institution-primary)] flex items-center gap-2">
+                  <CalendarDays className="size-4 text-[var(--institution-secondary)]" />
                   Calendrier d&apos;admission
                 </CardTitle>
               </CardHeader>
@@ -824,16 +824,16 @@ export function CandidaturePage() {
                         <div
                           className={`w-3 h-3 rounded-full shrink-0 mt-1 ${
                             event.status === 'done'
-                              ? 'bg-[#2d7a4f]'
+                              ? 'bg-[var(--institution-secondary)]'
                               : event.status === 'current'
-                              ? 'bg-[#d4a853] ring-2 ring-[#d4a85330]'
+                              ? 'bg-[var(--institution-accent)] ring-2 ring-[var(--institution-accent-30)]'
                               : 'bg-gray-200'
                           }`}
                         />
                         {idx < timelineEvents.length - 1 && (
                           <div
                             className={`w-0.5 h-10 ${
-                              event.status === 'done' ? 'bg-[#2d7a4f]' : 'bg-gray-200'
+                              event.status === 'done' ? 'bg-[var(--institution-secondary)]' : 'bg-gray-200'
                             }`}
                           />
                         )}
@@ -842,9 +842,9 @@ export function CandidaturePage() {
                       <div className="pb-4 min-w-0">
                         <p className={`text-sm font-medium ${
                           event.status === 'done'
-                            ? 'text-[#2d7a4f]'
+                            ? 'text-[var(--institution-secondary)]'
                             : event.status === 'current'
-                            ? 'text-[#d4a853]'
+                            ? 'text-[var(--institution-accent)]'
                             : 'text-gray-400'
                         }`}>
                           {event.label}
@@ -859,10 +859,10 @@ export function CandidaturePage() {
 
             {/* Admission Statistics */}
             <Card>
-              <div className="h-1 bg-gradient-to-r from-[#d4a853] to-[#e6c477]" />
+              <div className="h-1 bg-gradient-to-r from-[var(--institution-accent)] to-[var(--institution-accent-light)]" />
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold text-[#1a2744] flex items-center gap-2">
-                  <GraduationCap className="size-4 text-[#d4a853]" />
+                <CardTitle className="text-sm font-semibold text-[var(--institution-primary)] flex items-center gap-2">
+                  <GraduationCap className="size-4 text-[var(--institution-accent)]" />
                   Statistiques d&apos;admission
                 </CardTitle>
               </CardHeader>
@@ -915,7 +915,7 @@ export function CandidaturePage() {
                           cy="18"
                           r="15.91549430918954"
                           fill="transparent"
-                          stroke="#2d7a4f"
+                          stroke="var(--institution-secondary)"
                           strokeWidth="3"
                           strokeDasharray={`${admissionRate} ${100 - admissionRate}`}
                           strokeDashoffset="0"
@@ -934,13 +934,13 @@ export function CandidaturePage() {
                         />
                       </svg>
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-sm font-bold text-[#1a2744]">{admissionRate}%</span>
+                        <span className="text-sm font-bold text-[var(--institution-primary)]">{admissionRate}%</span>
                       </div>
                     </div>
                     {/* Legend */}
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
-                        <div className="w-2.5 h-2.5 rounded-full bg-[#2d7a4f] shrink-0" />
+                        <div className="w-2.5 h-2.5 rounded-full bg-[var(--institution-secondary)] shrink-0" />
                         <span className="text-xs text-gray-600">Admis ({admissionRate}%)</span>
                       </div>
                       <div className="flex items-center gap-2">
@@ -964,7 +964,7 @@ export function CandidaturePage() {
       <Dialog open={showForm} onOpenChange={setShowForm}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle className="text-[#1a2744]">Nouvelle candidature</DialogTitle>
+            <DialogTitle className="text-[var(--institution-primary)]">Nouvelle candidature</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
@@ -1045,7 +1045,7 @@ export function CandidaturePage() {
               </div>
             </div>
             <Button
-              className="w-full bg-[#2d7a4f] hover:bg-[#236b40] text-white"
+              className="w-full bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white"
               onClick={handleSubmit}
               disabled={isSubmitting || !currentYear || !hasPrograms}
             >
@@ -1059,7 +1059,7 @@ export function CandidaturePage() {
       <Dialog open={showDocsDialog} onOpenChange={setShowDocsDialog}>
         <DialogContent className="sm:max-w-[450px]">
           <DialogHeader>
-            <DialogTitle className="text-[#1a2744]">Pièces requises pour la candidature</DialogTitle>
+            <DialogTitle className="text-[var(--institution-primary)]">Pièces requises pour la candidature</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-4">
             {docs.map((doc) => {
@@ -1081,7 +1081,7 @@ export function CandidaturePage() {
                         ))
                       }}
                     />
-                    <span className="text-sm text-[#1a2744]">{doc.label}</span>
+                    <span className="text-sm text-[var(--institution-primary)]">{doc.label}</span>
                   </div>
                   <Badge className={`text-[10px] px-2 py-0.5 ${statusCfg.className} border-0`}>
                     <StatusIcon className="size-3 mr-1" />
@@ -1092,7 +1092,7 @@ export function CandidaturePage() {
             })}
             <div className="pt-2">
               <Button
-                className="w-full bg-[#2d7a4f] hover:bg-[#236b40] text-white text-sm"
+                className="w-full bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white text-sm"
                 onClick={() => setShowDocsDialog(false)}
               >
                 Fermer
