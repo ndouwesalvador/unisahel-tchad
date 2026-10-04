@@ -1,11 +1,12 @@
 import React from 'react'
 import { describe, expect, it } from 'vitest'
 import { countPdfPages } from './utils'
-import { AttestationInscriptionPDF, AttestationNiveauPDF, CertificatScolaritePDF, DiplomePDF, PVDeliberationPDF, ReleveNotesPDF, renderPDF } from './templates'
+import { AttestationInscriptionPDF, AttestationNiveauPDF, CertificatScolaritePDF, DiplomePDF, ListeEtudiantsPDF, PVDeliberationPDF, ReleveNotesPDF, renderPDF } from './templates'
 import type { PvSection } from './pv-matrix'
 import { renderArabicHeader } from './arabic-header'
-import { prepareDocumentArtwork } from './artwork'
+import { prepareDocumentArtwork, prepareDocumentPhoto } from './artwork'
 import sharp from 'sharp'
+import QRCode from 'qrcode'
 
 const tenant = { name: 'UNIVERSITÉ POLYTECHNIQUE DE MONGO', shortName: 'UPDM',
   country: 'Tchad', ministry: 'Ministère de l’Enseignement supérieur', city: 'Mongo',
@@ -83,7 +84,10 @@ describe('printed academic documents', () => {
     const diploma = await renderPDF(React.createElement(DiplomePDF, { tenant: branded, student,
       diploma: { title: 'Licence en génie industriel', program: 'Génie industriel', date: '2026-10-01', credits: 180 },
       docNumber: 'DIP-BRAND-001', verificationCode: 'BRANDTEST', isSigned: true }))
-    const transcript = await renderPDF(React.createElement(ReleveNotesPDF, { tenant: branded, student,
+    const photoSvg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240"><rect width="240" height="240" fill="#dbe9e2"/><circle cx="120" cy="85" r="40" fill="#176341"/><path d="M35 220 Q40 145 120 145 Q200 145 205 220" fill="#176341"/></svg>')
+    const photo = await prepareDocumentPhoto(`data:image/png;base64,${(await sharp(photoSvg).png().toBuffer()).toString('base64')}`)
+    const qrCodeDataUrl = await QRCode.toDataURL('https://unisahel-tchad.vercel.app/verify?code=BRANDTEST')
+    const transcript = await renderPDF(React.createElement(ReleveNotesPDF, { tenant: branded, student: { ...student, photo }, qrCodeDataUrl,
       ueGrades: [{ ue: 'Génie industriel', code: 'UE1', credits: 30, moyenne: 15,
         notes: [{ ec: 'Mécanique appliquée', coef: 1, cc: 15, exam: 15, final: 15 }] }],
       semester: 'Semestre 1', academicYear: '2026-2027', docNumber: 'RN-BRAND-001',
@@ -91,8 +95,33 @@ describe('printed academic documents', () => {
     expect(countPdfPages(diploma)).toBe(1)
     expect(countPdfPages(transcript)).toBe(1)
     expect((diploma.toString('latin1').match(/\/Subtype \/Image/g) || []).length).toBeGreaterThanOrEqual(3)
+    expect((transcript.toString('latin1').match(/\/Subtype \/Image/g) || []).length).toBeGreaterThanOrEqual(5)
     await savePreview('diplome-deux-signataires.pdf', diploma)
     await savePreview('releve-deux-signataires.pdf', transcript)
+  })
+
+  it('repeats the same institutional header on every student-list sheet', async () => {
+    const entries = Array.from({ length: 39 }, (_, index) => ({
+      name: `ÉTUDIANT ${String(index + 1).padStart(2, '0')} TEST DE MAQUETTE`,
+      matricule: `UPDM-DEV-${String(index + 1).padStart(3, '0')}`, gender: index % 2 ? 'F' : 'M',
+      program: 'Génie industriel et maintenance', level: 'Licence 1', status: 'INSCRIT',
+    }))
+    const pdf = await renderPDF(React.createElement(ListeEtudiantsPDF, { tenant, students: entries,
+      academicYear: '2026-2027', program: 'Génie industriel et maintenance', level: 'Licence 1' }))
+    expect(countPdfPages(pdf)).toBe(3)
+    expect(pdf.toString('latin1')).toMatch(/\/MediaBox \[0 0 841\.89\d* 595\.28\d*\]/)
+    await savePreview('liste-etudiants-institutionnelle.pdf', pdf)
+  })
+
+  it('does not spill a student-list sheet when names and programs wrap', async () => {
+    const entries = Array.from({ length: 15 }, (_, index) => ({
+      name: `NDOUWE SALVADOR ${index + 1} NOM COMPOSÉ DE PLUSIEURS PRÉNOMS TEST DE MISE EN PAGE`,
+      matricule: `UPDM-DEV-${index + 1}`, gender: 'M', status: 'INSCRIT', level: 'Licence 3',
+      program: 'Sciences et techniques industrielles appliquées aux systèmes de production et de maintenance',
+    }))
+    const pdf = await renderPDF(React.createElement(ListeEtudiantsPDF, { tenant, students: entries, academicYear: '2026-2027' }))
+    expect(countPdfPages(pdf)).toBe(3)
+    await savePreview('liste-etudiants-libelles-longs.pdf', pdf)
   })
 
   it('tiles a department PV by columns and students with matching row numbers', async () => {

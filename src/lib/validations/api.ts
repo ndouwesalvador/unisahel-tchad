@@ -73,6 +73,7 @@ export const createStudentSchema = z.object({
   parentName: z.string().max(100).optional(),
   parentPhone: z.string().max(30).optional(),
   parentEmail: z.string().email().optional(),
+  photo: z.string().max(3_000_000).regex(/^data:image\/(?:png|jpeg|webp);base64,/).optional(),
 })
 
 export const updateStudentSchema = createStudentSchema.partial().extend({

@@ -251,9 +251,9 @@ function SignatureField({ title, name, image }: { title: string; name?: string; 
   </View>
 }
 
-function DocumentSignatories({ tenant, compact = false, anchored = false }: { tenant: TenantInfo; compact?: boolean; anchored?: boolean }) {
+function DocumentSignatories({ tenant, compact = false, anchored = false, bottom = 98 }: { tenant: TenantInfo; compact?: boolean; anchored?: boolean; bottom?: number }) {
   const hasSecond = Boolean(tenant.secondarySignerName?.trim())
-  return <View style={{ ...(anchored ? { position: 'absolute' as const, bottom: 98, left: 31, right: 31, height: 58 } : { marginTop: compact ? 8 : 18, minHeight: compact ? 59 : 72 }), flexDirection: 'row', alignItems: 'flex-end', justifyContent: hasSecond ? 'space-between' : 'center' }} wrap={false}>
+  return <View style={{ ...(anchored ? { position: 'absolute' as const, bottom, left: 31, right: 31, height: 58 } : { marginTop: compact ? 8 : 18, minHeight: compact ? 59 : 72 }), flexDirection: 'row', alignItems: 'flex-end', justifyContent: hasSecond ? 'space-between' : 'center' }} wrap={false}>
     <SignatureField title={tenant.rectorTitle || 'Responsable de l’établissement'} name={tenant.rectorName} image={tenant.signature} />
     {tenant.stamp?.startsWith('data:image/') && <Image src={tenant.stamp} style={{ width: 72, height: 63, objectFit: 'contain', position: 'absolute', left: hasSecond ? '43%' : '63%', bottom: 0 }} />}
     {hasSecond && <SignatureField title={tenant.secondarySignerTitle || 'Second signataire'} name={tenant.secondarySignerName} image={tenant.secondarySignature} />}
@@ -314,10 +314,10 @@ function JurySignatures({ members, tenant, compact = false }: { members: Array<{
   </View>
 }
 
-function Footer({ tenant, docNumber, verificationCode, qrCodeDataUrl, isSigned = false }: { tenant: TenantInfo; docNumber?: string; verificationCode?: string; qrCodeDataUrl?: string; isSigned?: boolean }) {
+function Footer({ tenant, docNumber, verificationCode, qrCodeDataUrl, isSigned = false, qrInBody = false }: { tenant: TenantInfo; docNumber?: string; verificationCode?: string; qrCodeDataUrl?: string; isSigned?: boolean; qrInBody?: boolean }) {
   return (
     <>
-      {verificationCode && (
+      {verificationCode && !qrInBody && (
         <View style={styles.verificationBar} wrap={false} fixed>
           {qrCodeDataUrl && <Image src={qrCodeDataUrl} style={styles.qrCode} />}
           <View style={styles.verificationTextGroup}>
@@ -330,7 +330,7 @@ function Footer({ tenant, docNumber, verificationCode, qrCodeDataUrl, isSigned =
         <Text>
           {tenant.name}{docNumber ? ` · ${docNumber}` : ''}
         </Text>
-        <Text>{isSigned ? 'Authenticité du document vérifiable par le code ci-dessus. Les visuels de cachet et signature ne sont pas des signatures cryptographiques.' : 'APERÇU NON VALIDÉ - ne constitue pas une pièce officielle.'}</Text>
+        <Text>{isSigned ? `Authenticité vérifiable par ${qrInBody ? 'le QR du relevé' : 'le code ci-dessus'}. Les visuels de cachet et signature ne sont pas des signatures cryptographiques.` : 'APERÇU NON VALIDÉ - ne constitue pas une pièce officielle.'}</Text>
       </View>
       <Text style={styles.pageNumber} fixed render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`} />
     </>
@@ -345,66 +345,93 @@ export function ReleveNotesPDF({
   const rowCount = ueGrades.reduce((sum, ue) => sum + ue.notes.length, 0)
   const density = ueGrades.length + rowCount
   const credits = ueGrades.reduce((sum, ue) => sum + ue.credits, 0)
-  const tableFont = density > 34 ? 5.5 : density > 24 ? 6.1 : density > 18 ? 7.1 : 8.2
-  // Share the available table area between rows: a short transcript breathes,
-  // while a long one remains on one sheet. The API still rejects overflow.
-  const rowPadding = Math.max(0.55, Math.min(7, (300 - density * tableFont * 1.25) / Math.max(1, density * 2)))
+  const tableFont = density > 42 ? 5.1 : density > 34 ? 5.5 : density > 24 ? 6.1 : density > 18 ? 7.1 : 8.1
+  // The table is elastic like the EduSahel bulletin: compact for a complete
+  // curriculum, generous for a short one. Final PDF pagination is validated.
+  const rowPadding = Math.max(0.3, Math.min(6, (275 - density * tableFont * 1.2) / Math.max(1, density * 2)))
+  const note = (value?: number) => value == null ? '—' : formatNumber(value).replace('.', ',')
+  const positive = Boolean(jury && ['ADMI', 'ADMI_DETTE', 'COMPENSE'].includes(jury.decision))
+  const initials = `${student.firstName?.[0] || ''}${student.lastName?.[0] || ''}`.toUpperCase()
+  const inlineQr = Boolean(qrCodeDataUrl?.startsWith('data:image/'))
   return (
     <Document>
-      <Page size="A4" style={{ ...styles.page, paddingTop: 21, paddingHorizontal: 31, paddingBottom: 93 }}>
+      <Page size="A4" style={{ ...styles.page, paddingTop: 15, paddingHorizontal: 29, paddingBottom: 104 }}>
         <DocumentHeader tenant={tenant} docNumber={docNumber} compact />
-        <DocumentHeading title="RELEVÉ INDIVIDUEL DE NOTES" subtitle={`Année académique ${academicYear} · ${semester}`} isSigned={isSigned} compact={density > 34} />
+        <DocumentHeading title="RELEVÉ DE NOTES" subtitle={`${semester || 'Année complète'} · ${academicYear}`} isSigned={isSigned} compact />
 
-        <View style={{ flexDirection: 'row', borderWidth: 1, borderColor: colors.border, marginBottom: 6, padding: 6 }} wrap={false}>
-          <View style={{ width: '52%' }}>
-            <Text style={{ fontSize: 7, color: colors.muted }}>ÉTUDIANT</Text>
-            <Text style={{ fontSize: 10.5, fontWeight: 'bold', color: colors.primary, marginTop: 3 }}>{student.firstName} {student.lastName}</Text>
-            <Text style={{ fontSize: 8, marginTop: 4 }}>Matricule : {student.matricule || '—'}</Text>
-          </View>
-          <View style={{ width: '48%' }}>
-            <Text style={{ fontSize: 7, color: colors.muted }}>PARCOURS</Text>
-            <Text style={{ fontSize: 8.5, fontWeight: 'bold', marginTop: 3 }}>{student.program || '—'}</Text>
-            <Text style={{ fontSize: 8, marginTop: 4 }}>Niveau : {student.level || '—'}</Text>
-          </View>
-        </View>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4, paddingHorizontal: 9, marginBottom: 4, backgroundColor: '#edf5f0' }} wrap={false}>
-          <Text style={{ fontSize: 8, color: colors.primary }}>{ueGrades.length} UE · {rowCount} matières · {credits} crédits inscrits</Text>
-          <Text style={{ fontSize: 8, color: colors.primary, fontWeight: 'bold' }}>{jury ? `MOYENNE ANNUELLE : ${formatNumber(jury.average)} / 20` : 'Décision du jury non publiée'}</Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 2.4, borderTopColor: colors.accent, backgroundColor: '#edf2f7', paddingVertical: density > 34 ? 4 : 6, paddingHorizontal: 9, marginBottom: 6 }} wrap={false}>
+          <View style={{ width: '23%' }}><Text style={{ fontSize: 6, color: colors.muted }}>ANNÉE ACADÉMIQUE</Text><Text style={{ fontSize: 8.3, color: colors.primary, fontWeight: 'bold', marginTop: 1 }}>{academicYear}</Text></View>
+          <View style={{ width: '39%' }}><Text style={{ fontSize: 6, color: colors.muted }}>FILIÈRE</Text><Text style={{ fontSize: 8, color: colors.primary, fontWeight: 'bold', marginTop: 1 }}>{student.program || '—'}</Text></View>
+          <View style={{ width: '21%' }}><Text style={{ fontSize: 6, color: colors.muted }}>NIVEAU</Text><Text style={{ fontSize: 8, color: colors.primary, fontWeight: 'bold', marginTop: 1 }}>{student.level || '—'}</Text></View>
+          <View style={{ width: '13%' }}><Text style={{ fontSize: 6, color: colors.muted }}>CRÉDITS</Text><Text style={{ fontSize: 8.3, color: colors.primary, fontWeight: 'bold', marginTop: 1 }}>{credits} ECTS</Text></View>
         </View>
 
-        <View style={{ borderWidth: 1, borderColor: colors.border }} wrap={false}>
-          <View style={{ flexDirection: 'row', backgroundColor: colors.primary, paddingVertical: 4, paddingHorizontal: 7 }}>
-            <Text style={{ width: '42%', fontSize: tableFont, color: '#ffffff', fontWeight: 'bold' }}>MATIÈRE / ÉLÉMENT CONSTITUTIF</Text>
-            <Text style={{ width: '9%', fontSize: tableFont, color: '#ffffff', textAlign: 'center' }}>COEF.</Text>
-            <Text style={{ width: '11%', fontSize: tableFont, color: '#ffffff', textAlign: 'center' }}>CC</Text>
-            <Text style={{ width: '11%', fontSize: tableFont, color: '#ffffff', textAlign: 'center' }}>TP</Text>
-            <Text style={{ width: '13%', fontSize: tableFont, color: '#ffffff', textAlign: 'center' }}>EXAMEN</Text>
-            <Text style={{ width: '14%', fontSize: tableFont, color: '#ffffff', textAlign: 'center' }}>MOY. EC</Text>
+        <View style={{ flexDirection: 'row', borderWidth: 0.8, borderColor: colors.border, borderLeftWidth: 3, borderLeftColor: colors.primary, marginBottom: 7, minHeight: density > 34 ? 60 : 69 }} wrap={false}>
+          <View style={{ width: density > 34 ? 57 : 65, padding: 4, borderRightWidth: 0.5, borderRightColor: colors.border, justifyContent: 'center' }}>
+            {student.photo?.startsWith('data:image/') ? <Image src={student.photo} style={{ width: density > 34 ? 49 : 57, height: density > 34 ? 49 : 57, objectFit: 'cover' }} />
+              : <View style={{ width: density > 34 ? 49 : 57, height: density > 34 ? 49 : 57, backgroundColor: '#e8eff0', alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 18, fontWeight: 'bold', color: colors.secondary }}>{initials}</Text></View>}
+          </View>
+          <View style={{ flexGrow: 1, padding: density > 34 ? 5 : 8, justifyContent: 'center' }}>
+            <Text style={{ fontSize: 6.5, color: colors.muted, letterSpacing: 0.9 }}>NOM ET PRÉNOMS</Text>
+            <Text style={{ fontSize: density > 34 ? 11 : 13, fontWeight: 'bold', color: colors.primary, marginTop: 2 }}>{student.lastName.toUpperCase()} {student.firstName}</Text>
+            <Text style={{ fontSize: 7.2, color: colors.muted, marginTop: 3 }}>Matricule : {student.matricule || '—'}{student.gender ? ` · ${student.gender === 'M' ? 'Masculin' : student.gender === 'F' ? 'Féminin' : student.gender}` : ''}</Text>
+            {student.dateOfBirth && <Text style={{ fontSize: 7, color: colors.muted, marginTop: 2 }}>Né(e) le {formatDate(student.dateOfBirth)}{student.placeOfBirth ? ` à ${student.placeOfBirth}` : ''}</Text>}
+          </View>
+          {qrCodeDataUrl?.startsWith('data:image/') && <View style={{ width: density > 34 ? 62 : 69, padding: 4, borderLeftWidth: 0.5, borderLeftColor: colors.border, alignItems: 'center', justifyContent: 'center' }}>
+            <Image src={qrCodeDataUrl} style={{ width: density > 34 ? 48 : 55, height: density > 34 ? 48 : 55 }} />
+            <Text style={{ fontSize: 5, textAlign: 'center', color: colors.muted }}>Vérifier ce relevé</Text>
+          </View>}
+        </View>
+
+        <View style={{ borderWidth: 0.7, borderColor: colors.border }}>
+          <View style={{ flexDirection: 'row', backgroundColor: colors.primary, paddingVertical: density > 34 ? 3 : 5, paddingHorizontal: 5 }}>
+            <Text style={{ width: '39%', fontSize: tableFont, color: colors.accent, fontWeight: 'bold' }}>ÉLÉMENT CONSTITUTIF / UE</Text>
+            <Text style={{ width: '10%', fontSize: tableFont, color: colors.accent, textAlign: 'center' }}>CC</Text>
+            <Text style={{ width: '10%', fontSize: tableFont, color: colors.accent, textAlign: 'center' }}>TP</Text>
+            <Text style={{ width: '14%', fontSize: tableFont, color: colors.accent, textAlign: 'center' }}>EXAMEN</Text>
+            <Text style={{ width: '11%', fontSize: tableFont, color: colors.accent, textAlign: 'center' }}>COEF.</Text>
+            <Text style={{ width: '16%', fontSize: tableFont, color: colors.accent, textAlign: 'center' }}>MOY. / 20</Text>
           </View>
           {ueGrades.map((ue, i) => <View key={`${ue.code}-${i}`} wrap={false}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', backgroundColor: '#eaf3ed', paddingVertical: rowPadding, paddingHorizontal: 7, borderTopWidth: i ? 1 : 0, borderTopColor: colors.border }}>
-              <Text style={{ fontSize: tableFont, color: colors.primary, fontWeight: 'bold', width: '74%' }}>{ue.code ? `${ue.code} · ` : ''}{ue.ue}</Text>
-              <Text style={{ fontSize: tableFont, color: colors.secondary, fontWeight: 'bold', width: '26%', textAlign: 'right' }}>{ue.credits} CR · UE {ue.moyenne == null ? '—' : formatNumber(ue.moyenne)}</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', backgroundColor: i % 2 ? '#14563b' : '#213b60', borderLeftWidth: 3, borderLeftColor: colors.accent, paddingVertical: rowPadding + 0.8, paddingHorizontal: 5 }}>
+              <Text style={{ fontSize: tableFont + 0.3, color: '#ffffff', fontWeight: 'bold', width: '72%' }}>{ue.code ? `${ue.code} · ` : ''}{ue.ue}</Text>
+              <Text style={{ fontSize: tableFont + 0.3, color: '#ffffff', fontWeight: 'bold', width: '28%', textAlign: 'right' }}>{ue.credits} ECTS · UE {note(ue.moyenne)}</Text>
             </View>
-            {ue.notes.map((note, j) => <View key={j} style={{ flexDirection: 'row', paddingVertical: rowPadding, paddingHorizontal: 7, backgroundColor: j % 2 ? '#f8fafc' : '#ffffff', borderTopWidth: 0.4, borderTopColor: colors.border }} wrap={false}>
-              <Text style={{ width: '42%', fontSize: tableFont, color: colors.text }}>{note.code ? `${note.code} · ` : ''}{note.ec}</Text>
-              <Text style={{ width: '9%', fontSize: tableFont, textAlign: 'center' }}>{note.coef}</Text>
-              <Text style={{ width: '11%', fontSize: tableFont, textAlign: 'center' }}>{note.cc == null ? '—' : formatNumber(note.cc)}</Text>
-              <Text style={{ width: '11%', fontSize: tableFont, textAlign: 'center' }}>{note.tp == null ? '—' : formatNumber(note.tp)}</Text>
-              <Text style={{ width: '13%', fontSize: tableFont, textAlign: 'center' }}>{note.exam == null ? '—' : formatNumber(note.exam)}</Text>
-              <Text style={{ width: '14%', fontSize: tableFont, textAlign: 'center', fontWeight: 'bold' }}>{note.final == null ? '—' : formatNumber(note.final)}</Text>
+            {ue.notes.map((entry, j) => <View key={j} style={{ flexDirection: 'row', paddingVertical: rowPadding, paddingHorizontal: 5, backgroundColor: j % 2 ? '#f3f6f8' : '#ffffff', borderTopWidth: 0.3, borderTopColor: colors.border, borderLeftWidth: 3, borderLeftColor: entry.final == null ? '#d3dce4' : entry.final < 10 ? '#d8867b' : '#90bea1' }} wrap={false}>
+              <Text style={{ width: '39%', fontSize: tableFont, color: colors.text }}>{entry.code ? `${entry.code} · ` : ''}{entry.ec}</Text>
+              <Text style={{ width: '10%', fontSize: tableFont, textAlign: 'center' }}>{note(entry.cc)}</Text>
+              <Text style={{ width: '10%', fontSize: tableFont, textAlign: 'center' }}>{note(entry.tp)}</Text>
+              <Text style={{ width: '14%', fontSize: tableFont, textAlign: 'center' }}>{note(entry.exam)}</Text>
+              <Text style={{ width: '11%', fontSize: tableFont, textAlign: 'center' }}>{entry.coef}</Text>
+              <Text style={{ width: '16%', fontSize: tableFont, textAlign: 'center', fontWeight: 'bold', color: entry.final == null ? colors.muted : entry.final < 10 ? '#aa3434' : colors.secondary }}>{note(entry.final)}</Text>
             </View>)}
           </View>)}
         </View>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 9, borderWidth: 1, borderColor: colors.border, padding: 8 }} wrap={false}>
-          <Text style={{ fontSize: 8, width: '30%' }}>Crédits acquis : <Text style={{ fontWeight: 'bold' }}>{jury ? jury.creditsAcquired : 'À délibérer'} / {credits}</Text></Text>
-          <Text style={{ fontSize: 8, width: '27%' }}>Moyenne générale : <Text style={{ fontWeight: 'bold' }}>{jury ? `${formatNumber(jury.average)} / 20` : 'À délibérer'}</Text></Text>
-          <Text style={{ fontSize: 8, width: '43%', textAlign: 'right' }}>Décision du jury : <Text style={{ fontWeight: 'bold', color: jury && ['ADMI', 'ADMI_DETTE', 'COMPENSE'].includes(jury.decision) ? colors.secondary : colors.primary }}>{jury ? decisionLabel(jury.decision) : 'Non publiée'}</Text></Text>
-        </View>
-        {jury && <Text style={{ fontSize: 7.5, color: colors.muted, marginTop: 7 }}>Résultats arrêtés par le jury le {formatDate(jury.date)}. CC : contrôle continu · TP : travaux pratiques · EC : élément constitutif · UE : unité d’enseignement.</Text>}
-        <DocumentSignatories tenant={tenant} compact={density > 24} anchored />
 
-        <Footer tenant={tenant} docNumber={docNumber} verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} isSigned={isSigned} />
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: density > 34 ? 5 : 8, marginBottom: 4 }} wrap={false}>
+          <View style={{ height: 0.7, backgroundColor: colors.border, flexGrow: 1 }} />
+          <Text style={{ fontSize: 7, color: colors.muted, fontWeight: 'bold', letterSpacing: 1.1, marginHorizontal: 8 }}>RÉSULTATS ACADÉMIQUES</Text>
+          <View style={{ height: 0.7, backgroundColor: colors.border, flexGrow: 1 }} />
+        </View>
+        <View style={{ flexDirection: 'row', gap: 5 }} wrap={false}>
+          <View style={{ width: '34%', borderTopWidth: 2, borderTopColor: colors.accent, backgroundColor: '#edf2f7', padding: density > 34 ? 5 : 8, alignItems: 'center' }}>
+            <Text style={{ fontSize: 6, color: colors.muted, letterSpacing: 0.6 }}>MOYENNE GÉNÉRALE</Text>
+            <Text style={{ fontSize: density > 34 ? 13 : 18, fontWeight: 'bold', color: colors.primary, marginTop: 2 }}>{jury ? note(jury.average) : '—'} <Text style={{ fontSize: 8 }}>/ 20</Text></Text>
+            {jury && <View style={{ width: '100%', height: 3, backgroundColor: '#dce5e9', marginTop: 3 }}><View style={{ width: `${Math.max(0, Math.min(100, jury.average * 5))}%`, height: 3, backgroundColor: positive ? colors.secondary : '#aa3434' }} /></View>}
+          </View>
+          <View style={{ width: '26%', borderTopWidth: 2, borderTopColor: colors.accent, borderWidth: 0.5, borderColor: colors.border, padding: density > 34 ? 5 : 8, alignItems: 'center' }}>
+            <Text style={{ fontSize: 6, color: colors.muted, letterSpacing: 0.6 }}>CRÉDITS ACQUIS</Text>
+            <Text style={{ fontSize: density > 34 ? 12 : 15, fontWeight: 'bold', color: colors.primary, marginTop: 3 }}>{jury ? jury.creditsAcquired : '—'} <Text style={{ fontSize: 8 }}>/ {credits}</Text></Text>
+          </View>
+          <View style={{ width: '38%', borderTopWidth: 2, borderTopColor: colors.accent, borderWidth: 0.5, borderColor: colors.border, padding: density > 34 ? 5 : 8, alignItems: 'center' }}>
+            <Text style={{ fontSize: 6, color: colors.muted, letterSpacing: 0.6 }}>DÉCISION DU JURY</Text>
+            <Text style={{ fontSize: density > 34 ? 9 : 11, fontWeight: 'bold', color: jury ? positive ? colors.secondary : '#aa3434' : colors.muted, marginTop: 4, textAlign: 'center' }}>{jury ? decisionLabel(jury.decision) : 'Non publiée'}</Text>
+          </View>
+        </View>
+        <Text style={{ fontSize: density > 34 ? 6 : 7, color: colors.muted, marginTop: 5 }}>{jury ? `Résultats arrêtés par le jury le ${formatDate(jury.date)}. ` : ''}CC : contrôle continu · TP : travaux pratiques · EC : élément constitutif · UE : unité d’enseignement.</Text>
+        <DocumentSignatories tenant={tenant} compact={density > 24} anchored bottom={inlineQr ? 43 : 98} />
+
+        <Footer tenant={tenant} docNumber={docNumber} verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} isSigned={isSigned} qrInBody={inlineQr} />
       </Page>
     </Document>
   )
@@ -801,48 +828,66 @@ export function CertificatScolaritePDF({
   )
 }
 
+export interface StudentListEntry { name: string; matricule: string; gender: string; program?: string; level?: string; status?: string }
+
+export function paginateStudentList(students: StudentListEntry[], program = ''): Array<{ rows: StudentListEntry[]; start: number }> {
+  const pages: Array<{ rows: StudentListEntry[]; start: number }> = []
+  let rows: StudentListEntry[] = []
+  let usedHeight = 0
+  let start = 0
+  for (const entry of students) {
+    const lines = Math.max(1, Math.ceil(entry.name.length / 50), Math.ceil((entry.program || program || '').length / 40))
+    const estimatedHeight = 17 + Math.max(0, lines - 1) * 9
+    if (rows.length >= 15 || (rows.length > 0 && usedHeight + estimatedHeight > 255)) {
+      pages.push({ rows, start })
+      start += rows.length
+      rows = []
+      usedHeight = 0
+    }
+    rows.push(entry)
+    usedHeight += estimatedHeight
+  }
+  pages.push({ rows, start })
+  return pages
+}
+
 export function ListeEtudiantsPDF({
   tenant, students, program, level, academicYear,
 }: {
-  tenant: TenantInfo; students: Array<{ name: string; matricule: string; gender: string; phone?: string; email?: string }>; program?: string; level?: string; academicYear: string
+  tenant: TenantInfo; students: StudentListEntry[]; program?: string; level?: string; academicYear: string
 }) {
+  const pages = paginateStudentList(students, program)
+  const statusLabels: Record<string, string> = { INSCRIT: 'Inscrit', PRE_INSCRIT: 'Pré-inscrit', SUSPENDU: 'Suspendu', EXCLU: 'Exclu', DIPLOME: 'Diplômé', ABANDON: 'Abandon', TRANSFERE: 'Transféré' }
   return (
     <Document>
-      <Page size="A4" style={[styles.page]} orientation="landscape">
-        <DocumentHeader tenant={tenant} />
-        <DocumentHeading title="LISTE DES ÉTUDIANTS" subtitle={`${program ? `${program} · ` : ''}${level ? `${level} · ` : ''}${academicYear} · ${students.length} étudiants`} isSigned={false} eyebrow="EXPORT ADMINISTRATIF" />
-
-        <View style={styles.table}>
-          <View style={styles.tableHeader}>
-            <Text style={[styles.tableHeaderCell, { width: '6%', textAlign: 'center' }]}>#</Text>
-            <Text style={[styles.tableHeaderCell, { width: '30%' }]}>Nom & Prénom</Text>
-            <Text style={[styles.tableHeaderCell, { width: '20%' }]}>Matricule</Text>
-            <Text style={[styles.tableHeaderCell, { width: '8%', textAlign: 'center' }]}>Sexe</Text>
-            <Text style={[styles.tableHeaderCell, { width: '18%' }]}>Téléphone</Text>
-            <Text style={[styles.tableHeaderCell, { width: '18%' }]}>Email</Text>
+      {pages.map(({ rows: pageStudents, start: pageStart }, pageIndex) => <Page key={pageIndex} size="A4" orientation="landscape" style={{ ...styles.page, paddingTop: 17, paddingHorizontal: 34, paddingBottom: 35 }}>
+        <DocumentHeader tenant={tenant} compact />
+        <DocumentHeading title="LISTE DES ÉTUDIANTS" subtitle={`${program ? `${program} · ` : ''}${level ? `${level} · ` : ''}${academicYear} · ${students.length} étudiant(s)`} isSigned={false} eyebrow="EXPORT ADMINISTRATIF" compact />
+        <View style={{ borderTopWidth: 2, borderTopColor: colors.accent, marginTop: 2, marginBottom: 5, paddingVertical: 5, paddingHorizontal: 9, backgroundColor: '#eef2f6', flexDirection: 'row', justifyContent: 'space-between' }}>
+          <Text style={{ fontSize: 7.5, color: colors.primary, fontWeight: 'bold' }}>Année académique : {academicYear || 'Non précisée'}</Text>
+          <Text style={{ fontSize: 7.5, color: colors.primary }}>Effectif exporté : {students.length}</Text>
+        </View>
+        <View style={{ borderWidth: 0.7, borderColor: colors.border }}>
+          <View style={{ ...styles.tableHeader, paddingVertical: 5 }}>
+            {[['#', '5%'], ['Matricule', '18%'], ['Nom et prénoms', '28%'], ['Filière', '22%'], ['Niveau', '12%'], ['Statut', '10%'], ['Sexe', '5%']].map(([label, width]) =>
+              <Text key={label} style={{ ...styles.tableHeaderCell, width, fontSize: 7 }}>{label}</Text>)}
           </View>
-          {students.map((s, i) => (
-            <View key={i} style={[styles.tableRow, i % 2 === 1 ? styles.tableRowAlt : {}]}>
-              <Text style={[styles.tableCellCenter, { width: '6%' }]}>{i + 1}</Text>
-              <Text style={[styles.tableCell, { width: '30%' }]}>{s.name}</Text>
-              <Text style={[styles.tableCell, { width: '20%' }]}>{s.matricule}</Text>
-              <Text style={[styles.tableCellCenter, { width: '8%' }]}>{s.gender === 'M' ? 'M' : 'F'}</Text>
-              <Text style={[styles.tableCell, { width: '18%' }]}>{s.phone || '-'}</Text>
-              <Text style={[styles.tableCell, { width: '18%' }]}>{s.email || '-'}</Text>
-            </View>
-          ))}
+          {pageStudents.length === 0 && <Text style={{ padding: 10, fontSize: 8, color: colors.muted }}>Aucun étudiant dans cette sélection.</Text>}
+          {pageStudents.map((entry, rowIndex) => <View key={`${entry.matricule}-${rowIndex}`} wrap={false} style={{ ...styles.tableRow, paddingVertical: 4.2, backgroundColor: rowIndex % 2 ? '#f5f7fa' : '#ffffff' }}>
+            <Text style={{ ...styles.tableCell, width: '5%', fontSize: 7.4 }}>{pageStart + rowIndex + 1}</Text>
+            <Text style={{ ...styles.tableCell, width: '18%', fontSize: 7.4 }}>{entry.matricule || '—'}</Text>
+            <Text style={{ ...styles.tableCell, width: '28%', fontSize: 7.4, fontWeight: 'bold', color: colors.primary }}>{entry.name}</Text>
+            <Text style={{ ...styles.tableCell, width: '22%', fontSize: 7.2 }}>{entry.program || program || '—'}</Text>
+            <Text style={{ ...styles.tableCell, width: '12%', fontSize: 7.2 }}>{entry.level || level || '—'}</Text>
+            <Text style={{ ...styles.tableCell, width: '10%', fontSize: 7.2 }}>{statusLabels[entry.status || ''] || entry.status || '—'}</Text>
+            <Text style={{ ...styles.tableCell, width: '5%', fontSize: 7.2 }}>{entry.gender === 'M' || entry.gender === 'F' ? entry.gender : '—'}</Text>
+          </View>)}
         </View>
-
-        <View style={{ marginTop: 15, flexDirection: 'row', justifyContent: 'space-between' }}>
-          <Text style={{ fontSize: 8, color: colors.muted }}>Généré le {formatDate(new Date())}</Text>
-          <Text style={{ fontSize: 8, color: colors.muted }}>Total: {students.length} étudiants</Text>
+        <View style={{ position: 'absolute', bottom: 14, left: 34, right: 34, borderTopWidth: 0.8, borderTopColor: colors.border, paddingTop: 4, flexDirection: 'row', justifyContent: 'space-between' }}>
+          <Text style={{ fontSize: 7, color: colors.muted }}>{tenant.name} · Export administratif du {formatDate(new Date())}</Text>
+          <Text style={{ fontSize: 7, color: colors.muted }}>{pageIndex + 1} / {pages.length}</Text>
         </View>
-
-        <View style={styles.footer}>
-          <Text>{tenant.name} · liste administrative générée le {formatDate(new Date())}</Text>
-        </View>
-        <Text style={styles.pageNumber} render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`} />
-      </Page>
+      </Page>)}
     </Document>
   )
 }

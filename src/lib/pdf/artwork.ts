@@ -20,3 +20,17 @@ export async function prepareDocumentArtwork(tenant: TenantInfo): Promise<Tenant
   }
   return prepared
 }
+
+export async function prepareDocumentPhoto(value?: string | null): Promise<string | undefined> {
+  if (!value?.startsWith('data:image/') || !value.includes(';base64,')) return undefined
+  try {
+    const source = Buffer.from(value.split(';base64,')[1], 'base64')
+    if (source.length > 8_000_000) return undefined
+    const resized = await sharp(source, { failOn: 'error' }).rotate()
+      .resize(192, 192, { fit: 'cover', position: 'attention' })
+      .jpeg({ quality: 82 }).toBuffer()
+    return `data:image/jpeg;base64,${resized.toString('base64')}`
+  } catch {
+    return undefined
+  }
+}

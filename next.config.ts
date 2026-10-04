@@ -7,6 +7,7 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ['@resvg/resvg-js'],
   outputFileTracingIncludes: {
     '/api/documents/generate': ['./src/lib/pdf/fonts/NotoNaskhArabic.ttf'],
+    '/api/students/export-pdf': ['./src/lib/pdf/fonts/NotoNaskhArabic.ttf'],
   },
 };
 

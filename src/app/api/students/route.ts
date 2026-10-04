@@ -5,6 +5,7 @@ import { isStudentSelfRole } from '@/lib/auth/student-scope'
 import { studentQuerySchema, createStudentSchema, updateStudentSchema, validateQuery, validateBody, formatZodError } from '@/lib/validations/api'
 import { Prisma } from '@prisma/client'
 import { createStudentPortalCredentials } from '@/lib/student-portal'
+import { prepareDocumentPhoto } from '@/lib/pdf/artwork'
 
 // Credits are awarded by a finalized jury, not by the mutable Student cache.
 // A second session in the same year may replace the first decision; count the
@@ -68,6 +69,9 @@ async function getStudentsHandler(user: SessionUser, tenantId: string, request: 
     const [students, total] = await Promise.all([
       db.student.findMany({
         where,
+        // Portraits are stored for official documents, not transported with
+        // a potentially 1 000-row administrative roster.
+        omit: { photo: true },
         include: {
           currentProgram: {
             select: { id: true, name: true, code: true },
@@ -113,6 +117,11 @@ async function createStudentHandler(user: SessionUser, tenantId: string, request
   try {
     const body = await request.json()
     const validatedBody = validateBody(createStudentSchema, body)
+    if (validatedBody.photo) {
+      const photo = await prepareDocumentPhoto(validatedBody.photo)
+      if (!photo) return NextResponse.json({ error: 'Photo invalide ou trop volumineuse.' }, { status: 400 })
+      validatedBody.photo = photo
+    }
 
     // A level must belong to the selected active program, not merely to the tenant.
     const [level, program] = await Promise.all([
@@ -218,6 +227,11 @@ async function updateStudentHandler(user: SessionUser, tenantId: string, request
     const body = await request.json()
     const validatedBody = validateBody(updateStudentSchema, body)
     const { id, ...data } = validatedBody
+    if (data.photo) {
+      const photo = await prepareDocumentPhoto(data.photo)
+      if (!photo) return NextResponse.json({ error: 'Photo invalide ou trop volumineuse.' }, { status: 400 })
+      data.photo = photo
+    }
 
     // Verify student belongs to tenant
     const existing = await db.student.findFirst({ where: { id, tenantId } })

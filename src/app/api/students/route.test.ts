@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
 import { Prisma } from '@prisma/client'
+import sharp from 'sharp'
 
 const { authMock, credentialsMock, dbMock } = vi.hoisted(() => ({
   authMock: vi.fn(),
@@ -99,6 +100,11 @@ describe('GET /api/students', () => {
     expect(dbMock.student.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ take: 1000 })
     )
+  })
+
+  it('keeps stored portraits out of the large roster response', async () => {
+    await GET(req('/api/students?limit=1000'))
+    expect(dbMock.student.findMany).toHaveBeenCalledWith(expect.objectContaining({ omit: { photo: true } }))
   })
 
   it('shows credits from finalized jury decisions, counting a year only once', async () => {
@@ -201,6 +207,13 @@ describe('POST /api/students', () => {
     expect(res.status).toBe(400)
     expect(dbMock.$transaction).not.toHaveBeenCalled()
     expect(dbMock.level.findFirst).toHaveBeenCalledWith({ where: expect.objectContaining({ programId: body.currentProgramId }) })
+  })
+
+  it('normalizes an optional student portrait before saving it', async () => {
+    const source = await sharp({ create: { width: 300, height: 300, channels: 3, background: '#7a906a' } }).png().toBuffer()
+    const res = await POST(post({ ...body, photo: `data:image/png;base64,${source.toString('base64')}` }))
+    expect(res.status).toBe(201)
+    expect(dbMock.student.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ photo: expect.stringMatching(/^data:image\/jpeg;base64,/) }) }))
   })
 })
 

@@ -12,7 +12,7 @@ import { parseJuryMembers } from '@/lib/deliberations/jury'
 import { buildPvMatrix, expectedPvSheetCount, PvMatrixError, type PvSection } from '@/lib/pdf/pv-matrix'
 import { countPdfPages } from '@/lib/pdf/utils'
 import { renderArabicHeader } from '@/lib/pdf/arabic-header'
-import { prepareDocumentArtwork } from '@/lib/pdf/artwork'
+import { prepareDocumentArtwork, prepareDocumentPhoto } from '@/lib/pdf/artwork'
 
 const SIGNING_ROLES = new Set(['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'RECTORAT', 'SCOLARITE', 'JURY', 'FACULTE', 'DEPARTEMENT'])
 const GENERATING_ROLES = new Set([...SIGNING_ROLES, 'ETUDIANT', 'ETUDIANT_SANTE'])
@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
 
     // Fetch real student data
     let student: {
-      firstName: string; lastName: string; matricule: string; dateOfBirth: string;
+      firstName: string; lastName: string; matricule: string; photo: string; dateOfBirth: string;
       placeOfBirth: string; gender: string; nationality: string; phone: string;
       email: string; program: string; level: string;
     } | null = null
@@ -122,6 +122,7 @@ export async function POST(request: NextRequest) {
         firstName: studentDb.firstName,
         lastName: studentDb.lastName,
         matricule: studentDb.matricule || '',
+        photo: (await prepareDocumentPhoto(studentDb.photo)) || '',
         dateOfBirth: studentDb.dateOfBirth?.toISOString() || '',
         placeOfBirth: studentDb.placeOfBirth || '',
         gender: studentDb.gender || '',
@@ -167,6 +168,7 @@ export async function POST(request: NextRequest) {
     let DocumentComponent: React.ReactElement | null = null
     let documentData: Record<string, unknown> = {}
     let pvSections: PvSection[] | null = null
+    let expectedStudentListPages: number | null = null
 
     switch (type) {
       case 'RELEVE_NOTES': {
@@ -567,24 +569,28 @@ export async function POST(request: NextRequest) {
       }
 
       case 'LISTE_ETUDIANTS': {
-        const { ListeEtudiantsPDF } = await import('@/lib/pdf/templates')
+        const { ListeEtudiantsPDF, paginateStudentList } = await import('@/lib/pdf/templates')
         const filters: Record<string, string> = { tenantId }
         if (data?.programId) filters.currentProgramId = data.programId
         if (data?.levelId) filters.currentLevelId = data.levelId
         const dbStudents = await db.student.findMany({
           where: filters,
-          select: { firstName: true, lastName: true, matricule: true, gender: true, currentLevel: { select: { name: true } }, currentProgram: { select: { name: true } } },
+          select: { firstName: true, lastName: true, matricule: true, gender: true, status: true, currentLevel: { select: { name: true } }, currentProgram: { select: { name: true } } },
         })
         const studentsList = dbStudents.map(s => ({
           name: `${s.firstName} ${s.lastName}`,
           matricule: s.matricule || '',
           gender: s.gender || '',
+          status: s.status,
           level: s.currentLevel?.name || '',
           program: s.currentProgram?.name || '',
         }))
-        const program = dbStudents[0]?.currentProgram?.name || ''
-        const level = dbStudents[0]?.currentLevel?.name || ''
+        const programNames = new Set(studentsList.map((entry) => entry.program).filter(Boolean))
+        const levelNames = new Set(studentsList.map((entry) => entry.level).filter(Boolean))
+        const program = programNames.size === 1 ? [...programNames][0] : ''
+        const level = levelNames.size === 1 ? [...levelNames][0] : ''
         const acYear = requestedYear?.name || ''
+        expectedStudentListPages = paginateStudentList(studentsList, program).length
 
         DocumentComponent = React.createElement(ListeEtudiantsPDF, {
           tenant, students: studentsList, program, level, academicYear: acYear,
@@ -607,6 +613,9 @@ export async function POST(request: NextRequest) {
     }
     if (type === 'DIPLOME' && countPdfPages(pdfBuffer) !== 1) {
       return NextResponse.json({ error: 'Le diplôme dépasse une page : vérifiez les noms et les intitulés avant émission.' }, { status: 409 })
+    }
+    if (expectedStudentListPages !== null && countPdfPages(pdfBuffer) !== expectedStudentListPages) {
+      return NextResponse.json({ error: 'La liste dépasse la pagination prévue : vérifiez les libellés avant émission.' }, { status: 409 })
     }
     if (pvSections && countPdfPages(pdfBuffer) !== expectedPvSheetCount(pvSections, pvPageFormat)) {
       return NextResponse.json({ error: `Le PV déborde du format ${pvPageFormat} prévu : corrigez les libellés avant émission.` }, { status: 409 })

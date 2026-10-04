@@ -69,6 +69,7 @@ export interface StudentInfo {
   firstName: string
   lastName: string
   matricule?: string
+  photo?: string
   dateOfBirth?: string
   placeOfBirth?: string
   gender?: string

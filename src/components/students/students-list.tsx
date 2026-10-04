@@ -26,7 +26,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { exportToExcel } from '@/lib/export'
-import { exportListToPDF } from '@/lib/pdf-list'
 import {
   Select,
   SelectContent,
@@ -155,7 +154,7 @@ interface ApiFaculty { departments: ApiDepartment[] }
 const emptyStudentForm = {
   firstName: '', lastName: '', gender: '', dateOfBirth: '', placeOfBirth: '',
   nationality: 'Tchadienne', currentProgramId: '', currentLevelId: '',
-  email: '', phone: '', bacSeries: '', bacYear: '', status: 'PRE_INSCRIT',
+  email: '', phone: '', bacSeries: '', bacYear: '', status: 'PRE_INSCRIT', photo: '',
 }
 
 export function StudentsList() {
@@ -172,6 +171,7 @@ export function StudentsList() {
   const [editingStudent, setEditingStudent] = useState<StudentRow | null>(null)
   const [isUpdating, setIsUpdating] = useState(false)
   const [isChangingStatus, setIsChangingStatus] = useState(false)
+  const [isExportingPDF, setIsExportingPDF] = useState(false)
   const [form, setForm] = useState(emptyStudentForm)
   const [createdCredentials, setCreatedCredentials] = useState<{ matricule: string; login: string; pin: string; name: string } | null>(null)
 
@@ -183,6 +183,22 @@ export function StudentsList() {
     [structureData],
   )
   const selectedProgramLevels = realPrograms.find((p) => p.id === form.currentProgramId)?.levels || []
+
+  const handlePhotoSelection = (file?: File) => {
+    if (!file) return
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 2_000_000) {
+      setForm((current) => ({ ...current, photo: '' }))
+      toast.error('Photo non acceptée', { description: 'Utilisez une image JPEG, PNG ou WebP de 2 Mo maximum.' })
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = () => {
+      const photo = reader.result
+      if (typeof photo === 'string') setForm((current) => ({ ...current, photo }))
+    }
+    reader.onerror = () => toast.error('Impossible de lire la photo')
+    reader.readAsDataURL(file)
+  }
 
   const handleCreateStudent = async () => {
     if (!form.firstName || !form.lastName || !form.gender || !form.dateOfBirth || !form.placeOfBirth || !form.currentProgramId || !form.currentLevelId) {
@@ -208,6 +224,7 @@ export function StudentsList() {
           phone: form.phone || undefined,
           bacSeries: form.bacSeries || undefined,
           bacYear: form.bacYear ? Number(form.bacYear) : undefined,
+          photo: form.photo || undefined,
         }),
       })
       const body = await res.json().catch(() => ({}))
@@ -247,6 +264,7 @@ export function StudentsList() {
       bacSeries: student.bacSeries,
       bacYear: student.bacYear,
       status: student.statut === 'INSCRIT' ? 'INSCRIT' : 'PRE_INSCRIT',
+      photo: '',
     })
   }
 
@@ -277,6 +295,7 @@ export function StudentsList() {
         phone: form.phone || undefined,
         bacSeries: form.bacSeries || undefined,
         bacYear: form.bacYear ? Number(form.bacYear) : undefined,
+        photo: form.photo || undefined,
       }
       if (editingStudent.statut === 'INSCRIT' || editingStudent.statut === 'PRE_INSCRIT') {
         updatePayload.status = form.status === 'INSCRIT' ? 'INSCRIT' : 'PRE_INSCRIT'
@@ -337,22 +356,31 @@ export function StudentsList() {
     }
   }
 
-  const handleExportPDF = () => {
-    exportListToPDF(
-      'liste_etudiants',
-      'Liste des etudiants',
-      `${filteredStudents.length} etudiant(s)`,
-      [
-        { header: 'Matricule', width: 0.18, value: (s: StudentRow) => s.matricule },
-        { header: 'Nom', width: 0.16, value: (s: StudentRow) => s.nom },
-        { header: 'Prenom', width: 0.16, value: (s: StudentRow) => s.prenom },
-        { header: 'Filiere', width: 0.2, value: (s: StudentRow) => s.filiere },
-        { header: 'Niveau', width: 0.08, value: (s: StudentRow) => s.niveau },
-        { header: 'Statut', width: 0.12, value: (s: StudentRow) => statusConfig[s.statut]?.label || s.statut },
-        { header: 'Sexe', width: 0.1, value: (s: StudentRow) => s.sexe },
-      ],
-      filteredStudents,
-    )
+  const handleExportPDF = async () => {
+    if (filteredStudents.length === 0) return
+    setIsExportingPDF(true)
+    try {
+      const response = await fetch('/api/students/export-pdf', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentIds: filteredStudents.map((student: StudentRow) => student.id) }),
+      })
+      if (!response.ok) {
+        const problem = await response.json().catch(() => ({}))
+        throw new Error(problem.error || 'Export PDF impossible')
+      }
+      const url = URL.createObjectURL(await response.blob())
+      const link = document.createElement('a')
+      link.href = url
+      link.download = 'liste_etudiants.pdf'
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.setTimeout(() => URL.revokeObjectURL(url), 30_000)
+    } catch (error) {
+      toast.error('Export PDF impossible', { description: error instanceof Error ? error.message : 'Veuillez réessayer.' })
+    } finally {
+      setIsExportingPDF(false)
+    }
   }
 
   const copyPin = () => {
@@ -489,9 +517,9 @@ export function StudentsList() {
                 <FileSpreadsheet className="size-3.5 mr-1.5" />
                 Excel
               </Button>
-              <Button variant="outline" size="sm" className="text-xs bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white" onClick={handleExportPDF}>
+              <Button variant="outline" size="sm" className="text-xs bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white" onClick={() => void handleExportPDF()} disabled={isExportingPDF || filteredStudents.length === 0}>
                 <FileText className="size-3.5 mr-1.5" />
-                PDF
+                {isExportingPDF ? 'Préparation…' : 'PDF'}
               </Button>
               <Button size="sm" className="bg-[#2d7a4f] hover:bg-[#236b40] text-white text-xs border border-white/20" onClick={() => setShowCreate(true)}>
                 <UserPlus className="size-3.5 mr-1.5" />
@@ -801,6 +829,11 @@ export function StudentsList() {
               <p className="text-xs text-slate-700">L’inscription à l’année académique se valide ensuite dans le dossier, onglet Inscriptions.</p>
             </div>
             <p className="text-xs text-slate-700">Le matricule est généré automatiquement. Un compte étudiant (matricule et code PIN) est créé avec le dossier.</p>
+            <div className="space-y-1.5">
+              <Label htmlFor="new-student-photo" className="text-sm">Photo d’identité (optionnelle, affichée sur le relevé)</Label>
+              <Input id="new-student-photo" type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => handlePhotoSelection(event.target.files?.[0])} />
+              {form.photo && <p className="text-xs text-emerald-700">Photo prête à enregistrer.</p>}
+            </div>
             <Button className="w-full bg-[#2d7a4f] hover:bg-[#236b40] text-white" disabled={isCreating} onClick={handleCreateStudent}>
               {isCreating ? 'Enregistrement...' : "Enregistrer l'etudiant"}
             </Button>
@@ -907,6 +940,12 @@ export function StudentsList() {
                 <Label className="text-sm">Annee du bac</Label>
                 <Input type="number" min="1990" max="2030" value={form.bacYear} onChange={(e) => setForm((f) => ({ ...f, bacYear: e.target.value }))} />
               </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-student-photo" className="text-sm">Remplacer la photo d’identité (optionnel)</Label>
+              <Input id="edit-student-photo" type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => handlePhotoSelection(event.target.files?.[0])} />
+              <p className="text-xs text-slate-700">Sans nouveau fichier, la photo existante est conservée. Elle figure sur le relevé de notes.</p>
+              {form.photo && <p className="text-xs text-emerald-700">Nouvelle photo prête à enregistrer.</p>}
             </div>
             <Button className="w-full bg-[#2d7a4f] hover:bg-[#236b40] text-white" disabled={isUpdating} onClick={handleUpdateStudent}>
               {isUpdating ? 'Mise a jour...' : 'Enregistrer les modifications'}
