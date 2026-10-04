@@ -124,6 +124,14 @@ describe('printed academic documents', () => {
     await savePreview('liste-etudiants-libelles-longs.pdf', pdf)
   })
 
+  it('keeps the institutional emblem centered when Arabic is disabled', async () => {
+    const pdf = await renderPDF(React.createElement(ListeEtudiantsPDF, {
+      tenant: { ...tenant, arabicHeaderImage: undefined }, students: [], academicYear: '2026-2027',
+    }))
+    expect(countPdfPages(pdf)).toBe(1)
+    await savePreview('liste-etudiants-fr-seul.pdf', pdf)
+  })
+
   it('tiles a department PV by columns and students with matching row numbers', async () => {
     const columns: PvSection['columns'] = Array.from({ length: 14 }, (_, i) => ({
       key: `EC:${i}`, ueCode: `UE${Math.floor(i / 2) + 1}`, code: `MAT${i + 1}`,

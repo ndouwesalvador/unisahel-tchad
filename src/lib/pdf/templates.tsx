@@ -216,19 +216,19 @@ function DocumentHeader({ tenant, docNumber, compact = false }: { tenant: Tenant
     <View wrap={false}>
       <View style={styles.topRule} />
       <View style={{ flexDirection: 'row', height: compact ? 72 : 90, alignItems: 'center', justifyContent: 'space-between' }}>
-        <View style={{ width: tenant.arabicHeaderImage ? '37%' : '55%', height: compact ? 66 : 76, alignItems: 'center', paddingRight: 5, justifyContent: 'space-between' }}>
+        <View style={{ width: '37%', height: compact ? 66 : 76, alignItems: 'center', paddingRight: 5, justifyContent: 'space-between' }}>
           <Text style={{ fontSize: 7.2, fontWeight: 'bold', textAlign: 'center', color: colors.primary }}>{isChad ? 'RÉPUBLIQUE DU TCHAD' : (tenant.country || '').toUpperCase()}</Text>
           <Text style={{ fontSize: 6.6, textAlign: 'center' }}>{tenant.ministry?.toUpperCase() || ' '}</Text>
           <Text style={{ fontSize: 7.4, textAlign: 'center', fontWeight: 'bold', color: colors.primary }}>{tenant.name.toUpperCase()}</Text>
         </View>
-        <View style={{ width: tenant.arabicHeaderImage ? '26%' : '45%', alignItems: 'center', justifyContent: 'center' }}>
+        <View style={{ width: '26%', alignItems: 'center', justifyContent: 'center' }}>
           <Text style={{ fontSize: 7, fontWeight: 'bold', color: colors.primary, textAlign: 'center' }}>{tenant.motto?.toUpperCase() || (isChad ? 'UNITÉ · TRAVAIL · PROGRÈS' : '')}</Text>
           {tenant.logo?.startsWith('data:image/') ? <Image src={tenant.logo} style={{ width: compact ? 62 : 76, height: compact ? 52 : 66, objectFit: 'contain', marginTop: 3 }} />
             : <View style={{ width: compact ? 52 : 62, height: compact ? 52 : 62, marginTop: 3, borderWidth: 1, borderColor: colors.secondary, borderRadius: 31, justifyContent: 'center' }}><Text style={{ fontSize: 9, color: colors.secondary, textAlign: 'center' }}>{shortName}</Text></View>}
         </View>
-        {tenant.arabicHeaderImage && <View style={{ width: '37%', height: compact ? 66 : 76, alignItems: 'center', paddingLeft: 5, justifyContent: 'center' }}>
+        <View style={{ width: '37%', height: compact ? 66 : 76, alignItems: 'center', paddingLeft: 5, justifyContent: 'center' }}>
           {tenant.arabicHeaderImage?.startsWith('data:image/png;base64,') && <Image src={tenant.arabicHeaderImage} style={{ width: '100%', height: compact ? 66 : 76, objectFit: 'fill' }} />}
-        </View>}
+        </View>
       </View>
       <Text style={{ ...styles.contactLine, marginBottom: 10, textAlign: 'center' }}>{contact || 'Coordonnées de l’établissement non renseignées'}{docNumber ? `  ·  RÉF. ${docNumber.replace(/^[^-]+-/, '')}` : ''}</Text>
     </View>
