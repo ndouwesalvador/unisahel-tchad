@@ -4,7 +4,7 @@ import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
 
 const TENANT_FIELDS = [
   'name', 'shortName', 'motto', 'ministry', 'country', 'city', 'address',
-  'phone', 'email', 'website', 'rectorName', 'rectorTitle', 'secondarySignerName', 'secondarySignerTitle', 'academicSystem',
+  'phone', 'email', 'website', 'rectorName', 'rectorTitle', 'secondarySignerName', 'secondarySignerTitle', 'thirdSignerName', 'thirdSignerTitle', 'academicSystem',
   'headerLanguageMode', 'arabicCountry', 'arabicName', 'arabicMinistry',
 ] as const
 
@@ -62,7 +62,7 @@ async function handlePut(user: SessionUser, tenantId: string, request: NextReque
         return NextResponse.json({ error: `Texte ${field} invalide (130 caractères maximum)` }, { status: 400 })
       }
     }
-    for (const field of ['secondarySignerName', 'secondarySignerTitle'] as const) {
+    for (const field of ['secondarySignerName', 'secondarySignerTitle', 'thirdSignerName', 'thirdSignerTitle'] as const) {
       if (body[field] !== undefined && (typeof body[field] !== 'string' || body[field].length > 130)) {
         return NextResponse.json({ error: `${field} invalide (130 caractères maximum)` }, { status: 400 })
       }

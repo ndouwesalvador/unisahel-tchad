@@ -3,7 +3,7 @@ import sharp from 'sharp'
 import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
 
-const ASSET_KINDS = ['logo', 'stamp', 'signature', 'secondarySignature'] as const
+const ASSET_KINDS = ['logo', 'stamp', 'signature', 'secondarySignature', 'thirdSignature'] as const
 type AssetKind = typeof ASSET_KINDS[number]
 
 async function handlePost(user: SessionUser, tenantId: string, request: NextRequest) {

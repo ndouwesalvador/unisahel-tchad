@@ -111,6 +111,9 @@ interface TenantData {
   rectorTitle: string | null
   secondarySignerName: string | null
   secondarySignerTitle: string | null
+  thirdSignerName: string | null
+  thirdSignerTitle: string | null
+  thirdSignature: string | null
   academicSystem: string
   logo: string | null
   stamp: string | null
@@ -295,6 +298,9 @@ function InformationsTab() {
     secondarySignerName: '',
     secondarySignerTitle: '',
     secondarySignature: '',
+    thirdSignerName: '',
+    thirdSignerTitle: '',
+    thirdSignature: '',
     headerLanguageMode: 'FR_ONLY',
     arabicCountry: '',
     arabicName: '',
@@ -326,6 +332,9 @@ function InformationsTab() {
         secondarySignerName: t.secondarySignerName || '',
         secondarySignerTitle: t.secondarySignerTitle || '',
         secondarySignature: t.secondarySignature || '',
+        thirdSignerName: t.thirdSignerName || '',
+        thirdSignerTitle: t.thirdSignerTitle || '',
+        thirdSignature: t.thirdSignature || '',
         headerLanguageMode: t.headerLanguageMode || 'FR_ONLY',
         arabicCountry: t.arabicCountry || '',
         arabicName: t.arabicName || '',
@@ -339,7 +348,7 @@ function InformationsTab() {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
-  const handleAssetUpload = async (kind: 'logo' | 'stamp' | 'signature' | 'secondarySignature', file?: File) => {
+  const handleAssetUpload = async (kind: 'logo' | 'stamp' | 'signature' | 'secondarySignature' | 'thirdSignature', file?: File) => {
     if (!file) return
     setUploadingKind(kind)
     try {
@@ -384,6 +393,8 @@ function InformationsTab() {
           rectorTitle: formData.recteurTitre,
           secondarySignerName: formData.secondarySignerName,
           secondarySignerTitle: formData.secondarySignerTitle,
+          thirdSignerName: formData.thirdSignerName,
+          thirdSignerTitle: formData.thirdSignerTitle,
           headerLanguageMode: formData.headerLanguageMode,
           arabicCountry: formData.arabicCountry,
           arabicName: formData.arabicName,
@@ -460,7 +471,7 @@ function InformationsTab() {
           </Card>
           </motion.div>
           <Card className="border-l-4 border-l-[#1a2744]">
-            <CardHeader className="pb-3"><CardTitle className="text-base">Signature du responsable</CardTitle><CardDescription>Image de signature utilisée sur les documents officiels ; ce visuel ne vaut pas signature cryptographique.</CardDescription></CardHeader>
+            <CardHeader className="pb-3"><CardTitle className="text-base">Signataire de droite</CardTitle><CardDescription>Signature du responsable, accompagnée du cachet officiel. Ce visuel ne vaut pas signature cryptographique.</CardDescription></CardHeader>
             <CardContent className="space-y-3">
               {formData.signature && <div className="h-20 border rounded-lg bg-white p-2">
                 {/* eslint-disable-next-line @next/next/no-img-element -- stored institution artwork */}
@@ -470,13 +481,23 @@ function InformationsTab() {
             </CardContent>
           </Card>
           <Card className="border-l-4 border-l-[#176341]">
-            <CardHeader className="pb-3"><CardTitle className="text-base">Second signataire (facultatif)</CardTitle><CardDescription>Affiché sur les diplômes et relevés si un nom est renseigné.</CardDescription></CardHeader>
+            <CardHeader className="pb-3"><CardTitle className="text-base">Signataire de gauche</CardTitle><CardDescription>Nom et signature requis pour valider un relevé officiel.</CardDescription></CardHeader>
             <CardContent className="space-y-3">
               {formData.secondarySignature && <div className="h-20 border rounded-lg bg-white p-2">
                 {/* eslint-disable-next-line @next/next/no-img-element -- stored institution artwork */}
                 <img src={formData.secondarySignature} alt="Signature du second signataire" className="h-full w-full object-contain" />
               </div>}
               <Input type="file" accept="image/png,image/jpeg,image/webp" aria-label="Téléverser la signature du second signataire" disabled={Boolean(uploadingKind)} onChange={(event) => void handleAssetUpload('secondarySignature', event.target.files?.[0])} />
+            </CardContent>
+          </Card>
+          <Card className="border-l-4 border-l-[#c6a142]">
+            <CardHeader className="pb-3"><CardTitle className="text-base">Troisième signataire</CardTitle><CardDescription>Sa signature apparaît au centre du relevé ; le cachet reste associé au signataire de droite.</CardDescription></CardHeader>
+            <CardContent className="space-y-3">
+              {formData.thirdSignature && <div className="h-20 border rounded-lg bg-white p-2">
+                {/* eslint-disable-next-line @next/next/no-img-element -- stored institution artwork */}
+                <img src={formData.thirdSignature} alt="Signature du troisième signataire" className="h-full w-full object-contain" />
+              </div>}
+              <Input type="file" accept="image/png,image/jpeg,image/webp" aria-label="Téléverser la signature du troisième signataire" disabled={Boolean(uploadingKind)} onChange={(event) => void handleAssetUpload('thirdSignature', event.target.files?.[0])} />
             </CardContent>
           </Card>
         </div>
@@ -627,12 +648,20 @@ function InformationsTab() {
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="secondarySignerName">Nom du second signataire (facultatif)</Label>
+                  <Label htmlFor="secondarySignerName">Nom du signataire de gauche</Label>
                   <Input id="secondarySignerName" value={formData.secondarySignerName} onChange={(event) => handleChange('secondarySignerName', event.target.value)} className="mt-1.5" placeholder="Ex. président du jury" />
                 </div>
                 <div>
-                  <Label htmlFor="secondarySignerTitle">Fonction du second signataire</Label>
+                  <Label htmlFor="secondarySignerTitle">Fonction du signataire de gauche</Label>
                   <Input id="secondarySignerTitle" value={formData.secondarySignerTitle} onChange={(event) => handleChange('secondarySignerTitle', event.target.value)} className="mt-1.5" placeholder="Ex. Président du jury" />
+                </div>
+                <div>
+                  <Label htmlFor="thirdSignerName">Nom du signataire central</Label>
+                  <Input id="thirdSignerName" value={formData.thirdSignerName} onChange={(event) => handleChange('thirdSignerName', event.target.value)} className="mt-1.5" placeholder="Nom officiel" />
+                </div>
+                <div>
+                  <Label htmlFor="thirdSignerTitle">Fonction du signataire central</Label>
+                  <Input id="thirdSignerTitle" value={formData.thirdSignerTitle} onChange={(event) => handleChange('thirdSignerTitle', event.target.value)} className="mt-1.5" placeholder="Fonction officielle" />
                 </div>
               </div>
               <div className="mt-6 flex justify-end">
@@ -1347,23 +1376,18 @@ function DocumentsTab() {
         {/* Signature configuration */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Signataire</CardTitle>
-            <CardDescription>Renseigne dans l&apos;onglet Informations</CardDescription>
+            <CardTitle className="text-base">Trois signataires du relevé</CardTitle>
+            <CardDescription>Configurez leurs noms et signatures dans l&apos;onglet Informations.</CardDescription>
           </CardHeader>
-          <CardContent>
-            {tenant?.rectorName ? (
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 border border-gray-100">
-                <div className="w-9 h-9 rounded-lg bg-[#d4a85310] flex items-center justify-center shrink-0">
-                  <FileText className="size-4 text-[#d4a853]" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-[#1a2744]">{tenant.rectorName}</p>
-                  <p className="text-xs text-gray-400">{tenant.rectorTitle || 'Recteur'}</p>
-                </div>
-              </div>
-            ) : (
-              <p className="text-sm text-gray-400">Aucun signataire renseigne. Ajoutez-en un depuis l&apos;onglet Informations.</p>
-            )}
+          <CardContent className="space-y-2">
+            {([
+              { place: 'Gauche', name: tenant?.secondarySignerName, title: tenant?.secondarySignerTitle, signed: Boolean(tenant?.secondarySignature) },
+              { place: 'Centre', name: tenant?.thirdSignerName, title: tenant?.thirdSignerTitle, signed: Boolean(tenant?.thirdSignature) },
+              { place: 'Droite + cachet', name: tenant?.rectorName, title: tenant?.rectorTitle, signed: Boolean(tenant?.signature && tenant?.stamp) },
+            ] as const).map((signer) => <div key={signer.place} className="flex items-center justify-between gap-2 rounded-lg border border-[#d4a85355] bg-[#d4a85308] p-2 text-xs">
+              <div><p className="font-semibold text-[#1a2744]">{signer.place} · {signer.name || 'Nom à renseigner'}</p><p className="text-gray-600">{signer.title || 'Fonction à renseigner'}</p></div>
+              <span className={signer.name && signer.signed ? 'text-[#176341]' : 'text-amber-800'}>{signer.name && signer.signed ? 'Complet' : 'Incomplet'}</span>
+            </div>)}
           </CardContent>
         </Card>
 
@@ -1371,7 +1395,7 @@ function DocumentsTab() {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Verification</CardTitle>
-            <CardDescription>Chaque document genere est verifiable</CardDescription>
+            <CardDescription>Référence et intégrité du PDF sont deux vérifications distinctes.</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-3 p-3 rounded-lg bg-[#2d7a4f08] border border-[#2d7a4f20]">
@@ -1379,7 +1403,7 @@ function DocumentsTab() {
                 <QrCode className="size-4 text-[#2d7a4f]" />
               </div>
               <p className="text-xs text-gray-600">
-                Un code de verification unique et un QR code sont integres sur chaque document officiel. Toute personne peut verifier son authenticite sur la page publique <span className="font-mono text-[#2d7a4f]">/verify</span>.
+                Le QR vérifie la référence et sa validation. Pour les nouveaux PDF validés, le fichier peut aussi être comparé à l’original conservé sur <span className="font-mono text-[#2d7a4f]">/verify</span>. Une image de signature ou de cachet ne remplace pas un certificat numérique.
               </p>
             </div>
           </CardContent>

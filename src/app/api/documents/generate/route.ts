@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { randomBytes, randomUUID } from 'node:crypto'
+import { createHash, randomBytes, randomUUID } from 'node:crypto'
 import { auth } from '@/lib/auth/config'
 import { renderPDF } from '@/lib/pdf/templates'
 import { db } from '@/lib/db'
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
     // Fetch real tenant data
     const tenantDb = await db.tenant.findUnique({
       where: { id: tenantId },
-      select: { id: true, name: true, shortName: true, address: true, city: true, country: true, ministry: true, phone: true, email: true, logo: true, stamp: true, signature: true, secondarySignature: true, secondarySignerName: true, secondarySignerTitle: true, headerLanguageMode: true, arabicCountry: true, arabicName: true, arabicMinistry: true, rectorName: true, rectorTitle: true, motto: true },
+      select: { id: true, name: true, shortName: true, address: true, city: true, country: true, ministry: true, phone: true, email: true, logo: true, stamp: true, signature: true, secondarySignature: true, thirdSignature: true, secondarySignerName: true, secondarySignerTitle: true, thirdSignerName: true, thirdSignerTitle: true, headerLanguageMode: true, arabicCountry: true, arabicName: true, arabicMinistry: true, rectorName: true, rectorTitle: true, motto: true },
     })
 
     if (!tenantDb) {
@@ -77,6 +77,14 @@ export async function POST(request: NextRequest) {
     }
     if (type === 'DIPLOME' && !tenantDb.logo?.startsWith('data:image/')) {
       return NextResponse.json({ error: 'Téléversez le logo officiel de l’institution avant d’émettre un diplôme.' }, { status: 409 })
+    }
+    if (type === 'RELEVE_NOTES' && sign && (
+      !tenantDb.rectorName?.trim() || !tenantDb.signature?.startsWith('data:image/') ||
+      !tenantDb.secondarySignerName?.trim() || !tenantDb.secondarySignature?.startsWith('data:image/') ||
+      !tenantDb.thirdSignerName?.trim() || !tenantDb.thirdSignature?.startsWith('data:image/') ||
+      !tenantDb.stamp?.startsWith('data:image/')
+    )) {
+      return NextResponse.json({ error: 'Pour valider un relevé officiel, renseignez les trois noms, leurs signatures et le cachet dans Institution.' }, { status: 409 })
     }
     const tenant = await prepareDocumentArtwork({
       id: tenantDb.id,
@@ -92,8 +100,11 @@ export async function POST(request: NextRequest) {
       stamp: tenantDb.stamp || '',
       signature: tenantDb.signature || '',
       secondarySignature: tenantDb.secondarySignature || '',
+      thirdSignature: tenantDb.thirdSignature || '',
       secondarySignerName: tenantDb.secondarySignerName || '',
       secondarySignerTitle: tenantDb.secondarySignerTitle || '',
+      thirdSignerName: tenantDb.thirdSignerName || '',
+      thirdSignerTitle: tenantDb.thirdSignerTitle || '',
       arabicName: tenantDb.arabicName || '',
       arabicMinistry: tenantDb.arabicMinistry || '',
       arabicCountry: tenantDb.arabicCountry || '',
@@ -624,6 +635,10 @@ export async function POST(request: NextRequest) {
     // "Signing" certifies the document as officially validated -- a student
     // generating their own document can never self-certify it, only staff can.
     const isSigned = Boolean(sign)
+    if (isSigned && pdfBuffer.length > 4_200_000) {
+      return NextResponse.json({ error: 'Ce PDF dépasse la taille maximale de conservation sécurisée (4,2 Mo).' }, { status: 409 })
+    }
+    const pdfHash = isSigned ? createHash('sha256').update(pdfBuffer).digest('hex') : null
 
     // Save to database for verification
     await db.officialDocument.create({
@@ -635,6 +650,8 @@ export async function POST(request: NextRequest) {
         academicYearId: acYearId,
         content: JSON.stringify({ type, tenant, student, academicYearId: acYearId, issuedAt, ...documentData }),
         verificationCode,
+        hash: pdfHash,
+        ...(isSigned ? { pdfArtifact: { create: { bytes: Uint8Array.from(pdfBuffer) } } } : {}),
         status: 'GENERATED',
         generatedBy: sessionUser.id,
         validatedBy: isSigned ? sessionUser.id : undefined,

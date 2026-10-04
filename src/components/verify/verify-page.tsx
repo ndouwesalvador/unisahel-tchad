@@ -32,6 +32,7 @@ type VerificationResult = {
   institution: string
   date: string
   valide: boolean
+  fileVerificationAvailable?: boolean
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -43,11 +44,15 @@ export function VerifyPage() {
   const [searchResult, setSearchResult] = useState<VerificationResult | null | undefined>(undefined)
   const [searched, setSearched] = useState(false)
   const [verifying, setVerifying] = useState(false)
+  const [pdfFile, setPdfFile] = useState<File | null>(null)
+  const [fileCheck, setFileCheck] = useState<'match' | 'mismatch' | 'error' | null>(null)
+  const [checkingFile, setCheckingFile] = useState(false)
 
   const verifyCode = useCallback(async (rawCode: string) => {
     if (!rawCode.trim()) return
     setVerifying(true)
     setSearched(false)
+    setFileCheck(null)
     try {
       const res = await fetch(`/api/documents/verify/${encodeURIComponent(rawCode.trim().toUpperCase())}`)
       const data = await res.json()
@@ -59,6 +64,7 @@ export function VerifyPage() {
           institution: data.document.institution || '—',
           date: data.document.generatedAt ? new Date(data.document.generatedAt).toLocaleDateString('fr-FR') : '',
           valide: true,
+          fileVerificationAvailable: Boolean(data.fileVerificationAvailable),
         })
       } else {
         setSearchResult({ type: '', etudiant: '', matricule: '', institution: '', date: '', valide: false })
@@ -72,6 +78,23 @@ export function VerifyPage() {
   }, [])
 
   const handleSearch = () => verifyCode(code)
+
+  const verifyPdfFile = async () => {
+    if (!pdfFile || !code.trim()) return
+    setCheckingFile(true)
+    setFileCheck(null)
+    try {
+      const form = new FormData()
+      form.set('file', pdfFile)
+      const response = await fetch(`/api/documents/verify/${encodeURIComponent(code.trim().toUpperCase())}`, { method: 'POST', body: form })
+      const result = await response.json()
+      setFileCheck(response.ok ? result.fileMatchesOriginal ? 'match' : 'mismatch' : 'error')
+    } catch {
+      setFileCheck('error')
+    } finally {
+      setCheckingFile(false)
+    }
+  }
 
   // Auto-fill and verify when arriving via a scanned QR code (/verify?code=XXX)
   useEffect(() => {
@@ -87,6 +110,8 @@ export function VerifyPage() {
     setCode('')
     setSearchResult(undefined)
     setSearched(false)
+    setPdfFile(null)
+    setFileCheck(null)
   }
 
   return (
@@ -125,7 +150,7 @@ export function VerifyPage() {
             transition={{ duration: 0.5, delay: 0.3 }}
             className="text-white/70 text-sm sm:text-base max-w-lg mx-auto"
           >
-            Vérifiez l&apos;authenticité de vos documents UniSahel en entrant le code de vérification ou en scannant le QR code
+            Le QR confirme l’émission et la validation. Pour contrôler que le PDF n’a pas été modifié, comparez aussi son fichier à l’original conservé.
           </motion.p>
 
           {/* Back button */}
@@ -216,14 +241,23 @@ export function VerifyPage() {
                               <CheckCircle2 className="size-6 text-[#2d7a4f]" />
                             </motion.div>
                             <div>
-                              <h3 className="font-semibold text-[#2d7a4f]">Document authentique</h3>
-                              <p className="text-xs text-gray-500">Ce document a été vérifié et authentifié avec succès</p>
+                              <h3 className="font-semibold text-[#2d7a4f]">Référence institutionnelle validée</h3>
+                              <p className="text-xs text-gray-500">Le code existe et la validation est enregistrée. Le fichier lui-même n’est pas encore contrôlé.</p>
                             </div>
                             <Badge className="ml-auto bg-[#2d7a4f] text-white text-[10px] border-0">
                               <CheckCircle2 className="size-3 mr-1" />
-                              Authentique
+                              Code valide
                             </Badge>
                           </div>
+
+                          {searchResult.fileVerificationAvailable ? <div className="mt-4 rounded-lg border border-[#c7a44b66] bg-white/80 p-3 space-y-2">
+                            <label htmlFor="pdf-integrity-file" className="text-xs font-semibold text-[#1a2744]">Comparer le PDF reçu à l’original</label>
+                            <Input id="pdf-integrity-file" type="file" accept="application/pdf,.pdf" onChange={(event) => { setPdfFile(event.target.files?.[0] ?? null); setFileCheck(null) }} />
+                            <Button type="button" size="sm" variant="outline" disabled={!pdfFile || checkingFile} onClick={() => void verifyPdfFile()}>{checkingFile ? 'Comparaison…' : 'Vérifier l’intégrité du fichier'}</Button>
+                            {fileCheck === 'match' && <p role="status" className="text-xs font-semibold text-[#176341]">PDF identique à l’original validé (empreinte SHA‑256).</p>}
+                            {fileCheck === 'mismatch' && <p role="alert" className="text-xs font-semibold text-red-700">PDF différent de l’original : ne l’utilisez pas comme document officiel.</p>}
+                            {fileCheck === 'error' && <p role="alert" className="text-xs text-red-700">Vérification impossible. Vérifiez le code et le fichier PDF.</p>}
+                          </div> : <p className="mt-4 text-xs text-amber-800">Document antérieur à la conservation des empreintes : le code peut être contrôlé, mais pas l’intégrité du fichier.</p>}
 
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div className="flex items-start gap-3 p-2.5 rounded-lg bg-white/60">
@@ -271,7 +305,7 @@ export function VerifyPage() {
                             </span>
                             <span className="flex items-center gap-1">
                               <Fingerprint className="size-3" />
-                              Empreinte numérique validée
+                              {fileCheck === 'match' ? 'Fichier original confirmé' : 'Empreinte du fichier non contrôlée'}
                             </span>
                           </div>
                         </div>

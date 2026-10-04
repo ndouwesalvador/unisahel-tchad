@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
+import { createHash } from 'node:crypto'
 
 const { dbMock, renderMock } = vi.hoisted(() => ({
   dbMock: {
     officialDocument: { findFirst: vi.fn(), create: vi.fn() },
+    officialDocumentPdf: { findUnique: vi.fn() },
     student: { findFirst: vi.fn() },
     user: { findFirst: vi.fn() },
     academicYear: { findFirst: vi.fn() },
@@ -45,6 +47,22 @@ beforeEach(() => {
 })
 
 describe('GET /api/documents/download', () => {
+  it('returns the immutable issued bytes when an integrity artifact exists', async () => {
+    const original = Buffer.from('%PDF-1.4\noriginal issued bytes')
+    dbMock.officialDocument.findFirst.mockResolvedValue({ ...document, hash: createHash('sha256').update(original).digest('hex') })
+    dbMock.officialDocumentPdf.findUnique.mockResolvedValue({ bytes: Uint8Array.from(original) })
+    const response = await handler({ id: 'admin-A', role: 'ADMIN_INSTITUTION', tenantId: 'tenant-A' }, 'tenant-A', request)
+    expect(response.status).toBe(200)
+    expect(Buffer.from(await response.arrayBuffer())).toEqual(original)
+    expect(renderMock).not.toHaveBeenCalled()
+  })
+
+  it('refuses a corrupted stored original', async () => {
+    dbMock.officialDocument.findFirst.mockResolvedValue({ ...document, hash: createHash('sha256').update('original').digest('hex') })
+    dbMock.officialDocumentPdf.findUnique.mockResolvedValue({ bytes: Uint8Array.from(Buffer.from('altered')) })
+    const response = await handler({ id: 'admin-A', role: 'ADMIN_INSTITUTION', tenantId: 'tenant-A' }, 'tenant-A', request)
+    expect(response.status).toBe(409)
+  })
   it('downloads the saved reference without issuing another document', async () => {
     const response = await handler({ id: 'admin-A', role: 'ADMIN_INSTITUTION', tenantId: 'tenant-A' }, 'tenant-A', request)
     expect(response.status).toBe(200)

@@ -44,8 +44,12 @@ describe('printed academic documents', () => {
     expect(pdf.toString('latin1')).toMatch(/\/MediaBox \[0 0 595\.28\d* 841\.89\d*\]/)
   })
 
-  it('fits the deployed six-unit curriculum with the real-length labels, QR and two signers', async () => {
+  it('fits the deployed six-unit curriculum with the real-length labels, QR and three signers', async () => {
     const qrCodeDataUrl = await QRCode.toDataURL('https://unisahel-tchad.vercel.app/verify?code=TEST-LIVE-LENGTH')
+    const signatureSvg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="500" height="160"><path d="M10 118 Q 55 5 82 115 T 162 97 Q 220 18 251 103 T 390 88 L 485 56" fill="none" stroke="#142a52" stroke-width="7"/></svg>')
+    const logoSvg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><circle cx="200" cy="200" r="155" fill="#176341"/><circle cx="200" cy="200" r="125" fill="white"/><path d="M130 240 L200 105 L270 240 Z" fill="#176341"/></svg>')
+    const signature = `data:image/png;base64,${(await sharp(signatureSvg).png().toBuffer()).toString('base64')}`
+    const logo = `data:image/png;base64,${(await sharp(logoSvg).png().toBuffer()).toString('base64')}`
     const units = [
       ['MATHÉMATIQUES APPLIQUÉES', 'Outils mathématiques pour la maintenance'],
       ['ÉLECTRICITÉ INDUSTRIELLE', 'Électricité et mesures'],
@@ -62,7 +66,9 @@ describe('printed academic documents', () => {
       tenant: { ...tenant, arabicHeaderImage: renderArabicHeader({ headerLanguageMode: 'FR_AR', arabicCountry: 'جمهورية تشاد',
         arabicMinistry: 'وزارة التعليم العالي', arabicName: 'جامعة مونقو المتعددة التقنيات' }),
         address: '19 Rue Chevreul', city: 'NDJAMENA', phone: '63443731', email: 'test@example.org',
-        rectorName: 'Responsable de l’établissement', secondarySignerName: 'Président du jury', secondarySignerTitle: 'Président du jury' },
+        rectorName: 'Responsable de l’établissement', secondarySignerName: 'Président du jury', secondarySignerTitle: 'Président du jury',
+        thirdSignerName: 'Chef du département', thirdSignerTitle: 'Chef du département',
+        logo, stamp: logo, signature, secondarySignature: signature, thirdSignature: signature },
       student: { ...student, firstName: 'Leila', lastName: 'VALIDATION-DEV', matricule: 'UNSH-2026-DU1-DEV-000001',
         level: 'Année unique — VALIDATION DEV' }, qrCodeDataUrl, ueGrades,
       semester: 'Plusieurs semestres', academicYear: '2026-2027', jury: { average: 15.6, creditsAcquired: 60,
@@ -100,14 +106,17 @@ describe('printed academic documents', () => {
     expect(countPdfPages(pdf)).toBe(1)
   })
 
-  it('prints cropped institutional logo and two readable signer blocks on both documents', async () => {
+  it('prints cropped institutional logo and three readable signer blocks on the transcript', async () => {
     const logoSvg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><circle cx="200" cy="200" r="155" fill="#176341"/><circle cx="200" cy="200" r="125" fill="white"/><path d="M130 240 L200 105 L270 240 Z" fill="#176341"/></svg>')
     const signatureSvg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="500" height="160"><path d="M10 118 Q 55 5 82 115 T 162 97 Q 220 18 251 103 T 390 88 L 485 56" fill="none" stroke="#142a52" stroke-width="7"/></svg>')
     const raw = { ...tenant, id: 'institution-a', rectorName: 'Amina Responsable', rectorTitle: 'Rectrice',
       secondarySignerName: 'Youssouf Président', secondarySignerTitle: 'Président du jury',
+      thirdSignerName: 'Fatima Cheffe', thirdSignerTitle: 'Cheffe du département',
       logo: `data:image/png;base64,${(await sharp(logoSvg).png().toBuffer()).toString('base64')}`,
       signature: `data:image/png;base64,${(await sharp(signatureSvg).png().toBuffer()).toString('base64')}`,
-      secondarySignature: `data:image/png;base64,${(await sharp(signatureSvg).png().toBuffer()).toString('base64')}` }
+      secondarySignature: `data:image/png;base64,${(await sharp(signatureSvg).png().toBuffer()).toString('base64')}`,
+      thirdSignature: `data:image/png;base64,${(await sharp(signatureSvg).png().toBuffer()).toString('base64')}`,
+      stamp: `data:image/png;base64,${(await sharp(logoSvg).png().toBuffer()).toString('base64')}` }
     const branded = await prepareDocumentArtwork(raw)
     const diploma = await renderPDF(React.createElement(DiplomePDF, { tenant: branded, student,
       diploma: { title: 'Licence en génie industriel', program: 'Génie industriel', date: '2026-10-01', credits: 180 },
@@ -123,9 +132,9 @@ describe('printed academic documents', () => {
     expect(countPdfPages(diploma)).toBe(1)
     expect(countPdfPages(transcript)).toBe(1)
     expect((diploma.toString('latin1').match(/\/Subtype \/Image/g) || []).length).toBeGreaterThanOrEqual(3)
-    expect((transcript.toString('latin1').match(/\/Subtype \/Image/g) || []).length).toBeGreaterThanOrEqual(5)
+    expect((transcript.toString('latin1').match(/\/Subtype \/Image/g) || []).length).toBeGreaterThanOrEqual(7)
     await savePreview('diplome-deux-signataires.pdf', diploma)
-    await savePreview('releve-deux-signataires.pdf', transcript)
+    await savePreview('releve-trois-signataires.pdf', transcript)
   })
 
   it('repeats the same institutional header on every student-list sheet', async () => {

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createHash } from 'node:crypto'
 import React from 'react'
 import QRCode from 'qrcode'
 import { db } from '@/lib/db'
@@ -64,6 +65,15 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
 
   if (!document.number || !document.verificationCode) {
     return NextResponse.json({ error: 'Référence historique incomplète : PDF non reproductible.' }, { status: 409 })
+  }
+  if (document.hash) {
+    const artifact = await db.officialDocumentPdf.findUnique({ where: { documentId: document.id }, select: { bytes: true } })
+    if (!artifact) return NextResponse.json({ error: 'Original PDF indisponible.' }, { status: 409 })
+    const original = Buffer.from(artifact.bytes)
+    if (createHash('sha256').update(original).digest('hex') !== document.hash) {
+      return NextResponse.json({ error: 'Intégrité de l’original PDF compromise.' }, { status: 409 })
+    }
+    return pdfResponse(original, document.type, document.number)
   }
   const tenant = await prepareDocumentArtwork(snapshot.tenant as unknown as TenantInfo)
   const student = record(snapshot.student) ? snapshot.student as unknown as StudentInfo : null

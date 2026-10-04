@@ -5,7 +5,7 @@ import type { TenantInfo } from './utils'
 // database value intact, but crop their PDF snapshot so the art is legible.
 export async function prepareDocumentArtwork(tenant: TenantInfo): Promise<TenantInfo> {
   const prepared = { ...tenant }
-  for (const field of ['logo', 'stamp', 'signature', 'secondarySignature'] as const) {
+  for (const field of ['logo', 'stamp', 'signature', 'secondarySignature', 'thirdSignature'] as const) {
     const value = tenant[field]
     if (!value?.startsWith('data:image/') || !value.includes(';base64,')) continue
     try {

@@ -55,6 +55,9 @@ export interface TenantInfo {
   secondarySignature?: string
   secondarySignerName?: string
   secondarySignerTitle?: string
+  thirdSignature?: string
+  thirdSignerName?: string
+  thirdSignerTitle?: string
   arabicName?: string
   arabicMinistry?: string
   arabicHeaderImage?: string

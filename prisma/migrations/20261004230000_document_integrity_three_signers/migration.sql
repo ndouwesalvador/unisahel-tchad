@@ -1,0 +1,10 @@
+ALTER TABLE "Tenant" ADD COLUMN IF NOT EXISTS "thirdSignerName" TEXT;
+ALTER TABLE "Tenant" ADD COLUMN IF NOT EXISTS "thirdSignerTitle" TEXT;
+ALTER TABLE "Tenant" ADD COLUMN IF NOT EXISTS "thirdSignature" TEXT;
+
+CREATE TABLE IF NOT EXISTS "OfficialDocumentPdf" (
+  "documentId" TEXT NOT NULL PRIMARY KEY,
+  "bytes" BYTEA NOT NULL,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "OfficialDocumentPdf_documentId_fkey" FOREIGN KEY ("documentId") REFERENCES "OfficialDocument"("id") ON DELETE CASCADE ON UPDATE CASCADE
+);

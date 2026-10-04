@@ -57,6 +57,9 @@ model Tenant {
   secondarySignerName    String?
   secondarySignerTitle   String?
   secondarySignature     String?
+  thirdSignerName        String?
+  thirdSignerTitle       String?
+  thirdSignature         String?
   academicSystem         String                  @default("LMD")
   matriculeFormat        String?                 @default("UNSH-{YEAR}-{LEVEL}-{SEQ}")
   loginFormat            String?                 @default("UNSH-{YEAR}-{LEVEL}-{SEQ}")
@@ -856,6 +859,7 @@ model OfficialDocument {
   academicYearId   String?
   content          String
   hash             String?
+  pdfArtifact      OfficialDocumentPdf?
   verificationCode String?   @unique
   qrCodeData       String?
   status           String    @default("DRAFT")
@@ -865,6 +869,15 @@ model OfficialDocument {
   filePath         String?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
+}
+
+// The exact bytes issued to a recipient are retained separately from the
+// document-list query so that later downloads and integrity checks are stable.
+model OfficialDocumentPdf {
+  documentId String           @id
+  document   OfficialDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  bytes      Bytes
+  createdAt  DateTime         @default(now())
 }
 
 // ============================================

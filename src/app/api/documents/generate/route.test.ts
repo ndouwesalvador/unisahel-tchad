@@ -47,6 +47,7 @@ const { AwardEligibilityError } = await import('@/lib/documents/eligibility')
 
 const tenantId = 'tenant-A'
 const studentId = 'student-A'
+const signature = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO6p8Z8AAAAASUVORK5CYII='
 
 function request(body: unknown) {
   return new NextRequest('http://localhost:3000/api/documents/generate', {
@@ -58,7 +59,9 @@ beforeEach(() => {
   vi.clearAllMocks()
   authMock.mockResolvedValue({ user: { id: 'admin-A', role: 'ADMIN_INSTITUTION', tenantId } })
   dbMock.tenant.findUnique.mockResolvedValue({ id: tenantId, name: 'Université A',
-    logo: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO6p8Z8AAAAASUVORK5CYII=' })
+    logo: signature, stamp: signature, rectorName: 'Rectrice A', signature,
+    secondarySignerName: 'Membre B', secondarySignature: signature,
+    thirdSignerName: 'Membre C', thirdSignature: signature })
   dbMock.student.findFirst.mockResolvedValue({ id: studentId, firstName: 'Awa', lastName: 'Test', matricule: 'A-001',
     currentProgram: { name: 'Programme actuel' }, currentLevel: { name: 'Niveau actuel' } })
   dbMock.academicYear.findFirst.mockResolvedValue({ id: 'year-A', name: '2026-2027' })
@@ -301,7 +304,17 @@ describe('POST /api/documents/generate', () => {
     expect(response.status).toBe(200)
     const saved = dbMock.officialDocument.create.mock.calls[0][0].data
     expect(saved.validatedBy).toBe('admin-A')
+    expect(saved.hash).toMatch(/^[a-f0-9]{64}$/)
+    expect(saved.pdfArtifact.create.bytes).toBeInstanceOf(Uint8Array)
     expect(JSON.parse(saved.content).ueGrades[0].moyenne).toBe(16)
+  })
+
+  it('does not certify a transcript before the three real signatures and stamp are configured', async () => {
+    dbMock.tenant.findUnique.mockResolvedValue({ id: tenantId, name: 'Université A', rectorName: 'Rectrice A', signature })
+    const response = await POST(request({ type: 'RELEVE_NOTES', tenantId, studentId, sign: true }))
+    expect(response.status).toBe(409)
+    expect((await response.json()).error).toContain('trois noms')
+    expect(dbMock.officialDocument.create).not.toHaveBeenCalled()
   })
 
   it('does not issue a transcript if the rendered PDF has two pages', async () => {
