@@ -258,7 +258,6 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
     { icon: FileCheck, label: 'Notes', view: 'grades' },
     { icon: CheckSquare, label: 'Délibérations', view: 'deliberation' },
     { icon: ClipboardCheck, label: 'Examens', view: 'exam-scheduling' },
-    { icon: Award, label: 'Resultats', view: 'results' },
     { icon: Compass, label: 'Orientation', view: 'advising' },
     { icon: ClipboardList, label: 'Maquettes', view: 'maquette' },
     { icon: Monitor, label: 'Examens en ligne', view: 'online-exam' },

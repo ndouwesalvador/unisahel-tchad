@@ -49,6 +49,14 @@ beforeEach(() => {
 })
 
 describe('GET /api/results — étudiant', () => {
+  it('does not expose institution-wide grades to unscoped teacher or local manager roles', async () => {
+    for (const role of ['ENSEIGNANT', 'RESPONSABLE_FILIERE', 'JURY']) {
+      const response = await handle({ ...user, role }, 'tenant-A', request)
+      expect(response.status).toBe(403)
+    }
+    expect(dbMock.grade.findMany).not.toHaveBeenCalled()
+  })
+
   it('refuses an account without a linked student', async () => {
     ownStudentMock.mockResolvedValue(null)
     const response = await handle(user, 'tenant-A', request)

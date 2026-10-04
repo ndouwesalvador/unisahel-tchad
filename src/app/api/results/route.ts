@@ -5,6 +5,7 @@ import { isStudentSelfRole, resolveOwnStudentId } from '@/lib/auth/student-scope
 
 type Mention = 'Passable' | 'Assez-Bien' | 'Bien' | 'Tres-Bien' | 'Excellent'
 type Decision = 'Admis' | 'Ajourne'
+const RESULTS_OVERSIGHT_ROLES = new Set(['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'RECTORAT', 'SCOLARITE'])
 
 function round2(value: number): number {
   return Math.round(value * 100) / 100
@@ -39,6 +40,9 @@ async function resolveAcademicYearId(tenantId: string, requested: string | null)
 //   - `studentId` present: a single student's transcript for that academic year
 async function handleGet(user: SessionUser, tenantId: string, request: NextRequest) {
   try {
+    if (!isStudentSelfRole(user.role) && !RESULTS_OVERSIGHT_ROLES.has(user.role)) {
+      return NextResponse.json({ error: 'FORBIDDEN', message: 'Accès refusé' }, { status: 403 })
+    }
     const { searchParams } = new URL(request.url)
     const requestedStudentId = searchParams.get('studentId') || undefined
     const ownStudentId = await resolveOwnStudentId(user)
