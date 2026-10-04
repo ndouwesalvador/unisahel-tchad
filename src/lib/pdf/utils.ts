@@ -7,6 +7,13 @@ export function formatNumber(n: number, decimals = 2): string {
   return n.toFixed(decimals)
 }
 
+// React PDF writes one uncompressed /Type /Page dictionary per physical page.
+// Check the rendered artifact before issuing a one-page transcript, rather
+// than silently certifying a document whose last rows moved to page two.
+export function countPdfPages(pdf: Buffer): number {
+  return (pdf.toString('latin1').match(/\/Type\s*\/Page\b/g) || []).length
+}
+
 export function generateDocNumber(prefix: string, tenant: string, year: string, seq: number): string {
   const padded = String(seq).padStart(5, '0')
   return `${prefix}-${tenant}-${year}-${padded}`

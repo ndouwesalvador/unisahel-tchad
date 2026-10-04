@@ -10,12 +10,13 @@ const { authMock, dbMock, renderPDFMock, eligibilityMock, readinessMock } = vi.h
     academicYear: { findFirst: vi.fn() },
     administrativeRegistration: { findFirst: vi.fn(), findMany: vi.fn() },
     deliberation: { findFirst: vi.fn() },
+    deliberationDecision: { findMany: vi.fn() },
     department: { findFirst: vi.fn() },
     grade: { findMany: vi.fn() },
     pedagogicalRegistration: { findMany: vi.fn() },
     officialDocument: { create: vi.fn() },
-    program: { findFirst: vi.fn() },
-    level: { findFirst: vi.fn() },
+    program: { findFirst: vi.fn(), findMany: vi.fn() },
+    level: { findFirst: vi.fn(), findMany: vi.fn() },
     semester: { findMany: vi.fn() },
     student: { findFirst: vi.fn(), findMany: vi.fn() },
     tenant: { findUnique: vi.fn() },
@@ -57,15 +58,19 @@ beforeEach(() => {
   vi.clearAllMocks()
   authMock.mockResolvedValue({ user: { id: 'admin-A', role: 'ADMIN_INSTITUTION', tenantId } })
   dbMock.tenant.findUnique.mockResolvedValue({ id: tenantId, name: 'Université A' })
-  dbMock.student.findFirst.mockResolvedValue({ id: studentId, firstName: 'Awa', lastName: 'Test', matricule: 'A-001' })
+  dbMock.student.findFirst.mockResolvedValue({ id: studentId, firstName: 'Awa', lastName: 'Test', matricule: 'A-001',
+    currentProgram: { name: 'Programme actuel' }, currentLevel: { name: 'Niveau actuel' } })
   dbMock.academicYear.findFirst.mockResolvedValue({ id: 'year-A', name: '2026-2027' })
   dbMock.grade.findMany.mockResolvedValue([])
   dbMock.pedagogicalRegistration.findMany.mockResolvedValue([])
   dbMock.semester.findMany.mockResolvedValue([])
-  dbMock.administrativeRegistration.findFirst.mockResolvedValue({ id: 'registration-A', academicYear: { name: '2026-2027' } })
+  dbMock.administrativeRegistration.findFirst.mockResolvedValue({ id: 'registration-A', programId: 'program-A', levelId: 'level-A', academicYear: { name: '2026-2027' } })
   dbMock.administrativeRegistration.findMany.mockResolvedValue([])
-  dbMock.program.findFirst.mockResolvedValue(null)
-  dbMock.level.findFirst.mockResolvedValue(null)
+  dbMock.program.findFirst.mockResolvedValue({ name: 'Génie informatique', departmentId: 'department-A' })
+  dbMock.program.findMany.mockResolvedValue([])
+  dbMock.level.findFirst.mockResolvedValue({ name: 'Licence 1' })
+  dbMock.level.findMany.mockResolvedValue([])
+  dbMock.deliberationDecision.findMany.mockResolvedValue([])
   dbMock.deliberation.findFirst.mockResolvedValue(null)
   dbMock.department.findFirst.mockResolvedValue({ id: 'department-A', name: 'Génie informatique' })
   eligibilityMock.level.mockResolvedValue({
@@ -75,11 +80,11 @@ beforeEach(() => {
   eligibilityMock.diploma.mockResolvedValue({
     program: { id: 'program-A', name: 'Génie informatique', diplomaType: 'Licence' },
     finalLevel: { id: 'level-3', name: 'Licence 3' }, creditsRequired: 180,
-    finalDecision: { juryDate: new Date('2026-09-30') },
+    finalDecision: { juryDate: new Date('2026-09-30'), average: 15.2 },
     awards: [{ academicYearId: 'year-A', levelId: 'level-3', deliberationId: 'delib-A', decisionId: 'decision-A', creditsAcquired: 60 }],
   })
   readinessMock.mockResolvedValue({ ready: true, studentIds: [studentId], studentsTotal: 1 })
-  renderPDFMock.mockResolvedValue(Buffer.from('pdf'))
+  renderPDFMock.mockResolvedValue(Buffer.from('%PDF-1.4\n/Type /Page\n'))
   dbMock.officialDocument.create.mockResolvedValue({ id: 'doc-A' })
 })
 
@@ -177,6 +182,7 @@ describe('POST /api/documents/generate', () => {
     const snapshot = JSON.parse(saved.content)
     expect(saved.validatedBy).toBe('admin-A')
     expect(snapshot.diploma.title).toBe('Licence')
+    expect(snapshot.diploma.mention).toBe('Bien')
     expect(snapshot.awards[0].decisionId).toBe('decision-A')
   })
 
@@ -189,12 +195,20 @@ describe('POST /api/documents/generate', () => {
   })
 
   it('generates an attestation from a validated registration and records its source', async () => {
-    dbMock.administrativeRegistration.findFirst.mockResolvedValue({ id: 'registration-A', academicYear: { name: '2026-2027' } })
+    dbMock.administrativeRegistration.findFirst.mockResolvedValue({ id: 'registration-A', programId: 'program-A', levelId: 'level-A', academicYear: { name: '2026-2027' } })
     const response = await POST(request({ type: 'ATTESTATION_INSCRIPTION', tenantId, studentId, data: { academicYear: 'Inventée' } }))
 
     expect(response.status).toBe(200)
     const saved = dbMock.officialDocument.create.mock.calls[0][0].data
-    expect(JSON.parse(saved.content)).toMatchObject({ registrationId: 'registration-A', academicYear: '2026-2027' })
+    expect(JSON.parse(saved.content)).toMatchObject({ registrationId: 'registration-A', academicYear: '2026-2027',
+      student: { program: 'Génie informatique', level: 'Licence 1' } })
+  })
+
+  it('uses the historical registration on the school certificate', async () => {
+    const response = await POST(request({ type: 'CERTIFICAT_SCOLARITE', tenantId, studentId }))
+    expect(response.status).toBe(200)
+    expect(JSON.parse(dbMock.officialDocument.create.mock.calls[0][0].data.content).student)
+      .toMatchObject({ program: 'Génie informatique', level: 'Licence 1' })
   })
 
   it('refuses a PV for a deliberation outside the institution', async () => {
@@ -231,6 +245,7 @@ describe('POST /api/documents/generate', () => {
     expect(saved.studentId).toBe(studentId)
     expect(saved.generatedBy).toBe('admin-A')
     expect(snapshot.student.firstName).toBe('Awa')
+    expect(snapshot.student).toMatchObject({ program: 'Génie informatique', level: 'Licence 1' })
     expect(snapshot.ueGrades[0].ue).toBe('Mathématiques')
     expect(snapshot.ueGrades[0].notes[0].tp).toBe(17)
     expect(snapshot.ueGrades[0].moyenne).toBe(15)
@@ -273,6 +288,18 @@ describe('POST /api/documents/generate', () => {
     expect(JSON.parse(saved.content).ueGrades[0].moyenne).toBe(16)
   })
 
+  it('does not issue a transcript if the rendered PDF has two pages', async () => {
+    dbMock.grade.findMany.mockResolvedValue([{
+      isLocked: true, teachingUnitId: 'unit-A', courseElementId: 'element-A', finalGrade: 13,
+      teachingUnit: { id: 'unit-A', name: 'Mathématiques', code: 'MAT101', credits: 6, semester: { id: 'sem-A' } },
+      courseElement: { teachingUnitId: 'unit-A', name: 'Algèbre', coefficient: 1 },
+    }])
+    renderPDFMock.mockResolvedValue(Buffer.from('%PDF-1.4\n/Type /Page\n/Type /Page\n'))
+    const response = await POST(request({ type: 'RELEVE_NOTES', tenantId, studentId }))
+    expect(response.status).toBe(409)
+    expect(dbMock.officialDocument.create).not.toHaveBeenCalled()
+  })
+
   it('requires a validated PV and an existing deliberation', async () => {
     const unsigned = await POST(request({ type: 'PV_DELIBERATION', tenantId, deliberationId: 'delib-A' }))
     expect(unsigned.status).toBe(409)
@@ -287,6 +314,15 @@ describe('POST /api/documents/generate', () => {
       decisions: [{ studentId, average: 13.9, decision: 'ADMI_DETTE' }],
     })
     dbMock.student.findMany.mockResolvedValue([{ id: studentId, firstName: 'Awa', lastName: 'Test', matricule: 'A-001' }])
+    dbMock.administrativeRegistration.findMany.mockResolvedValue([{ studentId, programId: 'program-A', levelId: 'level-A' }])
+    dbMock.program.findMany.mockResolvedValue([{ id: 'program-A', name: 'Génie informatique' }])
+    dbMock.level.findMany.mockResolvedValue([{ id: 'level-A', programId: 'program-A', name: 'Licence 1', orderIndex: 1 }])
+    dbMock.pedagogicalRegistration.findMany.mockResolvedValue([{ studentId, teachingUnitId: 'ue-A', teachingUnit: {
+      id: 'ue-A', code: 'UE1', name: 'Mathématiques', orderIndex: 1,
+      semester: { levelId: 'level-A', orderIndex: 1 },
+      courseElements: [{ id: 'ec-A', code: 'MAT1', name: 'Algèbre', coefficient: 1, orderIndex: 1 }],
+    } }])
+    dbMock.grade.findMany.mockResolvedValue([{ studentId, teachingUnitId: 'ue-A', courseElementId: 'ec-A', finalGrade: 13.9, isLocked: true }])
     const response = await POST(request({
       type: 'PV_DELIBERATION', tenantId, deliberationId: 'delib-A', sign: true,
       data: { members: [{ name: '  Président Test  ', role: 'President' }], students: [{ name: 'Faux étudiant' }] },
@@ -298,6 +334,8 @@ describe('POST /api/documents/generate', () => {
     expect(saved.validatedBy).toBe('admin-A')
     expect(snapshot.members[0].name).toBe('Président enregistré')
     expect(snapshot.students[0]).toMatchObject({ name: 'Awa Test', decision: 'ADMIS AVEC DETTE' })
+    expect(snapshot.sections[0]).toMatchObject({ program: 'Génie informatique', level: 'Licence 1' })
+    expect(snapshot.sections[0].students[0].grades).toMatchObject({ 'EC:ec-A': 13.9, 'UE:ue-A': 13.9 })
   })
 
   it('refuses an old locked PV when grades have since become incomplete', async () => {

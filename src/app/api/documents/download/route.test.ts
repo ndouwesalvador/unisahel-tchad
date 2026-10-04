@@ -9,7 +9,7 @@ const { dbMock, renderMock } = vi.hoisted(() => ({
     academicYear: { findFirst: vi.fn() },
     department: { findFirst: vi.fn() },
   },
-  renderMock: vi.fn(async (_element: unknown) => Buffer.from('%PDF-1.4 test')),
+  renderMock: vi.fn(async (_element: unknown) => Buffer.from('%PDF-1.4\n/Type /Page\n')),
 }))
 
 vi.mock('@/lib/db', () => ({ db: dbMock }))
@@ -31,6 +31,7 @@ const request = new NextRequest('http://localhost:3000/api/documents/download?id
 const document = {
   id: 'doc-A', tenantId: 'tenant-A', studentId: 'student-A', type: 'RELEVE_NOTES',
   number: 'RELEVE_NOTES-001', verificationCode: 'VERIFY001', validatedAt: new Date(),
+  createdAt: new Date('2026-09-30T10:00:00.000Z'),
   content: JSON.stringify({ type: 'RELEVE_NOTES', tenant: { name: 'Université A' },
     student: { firstName: 'Awa', lastName: 'Test' }, academicYear: '2026-2027',
     semester: 'Semestre 1', ueGrades: [] }),
@@ -88,5 +89,15 @@ describe('GET /api/documents/download', () => {
     dbMock.user.findFirst.mockResolvedValue(null)
     const denied = await handler({ id: 'jury-B', role: 'JURY', tenantId: 'tenant-A' }, 'tenant-A', request)
     expect(denied.status).toBe(403)
+  })
+
+  it('reuses the original issue date on a historical certificate', async () => {
+    dbMock.officialDocument.findFirst.mockResolvedValue({ ...document, type: 'CERTIFICAT_SCOLARITE',
+      content: JSON.stringify({ type: 'CERTIFICAT_SCOLARITE', tenant: { name: 'Université A' },
+        student: { firstName: 'Awa', lastName: 'Test' }, academicYear: '2026-2027' }) })
+    const response = await handler({ id: 'admin-A', role: 'ADMIN_INSTITUTION', tenantId: 'tenant-A' }, 'tenant-A', request)
+    expect(response.status).toBe(200)
+    const rendered = renderMock.mock.calls[0][0] as { props: { issuedAt: string } }
+    expect(rendered.props.issuedAt).toBe('2026-09-30T10:00:00.000Z')
   })
 })

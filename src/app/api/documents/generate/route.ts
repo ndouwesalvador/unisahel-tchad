@@ -9,6 +9,8 @@ import { AwardEligibilityError, getValidatedDiplomaAward, getValidatedLevelAward
 import { computeGradeReadiness } from '@/lib/deliberations/readiness'
 import { getOrganizationScope, isOrganizationManager } from '@/lib/auth/organization-scope'
 import { parseJuryMembers } from '@/lib/deliberations/jury'
+import { buildPvMatrix, expectedPvSheetCount, PvMatrixError, type PvSection } from '@/lib/pdf/pv-matrix'
+import { countPdfPages } from '@/lib/pdf/utils'
 
 const SIGNING_ROLES = new Set(['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'RECTORAT', 'SCOLARITE', 'JURY', 'FACULTE', 'DEPARTEMENT'])
 const GENERATING_ROLES = new Set([...SIGNING_ROLES, 'ETUDIANT', 'ETUDIANT_SANTE'])
@@ -84,7 +86,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch real student data
-    let student = null
+    let student: {
+      firstName: string; lastName: string; matricule: string; dateOfBirth: string;
+      placeOfBirth: string; gender: string; nationality: string; phone: string;
+      email: string; program: string; level: string;
+    } | null = null
     if (studentId) {
       const studentDb = await db.student.findFirst({
         where: { id: studentId, tenantId },
@@ -108,7 +114,18 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const registeredContext = async (registration: { programId: string; levelId: string }) => {
+      const [program, level] = await Promise.all([
+        db.program.findFirst({ where: { id: registration.programId, tenantId }, select: { name: true, departmentId: true } }),
+        db.level.findFirst({ where: { id: registration.levelId, programId: registration.programId, program: { tenantId } }, select: { name: true } }),
+      ])
+      return student && program && level
+        ? { student: { ...student, program: program.name, level: level.name }, departmentId: program.departmentId }
+        : null
+    }
+
     const docNumber = `${type}-${Date.now()}-${randomUUID().slice(0, 8).toUpperCase()}`
+    const issuedAt = new Date().toISOString()
     const verificationCode = generateCode()
     const requestedYear = academicYearId
       ? await db.academicYear.findFirst({ where: { id: academicYearId, tenantId }, select: { id: true, name: true } })
@@ -130,6 +147,7 @@ export async function POST(request: NextRequest) {
 
     let DocumentComponent: React.ReactElement | null = null
     let documentData: Record<string, unknown> = {}
+    let pvSections: PvSection[] | null = null
 
     switch (type) {
       case 'RELEVE_NOTES': {
@@ -139,14 +157,20 @@ export async function POST(request: NextRequest) {
         }
         const registration = await db.administrativeRegistration.findFirst({
           where: { tenantId, studentId, academicYearId: acYearId, status: 'INSCRIT' },
-          select: { id: true },
+          select: { id: true, programId: true, levelId: true },
         })
         if (!registration) {
           return NextResponse.json({ error: 'Inscription administrative annuelle non validée : relevé indisponible' }, { status: 409 })
         }
+        const annualContext = await registeredContext(registration)
+        if (!annualContext) {
+          return NextResponse.json({ error: 'Programme ou niveau de cette inscription introuvable' }, { status: 409 })
+        }
+        student = annualContext.student
         const academicYear = requestedYear?.name || ''
         let semester = ''
-        let ueGrades: Array<{ ue: string; code: string; credits: number; notes: Array<{ ec: string; coef: number; cc?: number; tp?: number; exam?: number; final?: number }>; moyenne?: number }> = []
+        let ueGrades: Array<{ ue: string; code: string; credits: number; notes: Array<{ ec: string; code?: string; coef: number; cc?: number; tp?: number; exam?: number; final?: number }>; moyenne?: number }> = []
+        let jury: { average: number; creditsAcquired: number; decision: string; date: string } | undefined
 
         if (studentId) {
           const grades = await db.grade.findMany({
@@ -201,7 +225,7 @@ export async function POST(request: NextRequest) {
             semester = semesters.length === 1 ? semesters[0].name : 'Plusieurs semestres'
           }
 
-          const ueMap = new Map<string, { ue: string; code: string; credits: number; notes: Array<{ ec: string; coef: number; cc?: number; tp?: number; exam?: number; final?: number }>; moyenne?: number }>()
+          const ueMap = new Map<string, { ue: string; code: string; credits: number; notes: Array<{ ec: string; code?: string; coef: number; cc?: number; tp?: number; exam?: number; final?: number }>; moyenne?: number }>()
           // Keep the transcript in curriculum order, not database insertion order.
           const orderedGrades = [...grades].sort((a, b) =>
             (a.teachingUnit?.semester?.orderIndex ?? 0) - (b.teachingUnit?.semester?.orderIndex ?? 0) ||
@@ -218,6 +242,7 @@ export async function POST(request: NextRequest) {
             const entry = ueMap.get(key)!
             entry.notes.push({
               ec: g.courseElement?.name || 'EC',
+              code: g.courseElement?.code || undefined,
               coef: g.courseElement?.coefficient || 1,
               cc: g.ccGrade ?? undefined,
               tp: g.tpGrade ?? undefined,
@@ -234,11 +259,27 @@ export async function POST(request: NextRequest) {
           })
         }
 
+        if (annualContext.departmentId) {
+          const juryRows = await db.deliberationDecision.findMany({
+            where: { studentId: studentId!, deliberation: {
+              tenantId, academicYearId: acYearId, departmentId: annualContext.departmentId,
+              status: 'TERMINEE', isLocked: true,
+            } },
+            select: { average: true, creditsAcquired: true, decision: true,
+              deliberation: { select: { date: true } } },
+          })
+          const latest = juryRows.sort((a, b) => b.deliberation.date.getTime() - a.deliberation.date.getTime())[0]
+          if (latest && latest.average !== null) jury = {
+            average: latest.average, creditsAcquired: latest.creditsAcquired,
+            decision: latest.decision, date: latest.deliberation.date.toISOString(),
+          }
+        }
+
         DocumentComponent = React.createElement(ReleveNotesPDF, {
           tenant, student: student || { firstName: '', lastName: '', matricule: '', program: '', level: '' },
-          semester, ueGrades, academicYear, docNumber, verificationCode, qrCodeDataUrl, isSigned: Boolean(sign),
+          semester, ueGrades, academicYear, jury, docNumber, verificationCode, qrCodeDataUrl, isSigned: Boolean(sign),
         })
-        documentData = { semester, ueGrades, academicYear }
+        documentData = { semester, ueGrades, academicYear, jury }
         break
       }
 
@@ -254,11 +295,16 @@ export async function POST(request: NextRequest) {
         if (!reg) {
           return NextResponse.json({ error: 'Aucune inscription administrative validée pour cette année' }, { status: 409 })
         }
+        const annualContext = await registeredContext(reg)
+        if (!annualContext) {
+          return NextResponse.json({ error: 'Programme ou niveau de cette inscription introuvable' }, { status: 409 })
+        }
+        student = annualContext.student
         const academicYear = reg.academicYear.name
 
         DocumentComponent = React.createElement(AttestationInscriptionPDF, {
           tenant, student: student || { firstName: '', lastName: '', matricule: '' },
-          academicYear, docNumber, verificationCode, qrCodeDataUrl, isSigned: Boolean(sign),
+          academicYear, issuedAt, docNumber, verificationCode, qrCodeDataUrl, isSigned: Boolean(sign),
         })
         documentData = { registrationId: reg.id, academicYear }
         break
@@ -313,6 +359,9 @@ export async function POST(request: NextRequest) {
           program: diplomaAward.program.name,
           date: diplomaAward.finalDecision.juryDate.toISOString(),
           credits: diplomaAward.creditsRequired,
+          mention: diplomaAward.finalDecision.average >= 16 ? 'Très bien' :
+            diplomaAward.finalDecision.average >= 14 ? 'Bien' :
+            diplomaAward.finalDecision.average >= 12 ? 'Assez bien' : 'Passable',
         }
         DocumentComponent = React.createElement(DiplomePDF, {
           tenant, student: { ...student, program: diplomaAward.program.name, level: diplomaAward.finalLevel.name },
@@ -393,6 +442,49 @@ export async function POST(request: NextRequest) {
         })
         const studentMap = new Map(decisionStudents.map(s => [s.id, s]))
 
+        const [annualRegistrations, pedagogicalRegistrations, gradeRows] = await Promise.all([
+          db.administrativeRegistration.findMany({
+            where: { tenantId, academicYearId: acYearId, status: 'INSCRIT', studentId: { in: decisionIds } },
+            select: { studentId: true, programId: true, levelId: true },
+          }),
+          db.pedagogicalRegistration.findMany({
+            where: { academicYearId: acYearId, status: 'ACTIVE', studentId: { in: decisionIds }, student: { tenantId } },
+            select: { studentId: true, teachingUnitId: true, teachingUnit: { select: {
+              id: true, code: true, name: true, orderIndex: true,
+              semester: { select: { levelId: true, orderIndex: true } },
+              courseElements: { select: { id: true, code: true, name: true, coefficient: true, orderIndex: true } },
+            } } },
+          }),
+          db.grade.findMany({
+            where: { studentId: { in: decisionIds }, academicYearId: acYearId,
+              session: delib.type === 'RATTRAPAGE' ? 'RATTRAPAGE' : 'NORMALE', student: { tenantId } },
+            select: { studentId: true, teachingUnitId: true, courseElementId: true, finalGrade: true, isLocked: true },
+          }),
+        ])
+        const [programs, levels] = await Promise.all([
+          db.program.findMany({ where: { id: { in: annualRegistrations.map(r => r.programId) }, tenantId, departmentId: department.id },
+            select: { id: true, name: true } }),
+          db.level.findMany({ where: { id: { in: annualRegistrations.map(r => r.levelId) }, program: { tenantId, departmentId: department.id } },
+            select: { id: true, programId: true, name: true, orderIndex: true } }),
+        ])
+        const programById = new Map(programs.map(p => [p.id, p]))
+        const levelById = new Map(levels.map(l => [l.id, l]))
+        if (annualRegistrations.length !== decisionIds.length || annualRegistrations.some(r =>
+          !programById.has(r.programId) || levelById.get(r.levelId)?.programId !== r.programId)) {
+          return NextResponse.json({ error: 'Inscriptions annuelles incohérentes avec les filières du département' }, { status: 409 })
+        }
+        let sections
+        try {
+          sections = buildPvMatrix({
+            registrations: annualRegistrations.map(r => ({ ...r, program: programById.get(r.programId)!, level: levelById.get(r.levelId)! })),
+            pedagogicalRegistrations, grades: gradeRows, students: decisionStudents, decisions: delib.decisions,
+          })
+        } catch (error) {
+          if (error instanceof PvMatrixError) return NextResponse.json({ error: error.message }, { status: 409 })
+          throw error
+        }
+        pvSections = sections
+
         function mapDecision(d: string): string {
           switch (d) {
             case 'ADMI': return 'ADMIS'
@@ -418,10 +510,10 @@ export async function POST(request: NextRequest) {
 
         DocumentComponent = React.createElement(PVDeliberationPDF, {
           tenant, departmentName: department.name, departmentHeadName: department.headName || undefined,
-          session, members: validatedMembers, students, academicYear, docNumber, verificationCode, qrCodeDataUrl, isSigned: true,
+          session, members: validatedMembers, students, sections, academicYear, docNumber, verificationCode, qrCodeDataUrl, isSigned: true,
         })
         documentData = { deliberationId, departmentId: department.id, departmentName: department.name,
-          departmentHeadName: department.headName, session, members: validatedMembers, students, academicYear }
+          departmentHeadName: department.headName, session, members: validatedMembers, students, sections, academicYear }
         break
       }
 
@@ -437,11 +529,16 @@ export async function POST(request: NextRequest) {
         if (!reg) {
           return NextResponse.json({ error: 'Aucune inscription administrative validée pour cette année' }, { status: 409 })
         }
+        const annualContext = await registeredContext(reg)
+        if (!annualContext) {
+          return NextResponse.json({ error: 'Programme ou niveau de cette inscription introuvable' }, { status: 409 })
+        }
+        student = annualContext.student
         const academicYear = reg.academicYear.name
 
         DocumentComponent = React.createElement(CertificatScolaritePDF, {
           tenant, student: student || { firstName: '', lastName: '', matricule: '' },
-          academicYear, docNumber, verificationCode, qrCodeDataUrl, isSigned: Boolean(sign),
+          academicYear, issuedAt, docNumber, verificationCode, qrCodeDataUrl, isSigned: Boolean(sign),
         })
         documentData = { registrationId: reg.id, academicYear }
         break
@@ -483,6 +580,12 @@ export async function POST(request: NextRequest) {
     }
 
     const pdfBuffer = await renderPDF(DocumentComponent)
+    if (type === 'RELEVE_NOTES' && countPdfPages(pdfBuffer) !== 1) {
+      return NextResponse.json({ error: 'Le relevé dépasse une page : vérifiez les libellés et la maquette avant émission.' }, { status: 409 })
+    }
+    if (pvSections && countPdfPages(pdfBuffer) !== expectedPvSheetCount(pvSections)) {
+      return NextResponse.json({ error: 'Le PV déborde du format A3 prévu : corrigez les libellés avant émission.' }, { status: 409 })
+    }
 
     // "Signing" certifies the document as officially validated -- a student
     // generating their own document can never self-certify it, only staff can.
@@ -496,7 +599,7 @@ export async function POST(request: NextRequest) {
         type,
         number: docNumber,
         academicYearId: acYearId,
-        content: JSON.stringify({ type, tenant, student, academicYearId: acYearId, ...documentData }),
+        content: JSON.stringify({ type, tenant, student, academicYearId: acYearId, issuedAt, ...documentData }),
         verificationCode,
         status: 'GENERATED',
         generatedBy: sessionUser.id,

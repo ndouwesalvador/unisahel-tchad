@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import { formatDate, generateDocNumber, generateVerificationCode } from './utils'
+import { countPdfPages, formatDate, generateDocNumber, generateVerificationCode } from './utils'
+
+describe('countPdfPages', () => {
+  it('counts pages but not the Pages tree', () => {
+    expect(countPdfPages(Buffer.from('/Type /Pages\n/Type /Page\n/Type /Page\n'))).toBe(2)
+  })
+})
 
 describe('formatDate', () => {
   it('formats a Date object correctly in French long format', () => {

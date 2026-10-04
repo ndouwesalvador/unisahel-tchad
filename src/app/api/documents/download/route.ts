@@ -5,11 +5,12 @@ import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
 import { isStudentSelfRole, resolveOwnStudentId } from '@/lib/auth/student-scope'
 import { getOrganizationScope } from '@/lib/auth/organization-scope'
-import { getVerificationUrl, type StudentInfo, type TenantInfo } from '@/lib/pdf/utils'
+import { countPdfPages, getVerificationUrl, type StudentInfo, type TenantInfo } from '@/lib/pdf/utils'
 import {
   renderPDF, ReleveNotesPDF, AttestationInscriptionPDF, CertificatScolaritePDF,
   AttestationNiveauPDF, DiplomePDF, PVDeliberationPDF,
 } from '@/lib/pdf/templates'
+import { expectedPvSheetCount, type PvSection } from '@/lib/pdf/pv-matrix'
 
 const STAFF_ROLES = new Set(['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'RECTORAT', 'SCOLARITE'])
 
@@ -75,16 +76,23 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
   let pdf: React.ReactElement
 
   switch (document.type) {
-    case 'RELEVE_NOTES':
+    case 'RELEVE_NOTES': {
       if (!student || !Array.isArray(snapshot.ueGrades) || typeof snapshot.academicYear !== 'string') break
       pdf = React.createElement(ReleveNotesPDF, { ...common, student, semester: String(snapshot.semester ?? ''),
-        academicYear: snapshot.academicYear, ueGrades: snapshot.ueGrades as Parameters<typeof ReleveNotesPDF>[0]['ueGrades'] })
-      return pdfResponse(await renderPDF(pdf), document.type, docNumber)
+        academicYear: snapshot.academicYear, ueGrades: snapshot.ueGrades as Parameters<typeof ReleveNotesPDF>[0]['ueGrades'],
+        jury: record(snapshot.jury) ? snapshot.jury as Parameters<typeof ReleveNotesPDF>[0]['jury'] : undefined })
+      const transcript = await renderPDF(pdf)
+      if (countPdfPages(transcript) !== 1) {
+        return NextResponse.json({ error: 'Ce relevé historique ne tient pas sur une page avec la maquette actuelle.' }, { status: 409 })
+      }
+      return pdfResponse(transcript, document.type, docNumber)
+    }
     case 'ATTESTATION_INSCRIPTION':
     case 'CERTIFICAT_SCOLARITE': {
       if (!student || typeof snapshot.academicYear !== 'string') break
       const Template = document.type === 'ATTESTATION_INSCRIPTION' ? AttestationInscriptionPDF : CertificatScolaritePDF
-      pdf = React.createElement(Template, { ...common, student, academicYear: snapshot.academicYear })
+      pdf = React.createElement(Template, { ...common, student, academicYear: snapshot.academicYear,
+        issuedAt: typeof snapshot.issuedAt === 'string' ? snapshot.issuedAt : document.createdAt.toISOString() })
       return pdfResponse(await renderPDF(pdf), document.type, docNumber)
     }
     case 'ATTESTATION_NIVEAU': {
@@ -111,8 +119,13 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
         session: snapshot.session as Parameters<typeof PVDeliberationPDF>[0]['session'],
         members: snapshot.members as Parameters<typeof PVDeliberationPDF>[0]['members'],
         students: snapshot.students as Parameters<typeof PVDeliberationPDF>[0]['students'],
+        sections: Array.isArray(snapshot.sections) ? snapshot.sections as PvSection[] : undefined,
         academicYear: snapshot.academicYear })
-      return pdfResponse(await renderPDF(pdf), document.type, docNumber)
+      const pv = await renderPDF(pdf)
+      if (Array.isArray(snapshot.sections) && countPdfPages(pv) !== expectedPvSheetCount(snapshot.sections as PvSection[])) {
+        return NextResponse.json({ error: 'Le PV historique déborde des feuilles A3 prévues.' }, { status: 409 })
+      }
+      return pdfResponse(pv, document.type, docNumber)
     }
   }
   return NextResponse.json({ error: 'Ce type de document historique ne peut pas être reproduit.' }, { status: 409 })

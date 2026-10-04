@@ -1,6 +1,7 @@
 import React from 'react'
 import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer'
 import { formatDate, formatNumber, getVerificationUrl, TenantInfo, StudentInfo } from './utils'
+import { PV_COLUMNS_PER_SHEET, PV_ROWS_PER_SHEET, type PvSection } from './pv-matrix'
 
 const colors = {
   primary: '#1a2744',
@@ -270,64 +271,69 @@ function Footer({ tenant, docNumber, verificationCode, qrCodeDataUrl, isSigned =
 }
 
 export function ReleveNotesPDF({
-  tenant, student, semester, ueGrades, academicYear, docNumber, verificationCode, qrCodeDataUrl, isSigned = false,
+  tenant, student, semester, ueGrades, academicYear, jury, docNumber, verificationCode, qrCodeDataUrl, isSigned = false,
 }: {
-  tenant: TenantInfo; student: StudentInfo; semester: string; ueGrades: Array<{ ue: string; code: string; credits: number; notes: Array<{ ec: string; coef: number; cc?: number; tp?: number; exam?: number; final?: number }>; moyenne?: number }>; academicYear: string; docNumber: string; verificationCode: string; qrCodeDataUrl?: string; isSigned?: boolean
+  tenant: TenantInfo; student: StudentInfo; semester: string; ueGrades: Array<{ ue: string; code: string; credits: number; notes: Array<{ ec: string; code?: string; coef: number; cc?: number; tp?: number; exam?: number; final?: number }>; moyenne?: number }>; academicYear: string; jury?: { average: number; creditsAcquired: number; decision: string; date: string }; docNumber: string; verificationCode: string; qrCodeDataUrl?: string; isSigned?: boolean
 }) {
+  const rowCount = ueGrades.reduce((sum, ue) => sum + ue.notes.length, 0)
+  const density = ueGrades.length * 15 + rowCount * 17
+  const pageSize = density > 900 ? 'A2' : density > 460 ? 'A3' : 'A4'
+  const compact = pageSize !== 'A2'
+  const credits = ueGrades.reduce((sum, ue) => sum + ue.credits, 0)
+  const tableFont = pageSize === 'A4' ? 7.4 : pageSize === 'A3' ? 7.8 : 8.5
   return (
     <Document>
-      <Page size="A4" style={styles.page}>
-        <Text fixed style={{ position: 'absolute', top: 18, left: 48, right: 48, fontSize: 7, color: colors.muted }}>
-          {tenant.name} · RELEVÉ DE NOTES · {student.matricule} · {academicYear}
-        </Text>
+      <Page size={pageSize} style={{ ...styles.page, paddingTop: 29, paddingHorizontal: 38, paddingBottom: 91 }}>
         <DocumentHeader tenant={tenant} docNumber={docNumber} />
-        <DocumentHeading title="RELEVÉ DE NOTES" subtitle={`Année académique ${academicYear} · ${semester}`} isSigned={isSigned} />
+        <DocumentHeading title="RELEVÉ INDIVIDUEL DE NOTES" subtitle={`Année académique ${academicYear} · ${semester}`} isSigned={isSigned} />
 
-        <View style={styles.section}>
-          <View style={styles.row}><Text style={styles.label}>Étudiant</Text><Text style={styles.value}>{student.firstName} {student.lastName}</Text></View>
-          <View style={styles.row}><Text style={styles.label}>Matricule</Text><Text style={styles.value}>{student.matricule}</Text></View>
-          <View style={styles.row}><Text style={styles.label}>Programme</Text><Text style={styles.value}>{student.program}</Text></View>
-          <View style={styles.row}><Text style={styles.label}>Niveau</Text><Text style={styles.value}>{student.level}</Text></View>
-        </View>
-
-        <View style={{ flexDirection: 'row', marginBottom: 19, borderWidth: 1, borderColor: colors.border }} wrap={false}>
-          <View style={{ flex: 1, padding: 10, borderRightWidth: 1, borderColor: colors.border }}><Text style={{ fontSize: 8, color: colors.muted }}>UNITÉS D’ENSEIGNEMENT</Text><Text style={{ fontSize: 15, fontWeight: 'bold', color: colors.primary, marginTop: 4 }}>{ueGrades.length}</Text></View>
-          <View style={{ flex: 1, padding: 10 }}><Text style={{ fontSize: 8, color: colors.muted }}>CRÉDITS INSCRITS</Text><Text style={{ fontSize: 15, fontWeight: 'bold', color: colors.primary, marginTop: 4 }}>{ueGrades.reduce((sum, ue) => sum + ue.credits, 0)}</Text></View>
-        </View>
-
-        {ueGrades.map((ue, i) => (
-          <View key={i} style={styles.section} wrap={false}>
-            <Text style={styles.sectionTitle}>{ue.code} — {ue.ue} ({ue.credits} crédits)</Text>
-            <View style={styles.table}>
-              <View style={styles.tableHeader}>
-                <Text style={[styles.tableHeaderCell, { width: '34%' }]}>Élément Constitutif</Text>
-                <Text style={[styles.tableHeaderCell, { width: '12%', textAlign: 'center' }]}>Coef.</Text>
-                <Text style={[styles.tableHeaderCell, { width: '12%', textAlign: 'center' }]}>CC</Text>
-                <Text style={[styles.tableHeaderCell, { width: '12%', textAlign: 'center' }]}>TP</Text>
-                <Text style={[styles.tableHeaderCell, { width: '15%', textAlign: 'center' }]}>Examen</Text>
-                <Text style={[styles.tableHeaderCell, { width: '15%', textAlign: 'center' }]}>Moyenne</Text>
-              </View>
-              {ue.notes.map((n, j) => (
-                <View key={j} style={[styles.tableRow, j % 2 === 1 ? styles.tableRowAlt : {}]}>
-                  <Text style={[styles.tableCell, { width: '34%' }]}>{n.ec}</Text>
-                  <Text style={[styles.tableCellCenter, { width: '12%' }]}>{n.coef}</Text>
-                  <Text style={[styles.tableCellCenter, { width: '12%' }]}>{n.cc != null ? formatNumber(n.cc) : '-'}</Text>
-                  <Text style={[styles.tableCellCenter, { width: '12%' }]}>{n.tp != null ? formatNumber(n.tp) : '-'}</Text>
-                  <Text style={[styles.tableCellCenter, { width: '15%' }]}>{n.exam != null ? formatNumber(n.exam) : '-'}</Text>
-                  <Text style={[styles.tableCellCenter, { width: '15%' }]}>{n.final != null ? formatNumber(n.final) : '-'}</Text>
-                </View>
-              ))}
-              <View style={[styles.tableRow, { backgroundColor: '#f0fdf4' }]}>
-                <Text style={[styles.tableCell, { width: '34%', fontWeight: 'bold' }]}>Moyenne UE</Text>
-                <Text style={[styles.tableCellCenter, { width: '12%' }]} />
-                <Text style={[styles.tableCellCenter, { width: '12%' }]} />
-                <Text style={[styles.tableCellCenter, { width: '12%' }]} />
-                <Text style={[styles.tableCellCenter, { width: '15%' }]} />
-                <Text style={[styles.tableCellCenter, { width: '15%', fontWeight: 'bold' }]}>{ue.moyenne != null ? formatNumber(ue.moyenne) : '-'}</Text>
-              </View>
-            </View>
+        <View style={{ flexDirection: 'row', borderWidth: 1, borderColor: colors.border, marginBottom: 11, padding: 9 }} wrap={false}>
+          <View style={{ width: '52%' }}>
+            <Text style={{ fontSize: 7, color: colors.muted }}>ÉTUDIANT</Text>
+            <Text style={{ fontSize: 10.5, fontWeight: 'bold', color: colors.primary, marginTop: 3 }}>{student.firstName} {student.lastName}</Text>
+            <Text style={{ fontSize: 8, marginTop: 4 }}>Matricule : {student.matricule || '—'}</Text>
           </View>
-        ))}
+          <View style={{ width: '48%' }}>
+            <Text style={{ fontSize: 7, color: colors.muted }}>PARCOURS</Text>
+            <Text style={{ fontSize: 8.5, fontWeight: 'bold', marginTop: 3 }}>{student.program || '—'}</Text>
+            <Text style={{ fontSize: 8, marginTop: 4 }}>Niveau : {student.level || '—'}</Text>
+          </View>
+        </View>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, paddingHorizontal: 9, marginBottom: 6, backgroundColor: '#edf5f0' }} wrap={false}>
+          <Text style={{ fontSize: 8, color: colors.primary }}>{ueGrades.length} UE · {rowCount} matières · {credits} crédits inscrits</Text>
+          <Text style={{ fontSize: 8, color: colors.primary, fontWeight: 'bold' }}>{jury ? `MOYENNE ANNUELLE : ${formatNumber(jury.average)} / 20` : 'Décision du jury non publiée'}</Text>
+        </View>
+
+        <View style={{ borderWidth: 1, borderColor: colors.border }} wrap={false}>
+          <View style={{ flexDirection: 'row', backgroundColor: colors.primary, paddingVertical: 6, paddingHorizontal: 7 }}>
+            <Text style={{ width: '42%', fontSize: tableFont, color: '#ffffff', fontWeight: 'bold' }}>MATIÈRE / ÉLÉMENT CONSTITUTIF</Text>
+            <Text style={{ width: '9%', fontSize: tableFont, color: '#ffffff', textAlign: 'center' }}>COEF.</Text>
+            <Text style={{ width: '11%', fontSize: tableFont, color: '#ffffff', textAlign: 'center' }}>CC</Text>
+            <Text style={{ width: '11%', fontSize: tableFont, color: '#ffffff', textAlign: 'center' }}>TP</Text>
+            <Text style={{ width: '13%', fontSize: tableFont, color: '#ffffff', textAlign: 'center' }}>EXAMEN</Text>
+            <Text style={{ width: '14%', fontSize: tableFont, color: '#ffffff', textAlign: 'center' }}>MOY. EC</Text>
+          </View>
+          {ueGrades.map((ue, i) => <View key={`${ue.code}-${i}`} wrap={false}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', backgroundColor: '#eaf3ed', paddingVertical: compact ? 3.5 : 5, paddingHorizontal: 7, borderTopWidth: i ? 1 : 0, borderTopColor: colors.border }}>
+              <Text style={{ fontSize: tableFont, color: colors.primary, fontWeight: 'bold', width: '74%' }}>{ue.code ? `${ue.code} · ` : ''}{ue.ue}</Text>
+              <Text style={{ fontSize: tableFont, color: colors.secondary, fontWeight: 'bold', width: '26%', textAlign: 'right' }}>{ue.credits} CR · UE {ue.moyenne == null ? '—' : formatNumber(ue.moyenne)}</Text>
+            </View>
+            {ue.notes.map((note, j) => <View key={j} style={{ flexDirection: 'row', paddingVertical: compact ? 3 : 4.4, paddingHorizontal: 7, backgroundColor: j % 2 ? '#f8fafc' : '#ffffff', borderTopWidth: 0.4, borderTopColor: colors.border }} wrap={false}>
+              <Text style={{ width: '42%', fontSize: tableFont, color: colors.text }}>{note.code ? `${note.code} · ` : ''}{note.ec}</Text>
+              <Text style={{ width: '9%', fontSize: tableFont, textAlign: 'center' }}>{note.coef}</Text>
+              <Text style={{ width: '11%', fontSize: tableFont, textAlign: 'center' }}>{note.cc == null ? '—' : formatNumber(note.cc)}</Text>
+              <Text style={{ width: '11%', fontSize: tableFont, textAlign: 'center' }}>{note.tp == null ? '—' : formatNumber(note.tp)}</Text>
+              <Text style={{ width: '13%', fontSize: tableFont, textAlign: 'center' }}>{note.exam == null ? '—' : formatNumber(note.exam)}</Text>
+              <Text style={{ width: '14%', fontSize: tableFont, textAlign: 'center', fontWeight: 'bold' }}>{note.final == null ? '—' : formatNumber(note.final)}</Text>
+            </View>)}
+          </View>)}
+        </View>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 9, borderWidth: 1, borderColor: colors.border, padding: 8 }} wrap={false}>
+          <Text style={{ fontSize: 8, width: '30%' }}>Crédits acquis : <Text style={{ fontWeight: 'bold' }}>{jury ? jury.creditsAcquired : 'À délibérer'} / {credits}</Text></Text>
+          <Text style={{ fontSize: 8, width: '27%' }}>Moyenne générale : <Text style={{ fontWeight: 'bold' }}>{jury ? `${formatNumber(jury.average)} / 20` : 'À délibérer'}</Text></Text>
+          <Text style={{ fontSize: 8, width: '43%', textAlign: 'right' }}>Décision du jury : <Text style={{ fontWeight: 'bold', color: jury && ['ADMI', 'ADMI_DETTE', 'COMPENSE'].includes(jury.decision) ? colors.secondary : colors.primary }}>{jury ? decisionLabel(jury.decision) : 'Non publiée'}</Text></Text>
+        </View>
+        {jury && <Text style={{ fontSize: 7.5, color: colors.muted, marginTop: 7 }}>Résultats arrêtés par le jury le {formatDate(jury.date)}. CC : contrôle continu · TP : travaux pratiques · EC : élément constitutif · UE : unité d’enseignement.</Text>}
 
         <Footer tenant={tenant} docNumber={docNumber} verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} isSigned={isSigned} />
       </Page>
@@ -336,9 +342,9 @@ export function ReleveNotesPDF({
 }
 
 export function AttestationInscriptionPDF({
-  tenant, student, academicYear, docNumber, verificationCode, qrCodeDataUrl, isSigned = false,
+  tenant, student, academicYear, issuedAt, docNumber, verificationCode, qrCodeDataUrl, isSigned = false,
 }: {
-  tenant: TenantInfo; student: StudentInfo; academicYear: string; docNumber: string; verificationCode: string; qrCodeDataUrl?: string; isSigned?: boolean
+  tenant: TenantInfo; student: StudentInfo; academicYear: string; issuedAt?: string; docNumber: string; verificationCode: string; qrCodeDataUrl?: string; isSigned?: boolean
 }) {
   return (
     <Document>
@@ -372,7 +378,7 @@ export function AttestationInscriptionPDF({
           <SignatureField title="Service de la scolarité" />
           <SignatureField title={tenant.rectorTitle || 'Responsable de l’établissement'} name={tenant.rectorName} />
         </View>
-        <Text style={{ fontSize: 8, color: colors.muted, marginTop: 13 }}>Émis {tenant.city ? `à ${tenant.city}, ` : ''}le {formatDate(new Date())}</Text>
+        <Text style={{ fontSize: 8, color: colors.muted, marginTop: 13 }}>Émis {tenant.city ? `à ${tenant.city}, ` : ''}le {formatDate(issuedAt || new Date())}</Text>
 
         <Footer tenant={tenant} docNumber={docNumber} verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} isSigned={isSigned} />
       </Page>
@@ -395,25 +401,29 @@ export function AttestationNiveauPDF({
     <Document>
       <Page size="A4" style={styles.page}>
         <DocumentHeader tenant={tenant} docNumber={docNumber} />
-        <DocumentHeading title="ATTESTATION DE VALIDATION DE NIVEAU" subtitle={`Année académique ${academicYear}`} isSigned />
+        <DocumentHeading title="ATTESTATION DE NIVEAU" subtitle={`${award.level} · Année académique ${academicYear}`} isSigned />
 
-        <View style={{ marginTop: 25, marginBottom: 24 }}>
-          <Text style={{ fontSize: 10, lineHeight: 1.7 }}>
-            {tenant.name} atteste que l’étudiant(e) ci-dessous a validé le niveau indiqué, conformément à la décision finale du jury.
+        <View style={{ marginTop: 19, marginBottom: 18 }}>
+          <Text style={{ fontSize: 10, lineHeight: 1.6 }}>
+            {tenant.name} atteste, au vu des résultats arrêtés par le jury, que :
           </Text>
         </View>
 
+        <Text style={{ fontSize: 16, fontWeight: 'bold', color: colors.primary, textAlign: 'center', marginBottom: 19 }}>
+          {student.firstName} {student.lastName}
+        </Text>
+
         <View style={[styles.section, { padding: 16, borderWidth: 1, borderColor: colors.border, borderLeftWidth: 3, borderLeftColor: colors.secondary }]}>
-          <View style={styles.row}><Text style={styles.label}>Étudiant(e)</Text><Text style={styles.value}>{student.firstName} {student.lastName}</Text></View>
           {student.matricule && <View style={styles.row}><Text style={styles.label}>Matricule</Text><Text style={styles.value}>{student.matricule}</Text></View>}
+          {student.dateOfBirth && <View style={styles.row}><Text style={styles.label}>Date de naissance</Text><Text style={styles.value}>{formatDate(student.dateOfBirth)}{student.placeOfBirth ? ` à ${student.placeOfBirth}` : ''}</Text></View>}
           <View style={styles.row}><Text style={styles.label}>Programme</Text><Text style={styles.value}>{award.program}</Text></View>
           <View style={styles.row}><Text style={styles.label}>Niveau validé</Text><Text style={styles.value}>{award.level}</Text></View>
           <View style={styles.row}><Text style={styles.label}>Crédits acquis</Text><Text style={styles.value}>{award.credits}</Text></View>
-          <View style={styles.row}><Text style={styles.label}>Décision du jury</Text><Text style={styles.value}>{formatDate(award.juryDate)}</Text></View>
+          <View style={styles.row}><Text style={styles.label}>Décision du jury</Text><Text style={styles.value}>NIVEAU VALIDÉ · {formatDate(award.juryDate)}</Text></View>
         </View>
 
         <Text style={{ fontSize: 10, lineHeight: 1.6, marginTop: 20 }}>
-          Cette attestation certifie la validation de ce niveau sans dette de crédits pour l’année académique {academicYear}.
+          L’intéressé(e) a satisfait aux exigences du niveau {award.level} du programme {award.program}, sans dette de crédits pour l’année académique {academicYear}. La présente attestation est délivrée pour servir et valoir ce que de droit.
         </Text>
 
         <View style={styles.signature} wrap={false}>
@@ -463,11 +473,113 @@ export function DiplomePDF({
   )
 }
 
-export function PVDeliberationPDF({
-  tenant, departmentName, departmentHeadName, session, members, students, academicYear, docNumber, verificationCode, qrCodeDataUrl, isSigned = false,
-}: {
-  tenant: TenantInfo; departmentName: string; departmentHeadName?: string; session: { name: string; date: string; type: string }; members: Array<{ name: string; role: string }>; students: Array<{ name: string; matricule: string; moy: number; decision: string; mention?: string }>; academicYear: string; docNumber: string; verificationCode: string; qrCodeDataUrl?: string; isSigned?: boolean
+function decisionLabel(decision: string) {
+  const labels: Record<string, string> = {
+    ADMI: 'ADMIS', ADMI_DETTE: 'ADMIS AVEC DETTE', COMPENSE: 'ADMIS PAR COMPENSATION',
+    AJOURNE: 'AJOURNÉ', REDOUBLANT: 'REDOUBLANT', EXCLU: 'EXCLU',
+  }
+  return labels[decision] || decision
+}
+
+function PVMatrixPDF({ tenant, departmentName, departmentHeadName, session, members, sections,
+  academicYear, docNumber, verificationCode, qrCodeDataUrl, isSigned }: {
+  tenant: TenantInfo; departmentName: string; departmentHeadName?: string
+  session: { name: string; date: string; type: string }; members: Array<{ name: string; role: string }>
+  sections: PvSection[]; academicYear: string; docNumber: string; verificationCode: string
+  qrCodeDataUrl?: string; isSigned: boolean
 }) {
+  const maxColumns = PV_COLUMNS_PER_SHEET
+  const maxRows = PV_ROWS_PER_SHEET
+  const president = members.find(member => member.role === 'President')?.name || 'Non renseigné'
+  const totalStudents = sections.reduce((sum, section) => sum + section.students.length, 0)
+  const sheets = sections.flatMap((section) => {
+    const columnPanels: PvSection['columns'][] = []
+    for (let start = 0; start < section.columns.length; start += maxColumns) {
+      columnPanels.push(section.columns.slice(start, start + maxColumns))
+    }
+    const rowPanels: Array<{ start: number; students: PvSection['students'] }> = []
+    for (let start = 0; start < section.students.length; start += maxRows) {
+      rowPanels.push({ start, students: section.students.slice(start, start + maxRows) })
+    }
+    return rowPanels.flatMap((rows) => columnPanels.map((columns, panelIndex) => ({
+      section, rows, columns, panelIndex, panels: columnPanels.length,
+    })))
+  })
+
+  return <Document>
+    {sheets.map(({ section, rows, columns, panelIndex, panels }, sheetIndex) => {
+      const isLastPanel = panelIndex === panels - 1
+      const dataWidth = isLastPanel ? 605 : 780
+      const columnWidth = dataWidth / maxColumns
+      const headStyle = { fontSize: 6.5, color: '#ffffff', textAlign: 'center' as const, fontWeight: 'bold' as const }
+      const cellStyle = { fontSize: 7.4, color: colors.text, textAlign: 'center' as const }
+      return <Page key={sheetIndex} size="A3" orientation="landscape" style={{ ...styles.page, paddingTop: 29, paddingHorizontal: 34, paddingBottom: 95 }}>
+        <DocumentHeader tenant={tenant} docNumber={docNumber} />
+        <DocumentHeading title="PROCÈS-VERBAL DES RÉSULTATS" subtitle={`${departmentName} · ${academicYear} · ${session.name}`} isSigned={isSigned} />
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10, padding: 9, backgroundColor: '#edf5f0', borderLeftWidth: 3, borderLeftColor: colors.secondary }} wrap={false}>
+          <View style={{ width: '58%' }}>
+            <Text style={{ fontSize: 11, fontWeight: 'bold', color: colors.primary }}>{section.program}</Text>
+            <Text style={{ fontSize: 8, marginTop: 3, color: colors.muted }}>{section.level} · {section.students.length} étudiants · {session.type} · Jury du {formatDate(session.date)}</Text>
+          </View>
+          <View style={{ alignItems: 'flex-end', width: '42%' }}>
+            <Text style={{ fontSize: 9, fontWeight: 'bold', color: colors.primary }}>VOLET {panelIndex + 1}/{panels} · FEUILLE {sheetIndex + 1}/{sheets.length}</Text>
+            <Text style={{ fontSize: 7.5, color: colors.muted, marginTop: 3 }}>Lignes {rows.start + 1}–{rows.start + rows.students.length} · {totalStudents} étudiants dans le département</Text>
+            {panels > 1 && <Text style={{ fontSize: 7.5, color: colors.secondary, marginTop: 2 }}>Juxtaposer les volets selon le matricule et le numéro de ligne</Text>}
+          </View>
+        </View>
+        <View style={{ borderWidth: 1, borderColor: colors.border }} wrap={false}>
+          <View style={{ flexDirection: 'row', minHeight: 33, alignItems: 'center', backgroundColor: colors.primary }}>
+            <Text style={{ ...headStyle, width: 26 }}>N°</Text>
+            <Text style={{ ...headStyle, width: 108, textAlign: 'left' }}>MATRICULE</Text>
+            <Text style={{ ...headStyle, width: 170, textAlign: 'left' }}>NOM ET PRÉNOM</Text>
+            {columns.map(column => <View key={column.key} style={{ width: columnWidth, paddingHorizontal: 2, alignItems: 'center' }}>
+              <Text style={{ ...headStyle, fontSize: 6 }}>{column.ueCode.slice(0, 13)}</Text>
+              <Text style={headStyle}>{column.code.slice(0, 13)}</Text>
+              <Text style={{ ...headStyle, fontSize: 5.7, color: '#bce3cc' }}>{column.kind === 'UE' ? 'MOY. UE' : 'MATIÈRE'}</Text>
+            </View>)}
+            {isLastPanel && <>
+              <Text style={{ ...headStyle, width: 65 }}>MOY. /20</Text>
+              <Text style={{ ...headStyle, width: 105 }}>DÉCISION DU JURY</Text>
+            </>}
+          </View>
+          {rows.students.map((student, index) => <View key={student.matricule} style={{ flexDirection: 'row', minHeight: 18, alignItems: 'center', backgroundColor: index % 2 ? '#f5f8fa' : '#ffffff', borderTopWidth: 0.5, borderTopColor: colors.border }} wrap={false}>
+            <Text style={{ ...cellStyle, width: 26 }}>{rows.start + index + 1}</Text>
+            <Text style={{ ...cellStyle, width: 108, textAlign: 'left', fontSize: 6.8 }}>{student.matricule}</Text>
+            <Text style={{ ...cellStyle, width: 170, textAlign: 'left', fontWeight: 'bold' }}>{student.name}</Text>
+            {columns.map(column => <Text key={column.key} style={{ ...cellStyle, width: columnWidth,
+              fontWeight: column.kind === 'UE' ? 'bold' : 'normal',
+              color: column.kind === 'UE' ? colors.secondary : colors.text }}>
+              {student.grades[column.key] == null ? '—' : formatNumber(student.grades[column.key])}
+            </Text>)}
+            {isLastPanel && <>
+              <Text style={{ ...cellStyle, width: 65, fontWeight: 'bold' }}>{formatNumber(student.average)}</Text>
+              <Text style={{ ...cellStyle, width: 105, fontWeight: 'bold', color: ['ADMI', 'ADMI_DETTE', 'COMPENSE'].includes(student.decision) ? colors.secondary : '#9b3030', fontSize: 6.8 }}>{decisionLabel(student.decision)}</Text>
+            </>}
+          </View>)}
+        </View>
+        <View style={{ marginTop: 10, flexDirection: 'row', flexWrap: 'wrap' }} wrap={false}>
+          {columns.map(column => <Text key={column.key} style={{ width: '25%', fontSize: 6.7, color: colors.muted, paddingRight: 9, marginBottom: 3 }}>
+            <Text style={{ fontWeight: 'bold', color: colors.primary }}>{column.code}</Text> · {column.label}
+          </Text>)}
+        </View>
+        <View style={{ marginTop: 9, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 7, flexDirection: 'row', justifyContent: 'space-between' }} wrap={false}>
+          <Text style={{ fontSize: 7.5, color: colors.muted, width: '48%' }}>Présidence du jury : <Text style={{ fontWeight: 'bold', color: colors.primary }}>{president}</Text></Text>
+          <Text style={{ fontSize: 7.5, color: colors.muted, width: '48%', textAlign: 'right' }}>Chef de département : <Text style={{ fontWeight: 'bold', color: colors.primary }}>{departmentHeadName || 'Non renseigné'}</Text></Text>
+        </View>
+        <Footer tenant={tenant} docNumber={docNumber} verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} isSigned={isSigned} />
+      </Page>
+    })}
+  </Document>
+}
+
+export function PVDeliberationPDF({
+  tenant, departmentName, departmentHeadName, session, members, students, sections, academicYear, docNumber, verificationCode, qrCodeDataUrl, isSigned = false,
+}: {
+  tenant: TenantInfo; departmentName: string; departmentHeadName?: string; session: { name: string; date: string; type: string }; members: Array<{ name: string; role: string }>; students: Array<{ name: string; matricule: string; moy: number; decision: string; mention?: string }>; sections?: PvSection[]; academicYear: string; docNumber: string; verificationCode: string; qrCodeDataUrl?: string; isSigned?: boolean
+}) {
+  if (sections?.length) return <PVMatrixPDF tenant={tenant} departmentName={departmentName} departmentHeadName={departmentHeadName}
+    session={session} members={members} sections={sections} academicYear={academicYear} docNumber={docNumber}
+    verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} isSigned={isSigned} />
   const stats = {
     total: students.length,
     admis: students.filter(s => ['ADMIS', 'ADMIS AVEC DETTE', 'ADMIS PAR COMPENSATION'].includes(s.decision)).length,
@@ -581,9 +693,9 @@ export function PVDeliberationPDF({
 }
 
 export function CertificatScolaritePDF({
-  tenant, student, academicYear, docNumber, verificationCode, qrCodeDataUrl, isSigned = false,
+  tenant, student, academicYear, issuedAt, docNumber, verificationCode, qrCodeDataUrl, isSigned = false,
 }: {
-  tenant: TenantInfo; student: StudentInfo; academicYear: string; docNumber: string; verificationCode: string; qrCodeDataUrl?: string; isSigned?: boolean
+  tenant: TenantInfo; student: StudentInfo; academicYear: string; issuedAt?: string; docNumber: string; verificationCode: string; qrCodeDataUrl?: string; isSigned?: boolean
 }) {
   return (
     <Document>
@@ -615,7 +727,7 @@ export function CertificatScolaritePDF({
           <SignatureField title="Service de la scolarité" />
           <SignatureField title={tenant.rectorTitle || 'Responsable de l’établissement'} name={tenant.rectorName} />
         </View>
-        <Text style={{ fontSize: 8, color: colors.muted, marginTop: 13 }}>Émis {tenant.city ? `à ${tenant.city}, ` : ''}le {formatDate(new Date())}</Text>
+        <Text style={{ fontSize: 8, color: colors.muted, marginTop: 13 }}>Émis {tenant.city ? `à ${tenant.city}, ` : ''}le {formatDate(issuedAt || new Date())}</Text>
 
         <Footer tenant={tenant} docNumber={docNumber} verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} isSigned={isSigned} />
       </Page>
