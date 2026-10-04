@@ -6,6 +6,31 @@ import { studentQuerySchema, createStudentSchema, updateStudentSchema, validateQ
 import { Prisma } from '@prisma/client'
 import { createStudentPortalCredentials } from '@/lib/student-portal'
 
+// Credits are awarded by a finalized jury, not by the mutable Student cache.
+// A second session in the same year may replace the first decision; count the
+// best validated credit total for that year only once.
+async function validatedCreditsByStudent(tenantId: string, studentIds: string[], academicYearId?: string) {
+  const totals = new Map<string, number>()
+  if (studentIds.length === 0) return totals
+  const decisions = await db.deliberationDecision.findMany({
+    where: {
+      studentId: { in: studentIds },
+      deliberation: { tenantId, isLocked: true, status: 'TERMINEE', ...(academicYearId ? { academicYearId } : {}) },
+    },
+    select: { studentId: true, creditsAcquired: true, deliberation: { select: { academicYearId: true } } },
+  })
+  const yearly = new Map<string, number>()
+  for (const decision of decisions) {
+    const key = `${decision.studentId}:${decision.deliberation.academicYearId}`
+    yearly.set(key, Math.max(yearly.get(key) ?? 0, decision.creditsAcquired))
+  }
+  for (const [key, credits] of yearly) {
+    const studentId = key.split(':', 1)[0]
+    totals.set(studentId, (totals.get(studentId) ?? 0) + credits)
+  }
+  return totals
+}
+
 async function getStudentsHandler(user: SessionUser, tenantId: string, request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
@@ -57,11 +82,12 @@ async function getStudentsHandler(user: SessionUser, tenantId: string, request: 
       }),
       db.student.count({ where }),
     ])
+    const creditsByStudent = await validatedCreditsByStudent(tenantId, students.map((student) => student.id))
 
     const totalPages = Math.ceil(total / limit)
 
     return NextResponse.json({
-      data: students,
+      data: students.map((student) => ({ ...student, totalCreditsAcquired: creditsByStudent.get(student.id) ?? 0 })),
       pagination: {
         page,
         limit,
@@ -229,8 +255,8 @@ async function updateStudentHandler(user: SessionUser, tenantId: string, request
       const levelId = data.currentLevelId || existing.currentLevelId || ''
       const programId = data.currentProgramId || existing.currentProgramId || ''
       const [level, program] = await Promise.all([
-        db.level.findFirst({ where: { id: levelId, program: { tenantId } } }),
-        db.program.findFirst({ where: { id: programId, tenantId } }),
+        db.level.findFirst({ where: { id: levelId, programId, isActive: true, program: { tenantId, isActive: true } } }),
+        db.program.findFirst({ where: { id: programId, tenantId, isActive: true } }),
       ])
       if (!level || !program) {
         return NextResponse.json(
@@ -388,7 +414,8 @@ async function getStudentDetailHandler(user: SessionUser, tenantId: string, requ
       registrationDate: r.registrationDate,
     }))
 
-    return NextResponse.json({ data: { ...student, registrations } })
+    const creditsByStudent = await validatedCreditsByStudent(tenantId, [student.id])
+    return NextResponse.json({ data: { ...student, totalCreditsAcquired: creditsByStudent.get(student.id) ?? 0, registrations } })
   } catch (error) {
     console.error('Get student detail error:', error)
     return NextResponse.json(
@@ -569,12 +596,14 @@ async function getStudentTranscriptHandler(user: SessionUser, tenantId: string, 
           Math.max(grades.filter((g) => g.finalGrade !== null).length, 1)
         : 0
 
+    const creditsByStudent = annualRegistration && academicYear
+      ? await validatedCreditsByStudent(tenantId, [id], academicYear.id) : new Map<string, number>()
     const summary = {
       totalGrades,
       validatedGrades,
       failedGrades: totalGrades - validatedGrades,
       averageFinalGrade: Math.round(averageFinalGrade * 100) / 100,
-      totalCreditsAcquired: annualRegistration ? student.totalCreditsAcquired : 0,
+      totalCreditsAcquired: creditsByStudent.get(id) ?? 0,
     }
 
     return NextResponse.json({

@@ -21,6 +21,7 @@ const { authMock, credentialsMock, dbMock } = vi.hoisted(() => ({
     program: { findFirst: vi.fn() },
     academicYear: { findFirst: vi.fn() },
     administrativeRegistration: { findFirst: vi.fn() },
+    deliberationDecision: { findMany: vi.fn() },
     grade: { findMany: vi.fn() },
   },
 }))
@@ -29,7 +30,7 @@ vi.mock('@/lib/auth/config', () => ({ auth: authMock }))
 vi.mock('@/lib/db', () => ({ db: dbMock }))
 vi.mock('@/lib/student-portal', () => ({ createStudentPortalCredentials: credentialsMock }))
 
-const { GET, POST } = await import('./route')
+const { GET, POST, PUT } = await import('./route')
 
 const sessionUser = {
   id: 'user-1',
@@ -51,6 +52,7 @@ beforeEach(() => {
   dbMock.student.findFirst.mockResolvedValue(null)
   dbMock.academicYear.findFirst.mockResolvedValue({ id: 'year-A', name: '2026-2027' })
   dbMock.administrativeRegistration.findFirst.mockResolvedValue(null)
+  dbMock.deliberationDecision.findMany.mockResolvedValue([])
   dbMock.grade.findMany.mockResolvedValue([])
   dbMock.$transaction.mockImplementation((callback: (tx: typeof dbMock) => unknown) => callback(dbMock))
   dbMock.tenantSettings.findUnique.mockResolvedValue({ matriculePrefix: 'UNSH' })
@@ -99,6 +101,22 @@ describe('GET /api/students', () => {
     )
   })
 
+  it('shows credits from finalized jury decisions, counting a year only once', async () => {
+    dbMock.student.findMany.mockResolvedValue([{ id: 'student-A', totalCreditsAcquired: 0 }])
+    dbMock.deliberationDecision.findMany.mockResolvedValue([
+      { studentId: 'student-A', creditsAcquired: 40, deliberation: { academicYearId: 'year-A' } },
+      { studentId: 'student-A', creditsAcquired: 60, deliberation: { academicYearId: 'year-A' } },
+      { studentId: 'student-A', creditsAcquired: 30, deliberation: { academicYearId: 'year-B' } },
+    ])
+    const res = await GET(req('/api/students'))
+    expect(res.status).toBe(200)
+    expect((await res.json()).data[0].totalCreditsAcquired).toBe(90)
+    expect(dbMock.deliberationDecision.findMany).toHaveBeenCalledWith({
+      where: { studentId: { in: ['student-A'] }, deliberation: { tenantId: 'tenant-A', isLocked: true, status: 'TERMINEE' } },
+      select: expect.any(Object),
+    })
+  })
+
   it('rejects a limit above the raised cap (1000) without querying the DB', async () => {
     // Note: getStudentsHandler's catch block doesn't special-case ZodError
     // the way the POST/PUT handlers in this file do, so an out-of-range
@@ -124,8 +142,10 @@ describe('GET /api/students', () => {
   it('scopes a transcript preview to published grades in the enrolled year', async () => {
     dbMock.student.findFirst.mockResolvedValue({ id: 'student-A', totalCreditsAcquired: 12 })
     dbMock.administrativeRegistration.findFirst.mockResolvedValue({ id: 'registration-A' })
+    dbMock.deliberationDecision.findMany.mockResolvedValue([{ studentId: 'student-A', creditsAcquired: 60, deliberation: { academicYearId: 'year-A' } }])
     const res = await GET(req('/api/students?id=student-A&transcript=true&academicYearId=year-A'))
     expect(res.status).toBe(200)
+    expect((await res.json()).data.summary.totalCreditsAcquired).toBe(60)
     expect(dbMock.grade.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: {
       studentId: 'student-A', student: { tenantId: 'tenant-A' }, academicYearId: 'year-A', session: 'NORMALE', isLocked: true,
       teachingUnit: { pedagogicalRegistrations: { some: { studentId: 'student-A', academicYearId: 'year-A', status: 'ACTIVE' } } },
@@ -181,5 +201,18 @@ describe('POST /api/students', () => {
     expect(res.status).toBe(400)
     expect(dbMock.$transaction).not.toHaveBeenCalled()
     expect(dbMock.level.findFirst).toHaveBeenCalledWith({ where: expect.objectContaining({ programId: body.currentProgramId }) })
+  })
+})
+
+describe('PUT /api/students', () => {
+  it('rejects a level that does not belong to the selected program', async () => {
+    dbMock.student.findFirst.mockResolvedValue({ id: 'cstudent00000000000000001', currentProgramId: 'cprogram00000000000000001', currentLevelId: 'clevel000000000000000001' })
+    dbMock.level.findFirst.mockResolvedValue(null)
+    const res = await PUT(new NextRequest('http://localhost:3000/api/students', {
+      method: 'PUT', body: JSON.stringify({ id: 'cstudent00000000000000001', currentProgramId: 'cprogram00000000000000002', currentLevelId: 'clevel000000000000000001' }),
+    }))
+    expect(res.status).toBe(400)
+    expect(dbMock.level.findFirst).toHaveBeenCalledWith({ where: expect.objectContaining({ programId: 'cprogram00000000000000002', isActive: true }) })
+    expect(dbMock.student.update).not.toHaveBeenCalled()
   })
 })
