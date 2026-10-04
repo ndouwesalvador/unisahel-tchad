@@ -44,6 +44,32 @@ describe('printed academic documents', () => {
     expect(pdf.toString('latin1')).toMatch(/\/MediaBox \[0 0 595\.28\d* 841\.89\d*\]/)
   })
 
+  it('fits the deployed six-unit curriculum with the real-length labels, QR and two signers', async () => {
+    const qrCodeDataUrl = await QRCode.toDataURL('https://unisahel-tchad.vercel.app/verify?code=TEST-LIVE-LENGTH')
+    const units = [
+      ['MATHÉMATIQUES APPLIQUÉES', 'Outils mathématiques pour la maintenance'],
+      ['ÉLECTRICITÉ INDUSTRIELLE', 'Électricité et mesures'],
+      ['PROGRAMMATION DES AUTOMATES', 'Automates programmables'],
+      ['MAINTENANCE PRÉVENTIVE', 'Diagnostic et maintenance'],
+      ['SYSTÈMES NUMÉRIQUES', 'Réseaux et systèmes embarqués'],
+      ['PROJET TUTORÉ', 'Projet de maintenance numérique'],
+    ]
+    const ueGrades = units.map(([ue, ec], index) => ({
+      ue: `${ue} — VALIDATION DEV`, code: `DEV-UE${index + 1}`, credits: 10, moyenne: 15,
+      notes: [{ ec: `${ec} — VALIDATION DEV`, coef: 1, cc: 15, tp: 14, exam: 16, final: 15 }],
+    }))
+    const pdf = await renderPDF(React.createElement(ReleveNotesPDF, {
+      tenant: { ...tenant, arabicHeaderImage: undefined, address: '19 Rue Chevreul', city: 'NDJAMENA', phone: '63443731', email: 'test@example.org',
+        rectorName: 'Responsable de l’établissement', secondarySignerName: 'Président du jury', secondarySignerTitle: 'Président du jury' },
+      student: { ...student, firstName: 'Leila', lastName: 'VALIDATION-DEV', matricule: 'UNSH-2026-DU1-DEV-000001',
+        level: 'Année unique — VALIDATION DEV' }, qrCodeDataUrl, ueGrades,
+      semester: 'Plusieurs semestres', academicYear: '2026-2027', jury: { average: 15.6, creditsAcquired: 60,
+        decision: 'ADMI', date: '2026-10-04' }, docNumber: 'RN-TEST-LIVE-LENGTH', verificationCode: 'TEST-LIVE-LENGTH', isSigned: true,
+    }))
+    await savePreview('releve-regression-production.pdf', pdf)
+    expect(countPdfPages(pdf)).toBe(1)
+  })
+
   it('uses one A4 sheet for a dense transcript', async () => {
     const ueGrades = Array.from({ length: 10 }, (_, i) => ({ ue: `Unité ${i + 1}`,
       code: `UE${i + 1}`, credits: 6, moyenne: 13,

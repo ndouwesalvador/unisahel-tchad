@@ -253,7 +253,7 @@ function SignatureField({ title, name, image }: { title: string; name?: string; 
 
 function DocumentSignatories({ tenant, compact = false, anchored = false, bottom = 98 }: { tenant: TenantInfo; compact?: boolean; anchored?: boolean; bottom?: number }) {
   const hasSecond = Boolean(tenant.secondarySignerName?.trim())
-  return <View style={{ ...(anchored ? { position: 'absolute' as const, bottom, left: 31, right: 31, height: 58 } : { marginTop: compact ? 8 : 18, minHeight: compact ? 59 : 72 }), flexDirection: 'row', alignItems: 'flex-end', justifyContent: hasSecond ? 'space-between' : 'center' }} wrap={false}>
+  return <View style={{ ...(anchored ? { position: 'absolute' as const, bottom, left: 31, right: 31, height: 58 } : { marginTop: compact ? 8 : 18, minHeight: compact ? 59 : 72 }), flexDirection: 'row', alignItems: 'flex-end', justifyContent: hasSecond ? 'space-between' : 'center' }} wrap={false} fixed={anchored}>
     <SignatureField title={tenant.rectorTitle || 'Responsable de l’établissement'} name={tenant.rectorName} image={tenant.signature} />
     {tenant.stamp?.startsWith('data:image/') && <Image src={tenant.stamp} style={{ width: 72, height: 63, objectFit: 'contain', position: 'absolute', left: hasSecond ? '43%' : '63%', bottom: 0 }} />}
     {hasSecond && <SignatureField title={tenant.secondarySignerTitle || 'Second signataire'} name={tenant.secondarySignerName} image={tenant.secondarySignature} />}
@@ -356,6 +356,7 @@ export function ReleveNotesPDF({
   return (
     <Document>
       <Page size="A4" style={{ ...styles.page, paddingTop: 15, paddingHorizontal: 29, paddingBottom: 104 }}>
+        <DocumentSignatories tenant={tenant} compact={density > 24} anchored bottom={inlineQr ? 43 : 98} />
         <DocumentHeader tenant={tenant} docNumber={docNumber} compact />
         <DocumentHeading title="RELEVÉ DE NOTES" subtitle={`${semester || 'Année complète'} · ${academicYear}`} isSigned={isSigned} compact />
 
@@ -429,8 +430,6 @@ export function ReleveNotesPDF({
           </View>
         </View>
         <Text style={{ fontSize: density > 34 ? 6 : 7, color: colors.muted, marginTop: 5 }}>{jury ? `Résultats arrêtés par le jury le ${formatDate(jury.date)}. ` : ''}CC : contrôle continu · TP : travaux pratiques · EC : élément constitutif · UE : unité d’enseignement.</Text>
-        <DocumentSignatories tenant={tenant} compact={density > 24} anchored bottom={inlineQr ? 43 : 98} />
-
         <Footer tenant={tenant} docNumber={docNumber} verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} isSigned={isSigned} qrInBody={inlineQr} />
       </Page>
     </Document>
