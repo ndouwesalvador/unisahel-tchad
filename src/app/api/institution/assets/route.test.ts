@@ -33,6 +33,16 @@ describe('institution artwork upload', () => {
     expect(dbMock.auditLog.create).toHaveBeenCalledOnce()
   })
 
+  it('crops white margins from a second signature before saving it', async () => {
+    const image = await sharp(Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="500" height="160"><rect width="500" height="160" fill="white"/><path d="M150 90 Q200 10 250 90 L350 70" fill="none" stroke="black" stroke-width="5"/></svg>')).png().toBuffer()
+    const response = await POST(await request('secondarySignature', image))
+    expect(response.status).toBe(200)
+    const saved = dbMock.tenant.update.mock.calls[0][0].data.secondarySignature as string
+    const metadata = await sharp(Buffer.from(saved.split(',')[1], 'base64')).metadata()
+    expect(metadata.width).toBeLessThan(500)
+    expect(metadata.height).toBeLessThan(160)
+  })
+
   it('rejects a forged image and never writes it', async () => {
     const response = await POST(await request('stamp', Buffer.from('%PDF-1.4'), 'image/png'))
     expect(response.status).toBe(400)

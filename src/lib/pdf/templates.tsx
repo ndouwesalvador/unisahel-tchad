@@ -1,6 +1,6 @@
 /* eslint-disable jsx-a11y/alt-text -- @react-pdf/renderer Image is not an HTML img */
 import React from 'react'
-import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer'
+import { Document, Page, Text, View, StyleSheet, Image, Svg, Rect, Path, Ellipse } from '@react-pdf/renderer'
 import { formatDate, formatNumber, getVerificationUrl, TenantInfo, StudentInfo } from './utils'
 import { PV_COLUMNS_PER_SHEET, PV_ROWS_PER_SHEET, PV_A4_COLUMNS_PER_SHEET, PV_A4_ROWS_PER_SHEET, type PvSection } from './pv-matrix'
 
@@ -208,26 +208,26 @@ const styles = StyleSheet.create({
   },
 })
 
-function DocumentHeader({ tenant, docNumber }: { tenant: TenantInfo; docNumber?: string }) {
+function DocumentHeader({ tenant, docNumber, compact = false }: { tenant: TenantInfo; docNumber?: string; compact?: boolean }) {
   const shortName = tenant.shortName?.trim() || tenant.name.split(/\s+/).map((word) => word[0]).join('').slice(0, 4).toUpperCase()
   const contact = [tenant.address, tenant.city, tenant.phone, tenant.email, tenant.website].filter(Boolean).join('  ·  ')
   const isChad = /tchad|chad/i.test(tenant.country || '')
   return (
     <View wrap={false}>
       <View style={styles.topRule} />
-      <View style={{ flexDirection: 'row', minHeight: 80, alignItems: 'flex-start', justifyContent: 'space-between' }}>
-        <View style={{ width: tenant.arabicHeaderImage ? '37%' : '55%', alignItems: 'center', paddingRight: 5 }}>
+      <View style={{ flexDirection: 'row', height: compact ? 72 : 90, alignItems: 'center', justifyContent: 'space-between' }}>
+        <View style={{ width: tenant.arabicHeaderImage ? '37%' : '55%', height: compact ? 66 : 76, alignItems: 'center', paddingRight: 5, justifyContent: 'space-between' }}>
           <Text style={{ fontSize: 7.2, fontWeight: 'bold', textAlign: 'center', color: colors.primary }}>{isChad ? 'RÉPUBLIQUE DU TCHAD' : (tenant.country || '').toUpperCase()}</Text>
-          {tenant.ministry && <Text style={{ fontSize: 6.6, textAlign: 'center', marginTop: 3 }}>{tenant.ministry.toUpperCase()}</Text>}
-          <Text style={{ fontSize: 7.4, textAlign: 'center', fontWeight: 'bold', color: colors.primary, marginTop: 4 }}>{tenant.name.toUpperCase()}</Text>
+          <Text style={{ fontSize: 6.6, textAlign: 'center' }}>{tenant.ministry?.toUpperCase() || ' '}</Text>
+          <Text style={{ fontSize: 7.4, textAlign: 'center', fontWeight: 'bold', color: colors.primary }}>{tenant.name.toUpperCase()}</Text>
         </View>
-        <View style={{ width: tenant.arabicHeaderImage ? '26%' : '45%', alignItems: 'center' }}>
+        <View style={{ width: tenant.arabicHeaderImage ? '26%' : '45%', alignItems: 'center', justifyContent: 'center' }}>
           <Text style={{ fontSize: 7, fontWeight: 'bold', color: colors.primary, textAlign: 'center' }}>{tenant.motto?.toUpperCase() || (isChad ? 'UNITÉ · TRAVAIL · PROGRÈS' : '')}</Text>
-          {tenant.logo?.startsWith('data:image/') ? <Image src={tenant.logo} style={{ width: 54, height: 54, objectFit: 'contain', marginTop: 7 }} />
-            : <View style={{ width: 49, height: 49, marginTop: 7, borderWidth: 1, borderColor: colors.secondary, borderRadius: 25, justifyContent: 'center' }}><Text style={{ fontSize: 9, color: colors.secondary, textAlign: 'center' }}>{shortName}</Text></View>}
+          {tenant.logo?.startsWith('data:image/') ? <Image src={tenant.logo} style={{ width: compact ? 62 : 76, height: compact ? 52 : 66, objectFit: 'contain', marginTop: 3 }} />
+            : <View style={{ width: compact ? 52 : 62, height: compact ? 52 : 62, marginTop: 3, borderWidth: 1, borderColor: colors.secondary, borderRadius: 31, justifyContent: 'center' }}><Text style={{ fontSize: 9, color: colors.secondary, textAlign: 'center' }}>{shortName}</Text></View>}
         </View>
-        {tenant.arabicHeaderImage && <View style={{ width: '37%', alignItems: 'center', paddingLeft: 5 }}>
-          {tenant.arabicHeaderImage?.startsWith('data:image/png;base64,') && <Image src={tenant.arabicHeaderImage} style={{ width: '100%', height: 71, objectFit: 'contain' }} />}
+        {tenant.arabicHeaderImage && <View style={{ width: '37%', height: compact ? 66 : 76, alignItems: 'center', paddingLeft: 5, justifyContent: 'center' }}>
+          {tenant.arabicHeaderImage?.startsWith('data:image/png;base64,') && <Image src={tenant.arabicHeaderImage} style={{ width: '100%', height: compact ? 66 : 76, objectFit: 'fill' }} />}
         </View>}
       </View>
       <Text style={{ ...styles.contactLine, marginBottom: 10, textAlign: 'center' }}>{contact || 'Coordonnées de l’établissement non renseignées'}{docNumber ? `  ·  RÉF. ${docNumber.replace(/^[^-]+-/, '')}` : ''}</Text>
@@ -245,9 +245,50 @@ function DocumentHeading({ title, subtitle, isSigned, eyebrow, compact = false }
 
 function SignatureField({ title, name, image }: { title: string; name?: string; image?: string }) {
   return <View style={styles.signatureBlock} wrap={false}>
-    {image?.startsWith('data:image/') ? <Image src={image} style={{ height: 34, width: 120, objectFit: 'contain', marginBottom: 4 }} /> : <View style={styles.signatureLine} />}
-    <Text style={styles.signatureLabel}>{title}</Text>
-    {name && <Text style={[styles.signatureLabel, { color: colors.primary, marginTop: 3 }]}>{name}</Text>}
+    {image?.startsWith('data:image/') ? <Image src={image} style={{ height: 43, width: 150, objectFit: 'contain', marginBottom: 3 }} /> : <View style={{ ...styles.signatureLine, marginTop: 40 }} />}
+    <Text style={[styles.signatureLabel, { fontWeight: 'bold', color: colors.primary, textAlign: 'center' }]}>{title}</Text>
+    {name && <Text style={[styles.signatureLabel, { color: colors.primary, marginTop: 2, textAlign: 'center' }]}>{name}</Text>}
+  </View>
+}
+
+function DocumentSignatories({ tenant, compact = false, anchored = false }: { tenant: TenantInfo; compact?: boolean; anchored?: boolean }) {
+  const hasSecond = Boolean(tenant.secondarySignerName?.trim())
+  return <View style={{ ...(anchored ? { position: 'absolute' as const, bottom: 98, left: 31, right: 31, height: 58 } : { marginTop: compact ? 8 : 18, minHeight: compact ? 59 : 72 }), flexDirection: 'row', alignItems: 'flex-end', justifyContent: hasSecond ? 'space-between' : 'center' }} wrap={false}>
+    <SignatureField title={tenant.rectorTitle || 'Responsable de l’établissement'} name={tenant.rectorName} image={tenant.signature} />
+    {tenant.stamp?.startsWith('data:image/') && <Image src={tenant.stamp} style={{ width: 72, height: 63, objectFit: 'contain', position: 'absolute', left: hasSecond ? '43%' : '63%', bottom: 0 }} />}
+    {hasSecond && <SignatureField title={tenant.secondarySignerTitle || 'Second signataire'} name={tenant.secondarySignerName} image={tenant.secondarySignature} />}
+  </View>
+}
+
+// Stable institution-specific guilloché, drawn as light vector strokes.
+// It is decorative artwork, not a claim of counterfeit-proof security.
+function DiplomaSecurityFrame({ tenant }: { tenant: TenantInfo }) {
+  const seed = [...(tenant.id || tenant.name)].reduce((hash, char) => (hash * 31 + char.charCodeAt(0)) >>> 0, 7)
+  const petals = 10 + seed % 9
+  const loops = Array.from({ length: petals }, (_, index) => {
+    const angle = index * Math.PI * 2 / petals
+    const x = 420 + Math.cos(angle) * (85 + seed % 16)
+    const y = 296 + Math.sin(angle) * (64 + seed % 13)
+    return `M 420 296 Q ${x.toFixed(1)} ${(y - 36).toFixed(1)} ${x.toFixed(1)} ${y.toFixed(1)} Q ${(x + 21).toFixed(1)} ${(y + 27).toFixed(1)} 420 296`
+  }).join(' ')
+  return <View style={{ position: 'absolute', left: 0, top: 0, width: 842, height: 595 }} fixed>
+  <Svg width={842} height={595} viewBox="0 0 842 595">
+    <Rect x={15} y={15} width={812} height={565} fill="none" stroke={colors.primary} strokeWidth={2} />
+    <Rect x={22} y={22} width={798} height={551} fill="none" stroke={colors.accent} strokeWidth={0.9} />
+    <Rect x={29} y={29} width={784} height={537} fill="none" stroke={colors.primary} strokeWidth={0.35} />
+    <Path d={loops} fill="none" stroke={colors.secondary} strokeWidth={0.7} opacity={0.11} />
+    {[0, 1, 2, 3].map((corner) => {
+      const x = corner % 2 ? 776 : 66
+      const y = corner > 1 ? 531 : 64
+      return <React.Fragment key={corner}>
+        <Ellipse cx={x} cy={y} rx={31 + seed % 7} ry={18 + seed % 5} fill="none" stroke={colors.accent} strokeWidth={0.8} opacity={0.5} />
+        <Ellipse cx={x} cy={y} rx={19 + seed % 5} ry={29 + seed % 7} fill="none" stroke={colors.secondary} strokeWidth={0.6} opacity={0.4} />
+      </React.Fragment>
+    })}
+    {Array.from({ length: 8 }, (_, index) => <Path key={index}
+      d={`M 36 ${80 + index * 58} Q ${110 + seed % 60} ${65 + index * 58} 190 ${80 + index * 58} M 652 ${80 + index * 58} Q ${730 - seed % 60} ${65 + index * 58} 806 ${80 + index * 58}`}
+      fill="none" stroke={colors.accent} strokeWidth={0.4} opacity={0.24} />)}
+  </Svg>
   </View>
 }
 
@@ -278,7 +319,6 @@ function Footer({ tenant, docNumber, verificationCode, qrCodeDataUrl, isSigned =
     <>
       {verificationCode && (
         <View style={styles.verificationBar} wrap={false} fixed>
-          {/* eslint-disable-next-line jsx-a11y/alt-text -- @react-pdf/renderer's Image, not an HTML img */}
           {qrCodeDataUrl && <Image src={qrCodeDataUrl} style={styles.qrCode} />}
           <View style={styles.verificationTextGroup}>
             <Text style={[styles.verificationText, { fontWeight: 'bold' }]}>{isSigned ? 'Authenticité vérifiable' : 'Document non validé'} · {verificationCode}</Text>
@@ -305,12 +345,14 @@ export function ReleveNotesPDF({
   const rowCount = ueGrades.reduce((sum, ue) => sum + ue.notes.length, 0)
   const density = ueGrades.length + rowCount
   const credits = ueGrades.reduce((sum, ue) => sum + ue.credits, 0)
-  const tableFont = density > 34 ? 5.5 : density > 24 ? 6.1 : 7.1
-  const rowPadding = density > 34 ? 0.7 : density > 24 ? 1.8 : density > 18 ? 2.5 : 3.2
+  const tableFont = density > 34 ? 5.5 : density > 24 ? 6.1 : density > 18 ? 7.1 : 8.2
+  // Share the available table area between rows: a short transcript breathes,
+  // while a long one remains on one sheet. The API still rejects overflow.
+  const rowPadding = Math.max(0.55, Math.min(7, (300 - density * tableFont * 1.25) / Math.max(1, density * 2)))
   return (
     <Document>
       <Page size="A4" style={{ ...styles.page, paddingTop: 21, paddingHorizontal: 31, paddingBottom: 93 }}>
-        <DocumentHeader tenant={tenant} docNumber={docNumber} />
+        <DocumentHeader tenant={tenant} docNumber={docNumber} compact />
         <DocumentHeading title="RELEVÉ INDIVIDUEL DE NOTES" subtitle={`Année académique ${academicYear} · ${semester}`} isSigned={isSigned} compact={density > 34} />
 
         <View style={{ flexDirection: 'row', borderWidth: 1, borderColor: colors.border, marginBottom: 6, padding: 6 }} wrap={false}>
@@ -360,7 +402,7 @@ export function ReleveNotesPDF({
           <Text style={{ fontSize: 8, width: '43%', textAlign: 'right' }}>Décision du jury : <Text style={{ fontWeight: 'bold', color: jury && ['ADMI', 'ADMI_DETTE', 'COMPENSE'].includes(jury.decision) ? colors.secondary : colors.primary }}>{jury ? decisionLabel(jury.decision) : 'Non publiée'}</Text></Text>
         </View>
         {jury && <Text style={{ fontSize: 7.5, color: colors.muted, marginTop: 7 }}>Résultats arrêtés par le jury le {formatDate(jury.date)}. CC : contrôle continu · TP : travaux pratiques · EC : élément constitutif · UE : unité d’enseignement.</Text>}
-        <OfficialMarks tenant={tenant} />
+        <DocumentSignatories tenant={tenant} compact={density > 24} anchored />
 
         <Footer tenant={tenant} docNumber={docNumber} verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} isSigned={isSigned} />
       </Page>
@@ -473,10 +515,11 @@ export function DiplomePDF({
   return (
     <Document>
       <Page size="A4" orientation="landscape" style={{ ...styles.page, paddingTop: 27, paddingBottom: 87 }}>
+        <DiplomaSecurityFrame tenant={tenant} />
         <DocumentHeader tenant={tenant} docNumber={docNumber} />
-        <DocumentHeading title="DIPLÔME" subtitle={diploma.program} isSigned={isSigned} />
+        <DocumentHeading title="DIPLÔME" subtitle={diploma.program} isSigned={isSigned} compact />
 
-        <View style={{ marginVertical: 7, paddingVertical: 12, paddingHorizontal: 18, alignItems: 'center', borderWidth: 1.5, borderColor: colors.accent }} wrap={false}>
+        <View style={{ flexGrow: 1, minHeight: 190, marginVertical: 5, paddingVertical: 15, paddingHorizontal: 18, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: colors.accent, backgroundColor: '#ffffffde' }} wrap={false}>
           <Text style={{ fontSize: 9, color: colors.muted, marginBottom: 8, letterSpacing: 1 }}>DÉCERNÉ À</Text>
           <Text style={{ fontSize: 19, fontWeight: 'bold', color: colors.primary, marginVertical: 8, textAlign: 'center' }}>
             {student.firstName} {student.lastName}
@@ -491,11 +534,7 @@ export function DiplomePDF({
           <Text style={{ fontSize: 9, color: colors.muted, marginTop: 8 }}>Décision finale du jury du {formatDate(diploma.date)}</Text>
         </View>
 
-        <View style={{ ...styles.signature, marginTop: 8 }} wrap={false}>
-          <SignatureField title="Présidence du jury" />
-          <SignatureField title={tenant.rectorTitle || 'Responsable de l’établissement'} name={tenant.rectorName} image={tenant.signature} />
-        </View>
-        <OfficialMarks tenant={{ ...tenant, signature: undefined }} />
+        <DocumentSignatories tenant={tenant} compact />
 
         <Footer tenant={tenant} docNumber={docNumber} verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} isSigned={isSigned} />
       </Page>

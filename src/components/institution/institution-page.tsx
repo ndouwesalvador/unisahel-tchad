@@ -109,10 +109,13 @@ interface TenantData {
   website: string | null
   rectorName: string | null
   rectorTitle: string | null
+  secondarySignerName: string | null
+  secondarySignerTitle: string | null
   academicSystem: string
   logo: string | null
   stamp: string | null
   signature: string | null
+  secondarySignature: string | null
   headerLanguageMode: string
   arabicCountry: string | null
   arabicName: string | null
@@ -289,6 +292,9 @@ function InformationsTab() {
     logo: '',
     stamp: '',
     signature: '',
+    secondarySignerName: '',
+    secondarySignerTitle: '',
+    secondarySignature: '',
     headerLanguageMode: 'FR_ONLY',
     arabicCountry: '',
     arabicName: '',
@@ -317,6 +323,9 @@ function InformationsTab() {
         logo: t.logo || '',
         stamp: t.stamp || '',
         signature: t.signature || '',
+        secondarySignerName: t.secondarySignerName || '',
+        secondarySignerTitle: t.secondarySignerTitle || '',
+        secondarySignature: t.secondarySignature || '',
         headerLanguageMode: t.headerLanguageMode || 'FR_ONLY',
         arabicCountry: t.arabicCountry || '',
         arabicName: t.arabicName || '',
@@ -330,7 +339,7 @@ function InformationsTab() {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
-  const handleAssetUpload = async (kind: 'logo' | 'stamp' | 'signature', file?: File) => {
+  const handleAssetUpload = async (kind: 'logo' | 'stamp' | 'signature' | 'secondarySignature', file?: File) => {
     if (!file) return
     setUploadingKind(kind)
     try {
@@ -373,6 +382,8 @@ function InformationsTab() {
           website: formData.siteWeb,
           rectorName: formData.recteurNom,
           rectorTitle: formData.recteurTitre,
+          secondarySignerName: formData.secondarySignerName,
+          secondarySignerTitle: formData.secondarySignerTitle,
           headerLanguageMode: formData.headerLanguageMode,
           arabicCountry: formData.arabicCountry,
           arabicName: formData.arabicName,
@@ -451,8 +462,21 @@ function InformationsTab() {
           <Card className="border-l-4 border-l-[#1a2744]">
             <CardHeader className="pb-3"><CardTitle className="text-base">Signature du responsable</CardTitle><CardDescription>Image de signature utilisée sur les documents officiels ; ce visuel ne vaut pas signature cryptographique.</CardDescription></CardHeader>
             <CardContent className="space-y-3">
-              {formData.signature && <div className="h-20 border rounded-lg bg-white p-2">{/* eslint-disable-next-line @next/next/no-img-element -- stored institution artwork */}<img src={formData.signature} alt="Signature enregistrée" className="h-full w-full object-contain" /></div>}
+              {formData.signature && <div className="h-20 border rounded-lg bg-white p-2">
+                {/* eslint-disable-next-line @next/next/no-img-element -- stored institution artwork */}
+                <img src={formData.signature} alt="Signature enregistrée" className="h-full w-full object-contain" />
+              </div>}
               <Input type="file" accept="image/png,image/jpeg,image/webp" aria-label="Téléverser la signature" disabled={Boolean(uploadingKind)} onChange={(event) => void handleAssetUpload('signature', event.target.files?.[0])} />
+            </CardContent>
+          </Card>
+          <Card className="border-l-4 border-l-[#176341]">
+            <CardHeader className="pb-3"><CardTitle className="text-base">Second signataire (facultatif)</CardTitle><CardDescription>Affiché sur les diplômes et relevés si un nom est renseigné.</CardDescription></CardHeader>
+            <CardContent className="space-y-3">
+              {formData.secondarySignature && <div className="h-20 border rounded-lg bg-white p-2">
+                {/* eslint-disable-next-line @next/next/no-img-element -- stored institution artwork */}
+                <img src={formData.secondarySignature} alt="Signature du second signataire" className="h-full w-full object-contain" />
+              </div>}
+              <Input type="file" accept="image/png,image/jpeg,image/webp" aria-label="Téléverser la signature du second signataire" disabled={Boolean(uploadingKind)} onChange={(event) => void handleAssetUpload('secondarySignature', event.target.files?.[0])} />
             </CardContent>
           </Card>
         </div>
@@ -601,6 +625,14 @@ function InformationsTab() {
                       <SelectItem value="Administrateur">Administrateur</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+                <div>
+                  <Label htmlFor="secondarySignerName">Nom du second signataire (facultatif)</Label>
+                  <Input id="secondarySignerName" value={formData.secondarySignerName} onChange={(event) => handleChange('secondarySignerName', event.target.value)} className="mt-1.5" placeholder="Ex. président du jury" />
+                </div>
+                <div>
+                  <Label htmlFor="secondarySignerTitle">Fonction du second signataire</Label>
+                  <Input id="secondarySignerTitle" value={formData.secondarySignerTitle} onChange={(event) => handleChange('secondarySignerTitle', event.target.value)} className="mt-1.5" placeholder="Ex. Président du jury" />
                 </div>
               </div>
               <div className="mt-6 flex justify-end">

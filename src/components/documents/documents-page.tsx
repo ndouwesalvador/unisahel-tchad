@@ -268,6 +268,16 @@ export function DocumentsPage() {
     }
   }, [])
 
+  const prepareReissue = useCallback((doc: GeneratedDoc) => {
+    if (!doc.studentId || !doc.academicYearId) return
+    setSelectedType(doc.typeKey)
+    setSelectedStudentId(doc.studentId)
+    setSelectedStudentLabel(`${doc.etudiant} (${doc.matricule})`)
+    setSelectedYearId(doc.academicYearId)
+    document.getElementById('document-generator')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    toast.info('Vérifiez les paramètres puis générez une nouvelle pièce. L’original reste conservé.')
+  }, [])
+
   const filteredDocs = generatedDocuments.filter(d => {
     const matchSearch = search === '' ||
       d.etudiant.toLowerCase().includes(search.toLowerCase()) ||
@@ -582,6 +592,7 @@ export function DocumentsPage() {
               </p>
             )}
             {signedOnlyDocument && <p className="text-xs text-gray-500 mt-2">Ce document exige une délibération finale validée, les crédits complets sans dette et une validation par un responsable.</p>}
+            <p className="text-xs text-gray-500 mt-2">Le logo et les signatures sont figés lors de l’émission. Après une modification de l’identité visuelle, générez un nouveau document pour l’utiliser ; les pièces déjà délivrées restent inchangées.</p>
             {selectedDocumentType && !selectedDocumentType.implemented && (
               <p className="text-xs text-[#d4a853] mt-2">
                 Ce type n’est pas générable depuis cet écran : {selectedDocumentType.tooltip}.
@@ -707,6 +718,11 @@ export function DocumentsPage() {
                                   Télécharger
                                 </Button>
                               </div>
+                            )}
+                            {canManageDocuments && doc.studentId && doc.academicYearId && ['releve_notes', 'diplome'].includes(doc.typeKey) && (
+                              <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => prepareReissue(doc)}>
+                                Réémettre
+                              </Button>
                             )}
                           </div>
                         </TableCell>

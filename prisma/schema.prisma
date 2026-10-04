@@ -54,6 +54,9 @@ model Tenant {
   ministry               String?
   rectorName             String?
   rectorTitle            String?
+  secondarySignerName    String?
+  secondarySignerTitle   String?
+  secondarySignature     String?
   academicSystem         String                  @default("LMD")
   matriculeFormat        String?                 @default("UNSH-{YEAR}-{LEVEL}-{SEQ}")
   loginFormat            String?                 @default("UNSH-{YEAR}-{LEVEL}-{SEQ}")

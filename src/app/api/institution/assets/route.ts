@@ -3,7 +3,7 @@ import sharp from 'sharp'
 import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
 
-const ASSET_KINDS = ['logo', 'stamp', 'signature'] as const
+const ASSET_KINDS = ['logo', 'stamp', 'signature', 'secondarySignature'] as const
 type AssetKind = typeof ASSET_KINDS[number]
 
 async function handlePost(user: SessionUser, tenantId: string, request: NextRequest) {
@@ -22,8 +22,10 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
     if (!metadata.width || !metadata.height || metadata.width > 5000 || metadata.height > 5000) {
       return NextResponse.json({ error: 'Dimensions de l’image invalides.' }, { status: 400 })
     }
+    // Crop wide white/transparent margins: otherwise a real logo or signature
+    // appears minuscule inside the document's fixed image box.
     const optimized = await sharp(input, { failOn: 'error' })
-      .rotate().resize({ width: kind === 'logo' ? 520 : 400, height: kind === 'logo' ? 520 : 400,
+      .rotate().trim({ threshold: 12 }).resize({ width: kind === 'logo' ? 520 : 540, height: kind === 'logo' ? 520 : 180,
         fit: 'inside', withoutEnlargement: true })
       .png({ compressionLevel: 9, palette: true }).toBuffer()
     if (optimized.length > 300_000) {

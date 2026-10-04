@@ -39,6 +39,7 @@ export function getVerificationUrl(verificationCode: string): string {
 }
 
 export interface TenantInfo {
+  id?: string
   name: string
   shortName?: string
   address?: string
@@ -51,6 +52,9 @@ export interface TenantInfo {
   logo?: string
   stamp?: string
   signature?: string
+  secondarySignature?: string
+  secondarySignerName?: string
+  secondarySignerTitle?: string
   arabicName?: string
   arabicMinistry?: string
   arabicHeaderImage?: string

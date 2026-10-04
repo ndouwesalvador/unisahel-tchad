@@ -4,6 +4,8 @@ import { countPdfPages } from './utils'
 import { AttestationInscriptionPDF, AttestationNiveauPDF, CertificatScolaritePDF, DiplomePDF, PVDeliberationPDF, ReleveNotesPDF, renderPDF } from './templates'
 import type { PvSection } from './pv-matrix'
 import { renderArabicHeader } from './arabic-header'
+import { prepareDocumentArtwork } from './artwork'
+import sharp from 'sharp'
 
 const tenant = { name: 'UNIVERSITÉ POLYTECHNIQUE DE MONGO', shortName: 'UPDM',
   country: 'Tchad', ministry: 'Ministère de l’Enseignement supérieur', city: 'Mongo',
@@ -36,9 +38,9 @@ describe('printed academic documents', () => {
       semester: 'Deux semestres', academicYear: '2026-2027', jury: {
         average: 15, creditsAcquired: 60, decision: 'ADMI', date: '2026-10-01',
       }, docNumber: 'RN-DEV-001', verificationCode: 'TESTCODE', isSigned: true }))
+    await savePreview('releve-design-a4.pdf', pdf)
     expect(countPdfPages(pdf)).toBe(1)
     expect(pdf.toString('latin1')).toMatch(/\/MediaBox \[0 0 595\.28\d* 841\.89\d*\]/)
-    await savePreview('releve-design-a4.pdf', pdf)
   })
 
   it('uses one A4 sheet for a dense transcript', async () => {
@@ -51,9 +53,9 @@ describe('printed academic documents', () => {
       logo: tenant.arabicHeaderImage, stamp: tenant.arabicHeaderImage, signature: tenant.arabicHeaderImage }, student, ueGrades,
       semester: 'Deux semestres', academicYear: '2026-2027', docNumber: 'RN-DEV-DENSE',
       verificationCode: 'DENSETEST', isSigned: true }))
+    await savePreview('releve-design-dense.pdf', pdf)
     expect(countPdfPages(pdf)).toBe(1)
     expect(pdf.toString('latin1')).toMatch(/\/MediaBox \[0 0 595\.28\d* 841\.89\d*\]/)
-    await savePreview('releve-design-dense.pdf', pdf)
   })
 
   it('keeps a licence-style transcript with twenty subjects on one A4 sheet', async () => {
@@ -65,8 +67,32 @@ describe('printed academic documents', () => {
     const pdf = await renderPDF(React.createElement(ReleveNotesPDF, { tenant, student, ueGrades,
       semester: 'Deux semestres', academicYear: '2026-2027', docNumber: 'RN-DEV-LICENCE',
       verificationCode: 'LICENCETEST', isSigned: true }))
-    expect(countPdfPages(pdf)).toBe(1)
     await savePreview('releve-design-licence.pdf', pdf)
+    expect(countPdfPages(pdf)).toBe(1)
+  })
+
+  it('prints cropped institutional logo and two readable signer blocks on both documents', async () => {
+    const logoSvg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><circle cx="200" cy="200" r="155" fill="#176341"/><circle cx="200" cy="200" r="125" fill="white"/><path d="M130 240 L200 105 L270 240 Z" fill="#176341"/></svg>')
+    const signatureSvg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="500" height="160"><path d="M10 118 Q 55 5 82 115 T 162 97 Q 220 18 251 103 T 390 88 L 485 56" fill="none" stroke="#142a52" stroke-width="7"/></svg>')
+    const raw = { ...tenant, id: 'institution-a', rectorName: 'Amina Responsable', rectorTitle: 'Rectrice',
+      secondarySignerName: 'Youssouf Président', secondarySignerTitle: 'Président du jury',
+      logo: `data:image/png;base64,${(await sharp(logoSvg).png().toBuffer()).toString('base64')}`,
+      signature: `data:image/png;base64,${(await sharp(signatureSvg).png().toBuffer()).toString('base64')}`,
+      secondarySignature: `data:image/png;base64,${(await sharp(signatureSvg).png().toBuffer()).toString('base64')}` }
+    const branded = await prepareDocumentArtwork(raw)
+    const diploma = await renderPDF(React.createElement(DiplomePDF, { tenant: branded, student,
+      diploma: { title: 'Licence en génie industriel', program: 'Génie industriel', date: '2026-10-01', credits: 180 },
+      docNumber: 'DIP-BRAND-001', verificationCode: 'BRANDTEST', isSigned: true }))
+    const transcript = await renderPDF(React.createElement(ReleveNotesPDF, { tenant: branded, student,
+      ueGrades: [{ ue: 'Génie industriel', code: 'UE1', credits: 30, moyenne: 15,
+        notes: [{ ec: 'Mécanique appliquée', coef: 1, cc: 15, exam: 15, final: 15 }] }],
+      semester: 'Semestre 1', academicYear: '2026-2027', docNumber: 'RN-BRAND-001',
+      verificationCode: 'BRANDTEST', isSigned: true }))
+    expect(countPdfPages(diploma)).toBe(1)
+    expect(countPdfPages(transcript)).toBe(1)
+    expect((diploma.toString('latin1').match(/\/Subtype \/Image/g) || []).length).toBeGreaterThanOrEqual(3)
+    await savePreview('diplome-deux-signataires.pdf', diploma)
+    await savePreview('releve-deux-signataires.pdf', transcript)
   })
 
   it('tiles a department PV by columns and students with matching row numbers', async () => {
@@ -127,6 +153,7 @@ describe('printed academic documents', () => {
     ] as const
     for (const [name, element] of documents) {
       const pdf = await renderPDF(element)
+      await savePreview(name, pdf)
       expect(countPdfPages(pdf), name).toBe(1)
       expect(pdf.toString('latin1')).toContain(name === 'diplome.pdf' ? '/MediaBox [0 0 841.890' : '/MediaBox [0 0 595.280')
       await savePreview(name, pdf)

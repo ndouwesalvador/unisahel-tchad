@@ -57,7 +57,8 @@ function request(body: unknown) {
 beforeEach(() => {
   vi.clearAllMocks()
   authMock.mockResolvedValue({ user: { id: 'admin-A', role: 'ADMIN_INSTITUTION', tenantId } })
-  dbMock.tenant.findUnique.mockResolvedValue({ id: tenantId, name: 'Université A' })
+  dbMock.tenant.findUnique.mockResolvedValue({ id: tenantId, name: 'Université A',
+    logo: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO6p8Z8AAAAASUVORK5CYII=' })
   dbMock.student.findFirst.mockResolvedValue({ id: studentId, firstName: 'Awa', lastName: 'Test', matricule: 'A-001',
     currentProgram: { name: 'Programme actuel' }, currentLevel: { name: 'Niveau actuel' } })
   dbMock.academicYear.findFirst.mockResolvedValue({ id: 'year-A', name: '2026-2027' })
@@ -89,6 +90,21 @@ beforeEach(() => {
 })
 
 describe('POST /api/documents/generate', () => {
+  it('does not issue a diploma with a missing official logo', async () => {
+    dbMock.tenant.findUnique.mockResolvedValue({ id: tenantId, name: 'Université A', logo: null })
+    const response = await POST(request({ type: 'DIPLOME', tenantId, studentId, sign: true }))
+    expect(response.status).toBe(409)
+    expect((await response.json()).error).toContain('logo officiel')
+    expect(dbMock.officialDocument.create).not.toHaveBeenCalled()
+  })
+
+  it('does not issue a diploma when its layout spills onto a second sheet', async () => {
+    renderPDFMock.mockResolvedValue(Buffer.from('%PDF-1.4\n/Type /Page\n/Type /Page\n'))
+    const response = await POST(request({ type: 'DIPLOME', tenantId, studentId, academicYearId: 'year-A', sign: true }))
+    expect(response.status).toBe(409)
+    expect((await response.json()).error).toContain('dépasse une page')
+    expect(dbMock.officialDocument.create).not.toHaveBeenCalled()
+  })
   it('refuses document generation by a teacher role', async () => {
     authMock.mockResolvedValue({ user: { id: 'teacher-A', role: 'ENSEIGNANT', tenantId } })
     const response = await POST(request({ type: 'ATTESTATION_INSCRIPTION', tenantId, studentId }))

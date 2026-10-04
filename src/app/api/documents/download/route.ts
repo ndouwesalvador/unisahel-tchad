@@ -11,6 +11,7 @@ import {
   AttestationNiveauPDF, DiplomePDF, PVDeliberationPDF,
 } from '@/lib/pdf/templates'
 import { expectedPvSheetCount, type PvSection } from '@/lib/pdf/pv-matrix'
+import { prepareDocumentArtwork } from '@/lib/pdf/artwork'
 
 const STAFF_ROLES = new Set(['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'RECTORAT', 'SCOLARITE'])
 
@@ -64,7 +65,7 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
   if (!document.number || !document.verificationCode) {
     return NextResponse.json({ error: 'Référence historique incomplète : PDF non reproductible.' }, { status: 409 })
   }
-  const tenant = snapshot.tenant as unknown as TenantInfo
+  const tenant = await prepareDocumentArtwork(snapshot.tenant as unknown as TenantInfo)
   const student = record(snapshot.student) ? snapshot.student as unknown as StudentInfo : null
   const docNumber = document.number
   const verificationCode = document.verificationCode
@@ -104,11 +105,16 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
         award: snapshot.award as Parameters<typeof AttestationNiveauPDF>[0]['award'] })
       return pdfResponse(await renderPDF(pdf), document.type, docNumber)
     }
-    case 'DIPLOME':
+    case 'DIPLOME': {
       if (!student || !record(snapshot.diploma)) break
       pdf = React.createElement(DiplomePDF, { ...common, student,
         diploma: snapshot.diploma as Parameters<typeof DiplomePDF>[0]['diploma'] })
-      return pdfResponse(await renderPDF(pdf), document.type, docNumber)
+      const diploma = await renderPDF(pdf)
+      if (countPdfPages(diploma) !== 1) {
+        return NextResponse.json({ error: 'Ce diplôme historique ne tient pas sur une page avec la maquette actuelle.' }, { status: 409 })
+      }
+      return pdfResponse(diploma, document.type, docNumber)
+    }
     case 'PV_DELIBERATION': {
       if (!record(snapshot.session) || !Array.isArray(snapshot.members) || !Array.isArray(snapshot.students) ||
           typeof snapshot.departmentName !== 'string' || typeof snapshot.academicYear !== 'string') break

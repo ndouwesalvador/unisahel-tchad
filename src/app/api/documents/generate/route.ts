@@ -12,6 +12,7 @@ import { parseJuryMembers } from '@/lib/deliberations/jury'
 import { buildPvMatrix, expectedPvSheetCount, PvMatrixError, type PvSection } from '@/lib/pdf/pv-matrix'
 import { countPdfPages } from '@/lib/pdf/utils'
 import { renderArabicHeader } from '@/lib/pdf/arabic-header'
+import { prepareDocumentArtwork } from '@/lib/pdf/artwork'
 
 const SIGNING_ROLES = new Set(['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'RECTORAT', 'SCOLARITE', 'JURY', 'FACULTE', 'DEPARTEMENT'])
 const GENERATING_ROLES = new Set([...SIGNING_ROLES, 'ETUDIANT', 'ETUDIANT_SANTE'])
@@ -68,13 +69,16 @@ export async function POST(request: NextRequest) {
     // Fetch real tenant data
     const tenantDb = await db.tenant.findUnique({
       where: { id: tenantId },
-      select: { id: true, name: true, shortName: true, address: true, city: true, country: true, ministry: true, phone: true, email: true, logo: true, stamp: true, signature: true, headerLanguageMode: true, arabicCountry: true, arabicName: true, arabicMinistry: true, rectorName: true, rectorTitle: true, motto: true },
+      select: { id: true, name: true, shortName: true, address: true, city: true, country: true, ministry: true, phone: true, email: true, logo: true, stamp: true, signature: true, secondarySignature: true, secondarySignerName: true, secondarySignerTitle: true, headerLanguageMode: true, arabicCountry: true, arabicName: true, arabicMinistry: true, rectorName: true, rectorTitle: true, motto: true },
     })
 
     if (!tenantDb) {
       return NextResponse.json({ error: 'Établissement introuvable' }, { status: 404 })
     }
-    const tenant = {
+    if (type === 'DIPLOME' && !tenantDb.logo?.startsWith('data:image/')) {
+      return NextResponse.json({ error: 'Téléversez le logo officiel de l’institution avant d’émettre un diplôme.' }, { status: 409 })
+    }
+    const tenant = await prepareDocumentArtwork({
       id: tenantDb.id,
       name: tenantDb.name,
       shortName: tenantDb.shortName || '',
@@ -87,6 +91,9 @@ export async function POST(request: NextRequest) {
       logo: tenantDb.logo || '',
       stamp: tenantDb.stamp || '',
       signature: tenantDb.signature || '',
+      secondarySignature: tenantDb.secondarySignature || '',
+      secondarySignerName: tenantDb.secondarySignerName || '',
+      secondarySignerTitle: tenantDb.secondarySignerTitle || '',
       arabicName: tenantDb.arabicName || '',
       arabicMinistry: tenantDb.arabicMinistry || '',
       arabicCountry: tenantDb.arabicCountry || '',
@@ -95,7 +102,7 @@ export async function POST(request: NextRequest) {
       rectorName: tenantDb.rectorName || '',
       rectorTitle: tenantDb.rectorTitle || 'Recteur',
       motto: tenantDb.motto || '',
-    }
+    })
 
     // Fetch real student data
     let student: {
@@ -597,6 +604,9 @@ export async function POST(request: NextRequest) {
     const pdfBuffer = await renderPDF(DocumentComponent)
     if (type === 'RELEVE_NOTES' && countPdfPages(pdfBuffer) !== 1) {
       return NextResponse.json({ error: 'Le relevé dépasse une page : vérifiez les libellés et la maquette avant émission.' }, { status: 409 })
+    }
+    if (type === 'DIPLOME' && countPdfPages(pdfBuffer) !== 1) {
+      return NextResponse.json({ error: 'Le diplôme dépasse une page : vérifiez les noms et les intitulés avant émission.' }, { status: 409 })
     }
     if (pvSections && countPdfPages(pdfBuffer) !== expectedPvSheetCount(pvSections, pvPageFormat)) {
       return NextResponse.json({ error: `Le PV déborde du format ${pvPageFormat} prévu : corrigez les libellés avant émission.` }, { status: 409 })
