@@ -135,6 +135,7 @@ export function DocumentsPage() {
   const [studentSearch, setStudentSearch] = useState('')
   const [isGenerating, setIsGenerating] = useState(false)
   const [isGeneratingSigned, setIsGeneratingSigned] = useState(false)
+  const [downloadingId, setDownloadingId] = useState<string | null>(null)
   const [qrCode, setQrCode] = useState<string | null>(null)
   const qrCodeRef = useRef<string | null>(null)
 
@@ -177,11 +178,9 @@ export function DocumentsPage() {
     (!selectedDocumentType.requiresStudent || selectedStudentId)
   )
 
-  const generateDoc = useCallback(async (sign: boolean = false, override?: { type: string; studentId: string | null; academicYearId: string | null }) => {
-    const apiType = override?.type ?? documentTypeList.find((dt) => dt.key === selectedType)?.apiType
-    const docType = override
-      ? documentTypeList.find((dt) => dt.apiType === override.type)
-      : documentTypeList.find((dt) => dt.key === selectedType)
+  const generateDoc = useCallback(async (sign: boolean = false) => {
+    const docType = documentTypeList.find((dt) => dt.key === selectedType)
+    const apiType = docType?.apiType
     if (!apiType || !user) return
     if (['ATTESTATION_NIVEAU', 'DIPLOME'].includes(apiType) && !sign) {
       toast.error('Validation requise', { description: 'Ce document officiel ne peut pas être généré comme brouillon.' })
@@ -191,7 +190,7 @@ export function DocumentsPage() {
       toast.error('Document non configuré', { description: 'Ce type ne peut pas être généré depuis cet écran.' })
       return
     }
-    if (docType.requiresStudent && !(override?.studentId || selectedStudentId)) {
+    if (docType.requiresStudent && !selectedStudentId) {
       toast.error('Étudiant requis', { description: 'Sélectionnez un étudiant avant de générer ce document.' })
       return
     }
@@ -205,8 +204,8 @@ export function DocumentsPage() {
         body: JSON.stringify({
           type: apiType,
           tenantId: user.tenantId,
-          studentId: override ? override.studentId || undefined : selectedStudentId || undefined,
-          academicYearId: override?.academicYearId || selectedYearId || undefined,
+          studentId: selectedStudentId || undefined,
+          academicYearId: selectedYearId || undefined,
           sign,
         }),
       })
@@ -243,6 +242,31 @@ export function DocumentsPage() {
       loading(false)
     }
   }, [selectedType, selectedStudentId, selectedYearId, user, queryClient])
+
+  const downloadDoc = useCallback(async (doc: GeneratedDoc) => {
+    setDownloadingId(doc.id)
+    try {
+      const response = await fetch(`/api/documents/download?id=${encodeURIComponent(doc.id)}`)
+      if (!response.ok) {
+        const problem = await response.json()
+        throw new Error(problem.error || 'Document indisponible')
+      }
+      const url = URL.createObjectURL(await response.blob())
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `${doc.typeKey}_${doc.codeVerification || doc.id}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.setTimeout(() => URL.revokeObjectURL(url), 30_000)
+    } catch (error) {
+      toast.error('Téléchargement impossible', {
+        description: error instanceof Error ? error.message : 'Veuillez réessayer.',
+      })
+    } finally {
+      setDownloadingId(null)
+    }
+  }, [])
 
   const filteredDocs = generatedDocuments.filter(d => {
     const matchSearch = search === '' ||
@@ -670,23 +694,17 @@ export function DocumentsPage() {
                         </TableCell>
                         <TableCell className="text-right py-2.5">
                           <div className="flex items-center justify-end gap-1">
-                            {doc.statut !== 'en_attente' && doc.studentId && doc.academicYearId && documentTypeList.some((type) => type.key === doc.typeKey && type.implemented) && (
+                            {doc.statut !== 'en_attente' && (
                               <div className="flex items-center gap-1">
                                 <Button
                                   variant="ghost"
                                   size="sm"
                                   className="h-7 text-xs text-gray-500 hover:text-gray-700"
-                                  onClick={() => {
-                                    const docType = documentTypeList.find((dt) => dt.key === doc.typeKey)
-                                    if (docType?.apiType && docType.implemented) {
-                                      generateDoc(true, { type: docType.apiType, studentId: doc.studentId, academicYearId: doc.academicYearId })
-                                    } else {
-                                      toast.error('Régénération indisponible', { description: 'Ce type de document n’est pas configuré depuis cet écran.' })
-                                    }
-                                  }}
+                                  onClick={() => downloadDoc(doc)}
+                                  disabled={downloadingId === doc.id}
                                 >
-                                  <Download className="size-3.5 mr-1" />
-                                  Créer un PDF validé
+                                  {downloadingId === doc.id ? <Loader2 className="size-3.5 mr-1 animate-spin" /> : <Download className="size-3.5 mr-1" />}
+                                  Télécharger
                                 </Button>
                               </div>
                             )}
