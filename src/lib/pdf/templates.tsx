@@ -27,9 +27,9 @@ const styles = StyleSheet.create({
   identityBody: { flex: 1 },
   country: { fontSize: 8, fontWeight: 'bold', color: colors.primary, letterSpacing: 1.2, marginBottom: 3 },
   ministry: { fontSize: 7.5, color: colors.muted, marginBottom: 3 },
-  reference: { maxWidth: 132, alignItems: 'flex-end', marginLeft: 10 },
+  reference: { width: 155, alignItems: 'flex-end', marginLeft: 10 },
   referenceLabel: { fontSize: 7, fontWeight: 'bold', color: colors.muted, marginBottom: 3 },
-  referenceValue: { fontSize: 7.5, color: colors.primary, textAlign: 'right' },
+  referenceValue: { fontSize: 6, color: colors.primary, textAlign: 'right' },
   contactLine: { paddingVertical: 6, borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.border, fontSize: 7.5, color: colors.muted, marginBottom: 17 },
   eyebrow: { fontSize: 8, fontWeight: 'bold', color: colors.secondary, letterSpacing: 1.4, textAlign: 'center', marginBottom: 8 },
   header: {
@@ -272,11 +272,14 @@ function Footer({ tenant, docNumber, verificationCode, qrCodeDataUrl, isSigned =
 export function ReleveNotesPDF({
   tenant, student, semester, ueGrades, academicYear, docNumber, verificationCode, qrCodeDataUrl, isSigned = false,
 }: {
-  tenant: TenantInfo; student: StudentInfo; semester: string; ueGrades: Array<{ ue: string; code: string; credits: number; notes: Array<{ ec: string; coef: number; cc?: number; exam?: number; final?: number }>; moyenne?: number }>; academicYear: string; docNumber: string; verificationCode: string; qrCodeDataUrl?: string; isSigned?: boolean
+  tenant: TenantInfo; student: StudentInfo; semester: string; ueGrades: Array<{ ue: string; code: string; credits: number; notes: Array<{ ec: string; coef: number; cc?: number; tp?: number; exam?: number; final?: number }>; moyenne?: number }>; academicYear: string; docNumber: string; verificationCode: string; qrCodeDataUrl?: string; isSigned?: boolean
 }) {
   return (
     <Document>
       <Page size="A4" style={styles.page}>
+        <Text fixed style={{ position: 'absolute', top: 18, left: 48, right: 48, fontSize: 7, color: colors.muted }}>
+          {tenant.name} · RELEVÉ DE NOTES · {student.matricule} · {academicYear}
+        </Text>
         <DocumentHeader tenant={tenant} docNumber={docNumber} />
         <DocumentHeading title="RELEVÉ DE NOTES" subtitle={`Année académique ${academicYear} · ${semester}`} isSigned={isSigned} />
 
@@ -297,25 +300,28 @@ export function ReleveNotesPDF({
             <Text style={styles.sectionTitle}>{ue.code} — {ue.ue} ({ue.credits} crédits)</Text>
             <View style={styles.table}>
               <View style={styles.tableHeader}>
-                <Text style={[styles.tableHeaderCell, { width: '40%' }]}>Élément Constitutif</Text>
-                <Text style={[styles.tableHeaderCell, { width: '15%', textAlign: 'center' }]}>Coefficient</Text>
-                <Text style={[styles.tableHeaderCell, { width: '15%', textAlign: 'center' }]}>CC</Text>
+                <Text style={[styles.tableHeaderCell, { width: '34%' }]}>Élément Constitutif</Text>
+                <Text style={[styles.tableHeaderCell, { width: '12%', textAlign: 'center' }]}>Coef.</Text>
+                <Text style={[styles.tableHeaderCell, { width: '12%', textAlign: 'center' }]}>CC</Text>
+                <Text style={[styles.tableHeaderCell, { width: '12%', textAlign: 'center' }]}>TP</Text>
                 <Text style={[styles.tableHeaderCell, { width: '15%', textAlign: 'center' }]}>Examen</Text>
                 <Text style={[styles.tableHeaderCell, { width: '15%', textAlign: 'center' }]}>Moyenne</Text>
               </View>
               {ue.notes.map((n, j) => (
                 <View key={j} style={[styles.tableRow, j % 2 === 1 ? styles.tableRowAlt : {}]}>
-                  <Text style={[styles.tableCell, { width: '40%' }]}>{n.ec}</Text>
-                  <Text style={[styles.tableCellCenter, { width: '15%' }]}>{n.coef}</Text>
-                  <Text style={[styles.tableCellCenter, { width: '15%' }]}>{n.cc != null ? formatNumber(n.cc) : '-'}</Text>
+                  <Text style={[styles.tableCell, { width: '34%' }]}>{n.ec}</Text>
+                  <Text style={[styles.tableCellCenter, { width: '12%' }]}>{n.coef}</Text>
+                  <Text style={[styles.tableCellCenter, { width: '12%' }]}>{n.cc != null ? formatNumber(n.cc) : '-'}</Text>
+                  <Text style={[styles.tableCellCenter, { width: '12%' }]}>{n.tp != null ? formatNumber(n.tp) : '-'}</Text>
                   <Text style={[styles.tableCellCenter, { width: '15%' }]}>{n.exam != null ? formatNumber(n.exam) : '-'}</Text>
                   <Text style={[styles.tableCellCenter, { width: '15%' }]}>{n.final != null ? formatNumber(n.final) : '-'}</Text>
                 </View>
               ))}
               <View style={[styles.tableRow, { backgroundColor: '#f0fdf4' }]}>
-                <Text style={[styles.tableCell, { width: '40%', fontWeight: 'bold' }]}>Moyenne UE</Text>
-                <Text style={[styles.tableCellCenter, { width: '15%' }]} />
-                <Text style={[styles.tableCellCenter, { width: '15%' }]} />
+                <Text style={[styles.tableCell, { width: '34%', fontWeight: 'bold' }]}>Moyenne UE</Text>
+                <Text style={[styles.tableCellCenter, { width: '12%' }]} />
+                <Text style={[styles.tableCellCenter, { width: '12%' }]} />
+                <Text style={[styles.tableCellCenter, { width: '12%' }]} />
                 <Text style={[styles.tableCellCenter, { width: '15%' }]} />
                 <Text style={[styles.tableCellCenter, { width: '15%', fontWeight: 'bold' }]}>{ue.moyenne != null ? formatNumber(ue.moyenne) : '-'}</Text>
               </View>
@@ -481,19 +487,19 @@ export function PVDeliberationPDF({
       <View style={styles.tableHeader}>
         <Text style={[styles.tableHeaderCell, { width: '8%', textAlign: 'center' }]}>#</Text>
         <Text style={[styles.tableHeaderCell, { width: '25%' }]}>Nom & Prénom</Text>
-        <Text style={[styles.tableHeaderCell, { width: '17%' }]}>Matricule</Text>
-        <Text style={[styles.tableHeaderCell, { width: '12%', textAlign: 'center' }]}>Moyenne</Text>
-        <Text style={[styles.tableHeaderCell, { width: '18%', textAlign: 'center' }]}>Décision</Text>
-        <Text style={[styles.tableHeaderCell, { width: '20%', textAlign: 'center' }]}>Mention</Text>
+        <Text style={[styles.tableHeaderCell, { width: '27%' }]}>Matricule</Text>
+        <Text style={[styles.tableHeaderCell, { width: '10%', textAlign: 'center' }]}>Moy.</Text>
+        <Text style={[styles.tableHeaderCell, { width: '16%', textAlign: 'center' }]}>Décision</Text>
+        <Text style={[styles.tableHeaderCell, { width: '14%', textAlign: 'center' }]}>Mention</Text>
       </View>
       {rows.map((student, index) => (
         <View key={index} style={[styles.tableRow, (offset + index) % 2 === 1 ? styles.tableRowAlt : {}]}>
           <Text style={[styles.tableCellCenter, { width: '8%' }]}>{offset + index + 1}</Text>
           <Text style={[styles.tableCell, { width: '25%' }]}>{student.name}</Text>
-          <Text style={[styles.tableCell, { width: '17%' }]}>{student.matricule}</Text>
-          <Text style={[styles.tableCellCenter, { width: '12%' }]}>{formatNumber(student.moy)}</Text>
-          <Text style={[styles.tableCellCenter, { width: '18%' }]}>{student.decision}</Text>
-          <Text style={[styles.tableCellCenter, { width: '20%' }]}>{student.mention || '-'}</Text>
+          <Text style={[styles.tableCell, { width: '27%', fontSize: 7 }]}>{student.matricule}</Text>
+          <Text style={[styles.tableCellCenter, { width: '10%' }]}>{formatNumber(student.moy)}</Text>
+          <Text style={[styles.tableCellCenter, { width: '16%' }]}>{student.decision}</Text>
+          <Text style={[styles.tableCellCenter, { width: '14%' }]}>{student.mention || '-'}</Text>
         </View>
       ))}
     </View>

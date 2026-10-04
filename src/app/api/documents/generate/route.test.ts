@@ -219,7 +219,7 @@ describe('POST /api/documents/generate', () => {
       teachingUnitId: 'unit-A', courseElementId: 'element-A',
       teachingUnit: { id: 'unit-A', name: 'Mathématiques', code: 'MAT101', credits: 6, semester: { id: 'sem-A' } },
       courseElement: { teachingUnitId: 'unit-A', name: 'Algèbre', coefficient: 2 },
-      ccGrade: 14, examGrade: 16, finalGrade: 15,
+      ccGrade: 14, tpGrade: 17, examGrade: 16, finalGrade: 15,
     }])
     dbMock.semester.findMany.mockResolvedValue([{ name: 'Semestre 1', level: { program: { tenantId } } }])
 
@@ -232,6 +232,7 @@ describe('POST /api/documents/generate', () => {
     expect(saved.generatedBy).toBe('admin-A')
     expect(snapshot.student.firstName).toBe('Awa')
     expect(snapshot.ueGrades[0].ue).toBe('Mathématiques')
+    expect(snapshot.ueGrades[0].notes[0].tp).toBe(17)
     expect(snapshot.ueGrades[0].moyenne).toBe(15)
     expect(snapshot.academicYear).toBe('2026-2027')
   })

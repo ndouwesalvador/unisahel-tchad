@@ -146,7 +146,7 @@ export async function POST(request: NextRequest) {
         }
         const academicYear = requestedYear?.name || ''
         let semester = ''
-        let ueGrades: Array<{ ue: string; code: string; credits: number; notes: Array<{ ec: string; coef: number; cc?: number; exam?: number; final?: number }>; moyenne?: number }> = []
+        let ueGrades: Array<{ ue: string; code: string; credits: number; notes: Array<{ ec: string; coef: number; cc?: number; tp?: number; exam?: number; final?: number }>; moyenne?: number }> = []
 
         if (studentId) {
           const grades = await db.grade.findMany({
@@ -201,8 +201,15 @@ export async function POST(request: NextRequest) {
             semester = semesters.length === 1 ? semesters[0].name : 'Plusieurs semestres'
           }
 
-          const ueMap = new Map<string, { ue: string; code: string; credits: number; notes: Array<{ ec: string; coef: number; cc?: number; exam?: number; final?: number }>; moyenne?: number }>()
-          for (const g of grades) {
+          const ueMap = new Map<string, { ue: string; code: string; credits: number; notes: Array<{ ec: string; coef: number; cc?: number; tp?: number; exam?: number; final?: number }>; moyenne?: number }>()
+          // Keep the transcript in curriculum order, not database insertion order.
+          const orderedGrades = [...grades].sort((a, b) =>
+            (a.teachingUnit?.semester?.orderIndex ?? 0) - (b.teachingUnit?.semester?.orderIndex ?? 0) ||
+            (a.teachingUnit?.orderIndex ?? 0) - (b.teachingUnit?.orderIndex ?? 0) ||
+            (a.courseElement?.orderIndex ?? 0) - (b.courseElement?.orderIndex ?? 0) ||
+            (a.teachingUnit?.code ?? '').localeCompare(b.teachingUnit?.code ?? '')
+          )
+          for (const g of orderedGrades) {
             if (!g.teachingUnit) continue
             const key = g.teachingUnit.id
             if (!ueMap.has(key)) {
@@ -213,6 +220,7 @@ export async function POST(request: NextRequest) {
               ec: g.courseElement?.name || 'EC',
               coef: g.courseElement?.coefficient || 1,
               cc: g.ccGrade ?? undefined,
+              tp: g.tpGrade ?? undefined,
               exam: g.examGrade ?? undefined,
               final: g.finalGrade ?? undefined,
             })
