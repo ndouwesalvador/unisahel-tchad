@@ -296,7 +296,7 @@ export async function POST(request: NextRequest) {
           academicYear: requestedYear?.name || '', award, docNumber, verificationCode, qrCodeDataUrl,
         })
         documentData = {
-          award, programId: program.id, levelId: level.id,
+          award, academicYear: requestedYear?.name || '', programId: program.id, levelId: level.id,
           deliberationId: validatedAward.deliberationId, decisionId: validatedAward.decisionId,
         }
         break
@@ -420,7 +420,8 @@ export async function POST(request: NextRequest) {
           tenant, departmentName: department.name, departmentHeadName: department.headName || undefined,
           session, members: validatedMembers, students, academicYear, docNumber, verificationCode, qrCodeDataUrl, isSigned: true,
         })
-        documentData = { deliberationId, departmentId: department.id, departmentName: department.name, session, members: validatedMembers, students, academicYear }
+        documentData = { deliberationId, departmentId: department.id, departmentName: department.name,
+          departmentHeadName: department.headName, session, members: validatedMembers, students, academicYear }
         break
       }
 

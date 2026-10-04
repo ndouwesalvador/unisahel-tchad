@@ -11,6 +11,7 @@ const methods: Record<string, readonly string[]> = {
   '/api/academic-years': ['GET'],
   '/api/deliberation': ['GET', 'POST', 'PUT', 'PATCH'],
   '/api/documents/generate': ['POST'],
+  '/api/documents/download': ['GET'],
   '/api/profile': ['GET'],
   '/api/notifications': ['GET', 'PUT'],
 }

@@ -192,6 +192,7 @@ export function StudentDetail() {
   const selectedAcademicYearId = useAppStore((state) => state.selectedAcademicYearId)
   const [activeTab, setActiveTab] = useState(canPreviewDashboard ? 'dashboard' : 'informations')
   const [isGenerating, setIsGenerating] = useState<string | null>(null)
+  const [isDownloading, setIsDownloading] = useState<string | null>(null)
   const [isRegistering, setIsRegistering] = useState(false)
 
   const { data: detailData, isLoading: isLoadingDetail, isError: isDetailError, refetch: refetchDetail } = useStudentDetail(selectedStudentId || undefined)
@@ -240,6 +241,29 @@ export function StudentDetail() {
       })
     } finally {
       setIsGenerating(null)
+    }
+  }
+
+  const downloadDocument = async (id: string, type: string) => {
+    setIsDownloading(id)
+    try {
+      const res = await fetch(`/api/documents/download?id=${encodeURIComponent(id)}`)
+      if (!res.ok) {
+        const error = await res.json()
+        throw new Error(error.error || 'Téléchargement indisponible')
+      }
+      const number = res.headers.get('X-Doc-Number') || id
+      const url = window.URL.createObjectURL(await res.blob())
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${type}_${number}.pdf`
+      a.click()
+      window.setTimeout(() => window.URL.revokeObjectURL(url), 60_000)
+      toast.success('Document téléchargé avec sa référence d’origine')
+    } catch (error) {
+      toast.error('Téléchargement impossible', { description: error instanceof Error ? error.message : 'Une erreur est survenue' })
+    } finally {
+      setIsDownloading(null)
     }
   }
 
@@ -937,11 +961,11 @@ export function StudentDetail() {
                             variant="outline"
                             size="sm"
                             className="h-7 text-[10px] flex-1"
-                            disabled={isGenerating === doc.type}
-                            onClick={() => generateDocument(doc.type)}
+                            disabled={isDownloading === doc.id}
+                            onClick={() => downloadDocument(doc.id, doc.type)}
                           >
-                            {isGenerating === doc.type ? <Loader2 className="size-3 mr-1 animate-spin" /> : <Download className="size-3 mr-1" />}
-                            Regenerer / PDF
+                            {isDownloading === doc.id ? <Loader2 className="size-3 mr-1 animate-spin" /> : <Download className="size-3 mr-1" />}
+                            Télécharger PDF
                           </Button>
                         </div>
                       </CardContent>
