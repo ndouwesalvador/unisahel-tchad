@@ -407,9 +407,9 @@ function SidebarContent() {
             className="overflow-hidden"
           >
             <div className="text-lg font-bold tracking-tight">
-              Uni<span className="text-[var(--institution-secondary-bright)]">Sahel</span>
+              Uni<span className="text-white">Sahel</span>
             </div>
-            <div className="text-[10px] text-white/50 truncate">
+            <div className="text-[10px] text-white/80 truncate">
               {user.role === 'SUPER_ADMIN' ? 'Administration plateforme' : (user.tenantName || 'Établissement')}
             </div>
           </motion.div>
@@ -440,7 +440,7 @@ function SidebarContent() {
         {!sidebarCollapsed && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="overflow-hidden min-w-0">
             <div className="text-sm font-medium truncate">{user.firstName} {user.lastName}</div>
-            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-gradient-to-r from-[var(--institution-secondary-30)] to-[var(--institution-secondary-10)] text-[var(--institution-secondary-bright)] border-0 mt-0.5">
+            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-gradient-to-r from-[var(--institution-secondary-30)] to-[var(--institution-secondary-10)] text-white border-0 mt-0.5">
               {roleLabels[user.role]}
             </Badge>
           </motion.div>
@@ -464,7 +464,7 @@ function SidebarContent() {
                 } ${
                   isActive
                     ? 'bg-[var(--institution-secondary-20)] text-white'
-                    : 'text-white/60 hover:text-white hover:bg-gradient-to-r hover:from-[var(--institution-secondary-10)] hover:to-transparent'
+                    : 'text-white/85 hover:text-white hover:bg-gradient-to-r hover:from-[var(--institution-secondary-10)] hover:to-transparent'
                 }`}
               >
                 {/* Animated gradient left border for active item */}
@@ -476,7 +476,7 @@ function SidebarContent() {
                     style={{ transformOrigin: 'center' }}
                   />
                 )}
-                <item.icon className={`size-[18px] shrink-0 transition-colors duration-200 ${isActive ? 'text-[var(--institution-secondary-bright)]' : 'text-white/50 group-hover:text-[var(--institution-secondary-bright)]'}`} />
+                <item.icon className={`size-[18px] shrink-0 transition-colors duration-200 ${isActive ? 'text-white' : 'text-white/80 group-hover:text-white'}`} />
                 {!sidebarCollapsed && (
                   <span className="truncate">{item.label}</span>
                 )}
@@ -495,7 +495,7 @@ function SidebarContent() {
       <div className="border-t border-white/10 p-3 space-y-1">
         <button
           onClick={() => setView(['ENSEIGNANT', 'FACULTE', 'DEPARTEMENT'].includes(user.role) ? 'profile' : 'settings')}
-          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors ${sidebarCollapsed ? 'justify-center' : ''}`}
+          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-white/85 hover:text-white hover:bg-white/5 transition-colors ${sidebarCollapsed ? 'justify-center' : ''}`}
         >
           <Settings className="size-[18px] shrink-0" />
           {!sidebarCollapsed && <span>{['ENSEIGNANT', 'FACULTE', 'DEPARTEMENT'].includes(user.role) ? 'Mon profil' : 'Paramètres'}</span>}

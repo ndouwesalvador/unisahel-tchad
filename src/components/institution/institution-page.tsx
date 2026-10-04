@@ -42,7 +42,7 @@ import {
   ArrowDown,
   Trash2,
 } from 'lucide-react'
-import { parseHeaderLines, validBrandColor } from '@/lib/institution-branding'
+import { parseHeaderLines, readableBrandColor, validBrandColor } from '@/lib/institution-branding'
 
 // ─── Custom useCountUp Hook ────────────────────────────────────────────────────
 
@@ -1614,7 +1614,7 @@ function ApparenceTab() {
               {/* Header preview */}
               <div
                 className="p-3 flex items-center gap-2"
-                style={{ backgroundColor: primaryColor }}
+                style={{ backgroundColor: readableBrandColor(primaryColor) }}
               >
                 <div className="w-6 h-6 rounded bg-white/20 flex items-center justify-center">
                   <Shield className="size-3.5 text-white" />
@@ -1633,7 +1633,7 @@ function ApparenceTab() {
                 <div className="flex gap-2 mt-3">
                   <div
                     className="h-7 rounded-md flex items-center justify-center px-3"
-                    style={{ backgroundColor: secondaryColor }}
+                    style={{ backgroundColor: readableBrandColor(secondaryColor) }}
                   >
                     <span className="text-white text-xs font-medium">Valider</span>
                   </div>
