@@ -27,9 +27,9 @@ const styles = StyleSheet.create({
   identityBody: { flex: 1 },
   country: { fontSize: 8, fontWeight: 'bold', color: colors.primary, letterSpacing: 1.2, marginBottom: 3 },
   ministry: { fontSize: 7.5, color: colors.muted, marginBottom: 3 },
-  reference: { width: 155, alignItems: 'flex-end', marginLeft: 10 },
+  reference: { width: 132, alignItems: 'flex-end', marginLeft: 10 },
   referenceLabel: { fontSize: 7, fontWeight: 'bold', color: colors.muted, marginBottom: 3 },
-  referenceValue: { fontSize: 6, color: colors.primary, textAlign: 'right' },
+  referenceValue: { fontSize: 7.5, color: colors.primary, textAlign: 'right' },
   contactLine: { paddingVertical: 6, borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.border, fontSize: 7.5, color: colors.muted, marginBottom: 17 },
   eyebrow: { fontSize: 8, fontWeight: 'bold', color: colors.secondary, letterSpacing: 1.4, textAlign: 'center', marginBottom: 8 },
   header: {
@@ -221,7 +221,7 @@ function DocumentHeader({ tenant, docNumber }: { tenant: TenantInfo; docNumber?:
         </View>
         {docNumber && <View style={styles.reference}>
           <Text style={styles.referenceLabel}>RÉFÉRENCE</Text>
-          <Text style={styles.referenceValue}>{docNumber}</Text>
+          <Text style={styles.referenceValue}>{docNumber.replace(/^[^-]+-/, '')}</Text>
         </View>}
       </View>
       <Text style={styles.contactLine}>{contact || 'Coordonnées de l’établissement non renseignées'}</Text>
@@ -296,7 +296,7 @@ export function ReleveNotesPDF({
         </View>
 
         {ueGrades.map((ue, i) => (
-          <View key={i} style={styles.section}>
+          <View key={i} style={styles.section} wrap={false}>
             <Text style={styles.sectionTitle}>{ue.code} — {ue.ue} ({ue.credits} crédits)</Text>
             <View style={styles.table}>
               <View style={styles.tableHeader}>
