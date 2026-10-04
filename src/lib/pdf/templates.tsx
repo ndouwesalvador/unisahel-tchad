@@ -208,13 +208,13 @@ const styles = StyleSheet.create({
   },
 })
 
-function DocumentHeader({ tenant, docNumber, compact = false }: { tenant: TenantInfo; docNumber?: string; compact?: boolean }) {
+function DocumentHeader({ tenant, docNumber, compact = false, subtle = false }: { tenant: TenantInfo; docNumber?: string; compact?: boolean; subtle?: boolean }) {
   const shortName = tenant.shortName?.trim() || tenant.name.split(/\s+/).map((word) => word[0]).join('').slice(0, 4).toUpperCase()
   const contact = [tenant.address, tenant.city, tenant.phone, tenant.email, tenant.website].filter(Boolean).join('  ·  ')
   const isChad = /tchad|chad/i.test(tenant.country || '')
   return (
     <View wrap={false}>
-      <View style={styles.topRule} />
+      <View style={subtle ? { ...styles.topRule, height: 2, backgroundColor: '#d8dfe2' } : styles.topRule} />
       <View style={{ flexDirection: 'row', height: compact ? 72 : 90, alignItems: 'center', justifyContent: 'space-between' }}>
         <View style={{ width: '37%', height: compact ? 66 : 76, alignItems: 'center', paddingRight: 5, justifyContent: 'space-between' }}>
           <Text style={{ fontSize: 7.2, fontWeight: 'bold', textAlign: 'center', color: colors.primary }}>{isChad ? 'RÉPUBLIQUE DU TCHAD' : (tenant.country || '').toUpperCase()}</Text>
@@ -235,10 +235,10 @@ function DocumentHeader({ tenant, docNumber, compact = false }: { tenant: Tenant
   )
 }
 
-function DocumentHeading({ title, subtitle, isSigned, eyebrow, compact = false }: { title: string; subtitle?: string; isSigned: boolean; eyebrow?: string; compact?: boolean }) {
+function DocumentHeading({ title, subtitle, isSigned, eyebrow, compact = false, subtle = false }: { title: string; subtitle?: string; isSigned: boolean; eyebrow?: string; compact?: boolean; subtle?: boolean }) {
   return <View wrap={false}>
-    <Text style={styles.eyebrow}>{eyebrow ?? (isSigned ? 'DOCUMENT VALIDÉ PAR L’ÉTABLISSEMENT' : 'APERÇU NON VALIDÉ')}</Text>
-    <Text style={styles.docTitle}>{title}</Text>
+    <Text style={subtle ? { ...styles.eyebrow, color: '#66727c' } : styles.eyebrow}>{eyebrow ?? (isSigned ? 'DOCUMENT VALIDÉ PAR L’ÉTABLISSEMENT' : 'APERÇU NON VALIDÉ')}</Text>
+    <Text style={subtle ? { ...styles.docTitle, color: '#2b3641' } : styles.docTitle}>{title}</Text>
     {subtitle && <Text style={compact ? { ...styles.docSubtitle, marginBottom: 8 } : styles.docSubtitle}>{subtitle}</Text>}
   </View>
 }
@@ -350,27 +350,27 @@ export function ReleveNotesPDF({
   // curriculum, generous for a short one. Final PDF pagination is validated.
   const rowPadding = Math.max(0.3, Math.min(6, (275 - density * tableFont * 1.2) / Math.max(1, density * 2)))
   const note = (value?: number) => value == null ? '—' : formatNumber(value).replace('.', ',')
-  const positive = Boolean(jury && ['ADMI', 'ADMI_DETTE', 'COMPENSE'].includes(jury.decision))
+  const paper = { ink: '#2b3641', muted: '#5f6b75', rule: '#d9e0e3', tint: '#f5f7f7', tintAlt: '#fafbfb' }
   const initials = `${student.firstName?.[0] || ''}${student.lastName?.[0] || ''}`.toUpperCase()
   const inlineQr = Boolean(qrCodeDataUrl?.startsWith('data:image/'))
   return (
     <Document>
       <Page size="A4" style={{ ...styles.page, paddingTop: 15, paddingHorizontal: 29, paddingBottom: 104 }}>
         <DocumentSignatories tenant={tenant} compact={density > 24} anchored bottom={inlineQr ? 43 : 98} />
-        <DocumentHeader tenant={tenant} docNumber={docNumber} compact />
-        <DocumentHeading title="RELEVÉ DE NOTES" subtitle={`${semester || 'Année complète'} · ${academicYear}`} isSigned={isSigned} compact />
+        <DocumentHeader tenant={tenant} docNumber={docNumber} compact subtle />
+        <DocumentHeading title="RELEVÉ DE NOTES" subtitle={`${semester || 'Année complète'} · ${academicYear}`} isSigned={isSigned} compact subtle />
 
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 2.4, borderTopColor: colors.accent, backgroundColor: '#edf2f7', paddingVertical: density > 34 ? 4 : 6, paddingHorizontal: 9, marginBottom: 6 }} wrap={false}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 0.8, borderTopColor: paper.rule, backgroundColor: paper.tint, paddingVertical: density > 34 ? 4 : 6, paddingHorizontal: 9, marginBottom: 6 }} wrap={false}>
           <View style={{ width: '23%' }}><Text style={{ fontSize: 6, color: colors.muted }}>ANNÉE ACADÉMIQUE</Text><Text style={{ fontSize: 8.3, color: colors.primary, fontWeight: 'bold', marginTop: 1 }}>{academicYear}</Text></View>
           <View style={{ width: '39%' }}><Text style={{ fontSize: 6, color: colors.muted }}>FILIÈRE</Text><Text style={{ fontSize: 8, color: colors.primary, fontWeight: 'bold', marginTop: 1 }}>{student.program || '—'}</Text></View>
           <View style={{ width: '21%' }}><Text style={{ fontSize: 6, color: colors.muted }}>NIVEAU</Text><Text style={{ fontSize: 8, color: colors.primary, fontWeight: 'bold', marginTop: 1 }}>{student.level || '—'}</Text></View>
           <View style={{ width: '13%' }}><Text style={{ fontSize: 6, color: colors.muted }}>CRÉDITS</Text><Text style={{ fontSize: 8.3, color: colors.primary, fontWeight: 'bold', marginTop: 1 }}>{credits} ECTS</Text></View>
         </View>
 
-        <View style={{ flexDirection: 'row', borderWidth: 0.8, borderColor: colors.border, borderLeftWidth: 3, borderLeftColor: colors.primary, marginBottom: 7, minHeight: density > 34 ? 60 : 69 }} wrap={false}>
+        <View style={{ flexDirection: 'row', borderWidth: 0.8, borderColor: paper.rule, borderLeftWidth: 2, borderLeftColor: '#b9c5cb', marginBottom: 7, minHeight: density > 34 ? 60 : 69 }} wrap={false}>
           <View style={{ width: density > 34 ? 57 : 65, padding: 4, borderRightWidth: 0.5, borderRightColor: colors.border, justifyContent: 'center' }}>
             {student.photo?.startsWith('data:image/') ? <Image src={student.photo} style={{ width: density > 34 ? 49 : 57, height: density > 34 ? 49 : 57, objectFit: 'cover' }} />
-              : <View style={{ width: density > 34 ? 49 : 57, height: density > 34 ? 49 : 57, backgroundColor: '#e8eff0', alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 18, fontWeight: 'bold', color: colors.secondary }}>{initials}</Text></View>}
+              : <View style={{ width: density > 34 ? 49 : 57, height: density > 34 ? 49 : 57, backgroundColor: paper.tint, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 18, fontWeight: 'bold', color: paper.ink }}>{initials}</Text></View>}
           </View>
           <View style={{ flexGrow: 1, padding: density > 34 ? 5 : 8, justifyContent: 'center' }}>
             <Text style={{ fontSize: 6.5, color: colors.muted, letterSpacing: 0.9 }}>NOM ET PRÉNOMS</Text>
@@ -384,27 +384,27 @@ export function ReleveNotesPDF({
           </View>}
         </View>
 
-        <View style={{ borderWidth: 0.7, borderColor: colors.border }}>
-          <View style={{ flexDirection: 'row', backgroundColor: colors.primary, paddingVertical: density > 34 ? 3 : 5, paddingHorizontal: 5 }}>
-            <Text style={{ width: '39%', fontSize: tableFont, color: colors.accent, fontWeight: 'bold' }}>ÉLÉMENT CONSTITUTIF / UE</Text>
-            <Text style={{ width: '10%', fontSize: tableFont, color: colors.accent, textAlign: 'center' }}>CC</Text>
-            <Text style={{ width: '10%', fontSize: tableFont, color: colors.accent, textAlign: 'center' }}>TP</Text>
-            <Text style={{ width: '14%', fontSize: tableFont, color: colors.accent, textAlign: 'center' }}>EXAMEN</Text>
-            <Text style={{ width: '11%', fontSize: tableFont, color: colors.accent, textAlign: 'center' }}>COEF.</Text>
-            <Text style={{ width: '16%', fontSize: tableFont, color: colors.accent, textAlign: 'center' }}>MOY. / 20</Text>
+        <View style={{ borderWidth: 0.7, borderColor: paper.rule }}>
+          <View style={{ flexDirection: 'row', backgroundColor: '#edf1f2', borderBottomWidth: 0.8, borderBottomColor: '#cbd4d8', paddingVertical: density > 34 ? 3 : 5, paddingHorizontal: 5 }}>
+            <Text style={{ width: '39%', fontSize: tableFont, color: paper.ink, fontWeight: 'bold' }}>ÉLÉMENT CONSTITUTIF / UE</Text>
+            <Text style={{ width: '10%', fontSize: tableFont, color: paper.ink, textAlign: 'center' }}>CC</Text>
+            <Text style={{ width: '10%', fontSize: tableFont, color: paper.ink, textAlign: 'center' }}>TP</Text>
+            <Text style={{ width: '14%', fontSize: tableFont, color: paper.ink, textAlign: 'center' }}>EXAMEN</Text>
+            <Text style={{ width: '11%', fontSize: tableFont, color: paper.ink, textAlign: 'center' }}>COEF.</Text>
+            <Text style={{ width: '16%', fontSize: tableFont, color: paper.ink, textAlign: 'center' }}>MOY. / 20</Text>
           </View>
           {ueGrades.map((ue, i) => <View key={`${ue.code}-${i}`} wrap={false}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', backgroundColor: i % 2 ? '#14563b' : '#213b60', borderLeftWidth: 3, borderLeftColor: colors.accent, paddingVertical: rowPadding + 0.8, paddingHorizontal: 5 }}>
-              <Text style={{ fontSize: tableFont + 0.3, color: '#ffffff', fontWeight: 'bold', width: '72%' }}>{ue.code ? `${ue.code} · ` : ''}{ue.ue}</Text>
-              <Text style={{ fontSize: tableFont + 0.3, color: '#ffffff', fontWeight: 'bold', width: '28%', textAlign: 'right' }}>{ue.credits} ECTS · UE {note(ue.moyenne)}</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', backgroundColor: i % 2 ? '#f3f5f5' : '#f6f8f8', borderTopWidth: 0.55, borderTopColor: paper.rule, borderLeftWidth: 2, borderLeftColor: '#c5d0d3', paddingVertical: rowPadding + 0.8, paddingHorizontal: 5 }}>
+              <Text style={{ fontSize: tableFont + 0.3, color: paper.ink, fontWeight: 'bold', width: '72%' }}>{ue.code ? `${ue.code} · ` : ''}{ue.ue}</Text>
+              <Text style={{ fontSize: tableFont + 0.3, color: paper.ink, fontWeight: 'bold', width: '28%', textAlign: 'right' }}>{ue.credits} ECTS · UE {note(ue.moyenne)}</Text>
             </View>
-            {ue.notes.map((entry, j) => <View key={j} style={{ flexDirection: 'row', paddingVertical: rowPadding, paddingHorizontal: 5, backgroundColor: j % 2 ? '#f3f6f8' : '#ffffff', borderTopWidth: 0.3, borderTopColor: colors.border, borderLeftWidth: 3, borderLeftColor: entry.final == null ? '#d3dce4' : entry.final < 10 ? '#d8867b' : '#90bea1' }} wrap={false}>
+            {ue.notes.map((entry, j) => <View key={j} style={{ flexDirection: 'row', paddingVertical: rowPadding, paddingHorizontal: 5, backgroundColor: j % 2 ? paper.tintAlt : '#ffffff', borderTopWidth: 0.3, borderTopColor: paper.rule, borderLeftWidth: 2, borderLeftColor: '#e3e8e9' }} wrap={false}>
               <Text style={{ width: '39%', fontSize: tableFont, color: colors.text }}>{entry.code ? `${entry.code} · ` : ''}{entry.ec}</Text>
               <Text style={{ width: '10%', fontSize: tableFont, textAlign: 'center' }}>{note(entry.cc)}</Text>
               <Text style={{ width: '10%', fontSize: tableFont, textAlign: 'center' }}>{note(entry.tp)}</Text>
               <Text style={{ width: '14%', fontSize: tableFont, textAlign: 'center' }}>{note(entry.exam)}</Text>
               <Text style={{ width: '11%', fontSize: tableFont, textAlign: 'center' }}>{entry.coef}</Text>
-              <Text style={{ width: '16%', fontSize: tableFont, textAlign: 'center', fontWeight: 'bold', color: entry.final == null ? colors.muted : entry.final < 10 ? '#aa3434' : colors.secondary }}>{note(entry.final)}</Text>
+              <Text style={{ width: '16%', fontSize: tableFont, textAlign: 'center', fontWeight: 'bold', color: entry.final == null ? paper.muted : paper.ink }}>{note(entry.final)}</Text>
             </View>)}
           </View>)}
         </View>
@@ -415,18 +415,18 @@ export function ReleveNotesPDF({
           <View style={{ height: 0.7, backgroundColor: colors.border, flexGrow: 1 }} />
         </View>
         <View style={{ flexDirection: 'row', gap: 5 }} wrap={false}>
-          <View style={{ width: '34%', borderTopWidth: 2, borderTopColor: colors.accent, backgroundColor: '#edf2f7', padding: density > 34 ? 5 : 8, alignItems: 'center' }}>
+          <View style={{ width: '34%', borderTopWidth: 1, borderTopColor: '#bdc9ce', backgroundColor: paper.tint, padding: density > 34 ? 5 : 8, alignItems: 'center' }}>
             <Text style={{ fontSize: 6, color: colors.muted, letterSpacing: 0.6 }}>MOYENNE GÉNÉRALE</Text>
             <Text style={{ fontSize: density > 34 ? 13 : 18, fontWeight: 'bold', color: colors.primary, marginTop: 2 }}>{jury ? note(jury.average) : '—'} <Text style={{ fontSize: 8 }}>/ 20</Text></Text>
-            {jury && <View style={{ width: '100%', height: 3, backgroundColor: '#dce5e9', marginTop: 3 }}><View style={{ width: `${Math.max(0, Math.min(100, jury.average * 5))}%`, height: 3, backgroundColor: positive ? colors.secondary : '#aa3434' }} /></View>}
+            {jury && <View style={{ width: '100%', height: 2, backgroundColor: '#e4e9ea', marginTop: 3 }}><View style={{ width: `${Math.max(0, Math.min(100, jury.average * 5))}%`, height: 2, backgroundColor: '#aab9bf' }} /></View>}
           </View>
-          <View style={{ width: '26%', borderTopWidth: 2, borderTopColor: colors.accent, borderWidth: 0.5, borderColor: colors.border, padding: density > 34 ? 5 : 8, alignItems: 'center' }}>
+          <View style={{ width: '26%', borderTopWidth: 1, borderTopColor: '#bdc9ce', borderWidth: 0.5, borderColor: colors.border, padding: density > 34 ? 5 : 8, alignItems: 'center' }}>
             <Text style={{ fontSize: 6, color: colors.muted, letterSpacing: 0.6 }}>CRÉDITS ACQUIS</Text>
             <Text style={{ fontSize: density > 34 ? 12 : 15, fontWeight: 'bold', color: colors.primary, marginTop: 3 }}>{jury ? jury.creditsAcquired : '—'} <Text style={{ fontSize: 8 }}>/ {credits}</Text></Text>
           </View>
-          <View style={{ width: '38%', borderTopWidth: 2, borderTopColor: colors.accent, borderWidth: 0.5, borderColor: colors.border, padding: density > 34 ? 5 : 8, alignItems: 'center' }}>
+          <View style={{ width: '38%', borderTopWidth: 1, borderTopColor: '#bdc9ce', borderWidth: 0.5, borderColor: colors.border, padding: density > 34 ? 5 : 8, alignItems: 'center' }}>
             <Text style={{ fontSize: 6, color: colors.muted, letterSpacing: 0.6 }}>DÉCISION DU JURY</Text>
-            <Text style={{ fontSize: density > 34 ? 9 : 11, fontWeight: 'bold', color: jury ? positive ? colors.secondary : '#aa3434' : colors.muted, marginTop: 4, textAlign: 'center' }}>{jury ? decisionLabel(jury.decision) : 'Non publiée'}</Text>
+            <Text style={{ fontSize: density > 34 ? 9 : 11, fontWeight: 'bold', color: jury ? paper.ink : paper.muted, marginTop: 4, textAlign: 'center' }}>{jury ? decisionLabel(jury.decision) : 'Non publiée'}</Text>
           </View>
         </View>
         <Text style={{ fontSize: density > 34 ? 6 : 7, color: colors.muted, marginTop: 5 }}>{jury ? `Résultats arrêtés par le jury le ${formatDate(jury.date)}. ` : ''}CC : contrôle continu · TP : travaux pratiques · EC : élément constitutif · UE : unité d’enseignement.</Text>

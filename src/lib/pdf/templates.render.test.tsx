@@ -59,7 +59,9 @@ describe('printed academic documents', () => {
       notes: [{ ec: `${ec} — VALIDATION DEV`, coef: 1, cc: 15, tp: 14, exam: 16, final: 15 }],
     }))
     const pdf = await renderPDF(React.createElement(ReleveNotesPDF, {
-      tenant: { ...tenant, arabicHeaderImage: undefined, address: '19 Rue Chevreul', city: 'NDJAMENA', phone: '63443731', email: 'test@example.org',
+      tenant: { ...tenant, arabicHeaderImage: renderArabicHeader({ headerLanguageMode: 'FR_AR', arabicCountry: 'جمهورية تشاد',
+        arabicMinistry: 'وزارة التعليم العالي', arabicName: 'جامعة مونقو المتعددة التقنيات' }),
+        address: '19 Rue Chevreul', city: 'NDJAMENA', phone: '63443731', email: 'test@example.org',
         rectorName: 'Responsable de l’établissement', secondarySignerName: 'Président du jury', secondarySignerTitle: 'Président du jury' },
       student: { ...student, firstName: 'Leila', lastName: 'VALIDATION-DEV', matricule: 'UNSH-2026-DU1-DEV-000001',
         level: 'Année unique — VALIDATION DEV' }, qrCodeDataUrl, ueGrades,
