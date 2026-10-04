@@ -4,7 +4,8 @@ import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
 
 const TENANT_FIELDS = [
   'name', 'shortName', 'motto', 'ministry', 'country', 'city', 'address',
-  'phone', 'email', 'website', 'rectorName', 'rectorTitle', 'academicSystem', 'logo', 'stamp',
+  'phone', 'email', 'website', 'rectorName', 'rectorTitle', 'academicSystem',
+  'headerLanguageMode', 'arabicCountry', 'arabicName', 'arabicMinistry',
 ] as const
 
 const SETTINGS_FIELDS = [
@@ -50,6 +51,23 @@ async function handleGet(_user: SessionUser, tenantId: string, _request: NextReq
 async function handlePut(user: SessionUser, tenantId: string, request: NextRequest) {
   try {
     const body = await request.json()
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return NextResponse.json({ error: 'Données invalides' }, { status: 400 })
+    }
+    if (body.headerLanguageMode !== undefined && !['FR_ONLY', 'FR_AR'].includes(body.headerLanguageMode)) {
+      return NextResponse.json({ error: 'Langue d’en-tête invalide' }, { status: 400 })
+    }
+    for (const field of ['arabicCountry', 'arabicName', 'arabicMinistry'] as const) {
+      if (body[field] !== undefined && (typeof body[field] !== 'string' || body[field].length > 130)) {
+        return NextResponse.json({ error: `Texte ${field} invalide (130 caractères maximum)` }, { status: 400 })
+      }
+    }
+    if (body.headerLanguageMode === 'FR_AR') {
+      const existing = await db.tenant.findUnique({ where: { id: tenantId }, select: { arabicCountry: true, arabicName: true } })
+      if (!(body.arabicCountry ?? existing?.arabicCountry)?.trim() || !(body.arabicName ?? existing?.arabicName)?.trim()) {
+        return NextResponse.json({ error: 'Pays et nom officiel en arabe requis pour l’en-tête bilingue' }, { status: 400 })
+      }
+    }
 
     const tenantData: Record<string, unknown> = {}
     for (const field of TENANT_FIELDS) {

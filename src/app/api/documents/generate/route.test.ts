@@ -309,7 +309,7 @@ describe('POST /api/documents/generate', () => {
 
   it('signs a PV from stored jury decisions rather than client student data', async () => {
     dbMock.deliberation.findFirst.mockResolvedValue({
-      id: 'delib-A', departmentId: 'department-A', juryMembers: [{ name: 'Président enregistré', role: 'President' }], isLocked: true, status: 'TERMINEE', academicYearId: 'year-A',
+      id: 'delib-A', departmentId: 'department-A', juryMembers: [{ name: 'Président enregistré', role: 'President', signature: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO6p8Z8AAAAASUVORK5CYII=' }], isLocked: true, status: 'TERMINEE', academicYearId: 'year-A',
       name: 'Délibération annuelle', date: new Date('2026-10-01'), type: 'ANNUEL',
       decisions: [{ studentId, average: 13.9, decision: 'ADMI_DETTE' }],
     })

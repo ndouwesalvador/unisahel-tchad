@@ -49,6 +49,13 @@ export interface TenantInfo {
   email?: string
   website?: string
   logo?: string
+  stamp?: string
+  signature?: string
+  arabicName?: string
+  arabicMinistry?: string
+  arabicHeaderImage?: string
+  arabicCountry?: string
+  headerLanguageMode?: string
   rectorName?: string
   rectorTitle?: string
   motto?: string

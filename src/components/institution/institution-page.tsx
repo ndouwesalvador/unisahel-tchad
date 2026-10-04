@@ -112,6 +112,11 @@ interface TenantData {
   academicSystem: string
   logo: string | null
   stamp: string | null
+  signature: string | null
+  headerLanguageMode: string
+  arabicCountry: string | null
+  arabicName: string | null
+  arabicMinistry: string | null
   subscriptionPlan: string
   subscriptionEnd: string | null
   settings: TenantSettingsData | null
@@ -283,9 +288,15 @@ function InformationsTab() {
     recteurTitre: 'Recteur',
     logo: '',
     stamp: '',
+    signature: '',
+    headerLanguageMode: 'FR_ONLY',
+    arabicCountry: '',
+    arabicName: '',
+    arabicMinistry: '',
   })
   const [initialized, setInitialized] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [uploadingKind, setUploadingKind] = useState<string | null>(null)
 
   useEffect(() => {
     if (institutionQuery?.tenant && !initialized) {
@@ -305,6 +316,11 @@ function InformationsTab() {
         recteurTitre: t.rectorTitle || 'Recteur',
         logo: t.logo || '',
         stamp: t.stamp || '',
+        signature: t.signature || '',
+        headerLanguageMode: t.headerLanguageMode || 'FR_ONLY',
+        arabicCountry: t.arabicCountry || '',
+        arabicName: t.arabicName || '',
+        arabicMinistry: t.arabicMinistry || '',
       })
       setInitialized(true)
     }
@@ -314,7 +330,31 @@ function InformationsTab() {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
+  const handleAssetUpload = async (kind: 'logo' | 'stamp' | 'signature', file?: File) => {
+    if (!file) return
+    setUploadingKind(kind)
+    try {
+      const payload = new FormData()
+      payload.set('kind', kind)
+      payload.set('file', file)
+      const response = await fetch('/api/institution/assets', { method: 'POST', body: payload })
+      const result = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(result.error || 'Téléversement impossible')
+      setFormData((current) => ({ ...current, [kind]: result.dataUrl }))
+      void refetch()
+      toast.success('Visuel enregistré')
+    } catch (error) {
+      toast.error('Téléversement impossible', { description: error instanceof Error ? error.message : 'Fichier invalide' })
+    } finally {
+      setUploadingKind(null)
+    }
+  }
+
   const handleSave = async () => {
+    if (formData.headerLanguageMode === 'FR_AR' && (!formData.arabicCountry.trim() || !formData.arabicName.trim())) {
+      toast.error('Renseignez le pays et le nom officiel en arabe avant d’activer l’en-tête bilingue.')
+      return
+    }
     setIsSaving(true)
     try {
       const res = await fetch('/api/institution', {
@@ -333,8 +373,10 @@ function InformationsTab() {
           website: formData.siteWeb,
           rectorName: formData.recteurNom,
           rectorTitle: formData.recteurTitre,
-          logo: formData.logo,
-          stamp: formData.stamp,
+          headerLanguageMode: formData.headerLanguageMode,
+          arabicCountry: formData.arabicCountry,
+          arabicName: formData.arabicName,
+          arabicMinistry: formData.arabicMinistry,
         }),
       })
       const data = await res.json().catch(() => ({}))
@@ -372,19 +414,14 @@ function InformationsTab() {
               <div className="flex flex-col items-center gap-3">
                 <div className="w-32 h-32 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 overflow-hidden">
                   {formData.logo ? (
-                    // eslint-disable-next-line @next/next/no-img-element -- externally hosted logo URL, not a local asset
+                    // eslint-disable-next-line @next/next/no-img-element -- stored institution artwork
                     <img src={formData.logo} alt="Logo" className="w-full h-full object-contain" />
                   ) : (
                     <Building2 className="size-10 text-gray-300 mx-auto" />
                   )}
                 </div>
-                <Input
-                  value={formData.logo}
-                  onChange={(e) => handleChange('logo', e.target.value)}
-                  placeholder="https://.../logo.png"
-                  className="text-xs h-8"
-                />
-                <p className="text-[10px] text-gray-400 text-center">Collez l&apos;URL d&apos;une image hebergee (aucun televersement de fichier n&apos;est disponible pour le moment)</p>
+                <Input type="file" accept="image/png,image/jpeg,image/webp" aria-label="Téléverser le logo officiel" disabled={Boolean(uploadingKind)} onChange={(event) => void handleAssetUpload('logo', event.target.files?.[0])} />
+                <p className="text-[10px] text-gray-500 text-center">{uploadingKind === 'logo' ? 'Téléversement…' : 'PNG, JPEG ou WebP · 2 Mo maximum'}</p>
               </div>
             </CardContent>
           </Card>
@@ -400,22 +437,24 @@ function InformationsTab() {
               <div className="flex flex-col items-center gap-3">
                 <div className="w-28 h-28 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 overflow-hidden">
                   {formData.stamp ? (
-                    // eslint-disable-next-line @next/next/no-img-element -- externally hosted stamp URL, not a local asset
+                    // eslint-disable-next-line @next/next/no-img-element -- stored institution artwork
                     <img src={formData.stamp} alt="Cachet" className="w-full h-full object-contain" />
                   ) : (
                     <Stamp className="size-8 text-gray-300 mx-auto" />
                   )}
                 </div>
-                <Input
-                  value={formData.stamp}
-                  onChange={(e) => handleChange('stamp', e.target.value)}
-                  placeholder="https://.../cachet.png"
-                  className="text-xs h-8"
-                />
+                <Input type="file" accept="image/png,image/jpeg,image/webp" aria-label="Téléverser le cachet officiel" disabled={Boolean(uploadingKind)} onChange={(event) => void handleAssetUpload('stamp', event.target.files?.[0])} />
               </div>
             </CardContent>
           </Card>
           </motion.div>
+          <Card className="border-l-4 border-l-[#1a2744]">
+            <CardHeader className="pb-3"><CardTitle className="text-base">Signature du responsable</CardTitle><CardDescription>Image de signature utilisée sur les documents officiels ; ce visuel ne vaut pas signature cryptographique.</CardDescription></CardHeader>
+            <CardContent className="space-y-3">
+              {formData.signature && <div className="h-20 border rounded-lg bg-white p-2">{/* eslint-disable-next-line @next/next/no-img-element -- stored institution artwork */}<img src={formData.signature} alt="Signature enregistrée" className="h-full w-full object-contain" /></div>}
+              <Input type="file" accept="image/png,image/jpeg,image/webp" aria-label="Téléverser la signature" disabled={Boolean(uploadingKind)} onChange={(event) => void handleAssetUpload('signature', event.target.files?.[0])} />
+            </CardContent>
+          </Card>
         </div>
 
         {/* Right column: Form fields */}
@@ -463,6 +502,19 @@ function InformationsTab() {
                     className="mt-1.5"
                   />
                 </div>
+                <div className="sm:col-span-2">
+                  <Label>Langue de l’en-tête officiel</Label>
+                  <Select value={formData.headerLanguageMode} onValueChange={(value) => handleChange('headerLanguageMode', value)}>
+                    <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
+                    <SelectContent><SelectItem value="FR_ONLY">Français uniquement</SelectItem><SelectItem value="FR_AR">Français et arabe</SelectItem></SelectContent>
+                  </Select>
+                  <p className="text-xs text-gray-500 mt-1">L’arabe est facultatif et rédigé par votre institution, jamais ajouté automatiquement.</p>
+                </div>
+                {formData.headerLanguageMode === 'FR_AR' && <>
+                  <div><Label htmlFor="arabicCountry">Pays / autorité en arabe</Label><Input id="arabicCountry" dir="rtl" value={formData.arabicCountry} onChange={(event) => handleChange('arabicCountry', event.target.value)} className="mt-1.5" /></div>
+                  <div><Label htmlFor="arabicMinistry">Ministère de tutelle en arabe</Label><Input id="arabicMinistry" dir="rtl" value={formData.arabicMinistry} onChange={(event) => handleChange('arabicMinistry', event.target.value)} className="mt-1.5" /></div>
+                  <div className="sm:col-span-2"><Label htmlFor="arabicName">Nom officiel de l’institution en arabe</Label><Input id="arabicName" dir="rtl" value={formData.arabicName} onChange={(event) => handleChange('arabicName', event.target.value)} className="mt-1.5" /></div>
+                </>}
                 <div>
                   <Label htmlFor="pays">Pays</Label>
                   <Select value={formData.pays} onValueChange={(v) => handleChange('pays', v)}>

@@ -102,6 +102,7 @@ const createSchema = z.object({
   name: z.string().trim().min(2).max(150),
   country: z.string().trim().max(80).optional(),
   city: z.string().trim().max(80).optional(),
+  headerLanguageMode: z.enum(['FR_ONLY', 'FR_AR']).default('FR_ONLY'),
   subscriptionPlan: z.enum(['STARTER', 'PRO', 'ENTERPRISE']).default('STARTER'),
   adminFirstName: z.string().trim().min(1).max(80),
   adminLastName: z.string().trim().min(1).max(80),
@@ -139,6 +140,7 @@ async function handlePost(actor: SessionUser, request: NextRequest) {
           slug,
           country: data.country || null,
           city: data.city || null,
+          headerLanguageMode: data.headerLanguageMode,
           subscriptionPlan: data.subscriptionPlan,
         },
       })

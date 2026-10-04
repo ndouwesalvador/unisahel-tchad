@@ -22,12 +22,16 @@ export type PvSection = {
 }
 
 export const PV_COLUMNS_PER_SHEET = 12
-export const PV_ROWS_PER_SHEET = 19
+export const PV_ROWS_PER_SHEET = 11
+export const PV_A4_COLUMNS_PER_SHEET = 6
+export const PV_A4_ROWS_PER_SHEET = 3
 
-export function expectedPvSheetCount(sections: PvSection[]): number {
+export function expectedPvSheetCount(sections: PvSection[], pageFormat: 'A3' | 'A4' = 'A3'): number {
+  const columns = pageFormat === 'A4' ? PV_A4_COLUMNS_PER_SHEET : PV_COLUMNS_PER_SHEET
+  const rows = pageFormat === 'A4' ? PV_A4_ROWS_PER_SHEET : PV_ROWS_PER_SHEET
   return sections.reduce((sum, section) => sum +
-    Math.ceil(section.columns.length / PV_COLUMNS_PER_SHEET) *
-    Math.ceil(section.students.length / PV_ROWS_PER_SHEET), 0)
+    Math.ceil(section.columns.length / columns) *
+    Math.ceil(section.students.length / rows), 0)
 }
 
 type Registration = {

@@ -39,6 +39,11 @@ model Tenant {
   slug                   String                  @unique
   logo                   String?
   stamp                  String?
+  signature              String?
+  headerLanguageMode     String                  @default("FR_ONLY")
+  arabicCountry          String?
+  arabicName             String?
+  arabicMinistry         String?
   motto                  String?
   address                String?
   city                   String?

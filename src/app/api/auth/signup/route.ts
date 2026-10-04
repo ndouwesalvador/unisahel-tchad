@@ -12,6 +12,7 @@ const signupSchema = z.object({
   institutionName: z.string().trim().min(2).max(150),
   country: z.string().trim().max(80).optional(),
   city: z.string().trim().max(80).optional(),
+  headerLanguageMode: z.enum(['FR_ONLY', 'FR_AR']).default('FR_ONLY'),
   firstName: z.string().trim().min(1).max(80),
   lastName: z.string().trim().min(1).max(80),
   email: z.string().trim().email().max(180),
@@ -63,7 +64,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { institutionName, country, city, firstName, lastName, email, password } = parsed.data
+    const { institutionName, country, city, headerLanguageMode, firstName, lastName, email, password } = parsed.data
 
     const existingUser = await db.user.findUnique({ where: { email }, select: { id: true } })
     if (existingUser) {
@@ -81,6 +82,7 @@ export async function POST(request: NextRequest) {
           slug,
           country: country || null,
           city: city || null,
+          headerLanguageMode,
           subscriptionPlan: 'STARTER',
         },
       })

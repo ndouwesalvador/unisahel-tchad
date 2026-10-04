@@ -11,6 +11,7 @@ import { getOrganizationScope, isOrganizationManager } from '@/lib/auth/organiza
 import { parseJuryMembers } from '@/lib/deliberations/jury'
 import { buildPvMatrix, expectedPvSheetCount, PvMatrixError, type PvSection } from '@/lib/pdf/pv-matrix'
 import { countPdfPages } from '@/lib/pdf/utils'
+import { renderArabicHeader } from '@/lib/pdf/arabic-header'
 
 const SIGNING_ROLES = new Set(['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'RECTORAT', 'SCOLARITE', 'JURY', 'FACULTE', 'DEPARTEMENT'])
 const GENERATING_ROLES = new Set([...SIGNING_ROLES, 'ETUDIANT', 'ETUDIANT_SANTE'])
@@ -24,7 +25,11 @@ export async function POST(request: NextRequest) {
     const sessionUser = session.user as SessionUser
 
     const body = await request.json()
-    const { type, studentId, tenantId, academicYearId, deliberationId, data, sign } = body
+    const { type, studentId, tenantId, academicYearId, deliberationId, data, sign, pageFormat } = body
+    if (pageFormat !== undefined && !['A3', 'A4'].includes(pageFormat)) {
+      return NextResponse.json({ error: 'Format de PV invalide' }, { status: 400 })
+    }
+    const pvPageFormat: 'A3' | 'A4' = pageFormat === 'A4' ? 'A4' : 'A3'
 
     if (!type || !tenantId) {
       return NextResponse.json({ error: 'Type et tenant requis' }, { status: 400 })
@@ -63,7 +68,7 @@ export async function POST(request: NextRequest) {
     // Fetch real tenant data
     const tenantDb = await db.tenant.findUnique({
       where: { id: tenantId },
-      select: { id: true, name: true, shortName: true, address: true, city: true, country: true, ministry: true, phone: true, email: true, logo: true, rectorName: true, rectorTitle: true, motto: true },
+      select: { id: true, name: true, shortName: true, address: true, city: true, country: true, ministry: true, phone: true, email: true, logo: true, stamp: true, signature: true, headerLanguageMode: true, arabicCountry: true, arabicName: true, arabicMinistry: true, rectorName: true, rectorTitle: true, motto: true },
     })
 
     if (!tenantDb) {
@@ -80,6 +85,13 @@ export async function POST(request: NextRequest) {
       phone: tenantDb.phone || '',
       email: tenantDb.email || '',
       logo: tenantDb.logo || '',
+      stamp: tenantDb.stamp || '',
+      signature: tenantDb.signature || '',
+      arabicName: tenantDb.arabicName || '',
+      arabicMinistry: tenantDb.arabicMinistry || '',
+      arabicCountry: tenantDb.arabicCountry || '',
+      headerLanguageMode: tenantDb.headerLanguageMode,
+      arabicHeaderImage: renderArabicHeader({ headerLanguageMode: tenantDb.headerLanguageMode, arabicCountry: tenantDb.arabicCountry || '', arabicMinistry: tenantDb.arabicMinistry || '', arabicName: tenantDb.arabicName || '' }),
       rectorName: tenantDb.rectorName || '',
       rectorTitle: tenantDb.rectorTitle || 'Recteur',
       motto: tenantDb.motto || '',
@@ -396,6 +408,9 @@ export async function POST(request: NextRequest) {
         if (!validatedMembers) {
           return NextResponse.json({ error: 'Composition du jury non enregistrée lors de la validation' }, { status: 409 })
         }
+        if (validatedMembers.some((member) => !member.signature)) {
+          return NextResponse.json({ error: 'Chaque membre du jury doit avoir une signature scannée avant l’émission du PV officiel.' }, { status: 409 })
+        }
         if (!delib.departmentId) {
           return NextResponse.json({ error: 'Ce PV historique n’est pas rattaché à un département' }, { status: 409 })
         }
@@ -510,10 +525,10 @@ export async function POST(request: NextRequest) {
 
         DocumentComponent = React.createElement(PVDeliberationPDF, {
           tenant, departmentName: department.name, departmentHeadName: department.headName || undefined,
-          session, members: validatedMembers, students, sections, academicYear, docNumber, verificationCode, qrCodeDataUrl, isSigned: true,
+          session, members: validatedMembers, students, sections, academicYear, docNumber, verificationCode, qrCodeDataUrl, isSigned: true, pageFormat: pvPageFormat,
         })
         documentData = { deliberationId, departmentId: department.id, departmentName: department.name,
-          departmentHeadName: department.headName, session, members: validatedMembers, students, sections, academicYear }
+          departmentHeadName: department.headName, session, members: validatedMembers, students, sections, academicYear, pageFormat: pvPageFormat }
         break
       }
 
@@ -583,8 +598,8 @@ export async function POST(request: NextRequest) {
     if (type === 'RELEVE_NOTES' && countPdfPages(pdfBuffer) !== 1) {
       return NextResponse.json({ error: 'Le relevé dépasse une page : vérifiez les libellés et la maquette avant émission.' }, { status: 409 })
     }
-    if (pvSections && countPdfPages(pdfBuffer) !== expectedPvSheetCount(pvSections)) {
-      return NextResponse.json({ error: 'Le PV déborde du format A3 prévu : corrigez les libellés avant émission.' }, { status: 409 })
+    if (pvSections && countPdfPages(pdfBuffer) !== expectedPvSheetCount(pvSections, pvPageFormat)) {
+      return NextResponse.json({ error: `Le PV déborde du format ${pvPageFormat} prévu : corrigez les libellés avant émission.` }, { status: 409 })
     }
 
     // "Signing" certifies the document as officially validated -- a student

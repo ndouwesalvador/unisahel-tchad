@@ -158,10 +158,12 @@ export function DeliberationPage() {
   const [selectedDepartmentId, setSelectedDepartmentId] = useState<string | null>(null)
   const [selectedSessionType, setSelectedSessionType] = useState('normale')
   const [isExportingPV, setIsExportingPV] = useState(false)
+  const [pvPageFormat, setPvPageFormat] = useState<'A3' | 'A4'>('A3')
   const [isLaunching, setIsLaunching] = useState(false)
   const [isLocking, setIsLocking] = useState(false)
   const [qrCode, setQrCode] = useState<string | null>(null)
-  const [juryMembers, setJuryMembers] = useState<{ id: string; name: string; role: string }[]>([])
+  const [juryMembers, setJuryMembers] = useState<{ id: string; name: string; role: string; signature?: string }[]>([])
+  const [uploadingMember, setUploadingMember] = useState<number | null>(null)
   const [newMemberName, setNewMemberName] = useState('')
   const [newMemberRole, setNewMemberRole] = useState('Membre')
   const [editingStudent, setEditingStudent] = useState<DeliberationStudent | null>(null)
@@ -203,15 +205,37 @@ export function DeliberationPage() {
   useEffect(() => {
     const stored = deliberationData?.selected?.juryMembers
     if (isLocked && Array.isArray(stored)) {
-      setJuryMembers(stored.map((member: { name: string; role: string }, index: number) => ({
-        id: `${selectedSession}-${index}`, name: member.name, role: member.role,
+      setJuryMembers(stored.map((member: { name: string; role: string; signature?: string }, index: number) => ({
+        id: `${selectedSession}-${index}`, name: member.name, role: member.role, signature: member.signature,
       })))
     }
   }, [isLocked, deliberationData?.selected?.juryMembers, selectedSession])
   const currentSession = deliberations.find(d => d.id === selectedSession)
   const hasStudents = deliberationStudents.length > 0
-  const canExportPV = Boolean(selectedSession && isLocked && hasStudents && isReadyForJury)
+  const canExportPV = Boolean(selectedSession && isLocked && hasStudents && isReadyForJury &&
+    juryMembers.length > 0 && juryMembers.every((member) => Boolean(member.signature)))
   const canLock = Boolean(selectedSession && !isLocked && hasStudents && isReadyForJury && juryMembers.filter((member) => member.role === 'President').length === 1)
+
+  const uploadJurySignature = async (memberIndex: number, file?: File) => {
+    if (!selectedSession || !file) return
+    setUploadingMember(memberIndex)
+    try {
+      const payload = new FormData()
+      payload.set('deliberationId', selectedSession)
+      payload.set('memberIndex', String(memberIndex))
+      payload.set('file', file)
+      const response = await fetch('/api/deliberation/signature', { method: 'POST', body: payload })
+      const result = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(result.error || 'Signature non enregistrée')
+      setJuryMembers((current) => current.map((member, index) => index === memberIndex ? { ...member, signature: result.signature } : member))
+      await queryClient.invalidateQueries({ queryKey: ['deliberation'] })
+      toast.success('Image de signature enregistrée')
+    } catch (error) {
+      toast.error('Erreur', { description: error instanceof Error ? error.message : 'Signature invalide' })
+    } finally {
+      setUploadingMember(null)
+    }
+  }
 
   const openDecisionEditor = (student: DeliberationStudent) => {
     if (!selectedSession || isLocked || !student.updatedAt) return
@@ -349,6 +373,7 @@ export function DeliberationPage() {
           tenantId,
           deliberationId: selectedSession,
           sign: true,
+          pageFormat: pvPageFormat,
         }),
       })
 
@@ -379,7 +404,7 @@ export function DeliberationPage() {
     } finally {
       setIsExportingPV(false)
     }
-  }, [selectedSession, tenantId, isLocked, hasStudents, isReadyForJury, readiness, selectedDepartment])
+  }, [selectedSession, tenantId, isLocked, hasStudents, isReadyForJury, readiness, selectedDepartment, pvPageFormat])
 
   // ─── Computed Stats ────────────────────────────────────────────────────
   const stats = useMemo(() => {
@@ -467,6 +492,10 @@ export function DeliberationPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
+                  <Select value={pvPageFormat} onValueChange={(value) => setPvPageFormat(value as 'A3' | 'A4')}>
+                    <SelectTrigger aria-label="Format du procès-verbal" className="w-24 h-8 bg-white text-[#1a2744]"><SelectValue /></SelectTrigger>
+                    <SelectContent><SelectItem value="A3">A3</SelectItem><SelectItem value="A4">A4</SelectItem></SelectContent>
+                  </Select>
                   {/* Animated Badge */}
                   <motion.div
                     initial={{ scale: 0.8, opacity: 0 }}
@@ -750,6 +779,10 @@ export function DeliberationPage() {
                             }`}>
                               {member.role}
                             </Badge>
+                            {isLocked && <div className="mt-1 space-y-1">
+                              <span className="text-[10px] text-gray-600">{member.signature ? 'Signature scannée enregistrée' : 'Signature à apposer sur le PV'}</span>
+                              {['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'FACULTE', 'DEPARTEMENT'].includes(userRole || '') && <Input type="file" accept="image/png,image/jpeg,image/webp" aria-label={`Signature de ${member.name}`} disabled={uploadingMember !== null} onChange={(event) => void uploadJurySignature(idx, event.target.files?.[0])} className="h-8 text-xs max-w-52" />}
+                            </div>}
                           </div>
                         </div>
                         <Button
@@ -767,7 +800,7 @@ export function DeliberationPage() {
                 </div>
                 {/* Add Member */}
                 <p className="text-[11px] text-gray-400">
-                  La composition du jury est enregistrée lors de la validation et réutilisée pour chaque réédition du PV.
+                  La composition du jury est enregistrée lors de la validation. Après validation, téléversez la signature scannée de chaque membre pour permettre l’émission du PV officiel. Ces images ne constituent pas une signature cryptographique.
                 </p>
                 <div className="flex items-center gap-2">
                   <Input

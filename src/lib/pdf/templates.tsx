@@ -1,7 +1,8 @@
+/* eslint-disable jsx-a11y/alt-text -- @react-pdf/renderer Image is not an HTML img */
 import React from 'react'
 import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer'
 import { formatDate, formatNumber, getVerificationUrl, TenantInfo, StudentInfo } from './utils'
-import { PV_COLUMNS_PER_SHEET, PV_ROWS_PER_SHEET, type PvSection } from './pv-matrix'
+import { PV_COLUMNS_PER_SHEET, PV_ROWS_PER_SHEET, PV_A4_COLUMNS_PER_SHEET, PV_A4_ROWS_PER_SHEET, type PvSection } from './pv-matrix'
 
 const colors = {
   primary: '#1a2744',
@@ -11,6 +12,7 @@ const colors = {
   muted: '#475569',
   border: '#cbd5e1',
 }
+
 
 const styles = StyleSheet.create({
   page: {
@@ -209,40 +211,65 @@ const styles = StyleSheet.create({
 function DocumentHeader({ tenant, docNumber }: { tenant: TenantInfo; docNumber?: string }) {
   const shortName = tenant.shortName?.trim() || tenant.name.split(/\s+/).map((word) => word[0]).join('').slice(0, 4).toUpperCase()
   const contact = [tenant.address, tenant.city, tenant.phone, tenant.email, tenant.website].filter(Boolean).join('  ·  ')
+  const isChad = /tchad|chad/i.test(tenant.country || '')
   return (
     <View wrap={false}>
       <View style={styles.topRule} />
-      <View style={styles.identity}>
-        <View style={styles.monogram}><Text style={styles.monogramText}>{shortName}</Text></View>
-        <View style={styles.identityBody}>
-          {tenant.country && <Text style={styles.country}>{tenant.country.toUpperCase()}</Text>}
-          {tenant.ministry && <Text style={styles.ministry}>{tenant.ministry.toUpperCase()}</Text>}
-          <Text style={styles.institutionName}>{tenant.name}</Text>
-          {tenant.motto && <Text style={styles.institutionSub}>{tenant.motto}</Text>}
+      <View style={{ flexDirection: 'row', minHeight: 80, alignItems: 'flex-start', justifyContent: 'space-between' }}>
+        <View style={{ width: tenant.arabicHeaderImage ? '37%' : '55%', alignItems: 'center', paddingRight: 5 }}>
+          <Text style={{ fontSize: 7.2, fontWeight: 'bold', textAlign: 'center', color: colors.primary }}>{isChad ? 'RÉPUBLIQUE DU TCHAD' : (tenant.country || '').toUpperCase()}</Text>
+          {tenant.ministry && <Text style={{ fontSize: 6.6, textAlign: 'center', marginTop: 3 }}>{tenant.ministry.toUpperCase()}</Text>}
+          <Text style={{ fontSize: 7.4, textAlign: 'center', fontWeight: 'bold', color: colors.primary, marginTop: 4 }}>{tenant.name.toUpperCase()}</Text>
         </View>
-        {docNumber && <View style={styles.reference}>
-          <Text style={styles.referenceLabel}>RÉFÉRENCE</Text>
-          <Text style={styles.referenceValue}>{docNumber.replace(/^[^-]+-/, '')}</Text>
+        <View style={{ width: tenant.arabicHeaderImage ? '26%' : '45%', alignItems: 'center' }}>
+          <Text style={{ fontSize: 7, fontWeight: 'bold', color: colors.primary, textAlign: 'center' }}>{tenant.motto?.toUpperCase() || (isChad ? 'UNITÉ · TRAVAIL · PROGRÈS' : '')}</Text>
+          {tenant.logo?.startsWith('data:image/') ? <Image src={tenant.logo} style={{ width: 54, height: 54, objectFit: 'contain', marginTop: 7 }} />
+            : <View style={{ width: 49, height: 49, marginTop: 7, borderWidth: 1, borderColor: colors.secondary, borderRadius: 25, justifyContent: 'center' }}><Text style={{ fontSize: 9, color: colors.secondary, textAlign: 'center' }}>{shortName}</Text></View>}
+        </View>
+        {tenant.arabicHeaderImage && <View style={{ width: '37%', alignItems: 'center', paddingLeft: 5 }}>
+          {tenant.arabicHeaderImage?.startsWith('data:image/png;base64,') && <Image src={tenant.arabicHeaderImage} style={{ width: '100%', height: 71, objectFit: 'contain' }} />}
         </View>}
       </View>
-      <Text style={styles.contactLine}>{contact || 'Coordonnées de l’établissement non renseignées'}</Text>
+      <Text style={{ ...styles.contactLine, marginBottom: 10, textAlign: 'center' }}>{contact || 'Coordonnées de l’établissement non renseignées'}{docNumber ? `  ·  RÉF. ${docNumber.replace(/^[^-]+-/, '')}` : ''}</Text>
     </View>
   )
 }
 
-function DocumentHeading({ title, subtitle, isSigned, eyebrow }: { title: string; subtitle?: string; isSigned: boolean; eyebrow?: string }) {
+function DocumentHeading({ title, subtitle, isSigned, eyebrow, compact = false }: { title: string; subtitle?: string; isSigned: boolean; eyebrow?: string; compact?: boolean }) {
   return <View wrap={false}>
     <Text style={styles.eyebrow}>{eyebrow ?? (isSigned ? 'DOCUMENT VALIDÉ PAR L’ÉTABLISSEMENT' : 'APERÇU NON VALIDÉ')}</Text>
     <Text style={styles.docTitle}>{title}</Text>
-    {subtitle && <Text style={styles.docSubtitle}>{subtitle}</Text>}
+    {subtitle && <Text style={compact ? { ...styles.docSubtitle, marginBottom: 8 } : styles.docSubtitle}>{subtitle}</Text>}
   </View>
 }
 
-function SignatureField({ title, name }: { title: string; name?: string }) {
+function SignatureField({ title, name, image }: { title: string; name?: string; image?: string }) {
   return <View style={styles.signatureBlock} wrap={false}>
-    <View style={styles.signatureLine} />
+    {image?.startsWith('data:image/') ? <Image src={image} style={{ height: 34, width: 120, objectFit: 'contain', marginBottom: 4 }} /> : <View style={styles.signatureLine} />}
     <Text style={styles.signatureLabel}>{title}</Text>
     {name && <Text style={[styles.signatureLabel, { color: colors.primary, marginTop: 3 }]}>{name}</Text>}
+  </View>
+}
+
+function OfficialMarks({ tenant }: { tenant: TenantInfo }) {
+  if (!tenant.stamp?.startsWith('data:image/') && !tenant.signature?.startsWith('data:image/')) return null
+  return <View style={{ flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', height: 38, marginTop: 5 }} wrap={false}>
+    {tenant.stamp?.startsWith('data:image/') && <Image src={tenant.stamp} style={{ height: 37, width: 68, objectFit: 'contain' }} />}
+    {tenant.signature?.startsWith('data:image/') && <Image src={tenant.signature} style={{ height: 33, width: 85, objectFit: 'contain' }} />}
+  </View>
+}
+
+function JurySignatures({ members, tenant, compact = false }: { members: Array<{ name: string; role: string; signature?: string }>; tenant: TenantInfo; compact?: boolean }) {
+  return <View style={{ marginTop: compact ? 4 : 9, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: compact ? 3 : 5 }} wrap={false}>
+    <Text style={{ fontSize: 7.5, fontWeight: 'bold', color: colors.primary, marginBottom: 4 }}>MEMBRES DU JURY · SIGNATURES</Text>
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+      {members.map((member, index) => <View key={`${member.name}-${index}`} style={{ width: compact ? '16.66%' : '25%', height: compact ? 24 : 37, paddingRight: 8, paddingBottom: 3 }}>
+        <Text style={{ fontSize: compact ? 5.6 : 6.8, color: colors.primary }}>{member.role === 'President' ? 'Président' : 'Membre'} · {member.name}</Text>
+        {member.signature?.startsWith('data:image/') ? <Image src={member.signature} style={{ height: compact ? 13 : 23, width: compact ? 60 : 95, objectFit: 'contain' }} />
+          : <View style={{ borderBottomWidth: 0.6, borderBottomColor: colors.muted, width: compact ? 60 : 95, marginTop: compact ? 11 : 21 }} />}
+      </View>)}
+    </View>
+    {tenant.stamp?.startsWith('data:image/') && <Image src={tenant.stamp} style={{ position: 'absolute', right: 0, bottom: 0, height: 40, width: 60, objectFit: 'contain' }} />}
   </View>
 }
 
@@ -263,7 +290,7 @@ function Footer({ tenant, docNumber, verificationCode, qrCodeDataUrl, isSigned =
         <Text>
           {tenant.name}{docNumber ? ` · ${docNumber}` : ''}
         </Text>
-        <Text>{isSigned ? 'Validation électronique vérifiable par le code ci-dessus. Aucun cachet ou signature manuscrite n’est simulé.' : 'APERÇU NON VALIDÉ - ne constitue pas une pièce officielle.'}</Text>
+        <Text>{isSigned ? 'Authenticité du document vérifiable par le code ci-dessus. Les visuels de cachet et signature ne sont pas des signatures cryptographiques.' : 'APERÇU NON VALIDÉ - ne constitue pas une pièce officielle.'}</Text>
       </View>
       <Text style={styles.pageNumber} fixed render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`} />
     </>
@@ -276,18 +303,17 @@ export function ReleveNotesPDF({
   tenant: TenantInfo; student: StudentInfo; semester: string; ueGrades: Array<{ ue: string; code: string; credits: number; notes: Array<{ ec: string; code?: string; coef: number; cc?: number; tp?: number; exam?: number; final?: number }>; moyenne?: number }>; academicYear: string; jury?: { average: number; creditsAcquired: number; decision: string; date: string }; docNumber: string; verificationCode: string; qrCodeDataUrl?: string; isSigned?: boolean
 }) {
   const rowCount = ueGrades.reduce((sum, ue) => sum + ue.notes.length, 0)
-  const density = ueGrades.length * 15 + rowCount * 17
-  const pageSize = density > 900 ? 'A2' : density > 460 ? 'A3' : 'A4'
-  const compact = pageSize !== 'A2'
+  const density = ueGrades.length + rowCount
   const credits = ueGrades.reduce((sum, ue) => sum + ue.credits, 0)
-  const tableFont = pageSize === 'A4' ? 7.4 : pageSize === 'A3' ? 7.8 : 8.5
+  const tableFont = density > 34 ? 5.5 : density > 24 ? 6.1 : 7.1
+  const rowPadding = density > 34 ? 0.7 : density > 24 ? 1.8 : density > 18 ? 2.5 : 3.2
   return (
     <Document>
-      <Page size={pageSize} style={{ ...styles.page, paddingTop: 29, paddingHorizontal: 38, paddingBottom: 91 }}>
+      <Page size="A4" style={{ ...styles.page, paddingTop: 21, paddingHorizontal: 31, paddingBottom: 93 }}>
         <DocumentHeader tenant={tenant} docNumber={docNumber} />
-        <DocumentHeading title="RELEVÉ INDIVIDUEL DE NOTES" subtitle={`Année académique ${academicYear} · ${semester}`} isSigned={isSigned} />
+        <DocumentHeading title="RELEVÉ INDIVIDUEL DE NOTES" subtitle={`Année académique ${academicYear} · ${semester}`} isSigned={isSigned} compact={density > 34} />
 
-        <View style={{ flexDirection: 'row', borderWidth: 1, borderColor: colors.border, marginBottom: 11, padding: 9 }} wrap={false}>
+        <View style={{ flexDirection: 'row', borderWidth: 1, borderColor: colors.border, marginBottom: 6, padding: 6 }} wrap={false}>
           <View style={{ width: '52%' }}>
             <Text style={{ fontSize: 7, color: colors.muted }}>ÉTUDIANT</Text>
             <Text style={{ fontSize: 10.5, fontWeight: 'bold', color: colors.primary, marginTop: 3 }}>{student.firstName} {student.lastName}</Text>
@@ -299,13 +325,13 @@ export function ReleveNotesPDF({
             <Text style={{ fontSize: 8, marginTop: 4 }}>Niveau : {student.level || '—'}</Text>
           </View>
         </View>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, paddingHorizontal: 9, marginBottom: 6, backgroundColor: '#edf5f0' }} wrap={false}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4, paddingHorizontal: 9, marginBottom: 4, backgroundColor: '#edf5f0' }} wrap={false}>
           <Text style={{ fontSize: 8, color: colors.primary }}>{ueGrades.length} UE · {rowCount} matières · {credits} crédits inscrits</Text>
           <Text style={{ fontSize: 8, color: colors.primary, fontWeight: 'bold' }}>{jury ? `MOYENNE ANNUELLE : ${formatNumber(jury.average)} / 20` : 'Décision du jury non publiée'}</Text>
         </View>
 
         <View style={{ borderWidth: 1, borderColor: colors.border }} wrap={false}>
-          <View style={{ flexDirection: 'row', backgroundColor: colors.primary, paddingVertical: 6, paddingHorizontal: 7 }}>
+          <View style={{ flexDirection: 'row', backgroundColor: colors.primary, paddingVertical: 4, paddingHorizontal: 7 }}>
             <Text style={{ width: '42%', fontSize: tableFont, color: '#ffffff', fontWeight: 'bold' }}>MATIÈRE / ÉLÉMENT CONSTITUTIF</Text>
             <Text style={{ width: '9%', fontSize: tableFont, color: '#ffffff', textAlign: 'center' }}>COEF.</Text>
             <Text style={{ width: '11%', fontSize: tableFont, color: '#ffffff', textAlign: 'center' }}>CC</Text>
@@ -314,11 +340,11 @@ export function ReleveNotesPDF({
             <Text style={{ width: '14%', fontSize: tableFont, color: '#ffffff', textAlign: 'center' }}>MOY. EC</Text>
           </View>
           {ueGrades.map((ue, i) => <View key={`${ue.code}-${i}`} wrap={false}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', backgroundColor: '#eaf3ed', paddingVertical: compact ? 3.5 : 5, paddingHorizontal: 7, borderTopWidth: i ? 1 : 0, borderTopColor: colors.border }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', backgroundColor: '#eaf3ed', paddingVertical: rowPadding, paddingHorizontal: 7, borderTopWidth: i ? 1 : 0, borderTopColor: colors.border }}>
               <Text style={{ fontSize: tableFont, color: colors.primary, fontWeight: 'bold', width: '74%' }}>{ue.code ? `${ue.code} · ` : ''}{ue.ue}</Text>
               <Text style={{ fontSize: tableFont, color: colors.secondary, fontWeight: 'bold', width: '26%', textAlign: 'right' }}>{ue.credits} CR · UE {ue.moyenne == null ? '—' : formatNumber(ue.moyenne)}</Text>
             </View>
-            {ue.notes.map((note, j) => <View key={j} style={{ flexDirection: 'row', paddingVertical: compact ? 3 : 4.4, paddingHorizontal: 7, backgroundColor: j % 2 ? '#f8fafc' : '#ffffff', borderTopWidth: 0.4, borderTopColor: colors.border }} wrap={false}>
+            {ue.notes.map((note, j) => <View key={j} style={{ flexDirection: 'row', paddingVertical: rowPadding, paddingHorizontal: 7, backgroundColor: j % 2 ? '#f8fafc' : '#ffffff', borderTopWidth: 0.4, borderTopColor: colors.border }} wrap={false}>
               <Text style={{ width: '42%', fontSize: tableFont, color: colors.text }}>{note.code ? `${note.code} · ` : ''}{note.ec}</Text>
               <Text style={{ width: '9%', fontSize: tableFont, textAlign: 'center' }}>{note.coef}</Text>
               <Text style={{ width: '11%', fontSize: tableFont, textAlign: 'center' }}>{note.cc == null ? '—' : formatNumber(note.cc)}</Text>
@@ -334,6 +360,7 @@ export function ReleveNotesPDF({
           <Text style={{ fontSize: 8, width: '43%', textAlign: 'right' }}>Décision du jury : <Text style={{ fontWeight: 'bold', color: jury && ['ADMI', 'ADMI_DETTE', 'COMPENSE'].includes(jury.decision) ? colors.secondary : colors.primary }}>{jury ? decisionLabel(jury.decision) : 'Non publiée'}</Text></Text>
         </View>
         {jury && <Text style={{ fontSize: 7.5, color: colors.muted, marginTop: 7 }}>Résultats arrêtés par le jury le {formatDate(jury.date)}. CC : contrôle continu · TP : travaux pratiques · EC : élément constitutif · UE : unité d’enseignement.</Text>}
+        <OfficialMarks tenant={tenant} />
 
         <Footer tenant={tenant} docNumber={docNumber} verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} isSigned={isSigned} />
       </Page>
@@ -376,8 +403,9 @@ export function AttestationInscriptionPDF({
 
         <View style={styles.signature} wrap={false}>
           <SignatureField title="Service de la scolarité" />
-          <SignatureField title={tenant.rectorTitle || 'Responsable de l’établissement'} name={tenant.rectorName} />
+          <SignatureField title={tenant.rectorTitle || 'Responsable de l’établissement'} name={tenant.rectorName} image={tenant.signature} />
         </View>
+        <OfficialMarks tenant={{ ...tenant, signature: undefined }} />
         <Text style={{ fontSize: 8, color: colors.muted, marginTop: 13 }}>Émis {tenant.city ? `à ${tenant.city}, ` : ''}le {formatDate(issuedAt || new Date())}</Text>
 
         <Footer tenant={tenant} docNumber={docNumber} verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} isSigned={isSigned} />
@@ -428,8 +456,9 @@ export function AttestationNiveauPDF({
 
         <View style={styles.signature} wrap={false}>
           <SignatureField title="Service de la scolarité" />
-          <SignatureField title={tenant.rectorTitle || 'Responsable de l’établissement'} name={tenant.rectorName} />
+          <SignatureField title={tenant.rectorTitle || 'Responsable de l’établissement'} name={tenant.rectorName} image={tenant.signature} />
         </View>
+        <OfficialMarks tenant={{ ...tenant, signature: undefined }} />
         <Footer tenant={tenant} docNumber={docNumber} verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} isSigned />
       </Page>
     </Document>
@@ -443,29 +472,30 @@ export function DiplomePDF({
 }) {
   return (
     <Document>
-      <Page size="A4" style={styles.page}>
+      <Page size="A4" orientation="landscape" style={{ ...styles.page, paddingTop: 27, paddingBottom: 87 }}>
         <DocumentHeader tenant={tenant} docNumber={docNumber} />
         <DocumentHeading title="DIPLÔME" subtitle={diploma.program} isSigned={isSigned} />
 
-        <View style={{ marginVertical: 22, paddingVertical: 29, paddingHorizontal: 18, alignItems: 'center', borderWidth: 1.5, borderColor: colors.accent }} wrap={false}>
+        <View style={{ marginVertical: 7, paddingVertical: 12, paddingHorizontal: 18, alignItems: 'center', borderWidth: 1.5, borderColor: colors.accent }} wrap={false}>
           <Text style={{ fontSize: 9, color: colors.muted, marginBottom: 8, letterSpacing: 1 }}>DÉCERNÉ À</Text>
           <Text style={{ fontSize: 19, fontWeight: 'bold', color: colors.primary, marginVertical: 8, textAlign: 'center' }}>
             {student.firstName} {student.lastName}
           </Text>
           {student.dateOfBirth && <Text style={{ fontSize: 9, color: colors.muted }}>Né(e) le {formatDate(student.dateOfBirth)}{student.placeOfBirth ? ` à ${student.placeOfBirth}` : ''}</Text>}
-          <Text style={{ fontSize: 10, marginTop: 25 }}>A obtenu le diplôme de</Text>
+          <Text style={{ fontSize: 10, marginTop: 10 }}>A obtenu le diplôme de</Text>
           <Text style={{ fontSize: 16, fontWeight: 'bold', color: colors.secondary, marginVertical: 8, textAlign: 'center' }}>
             {diploma.title}
           </Text>
           <Text style={{ fontSize: 10, textAlign: 'center' }}>Après validation des {diploma.credits} crédits requis du cursus</Text>
           {diploma.mention && <Text style={{ fontSize: 10, marginTop: 8 }}>Mention : <Text style={{ fontWeight: 'bold', color: colors.primary }}>{diploma.mention}</Text></Text>}
-          <Text style={{ fontSize: 9, color: colors.muted, marginTop: 18 }}>Décision finale du jury du {formatDate(diploma.date)}</Text>
+          <Text style={{ fontSize: 9, color: colors.muted, marginTop: 8 }}>Décision finale du jury du {formatDate(diploma.date)}</Text>
         </View>
 
-        <View style={styles.signature} wrap={false}>
+        <View style={{ ...styles.signature, marginTop: 8 }} wrap={false}>
           <SignatureField title="Présidence du jury" />
-          <SignatureField title={tenant.rectorTitle || 'Responsable de l’établissement'} name={tenant.rectorName} />
+          <SignatureField title={tenant.rectorTitle || 'Responsable de l’établissement'} name={tenant.rectorName} image={tenant.signature} />
         </View>
+        <OfficialMarks tenant={{ ...tenant, signature: undefined }} />
 
         <Footer tenant={tenant} docNumber={docNumber} verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} isSigned={isSigned} />
       </Page>
@@ -482,14 +512,14 @@ function decisionLabel(decision: string) {
 }
 
 function PVMatrixPDF({ tenant, departmentName, departmentHeadName, session, members, sections,
-  academicYear, docNumber, verificationCode, qrCodeDataUrl, isSigned }: {
+  academicYear, docNumber, verificationCode, qrCodeDataUrl, isSigned, pageFormat = 'A3' }: {
   tenant: TenantInfo; departmentName: string; departmentHeadName?: string
-  session: { name: string; date: string; type: string }; members: Array<{ name: string; role: string }>
+  session: { name: string; date: string; type: string }; members: Array<{ name: string; role: string; signature?: string }>
   sections: PvSection[]; academicYear: string; docNumber: string; verificationCode: string
-  qrCodeDataUrl?: string; isSigned: boolean
+  qrCodeDataUrl?: string; isSigned: boolean; pageFormat?: 'A3' | 'A4'
 }) {
-  const maxColumns = PV_COLUMNS_PER_SHEET
-  const maxRows = PV_ROWS_PER_SHEET
+  const maxColumns = pageFormat === 'A4' ? PV_A4_COLUMNS_PER_SHEET : PV_COLUMNS_PER_SHEET
+  const maxRows = pageFormat === 'A4' ? PV_A4_ROWS_PER_SHEET : PV_ROWS_PER_SHEET
   const president = members.find(member => member.role === 'President')?.name || 'Non renseigné'
   const totalStudents = sections.reduce((sum, section) => sum + section.students.length, 0)
   const sheets = sections.flatMap((section) => {
@@ -509,14 +539,14 @@ function PVMatrixPDF({ tenant, departmentName, departmentHeadName, session, memb
   return <Document>
     {sheets.map(({ section, rows, columns, panelIndex, panels }, sheetIndex) => {
       const isLastPanel = panelIndex === panels - 1
-      const dataWidth = isLastPanel ? 605 : 780
+      const dataWidth = pageFormat === 'A4' ? (isLastPanel ? 370 : 525) : (isLastPanel ? 605 : 780)
       const columnWidth = dataWidth / maxColumns
       const headStyle = { fontSize: 6.5, color: '#ffffff', textAlign: 'center' as const, fontWeight: 'bold' as const }
       const cellStyle = { fontSize: 7.4, color: colors.text, textAlign: 'center' as const }
-      return <Page key={sheetIndex} size="A3" orientation="landscape" style={{ ...styles.page, paddingTop: 29, paddingHorizontal: 34, paddingBottom: 95 }}>
+      return <Page key={sheetIndex} size={pageFormat} orientation="landscape" style={{ ...styles.page, paddingTop: pageFormat === 'A4' ? 17 : 29, paddingHorizontal: 34, paddingBottom: 90 }}>
         <DocumentHeader tenant={tenant} docNumber={docNumber} />
-        <DocumentHeading title="PROCÈS-VERBAL DES RÉSULTATS" subtitle={`${departmentName} · ${academicYear} · ${session.name}`} isSigned={isSigned} />
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10, padding: 9, backgroundColor: '#edf5f0', borderLeftWidth: 3, borderLeftColor: colors.secondary }} wrap={false}>
+        <DocumentHeading title="PROCÈS-VERBAL DES RÉSULTATS" subtitle={`${departmentName} · ${academicYear} · ${session.name}`} isSigned={isSigned} compact={pageFormat === 'A4'} />
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: pageFormat === 'A4' ? 4 : 10, padding: pageFormat === 'A4' ? 5 : 9, backgroundColor: '#edf5f0', borderLeftWidth: 3, borderLeftColor: colors.secondary }} wrap={false}>
           <View style={{ width: '58%' }}>
             <Text style={{ fontSize: 11, fontWeight: 'bold', color: colors.primary }}>{section.program}</Text>
             <Text style={{ fontSize: 8, marginTop: 3, color: colors.muted }}>{section.level} · {section.students.length} étudiants · {session.type} · Jury du {formatDate(session.date)}</Text>
@@ -529,35 +559,35 @@ function PVMatrixPDF({ tenant, departmentName, departmentHeadName, session, memb
         </View>
         <View style={{ borderWidth: 1, borderColor: colors.border }} wrap={false}>
           <View style={{ flexDirection: 'row', minHeight: 33, alignItems: 'center', backgroundColor: colors.primary }}>
-            <Text style={{ ...headStyle, width: 26 }}>N°</Text>
-            <Text style={{ ...headStyle, width: 108, textAlign: 'left' }}>MATRICULE</Text>
-            <Text style={{ ...headStyle, width: 170, textAlign: 'left' }}>NOM ET PRÉNOM</Text>
+            <Text style={{ ...headStyle, width: pageFormat === 'A4' ? 20 : 26 }}>N°</Text>
+            <Text style={{ ...headStyle, width: pageFormat === 'A4' ? 80 : 108, textAlign: 'left' }}>MATRICULE</Text>
+            <Text style={{ ...headStyle, width: pageFormat === 'A4' ? 130 : 170, textAlign: 'left' }}>NOM ET PRÉNOM</Text>
             {columns.map(column => <View key={column.key} style={{ width: columnWidth, paddingHorizontal: 2, alignItems: 'center' }}>
               <Text style={{ ...headStyle, fontSize: 6 }}>{column.ueCode.slice(0, 13)}</Text>
               <Text style={headStyle}>{column.code.slice(0, 13)}</Text>
               <Text style={{ ...headStyle, fontSize: 5.7, color: '#bce3cc' }}>{column.kind === 'UE' ? 'MOY. UE' : 'MATIÈRE'}</Text>
             </View>)}
             {isLastPanel && <>
-              <Text style={{ ...headStyle, width: 65 }}>MOY. /20</Text>
-              <Text style={{ ...headStyle, width: 105 }}>DÉCISION DU JURY</Text>
+              <Text style={{ ...headStyle, width: pageFormat === 'A4' ? 50 : 65 }}>MOY. /20</Text>
+              <Text style={{ ...headStyle, width: pageFormat === 'A4' ? 100 : 105 }}>DÉCISION DU JURY</Text>
             </>}
           </View>
           {rows.students.map((student, index) => <View key={student.matricule} style={{ flexDirection: 'row', minHeight: 18, alignItems: 'center', backgroundColor: index % 2 ? '#f5f8fa' : '#ffffff', borderTopWidth: 0.5, borderTopColor: colors.border }} wrap={false}>
-            <Text style={{ ...cellStyle, width: 26 }}>{rows.start + index + 1}</Text>
-            <Text style={{ ...cellStyle, width: 108, textAlign: 'left', fontSize: 6.8 }}>{student.matricule}</Text>
-            <Text style={{ ...cellStyle, width: 170, textAlign: 'left', fontWeight: 'bold' }}>{student.name}</Text>
+            <Text style={{ ...cellStyle, width: pageFormat === 'A4' ? 20 : 26 }}>{rows.start + index + 1}</Text>
+            <Text style={{ ...cellStyle, width: pageFormat === 'A4' ? 80 : 108, textAlign: 'left', fontSize: 6.8 }}>{student.matricule}</Text>
+            <Text style={{ ...cellStyle, width: pageFormat === 'A4' ? 130 : 170, textAlign: 'left', fontWeight: 'bold' }}>{student.name}</Text>
             {columns.map(column => <Text key={column.key} style={{ ...cellStyle, width: columnWidth,
               fontWeight: column.kind === 'UE' ? 'bold' : 'normal',
               color: column.kind === 'UE' ? colors.secondary : colors.text }}>
               {student.grades[column.key] == null ? '—' : formatNumber(student.grades[column.key])}
             </Text>)}
             {isLastPanel && <>
-              <Text style={{ ...cellStyle, width: 65, fontWeight: 'bold' }}>{formatNumber(student.average)}</Text>
-              <Text style={{ ...cellStyle, width: 105, fontWeight: 'bold', color: ['ADMI', 'ADMI_DETTE', 'COMPENSE'].includes(student.decision) ? colors.secondary : '#9b3030', fontSize: 6.8 }}>{decisionLabel(student.decision)}</Text>
+              <Text style={{ ...cellStyle, width: pageFormat === 'A4' ? 50 : 65, fontWeight: 'bold' }}>{formatNumber(student.average)}</Text>
+              <Text style={{ ...cellStyle, width: pageFormat === 'A4' ? 100 : 105, fontWeight: 'bold', color: ['ADMI', 'ADMI_DETTE', 'COMPENSE'].includes(student.decision) ? colors.secondary : '#9b3030', fontSize: 6.8 }}>{decisionLabel(student.decision)}</Text>
             </>}
           </View>)}
         </View>
-        <View style={{ marginTop: 10, flexDirection: 'row', flexWrap: 'wrap' }} wrap={false}>
+        <View style={{ marginTop: pageFormat === 'A4' ? 4 : 10, flexDirection: 'row', flexWrap: 'wrap' }} wrap={false}>
           {columns.map(column => <Text key={column.key} style={{ width: '25%', fontSize: 6.7, color: colors.muted, paddingRight: 9, marginBottom: 3 }}>
             <Text style={{ fontWeight: 'bold', color: colors.primary }}>{column.code}</Text> · {column.label}
           </Text>)}
@@ -566,6 +596,7 @@ function PVMatrixPDF({ tenant, departmentName, departmentHeadName, session, memb
           <Text style={{ fontSize: 7.5, color: colors.muted, width: '48%' }}>Présidence du jury : <Text style={{ fontWeight: 'bold', color: colors.primary }}>{president}</Text></Text>
           <Text style={{ fontSize: 7.5, color: colors.muted, width: '48%', textAlign: 'right' }}>Chef de département : <Text style={{ fontWeight: 'bold', color: colors.primary }}>{departmentHeadName || 'Non renseigné'}</Text></Text>
         </View>
+        <JurySignatures members={members} tenant={tenant} compact={pageFormat === 'A4'} />
         <Footer tenant={tenant} docNumber={docNumber} verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} isSigned={isSigned} />
       </Page>
     })}
@@ -573,13 +604,13 @@ function PVMatrixPDF({ tenant, departmentName, departmentHeadName, session, memb
 }
 
 export function PVDeliberationPDF({
-  tenant, departmentName, departmentHeadName, session, members, students, sections, academicYear, docNumber, verificationCode, qrCodeDataUrl, isSigned = false,
+  tenant, departmentName, departmentHeadName, session, members, students, sections, academicYear, docNumber, verificationCode, qrCodeDataUrl, isSigned = false, pageFormat = 'A3',
 }: {
-  tenant: TenantInfo; departmentName: string; departmentHeadName?: string; session: { name: string; date: string; type: string }; members: Array<{ name: string; role: string }>; students: Array<{ name: string; matricule: string; moy: number; decision: string; mention?: string }>; sections?: PvSection[]; academicYear: string; docNumber: string; verificationCode: string; qrCodeDataUrl?: string; isSigned?: boolean
+  tenant: TenantInfo; departmentName: string; departmentHeadName?: string; session: { name: string; date: string; type: string }; members: Array<{ name: string; role: string; signature?: string }>; students: Array<{ name: string; matricule: string; moy: number; decision: string; mention?: string }>; sections?: PvSection[]; academicYear: string; docNumber: string; verificationCode: string; qrCodeDataUrl?: string; isSigned?: boolean; pageFormat?: 'A3' | 'A4'
 }) {
   if (sections?.length) return <PVMatrixPDF tenant={tenant} departmentName={departmentName} departmentHeadName={departmentHeadName}
     session={session} members={members} sections={sections} academicYear={academicYear} docNumber={docNumber}
-    verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} isSigned={isSigned} />
+    verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} isSigned={isSigned} pageFormat={pageFormat} />
   const stats = {
     total: students.length,
     admis: students.filter(s => ['ADMIS', 'ADMIS AVEC DETTE', 'ADMIS PAR COMPENSATION'].includes(s.decision)).length,
@@ -616,16 +647,11 @@ export function PVDeliberationPDF({
       ))}
     </View>
   )
-  const signatures = () => (
-    <View style={styles.signature} wrap={false}>
-      <SignatureField title="Présidence du jury" name={members.find((member) => member.role === 'President')?.name} />
-      <SignatureField title="Chef de département" name={departmentHeadName} />
-    </View>
-  )
+  const signatures = () => <JurySignatures members={members} tenant={tenant} />
 
   return (
     <Document>
-      <Page size="A4" style={styles.page}>
+      <Page size="A4" orientation="landscape" style={styles.page}>
         <DocumentHeader tenant={tenant} docNumber={docNumber} />
         <DocumentHeading title="PROCÈS-VERBAL DE DÉLIBÉRATION" subtitle={`${departmentName} · Année académique ${academicYear}`} isSigned={isSigned} />
 
@@ -680,7 +706,7 @@ export function PVDeliberationPDF({
         <Footer tenant={tenant} docNumber={docNumber} verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} isSigned={isSigned} />
       </Page>
       {continuationPages.map((pageStudents, pageIndex) => (
-        <Page key={pageIndex} size="A4" style={styles.page}>
+        <Page key={pageIndex} size="A4" orientation="landscape" style={styles.page}>
           <DocumentHeader tenant={tenant} docNumber={docNumber} />
           <DocumentHeading title="PROCÈS-VERBAL · SUITE" subtitle={`${departmentName} · ${session.name} · ${academicYear}`} isSigned={isSigned} />
           {resultTable(pageStudents, firstPageCapacity + pageIndex * 19)}
@@ -725,8 +751,9 @@ export function CertificatScolaritePDF({
 
         <View style={styles.signature} wrap={false}>
           <SignatureField title="Service de la scolarité" />
-          <SignatureField title={tenant.rectorTitle || 'Responsable de l’établissement'} name={tenant.rectorName} />
+          <SignatureField title={tenant.rectorTitle || 'Responsable de l’établissement'} name={tenant.rectorName} image={tenant.signature} />
         </View>
+        <OfficialMarks tenant={{ ...tenant, signature: undefined }} />
         <Text style={{ fontSize: 8, color: colors.muted, marginTop: 13 }}>Émis {tenant.city ? `à ${tenant.city}, ` : ''}le {formatDate(issuedAt || new Date())}</Text>
 
         <Footer tenant={tenant} docNumber={docNumber} verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} isSigned={isSigned} />

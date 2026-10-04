@@ -65,6 +65,7 @@ export function SignupPage() {
   const [institutionName, setInstitutionName] = useState('')
   const [country, setCountry] = useState('')
   const [city, setCity] = useState('')
+  const [headerLanguageMode, setHeaderLanguageMode] = useState<'FR_ONLY' | 'FR_AR'>('FR_ONLY')
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
@@ -89,7 +90,7 @@ export function SignupPage() {
       const res = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ institutionName, country, city, firstName, lastName, email, password }),
+        body: JSON.stringify({ institutionName, country, city, headerLanguageMode, firstName, lastName, email, password }),
       })
       const data = await res.json().catch(() => ({}))
 
@@ -227,6 +228,14 @@ export function SignupPage() {
                         />
                       </div>
                     </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Langue de l’en-tête des documents</Label>
+                    <Select value={headerLanguageMode} onValueChange={(value) => setHeaderLanguageMode(value as 'FR_ONLY' | 'FR_AR')} disabled={isLoading}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent><SelectItem value="FR_ONLY">Français uniquement</SelectItem><SelectItem value="FR_AR">Français et arabe</SelectItem></SelectContent>
+                    </Select>
+                    <p className="text-xs text-gray-500">Les textes arabes seront rédigés par votre institution dans sa configuration.</p>
                   </div>
                 </div>
 

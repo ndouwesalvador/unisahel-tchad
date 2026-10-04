@@ -69,6 +69,7 @@ export function PlatformInstitutionsPage() {
     name: '',
     country: 'Tchad',
     city: '',
+    headerLanguageMode: 'FR_ONLY',
     subscriptionPlan: 'STARTER',
     adminFirstName: '',
     adminLastName: '',
@@ -80,7 +81,7 @@ export function PlatformInstitutionsPage() {
   const tenants = data?.data ?? []
   const stats = data?.stats
 
-  const resetForm = () => setForm({ name: '', country: 'Tchad', city: '', subscriptionPlan: 'STARTER', adminFirstName: '', adminLastName: '', adminEmail: '' })
+  const resetForm = () => setForm({ name: '', country: 'Tchad', city: '', headerLanguageMode: 'FR_ONLY', subscriptionPlan: 'STARTER', adminFirstName: '', adminLastName: '', adminEmail: '' })
 
   const handleCreate = async () => {
     if (!form.name || !form.adminFirstName || !form.adminLastName || !form.adminEmail) {
@@ -286,6 +287,14 @@ export function PlatformInstitutionsPage() {
                 <Label className="text-sm">Ville</Label>
                 <Input value={form.city} onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))} />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm">Langue de l’en-tête des documents</Label>
+              <Select value={form.headerLanguageMode} onValueChange={(value) => setForm((current) => ({ ...current, headerLanguageMode: value }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent><SelectItem value="FR_ONLY">Français uniquement</SelectItem><SelectItem value="FR_AR">Français et arabe</SelectItem></SelectContent>
+              </Select>
+              <p className="text-xs text-gray-500">L’institution renseignera elle-même ses textes arabes.</p>
             </div>
             <div className="space-y-2">
               <Label className="text-sm">Plan d&apos;abonnement</Label>

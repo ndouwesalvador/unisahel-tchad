@@ -120,10 +120,11 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
         members: snapshot.members as Parameters<typeof PVDeliberationPDF>[0]['members'],
         students: snapshot.students as Parameters<typeof PVDeliberationPDF>[0]['students'],
         sections: Array.isArray(snapshot.sections) ? snapshot.sections as PvSection[] : undefined,
-        academicYear: snapshot.academicYear })
+        academicYear: snapshot.academicYear,
+        pageFormat: snapshot.pageFormat === 'A4' ? 'A4' : 'A3' })
       const pv = await renderPDF(pdf)
-      if (Array.isArray(snapshot.sections) && countPdfPages(pv) !== expectedPvSheetCount(snapshot.sections as PvSection[])) {
-        return NextResponse.json({ error: 'Le PV historique déborde des feuilles A3 prévues.' }, { status: 409 })
+      if (Array.isArray(snapshot.sections) && countPdfPages(pv) !== expectedPvSheetCount(snapshot.sections as PvSection[], snapshot.pageFormat === 'A4' ? 'A4' : 'A3')) {
+        return NextResponse.json({ error: 'Le PV historique déborde des feuilles prévues.' }, { status: 409 })
       }
       return pdfResponse(pv, document.type, docNumber)
     }
