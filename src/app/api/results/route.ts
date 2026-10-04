@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
-import { resolveOwnStudentId } from '@/lib/auth/student-scope'
+import { isStudentSelfRole, resolveOwnStudentId } from '@/lib/auth/student-scope'
 
 type Mention = 'Passable' | 'Assez-Bien' | 'Bien' | 'Tres-Bien' | 'Excellent'
 type Decision = 'Admis' | 'Ajourne'
@@ -42,6 +42,9 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
     const { searchParams } = new URL(request.url)
     const requestedStudentId = searchParams.get('studentId') || undefined
     const ownStudentId = await resolveOwnStudentId(user)
+    if (isStudentSelfRole(user.role) && !ownStudentId) {
+      return NextResponse.json({ error: 'FORBIDDEN', message: 'Accès refusé' }, { status: 403 })
+    }
     if (ownStudentId && requestedStudentId && requestedStudentId !== ownStudentId) {
       return NextResponse.json({ error: 'FORBIDDEN', message: 'Accès refusé' }, { status: 403 })
     }
@@ -80,25 +83,40 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
 
     // ─── Single student transcript ─────────────────────────────────────────
     if (studentId) {
-      const student = await db.student.findFirst({
-        where: { id: studentId, tenantId },
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          matricule: true,
-          dateOfBirth: true,
-          placeOfBirth: true,
-          currentProgram: { select: { name: true } },
-          currentLevel: { select: { name: true } },
-        },
-      })
+      const [student, registration] = await Promise.all([
+        db.student.findFirst({
+          where: { id: studentId, tenantId },
+          select: { id: true, firstName: true, lastName: true, matricule: true,
+            dateOfBirth: true, placeOfBirth: true },
+        }),
+        db.administrativeRegistration.findFirst({
+          where: { tenantId, studentId, academicYearId, status: 'INSCRIT' },
+          select: { programId: true, levelId: true },
+        }),
+      ])
       if (!student) {
         return NextResponse.json({ error: 'Student not found' }, { status: 404 })
       }
+      if (!registration) {
+        return NextResponse.json({ transcript: null, jury: null, passingGrade, creditsPerYear })
+      }
+      const [program, level] = await Promise.all([
+        db.program.findFirst({ where: { id: registration.programId, tenantId }, select: { name: true, departmentId: true } }),
+        db.level.findFirst({ where: { id: registration.levelId, programId: registration.programId, program: { tenantId } }, select: { name: true } }),
+      ])
+      if (!program || !level) {
+        return NextResponse.json({ error: 'Programme ou niveau de l’inscription introuvable' }, { status: 409 })
+      }
 
       const grades = await db.grade.findMany({
-        where: { studentId, academicYearId, session: sessionType, finalGrade: { not: null } },
+        where: { studentId, academicYearId, session: sessionType, finalGrade: { not: null },
+          ...(isStudentSelfRole(user.role) ? {
+            isLocked: true,
+            teachingUnit: { pedagogicalRegistrations: { some: {
+              studentId, academicYearId, status: 'ACTIVE',
+            } } },
+          } : {}),
+        },
         select: {
           finalGrade: true,
           courseElement: { select: { coefficient: true } },
@@ -147,8 +165,8 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
         matricule: student.matricule || '—',
         dateNaissance: formatDateFr(student.dateOfBirth) || '—',
         lieuNaissance: student.placeOfBirth || '—',
-        filiere: student.currentProgram?.name || '—',
-        niveau: student.currentLevel?.name || '—',
+        filiere: program.name,
+        niveau: level.name,
         semester: academicYear?.name || '—',
         ueGrades,
         moyenne,
@@ -156,7 +174,32 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
         totalCredits,
       }
 
-      return NextResponse.json({ transcript, passingGrade, creditsPerYear })
+      let jury: { average: number; creditsAcquired: number; decision: string; date: string } | null = null
+      if (program.departmentId) {
+        const decisions = await db.deliberationDecision.findMany({
+          where: { studentId, deliberation: {
+            tenantId, academicYearId, departmentId: program.departmentId,
+            status: 'TERMINEE', isLocked: true,
+          } },
+          select: { average: true, creditsAcquired: true, decision: true,
+            deliberation: { select: { id: true, date: true } } },
+        })
+        for (const decision of decisions.sort((a, b) => b.deliberation.date.getTime() - a.deliberation.date.getTime())) {
+          if (decision.average === null) continue
+          const issuedPv = await db.officialDocument.findFirst({
+            where: { tenantId, academicYearId, type: 'PV_DELIBERATION', validatedAt: { not: null },
+              content: { contains: `"deliberationId":"${decision.deliberation.id}"` } },
+            select: { id: true },
+          })
+          if (issuedPv) {
+            jury = { average: decision.average, creditsAcquired: decision.creditsAcquired,
+              decision: decision.decision, date: decision.deliberation.date.toISOString() }
+            break
+          }
+        }
+      }
+
+      return NextResponse.json({ transcript, jury, passingGrade, creditsPerYear })
     }
 
     // ─── Session results: one row per student with at least one published grade ──

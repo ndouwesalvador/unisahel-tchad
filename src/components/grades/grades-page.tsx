@@ -46,6 +46,17 @@ function OversightGradesPage() {
 function StudentGradesPage() {
   const { data: dashboard } = useDashboardStats()
   const academicYearId = dashboard?.currentAcademicYear?.id
+  const { data: result, isLoading: juryLoading, isError: resultError } = useQuery<{
+    jury: { average: number; creditsAcquired: number; decision: string; date: string } | null
+  }>({
+    queryKey: ['my-jury-decision', academicYearId],
+    enabled: Boolean(academicYearId),
+    queryFn: async () => {
+      const response = await fetch(`/api/results?academicYearId=${encodeURIComponent(academicYearId!)}`)
+      if (!response.ok) throw new Error('Impossible de consulter la décision du jury')
+      return response.json()
+    },
+  })
   const { data, isLoading, isError, refetch } = useQuery<{ data: PublishedGrade[] }>({
     queryKey: ['my-published-grades', academicYearId],
     enabled: Boolean(academicYearId),
@@ -65,6 +76,17 @@ function StudentGradesPage() {
       <p className="mt-2 text-sm text-slate-700">Seules vos notes validées apparaissent ici. Pour un document officiel, ouvrez « Mes Documents ».</p>
       <p className="mt-2 text-sm font-medium text-slate-700">{dashboard?.currentAcademicYear ? `Année académique ${dashboard.currentAcademicYear.name}` : 'Aucune année académique active'}</p>
     </div>
+    {juryLoading ? <div role="status" className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">Vérification du résultat final…</div>
+      : resultError ? <div role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">La décision du jury ne peut pas être consultée pour le moment.</div>
+      : result?.jury ? <Card className="border-emerald-200 bg-emerald-50"><CardContent className="p-5 text-slate-900">
+          <p className="text-xs font-bold uppercase tracking-wider text-emerald-800">Résultat final publié par le jury</p>
+          <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
+            <p className="text-xl font-bold text-slate-950">{({ ADMI: 'Admis', ADMI_DETTE: 'Admis avec dette', COMPENSE: 'Admis par compensation', AJOURNE: 'Ajourné', REDOUBLANT: 'Redoublant', EXCLU: 'Exclu' } as Record<string, string>)[result.jury.decision] || result.jury.decision}</p>
+            <p className="text-base font-semibold text-slate-950">{result.jury.average.toFixed(2)} / 20 · {result.jury.creditsAcquired} crédits acquis</p>
+          </div>
+          <p className="mt-2 text-xs text-slate-700">Décision arrêtée le {new Date(result.jury.date).toLocaleDateString('fr-FR')} et publiée par PV validé.</p>
+        </CardContent></Card>
+      : <div role="status" className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">Décision finale du jury en attente de publication du PV.</div>}
     {isError ? <Card><CardContent className="flex flex-wrap items-center gap-3 p-5 text-sm text-slate-800">Impossible de charger vos notes.<Button variant="outline" onClick={() => refetch()}>Réessayer</Button></CardContent></Card>
       : !academicYearId ? <Card><CardContent className="p-5 text-sm text-slate-700">Aucune année académique active n’est configurée.</CardContent></Card>
       : isLoading ? <Card><CardContent className="p-5 text-sm text-slate-700">Chargement des notes…</CardContent></Card>
