@@ -205,6 +205,12 @@ const updateSchema = z.object({
   subscriptionEnd: z.string().datetime().optional().nullable(),
 })
 
+const deleteSchema = z.object({
+  id: z.string().min(1),
+  confirmationName: z.string().trim().min(1),
+  currentPassword: z.string().min(1),
+})
+
 // PUT /api/tenants - suspend/reactivate an institution or change its plan
 async function handlePut(actor: SessionUser, request: NextRequest) {
   try {
@@ -247,6 +253,46 @@ async function handlePut(actor: SessionUser, request: NextRequest) {
   }
 }
 
+// DELETE /api/tenants - irreversible platform deletion. It is deliberately
+// protected by the Super Admin's current password and an exact institution
+// name confirmation. Foreign-key restrictions can still refuse deletion when
+// the institution has protected historical records; suspension remains safe.
+async function handleDelete(actor: SessionUser, request: NextRequest) {
+  try {
+    const parsed = deleteSchema.safeParse(await request.json())
+    if (!parsed.success) return NextResponse.json({ error: 'Données invalides', details: parsed.error.flatten().fieldErrors }, { status: 400 })
+
+    const [target, actorAccount] = await Promise.all([
+      db.tenant.findUnique({ where: { id: parsed.data.id }, select: { id: true, name: true } }),
+      db.user.findUnique({ where: { id: actor.id }, select: { passwordHash: true, role: true } }),
+    ])
+    if (!target) return NextResponse.json({ error: 'Institution introuvable' }, { status: 404 })
+    if (actorAccount?.role !== 'SUPER_ADMIN' || !actorAccount.passwordHash) return NextResponse.json({ error: 'Une validation par mot de passe est requise.' }, { status: 403 })
+    if (target.name !== parsed.data.confirmationName) return NextResponse.json({ error: 'Le nom de confirmation ne correspond pas exactement.' }, { status: 400 })
+    if (!await bcrypt.compare(parsed.data.currentPassword, actorAccount.passwordHash)) return NextResponse.json({ error: 'Mot de passe Super Admin incorrect.' }, { status: 403 })
+
+    await db.auditLog.create({
+      data: {
+        tenantId: null,
+        userId: actor.id,
+        action: 'DELETE_ATTEMPT',
+        entity: 'Tenant',
+        entityId: target.id,
+        details: JSON.stringify({ name: target.name, confirmation: 'exact-name-and-password' }),
+      },
+    })
+    await db.tenant.delete({ where: { id: target.id } })
+    return NextResponse.json({ ok: true, deletedId: target.id })
+  } catch (error) {
+    if (error && typeof error === 'object' && 'code' in error && (error as { code?: string }).code === 'P2003') {
+      return NextResponse.json({ error: 'Cette institution contient encore des historiques protégés et ne peut pas être supprimée. Suspendez-la pour la désactiver sans perte de données.' }, { status: 409 })
+    }
+    console.error('Delete tenant error:', error)
+    return NextResponse.json({ error: "Échec de la suppression de l'institution" }, { status: 500 })
+  }
+}
+
 export const GET = withAuth(handleGet, ['SUPER_ADMIN'])
 export const POST = withAuth(handlePost, ['SUPER_ADMIN'])
 export const PUT = withAuth(handlePut, ['SUPER_ADMIN'])
+export const DELETE = withAuth(handleDelete, ['SUPER_ADMIN'])

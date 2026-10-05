@@ -28,6 +28,7 @@ import {
   Copy,
   Loader2,
   ShieldAlert,
+  Trash2,
 } from 'lucide-react'
 
 interface TenantRow {
@@ -77,6 +78,10 @@ export function PlatformInstitutionsPage() {
   })
   const [createdCredentials, setCreatedCredentials] = useState<{ email: string; tempPassword: string; institutionName: string } | null>(null)
   const [togglingId, setTogglingId] = useState<string | null>(null)
+  const [deletingTenant, setDeletingTenant] = useState<TenantRow | null>(null)
+  const [deleteName, setDeleteName] = useState('')
+  const [deletePassword, setDeletePassword] = useState('')
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const tenants = data?.data ?? []
   const stats = data?.stats
@@ -133,6 +138,29 @@ export function PlatformInstitutionsPage() {
       () => toast.success('Mot de passe copie'),
       () => toast.error('Copie impossible')
     )
+  }
+
+  const handleDelete = async () => {
+    if (!deletingTenant) return
+    setIsDeleting(true)
+    try {
+      const res = await fetch('/api/tenants', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: deletingTenant.id, confirmationName: deleteName, currentPassword: deletePassword }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json.error || "Échec de la suppression de l'institution")
+      toast.success('Institution supprimée')
+      setDeletingTenant(null)
+      setDeleteName('')
+      setDeletePassword('')
+      queryClient.invalidateQueries({ queryKey: ['tenants'] })
+    } catch (error) {
+      toast.error('Suppression refusée', { description: error instanceof Error ? error.message : "Échec de la suppression" })
+    } finally {
+      setIsDeleting(false)
+    }
   }
 
   return (
@@ -257,6 +285,15 @@ export function PlatformInstitutionsPage() {
                           {togglingId === t.id ? <Loader2 className="size-3 animate-spin mr-1" /> : <ShieldAlert className="size-3 mr-1" />}
                           {t.isActive ? 'Suspendre' : 'Reactiver'}
                         </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-xs text-red-700 hover:bg-red-50 hover:text-red-800"
+                          onClick={() => { setDeletingTenant(t); setDeleteName(''); setDeletePassword('') }}
+                        >
+                          <Trash2 className="size-3 mr-1" />
+                          Supprimer
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -329,6 +366,21 @@ export function PlatformInstitutionsPage() {
               {isCreating ? 'Création…' : "Créer l'institution"}
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(deletingTenant)} onOpenChange={(open) => { if (!open && !isDeleting) setDeletingTenant(null) }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle className="text-red-700">Supprimer définitivement l’institution</DialogTitle></DialogHeader>
+          {deletingTenant && <div className="space-y-4 py-2">
+            <p className="text-sm text-gray-700">Cette action est irréversible. Pour confirmer, saisissez exactement le nom de l’institution et votre mot de passe Super Admin.</p>
+            <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-900">{deletingTenant.name}</div>
+            <div className="space-y-2"><Label>Nom exact de l’institution</Label><Input value={deleteName} onChange={(e) => setDeleteName(e.target.value)} placeholder={deletingTenant.name} /></div>
+            <div className="space-y-2"><Label>Mot de passe Super Admin</Label><Input type="password" value={deletePassword} onChange={(e) => setDeletePassword(e.target.value)} /></div>
+            <Button variant="destructive" className="w-full" disabled={isDeleting || deleteName !== deletingTenant.name || !deletePassword} onClick={handleDelete}>
+              {isDeleting ? 'Suppression…' : 'Confirmer la suppression définitive'}
+            </Button>
+          </div>}
         </DialogContent>
       </Dialog>
 

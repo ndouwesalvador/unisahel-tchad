@@ -226,7 +226,7 @@ function DocumentHeader({ tenant, docNumber, compact = false, subtle = false }: 
         <View style={{ width: '26%', alignItems: 'center', justifyContent: 'center' }}>
           <Text style={{ fontSize: 7, fontWeight: 'bold', color: ink, textAlign: 'center' }}>{tenant.motto?.toUpperCase() || (isChad ? 'UNITÉ · TRAVAIL · PROGRÈS' : '')}</Text>
           {tenant.arabicMottoImage?.startsWith('data:image/png;base64,') && <Image src={tenant.arabicMottoImage} style={{ width: '100%', height: 11, objectFit: 'fill' }} />}
-          {tenant.logo?.startsWith('data:image/') ? <Image src={tenant.logo} style={{ width: compact ? 62 : 76, height: compact ? 43 : 55, objectFit: 'contain', marginTop: 2 }} />
+          {tenant.logo?.startsWith('data:image/') ? <Image src={tenant.logo} style={{ width: compact ? 68 : 84, height: compact ? 48 : 61, objectFit: 'contain', marginTop: 2 }} />
             : <View style={{ width: compact ? 43 : 55, height: compact ? 43 : 55, marginTop: 2, borderWidth: 1, borderColor: ink, borderRadius: 30, justifyContent: 'center' }}><Text style={{ fontSize: 9, color: ink, textAlign: 'center' }}>{shortName}</Text></View>}
         </View>
         <View style={{ width: '37%', height: columnHeight, alignItems: 'center', paddingLeft: 5, justifyContent: 'center' }}>
@@ -380,7 +380,8 @@ export function ReleveNotesPDF({
   // The table is elastic like the EduSahel bulletin: compact for a complete
   // curriculum, generous for a short one. Final PDF pagination is validated.
   const rowPadding = Math.max(0.3, Math.min(6, (275 - density * tableFont * 1.2) / Math.max(1, density * 2)))
-  const note = (value?: number) => value == null ? '—' : formatNumber(value).replace('.', ',')
+  const note = (value?: number) => value == null ? '' : formatNumber(value).replace('.', ',')
+  const matterStatus = (value?: number) => value == null ? 'Non notée' : value >= 10 ? 'Validée' : 'Non validée'
   const paper = { ink: '#2b3641', muted: '#5f6b75', rule: '#d2b262', tint: '#f8f7f2', tintAlt: '#fafbfb', gold: '#c7a44b' }
   const ueTints = [
     { fill: '#eef3f9', edge: '#90a8c2' },
@@ -390,7 +391,6 @@ export function ReleveNotesPDF({
   const initials = `${student.firstName?.[0] || ''}${student.lastName?.[0] || ''}`.toUpperCase()
   const inlineQr = Boolean(qrCodeDataUrl?.startsWith('data:image/'))
   const denseTop = density > 34 && tenant.contactPlacement === 'TOP'
-  const decisionText = jury ? decisionLabel(jury.decision) : 'Non publiée'
   return (
     <Document>
       <Page size="A4" style={{ ...styles.page, paddingTop: 15, paddingHorizontal: 29, paddingBottom: 104 }}>
@@ -401,8 +401,8 @@ export function ReleveNotesPDF({
 
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 0.8, borderTopColor: paper.gold, backgroundColor: paper.tint, paddingVertical: density > 34 ? 4 : 6, paddingHorizontal: 9, marginBottom: 6 }} wrap={false}>
           <View style={{ width: '23%' }}><Text style={{ fontSize: 6, color: colors.muted }}>ANNÉE ACADÉMIQUE</Text><Text style={{ fontSize: 8.3, color: colors.primary, fontWeight: 'bold', marginTop: 1 }}>{academicYear}</Text></View>
-          <View style={{ width: '39%' }}><Text style={{ fontSize: 6, color: colors.muted }}>FILIÈRE</Text><Text style={{ fontSize: 8, color: colors.primary, fontWeight: 'bold', marginTop: 1 }}>{student.program || '—'}</Text></View>
-          <View style={{ width: '21%' }}><Text style={{ fontSize: 6, color: colors.muted }}>NIVEAU</Text><Text style={{ fontSize: 8, color: colors.primary, fontWeight: 'bold', marginTop: 1 }}>{student.level || '—'}</Text></View>
+          <View style={{ width: '39%' }}><Text style={{ fontSize: 6, color: colors.muted }}>FILIÈRE</Text><Text style={{ fontSize: 8, color: colors.primary, fontWeight: 'bold', marginTop: 1 }}>{student.program || ''}</Text></View>
+          <View style={{ width: '21%' }}><Text style={{ fontSize: 6, color: colors.muted }}>NIVEAU</Text><Text style={{ fontSize: 8, color: colors.primary, fontWeight: 'bold', marginTop: 1 }}>{student.level || ''}</Text></View>
           <View style={{ width: '13%' }}><Text style={{ fontSize: 6, color: colors.muted }}>CRÉDITS</Text><Text style={{ fontSize: 8.3, color: colors.primary, fontWeight: 'bold', marginTop: 1 }}>{credits} ECTS</Text></View>
         </View>
 
@@ -414,7 +414,7 @@ export function ReleveNotesPDF({
           <View style={{ flexGrow: 1, padding: density > 34 ? 5 : 8, justifyContent: 'center' }}>
             <Text style={{ fontSize: 6.5, color: colors.muted, letterSpacing: 0.9 }}>NOM ET PRÉNOMS</Text>
             <Text style={{ fontSize: density > 34 ? 11 : 13, fontWeight: 'bold', color: colors.primary, marginTop: 2 }}>{student.lastName.toUpperCase()} {student.firstName}</Text>
-            <Text style={{ fontSize: 7.2, color: colors.muted, marginTop: 3 }}>Matricule : {student.matricule || '—'}{student.gender ? ` · ${student.gender === 'M' ? 'Masculin' : student.gender === 'F' ? 'Féminin' : student.gender}` : ''}</Text>
+            <Text style={{ fontSize: 7.2, color: colors.muted, marginTop: 3 }}>Matricule : {student.matricule || ''}{student.gender ? ` · ${student.gender === 'M' ? 'Masculin' : student.gender === 'F' ? 'Féminin' : student.gender}` : ''}</Text>
             {student.dateOfBirth && <Text style={{ fontSize: 7, color: colors.muted, marginTop: 2 }}>Né(e) le {formatDate(student.dateOfBirth)}{student.placeOfBirth ? ` à ${student.placeOfBirth}` : ''}</Text>}
           </View>
           {qrCodeDataUrl?.startsWith('data:image/') && <View style={{ width: density > 34 ? 62 : 69, padding: 4, borderLeftWidth: 0.5, borderLeftColor: colors.border, alignItems: 'center', justifyContent: 'center' }}>
@@ -445,17 +445,17 @@ export function ReleveNotesPDF({
                   <Text style={{ width: '42%', fontSize: tableFont + 0.3, color: paper.ink, fontWeight: 'bold' }}>{ue.code ? `${ue.code} · ` : ''}{ue.ue}</Text>
                   <Text style={{ width: '11%', fontSize: tableFont + 0.3, color: paper.ink, textAlign: 'center' }}>{ue.code || '—'}</Text>
                   <Text style={{ width: '10%', fontSize: tableFont + 0.3, color: paper.ink, fontWeight: 'bold', textAlign: 'center' }}>{ue.credits}</Text>
-                  <Text style={{ width: '15%', fontSize: tableFont + 0.3, color: paper.ink, textAlign: 'center' }}>—</Text>
+                  <Text style={{ width: '15%', fontSize: tableFont + 0.3, color: paper.ink, textAlign: 'center' }}></Text>
                   <Text style={{ width: '12%', fontSize: tableFont + 0.3, color: paper.ink, fontWeight: 'bold', textAlign: 'center' }}>{note(ue.moyenne)}</Text>
-                  <Text style={{ width: '10%', fontSize: tableFont + 0.3, color: paper.ink, fontWeight: 'bold', textAlign: 'center' }}>{jury ? decisionText : '—'}</Text>
+                  <Text style={{ width: '10%', fontSize: tableFont + 0.3, color: ue.moyenne != null && ue.moyenne >= 10 ? '#176341' : paper.ink, fontWeight: 'bold', textAlign: 'center' }}>{matterStatus(ue.moyenne)}</Text>
                 </View>
                 {ue.notes.map((entry, j) => <View key={j} style={{ flexDirection: 'row', paddingVertical: rowPadding, paddingHorizontal: 5, backgroundColor: j % 2 ? paper.tintAlt : '#ffffff', borderTopWidth: 0.3, borderTopColor: paper.rule, borderLeftWidth: 2, borderLeftColor: '#e3e8e9' }} wrap={false}>
                   <Text style={{ width: '42%', fontSize: tableFont, color: colors.text, paddingLeft: 4 }}>{entry.ec}</Text>
-                  <Text style={{ width: '11%', fontSize: tableFont, color: colors.text, textAlign: 'center' }}>{entry.code || '—'}</Text>
+                  <Text style={{ width: '11%', fontSize: tableFont, color: colors.text, textAlign: 'center' }}>{entry.code || ''}</Text>
                   <Text style={{ width: '10%', fontSize: tableFont, textAlign: 'center' }}>{baseCredits[j] ?? 0}</Text>
                   <Text style={{ width: '15%', fontSize: tableFont, textAlign: 'center', fontWeight: 'bold' }}>{note(entry.final)}</Text>
-                  <Text style={{ width: '12%', fontSize: tableFont, textAlign: 'center' }}>—</Text>
-                  <Text style={{ width: '10%', fontSize: tableFont, textAlign: 'center' }}>—</Text>
+                  <Text style={{ width: '12%', fontSize: tableFont, textAlign: 'center' }}></Text>
+                  <Text style={{ width: '10%', fontSize: tableFont, color: entry.final != null && entry.final >= 10 ? '#176341' : paper.ink, fontWeight: 'bold', textAlign: 'center' }}>{matterStatus(entry.final)}</Text>
                 </View>)}
               </>
             })()}
@@ -470,12 +470,12 @@ export function ReleveNotesPDF({
         <View style={{ flexDirection: 'row', gap: 5 }} wrap={false}>
           <View style={{ width: '34%', borderTopWidth: 1, borderTopColor: paper.gold, backgroundColor: paper.tint, padding: density > 34 ? 5 : 8, alignItems: 'center' }}>
             <Text style={{ fontSize: 6, color: colors.muted, letterSpacing: 0.6 }}>MOYENNE GÉNÉRALE</Text>
-            <Text style={{ fontSize: density > 34 ? 13 : 18, fontWeight: 'bold', color: colors.primary, marginTop: 2 }}>{jury ? note(jury.average) : '—'} <Text style={{ fontSize: 8 }}>/ 20</Text></Text>
+            <Text style={{ fontSize: density > 34 ? 13 : 18, fontWeight: 'bold', color: colors.primary, marginTop: 2 }}>{jury ? note(jury.average) : ''} <Text style={{ fontSize: 8 }}>/ 20</Text></Text>
             {jury && <View style={{ width: '100%', height: 2, backgroundColor: '#e4e9ea', marginTop: 3 }}><View style={{ width: `${Math.max(0, Math.min(100, jury.average * 5))}%`, height: 2, backgroundColor: '#aab9bf' }} /></View>}
           </View>
           <View style={{ width: '26%', borderTopWidth: 1, borderTopColor: paper.gold, borderWidth: 0.5, borderColor: paper.rule, padding: density > 34 ? 5 : 8, alignItems: 'center' }}>
             <Text style={{ fontSize: 6, color: colors.muted, letterSpacing: 0.6 }}>CRÉDITS ACQUIS</Text>
-            <Text style={{ fontSize: density > 34 ? 12 : 15, fontWeight: 'bold', color: colors.primary, marginTop: 3 }}>{jury ? jury.creditsAcquired : '—'} <Text style={{ fontSize: 8 }}>/ {credits}</Text></Text>
+            <Text style={{ fontSize: density > 34 ? 12 : 15, fontWeight: 'bold', color: colors.primary, marginTop: 3 }}>{jury ? jury.creditsAcquired : ''} <Text style={{ fontSize: 8 }}>/ {credits}</Text></Text>
           </View>
           <View style={{ width: '38%', borderTopWidth: 1, borderTopColor: paper.gold, borderWidth: 0.5, borderColor: paper.rule, padding: density > 34 ? 5 : 8, alignItems: 'center' }}>
             <Text style={{ fontSize: 6, color: colors.muted, letterSpacing: 0.6 }}>DÉCISION DU JURY</Text>
