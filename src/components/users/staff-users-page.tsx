@@ -109,7 +109,7 @@ export function StaffUsersPage() {
       toast.error('Champs requis', { description: 'Nom, prénom, e-mail et rôle sont obligatoires' })
       return
     }
-    if ((form.role === 'FACULTE' && !form.facultyId) || (['DEPARTEMENT', 'JURY'].includes(form.role) && !form.departmentId)) {
+    if ((form.role === 'FACULTE' && !form.facultyId) || (['DEPARTEMENT', 'RESPONSABLE_FILIERE', 'JURY'].includes(form.role) && !form.departmentId)) {
       toast.error('Périmètre requis', { description: 'Affectez ce responsable à sa faculté ou à son département.' })
       return
     }
@@ -143,7 +143,7 @@ export function StaffUsersPage() {
         body: JSON.stringify({
           id: editing.id, role: editRole,
           facultyId: editRole === 'FACULTE' ? editFacultyId || null : null,
-          departmentId: ['DEPARTEMENT', 'JURY'].includes(editRole) ? editDepartmentId || null : null,
+          departmentId: ['DEPARTEMENT', 'RESPONSABLE_FILIERE', 'JURY'].includes(editRole) ? editDepartmentId || null : null,
         }),
       })
       const json = await res.json().catch(() => ({}))
@@ -380,7 +380,7 @@ export function StaffUsersPage() {
                 <SelectContent>{faculties.map((faculty) => <SelectItem key={faculty.id} value={faculty.id}>{faculty.name}</SelectItem>)}</SelectContent>
               </Select>
             </div>}
-            {['DEPARTEMENT', 'JURY'].includes(form.role) && <div className="space-y-2">
+            {['DEPARTEMENT', 'RESPONSABLE_FILIERE', 'JURY'].includes(form.role) && <div className="space-y-2">
               <Label>Département du compte *</Label>
               <Select value={form.departmentId} onValueChange={(value) => setForm((f) => ({ ...f, departmentId: value }))}>
                 <SelectTrigger><SelectValue placeholder="Choisir un département" /></SelectTrigger>
@@ -407,8 +407,8 @@ export function StaffUsersPage() {
             </Select>
           </div>
           {editRole === 'FACULTE' && <div className="space-y-2"><Label>Faculté</Label><Select value={editFacultyId} onValueChange={setEditFacultyId}><SelectTrigger><SelectValue placeholder="Choisir" /></SelectTrigger><SelectContent>{faculties.map((faculty) => <SelectItem key={faculty.id} value={faculty.id}>{faculty.name}</SelectItem>)}</SelectContent></Select></div>}
-          {['DEPARTEMENT', 'JURY'].includes(editRole) && <div className="space-y-2"><Label>Département</Label><Select value={editDepartmentId} onValueChange={setEditDepartmentId}><SelectTrigger><SelectValue placeholder="Choisir" /></SelectTrigger><SelectContent>{departments.map((department) => <SelectItem key={department.id} value={department.id}>{department.name} · {department.facultyName}</SelectItem>)}</SelectContent></Select></div>}
-          <Button disabled={busyId === editing?.id || (editRole === 'FACULTE' && !editFacultyId) || (['DEPARTEMENT', 'JURY'].includes(editRole) && !editDepartmentId)} onClick={handleUpdateRole}>Enregistrer</Button>
+          {['DEPARTEMENT', 'RESPONSABLE_FILIERE', 'JURY'].includes(editRole) && <div className="space-y-2"><Label>Département</Label><Select value={editDepartmentId} onValueChange={setEditDepartmentId}><SelectTrigger><SelectValue placeholder="Choisir" /></SelectTrigger><SelectContent>{departments.map((department) => <SelectItem key={department.id} value={department.id}>{department.name} · {department.facultyName}</SelectItem>)}</SelectContent></Select></div>}
+          <Button disabled={busyId === editing?.id || (editRole === 'FACULTE' && !editFacultyId) || (['DEPARTEMENT', 'RESPONSABLE_FILIERE', 'JURY'].includes(editRole) && !editDepartmentId)} onClick={handleUpdateRole}>Enregistrer</Button>
         </DialogContent>
       </Dialog>
 

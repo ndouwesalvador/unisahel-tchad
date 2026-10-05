@@ -49,6 +49,18 @@ describe('staff scope assignment', () => {
     expect(mocks.userCreate).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ facultyId: 'cfaculty0000000000000001', departmentId: null }) }))
   })
 
+  it('accepts empty scope fields for an institution-level cashier', async () => {
+    const response = await post(admin, admin.tenantId, request('POST', { ...base, role: 'CAISSE', facultyId: '', departmentId: '' }))
+    expect(response.status).toBe(201)
+    expect(mocks.userCreate).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ role: 'CAISSE', facultyId: null, departmentId: null }) }))
+  })
+
+  it('binds a programme manager to a department', async () => {
+    const response = await post(admin, admin.tenantId, request('POST', { ...base, role: 'RESPONSABLE_FILIERE', departmentId: 'cdepartment000000000001', facultyId: '' }))
+    expect(response.status).toBe(201)
+    expect(mocks.userCreate).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ role: 'RESPONSABLE_FILIERE', departmentId: 'cdepartment000000000001', facultyId: null }) }))
+  })
+
   it('requires a department for a jury account', async () => {
     const response = await post(admin, admin.tenantId, request('POST', { ...base, role: 'JURY' }))
     expect(response.status).toBe(400)

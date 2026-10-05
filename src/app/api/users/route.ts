@@ -22,22 +22,36 @@ const STAFF_ROLES = [
   'MAITRE_STAGE',
 ] as const
 
+// Select components submit an empty string when a scope is not applicable.
+// Treat that value as absent before validating CUIDs; otherwise valid
+// institution-level roles (caisse, rectorat, scolarité, etc.) are rejected
+// with the generic “données invalides” response.
+const optionalCuid = z.preprocess(
+  (value) => (value === '' || value === null || value === undefined ? undefined : value),
+  z.string().cuid().optional(),
+)
+
+const nullableCuid = z.preprocess(
+  (value) => (value === '' ? null : value),
+  z.string().cuid().nullable().optional(),
+)
+
 const createStaffSchema = z.object({
   firstName: z.string().min(1).max(100),
   lastName: z.string().min(1).max(100),
   email: z.string().email(),
   phone: z.string().max(30).optional(),
   role: z.enum(STAFF_ROLES),
-  facultyId: z.string().cuid().optional(),
-  departmentId: z.string().cuid().optional(),
+  facultyId: optionalCuid,
+  departmentId: optionalCuid,
 })
 
 const updateStaffSchema = z.object({
   id: z.string().cuid(),
   isActive: z.boolean().optional(),
   role: z.enum(STAFF_ROLES).optional(),
-  facultyId: z.string().cuid().nullable().optional(),
-  departmentId: z.string().cuid().nullable().optional(),
+  facultyId: nullableCuid,
+  departmentId: nullableCuid,
   resetPassword: z.boolean().optional(),
 })
 
@@ -47,7 +61,7 @@ async function resolveStaffScope(tenantId: string, role: string, facultyId?: str
     const faculty = await db.faculty.findFirst({ where: { id: facultyId, tenantId, isActive: true }, select: { id: true } })
     return faculty ? { facultyId, departmentId: null } : { error: 'Faculté active introuvable dans cette institution.' }
   }
-  if (role === 'DEPARTEMENT' || role === 'JURY') {
+  if (role === 'DEPARTEMENT' || role === 'RESPONSABLE_FILIERE' || role === 'JURY') {
     if (!departmentId || facultyId) return { error: 'Choisissez un département, sans faculté.' }
     const department = await db.department.findFirst({ where: { id: departmentId, tenantId, isActive: true }, select: { id: true, facultyId: true } })
     return department?.facultyId ? { facultyId: null, departmentId } : { error: 'Département actif sans faculté de rattachement ou introuvable.' }

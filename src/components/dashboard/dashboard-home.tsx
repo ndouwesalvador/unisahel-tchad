@@ -146,14 +146,26 @@ const roleQuickActions: Record<string, { label: string; view: import('@/lib/stor
   PARENT: [{ label: 'Paiements', view: 'payments' }],
 }
 
+const roleWorkspaces: Record<string, { title: string; description: string; focus: string }> = {
+  RECTORAT: { title: 'Pilotage du rectorat', description: 'Suivez les indicateurs globaux et les décisions de l’institution.', focus: 'Pilotage et conformité' },
+  SCOLARITE: { title: 'Scolarité centrale', description: 'Gérez les inscriptions, les dossiers, les documents et la chaîne académique.', focus: 'Dossiers et résultats' },
+  FACULTE: { title: 'Direction de faculté', description: 'Coordonnez les départements et suivez les activités de votre faculté.', focus: 'Coordination facultaire' },
+  DEPARTEMENT: { title: 'Gestion du département', description: 'Organisez les enseignants, les UE, les emplois du temps et les délibérations de votre département.', focus: 'Périmètre départemental' },
+  RESPONSABLE_FILIERE: { title: 'Responsable de filière', description: 'Suivez la maquette, les étudiants et les résultats de votre filière.', focus: 'Suivi de filière' },
+  JURY: { title: 'Espace du jury', description: 'Préparez, contrôlez et validez les décisions de délibération de votre département.', focus: 'Délibérations et PV' },
+  CAISSE: { title: 'Caisse et recouvrement', description: 'Enregistrez les paiements, contrôlez les validations et éditez les reçus.', focus: 'Paiements et reçus' },
+  MAITRE_STAGE: { title: 'Suivi des stages', description: 'Suivez les étudiants qui vous sont confiés et leurs évaluations de stage.', focus: 'Stages et évaluations' },
+}
+
 function RoleDashboardHome({ data }: { data: RoleDashboardResponse }) {
   const { user, setView } = useAppStore()
   const links = roleQuickActions[data.role] ?? []
+  const workspace = roleWorkspaces[data.role] ?? { title: 'Espace de travail', description: 'Accédez aux fonctions autorisées pour votre rôle.', focus: 'Activités autorisées' }
   return <div className="space-y-5 text-slate-900">
     <Card className="border-emerald-200 bg-emerald-50 shadow-sm"><CardContent className="p-6">
-      <p className="text-sm font-bold uppercase tracking-wide text-emerald-900">Espace {data.role.replaceAll('_', ' ').toLocaleLowerCase('fr-FR')}</p>
-      <h1 className="mt-2 text-2xl font-bold text-slate-950">{getGreeting()}, {user?.firstName} {user?.lastName}</h1>
-      <p className="mt-2 text-sm text-slate-800">Accédez aux fonctions autorisées pour votre rôle.</p>
+      <p className="text-sm font-bold uppercase tracking-wide text-emerald-900">{workspace.focus}</p>
+      <h1 className="mt-2 text-2xl font-bold text-slate-950">{workspace.title}</h1>
+      <p className="mt-2 text-sm text-slate-800">{getGreeting()}, {user?.firstName} {user?.lastName}. {workspace.description}</p>
       <p className="mt-3 text-sm font-semibold text-emerald-950">{data.academicYear ? `Année académique ${data.academicYear.name}` : 'Aucune année académique active'}</p>
     </CardContent></Card>
     <Card className="border-slate-200 bg-white"><CardHeader><CardTitle className="text-lg text-slate-950">Accès rapides</CardTitle></CardHeader><CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

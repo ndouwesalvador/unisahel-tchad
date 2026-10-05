@@ -530,6 +530,16 @@ function SidebarContent() {
 function MainContent({ view }: { view: AppView }) {
   const { user } = useAppStore()
   if (user?.role === 'FACULTE' || user?.role === 'DEPARTEMENT') {
+    // These screens are intentionally shared with the central administration,
+    // but their APIs apply the user's faculty/department scope server-side.
+    // Keep them reachable from the local dashboard instead of falling back to
+    // the organization overview for every unlisted view.
+    if (view === 'students') return <StudentsList />
+    if (view === 'teachers') return <TeachersPage />
+    if (view === 'structure') return <StructurePage />
+    if (view === 'maquette' || view === 'programs') return <MaquettePage />
+    if (view === 'grades') return <GradesPage />
+    if (view === 'reports') return <ReportsPage />
     if (view === 'timetable') return <TimetablePage />
     if (view === 'teaching-services') return <TeachingServicesPage />
     if (view === 'deliberation') return <DeliberationPage />
