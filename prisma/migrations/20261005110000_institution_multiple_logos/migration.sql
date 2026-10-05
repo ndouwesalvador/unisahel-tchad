@@ -1,2 +1,2 @@
-ALTER TABLE "Tenant" ADD COLUMN "secondaryLogo" TEXT;
-ALTER TABLE "Tenant" ADD COLUMN "thirdLogo" TEXT;
+ALTER TABLE "Tenant" ADD COLUMN IF NOT EXISTS "secondaryLogo" TEXT;
+ALTER TABLE "Tenant" ADD COLUMN IF NOT EXISTS "thirdLogo" TEXT;
