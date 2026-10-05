@@ -109,6 +109,7 @@ const TeachersPage = lazyView(() => import('@/components/teachers/teachers-page'
 const TeacherDetail = lazyView(() => import('@/components/teachers/teacher-detail').then(m => m.TeacherDetail))
 const MaquettePage = lazyView(() => import('@/components/maquette/maquette-page').then(m => m.MaquettePage))
 const TeacherUnitsPage = lazyView(() => import('@/components/teacher/teacher-workspace').then(m => m.TeacherUnitsPage))
+const TeacherStudentsPage = lazyView(() => import('@/components/teacher/teacher-workspace').then(m => m.TeacherStudentsPage))
 const TeacherTimetablePage = lazyView(() => import('@/components/teacher/teacher-workspace').then(m => m.TeacherTimetablePage))
 const TeacherAttendancePage = lazyView(() => import('@/components/teacher/teacher-workspace').then(m => m.TeacherAttendancePage))
 const TeacherOnlineExamPage = lazyView(() => import('@/components/teacher/teacher-workspace').then(m => m.TeacherOnlineExamPage))
@@ -549,6 +550,7 @@ function MainContent({ view }: { view: AppView }) {
   }
   if (user?.role === 'ENSEIGNANT') {
     if (view === 'maquette') return <TeacherUnitsPage />
+    if (view === 'students') return <TeacherStudentsPage />
     if (view === 'timetable') return <TeacherTimetablePage />
     if (view === 'attendance') return <TeacherAttendancePage />
     if (view === 'online-exam') return <TeacherOnlineExamPage />

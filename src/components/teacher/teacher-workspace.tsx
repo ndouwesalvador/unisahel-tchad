@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { BookOpen, CalendarDays, ClipboardCheck, FileQuestion, MessageSquare, Send } from 'lucide-react'
+import { BookOpen, CalendarDays, ClipboardCheck, FileQuestion, MessageSquare, Search, Send, UsersRound } from 'lucide-react'
 import { useDashboardStats } from '@/lib/api-hooks'
 import { useAppStore } from '@/lib/store'
 
@@ -102,6 +102,55 @@ export function TeacherUnitsPage() {
           <h3 className="mt-1 font-semibold text-slate-950">{course.code ? `${course.code} · ` : ''}{course.name}</h3>
         </div>)}</div>
       </section>)}
+  </div>
+}
+
+type TeacherStudent = {
+  id: string; matricule: string | null; firstName: string; lastName: string; middleName: string | null
+  email: string | null; phone: string | null; program: string; level: string; programId: string; levelId: string
+}
+type TeacherStudentScope = {
+  programId: string; program: string; levelId: string; level: string
+  courses: Array<{ id: string; code: string | null; name: string; unit: string; unitCode: string | null }>
+}
+
+export function TeacherStudentsPage() {
+  const selectedAcademicYearId = useAppStore((state) => state.selectedAcademicYearId)
+  const [search, setSearch] = useState('')
+  const query = useQuery({
+    queryKey: ['teacher-students', selectedAcademicYearId],
+    queryFn: () => readJson<{ data: { academicYear: { id: string; name: string }; scopes: TeacherStudentScope[]; students: TeacherStudent[] } }>(
+      `/api/teacher-students${selectedAcademicYearId ? `?academicYearId=${encodeURIComponent(selectedAcademicYearId)}` : ''}`,
+    ),
+    staleTime: 0,
+  })
+  const payload = query.data?.data
+  const normalizedSearch = search.trim().toLocaleLowerCase('fr')
+  const students = (payload?.students ?? []).filter((student) => {
+    if (!normalizedSearch) return true
+    return `${student.firstName} ${student.middleName ?? ''} ${student.lastName} ${student.matricule ?? ''} ${student.program} ${student.level}`.toLocaleLowerCase('fr').includes(normalizedSearch)
+  })
+
+  return <div className="space-y-6 text-slate-900">
+    <PageHeading icon={UsersRound} title="Mes étudiants" description="Les étudiants inscrits dans les filières et niveaux où vos matières sont affectées apparaissent automatiquement ici. La saisie des notes reste limitée à chaque matière qui vous est attribuée." />
+    {payload?.academicYear && <p className="text-sm font-semibold text-slate-700">Année académique : {payload.academicYear.name}</p>}
+    {query.isLoading ? <Empty>Chargement de vos étudiants…</Empty> : query.isError ? <Empty>Impossible de charger vos étudiants. <button className="font-bold underline" onClick={() => query.refetch()}>Réessayer</button></Empty> : (payload?.scopes ?? []).length === 0 ?
+      <Empty>Aucune matière ne vous est affectée pour cette année. Dès qu’un service d’enseignement est approuvé, les étudiants concernés apparaîtront automatiquement.</Empty> : <>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {(payload?.scopes ?? []).map((scope) => <article key={`${scope.programId}:${scope.levelId}`} className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4">
+            <p className="text-sm font-bold text-emerald-950">{scope.program}</p>
+            <p className="mt-1 text-sm text-emerald-800">{scope.level}</p>
+            <p className="mt-3 text-xs font-semibold text-emerald-700">{scope.courses.length} matière{scope.courses.length > 1 ? 's' : ''} affectée{scope.courses.length > 1 ? 's' : ''}</p>
+          </article>)}
+        </div>
+        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+          <div className="flex flex-col gap-3 border-b border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+            <div><h2 className="text-lg font-bold text-slate-950">Étudiants suivis</h2><p className="text-sm text-slate-600">{students.length} résultat{students.length > 1 ? 's' : ''}{search ? ' filtré(s)' : ''}</p></div>
+            <label className="relative block w-full sm:max-w-xs"><span className="sr-only">Rechercher un étudiant</span><Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" aria-hidden="true" /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Nom, matricule, filière…" className="min-h-11 w-full rounded-lg border border-slate-300 pl-9 pr-3 text-sm text-slate-900 focus-visible:outline-2 focus-visible:outline-emerald-700" /></label>
+          </div>
+          {students.length === 0 ? <Empty>Aucun étudiant inscrit ne correspond à votre recherche.</Empty> : <div className="overflow-x-auto"><table className="min-w-full text-left text-sm"><thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-600"><tr><th className="px-5 py-3 font-bold">Étudiant</th><th className="px-5 py-3 font-bold">Matricule</th><th className="px-5 py-3 font-bold">Filière</th><th className="px-5 py-3 font-bold">Niveau</th></tr></thead><tbody className="divide-y divide-slate-100">{students.map((student) => <tr key={student.id} className="hover:bg-slate-50"><td className="whitespace-nowrap px-5 py-3 font-semibold text-slate-950">{student.lastName.toUpperCase()} {student.firstName}{student.middleName ? ` ${student.middleName}` : ''}</td><td className="whitespace-nowrap px-5 py-3 text-slate-700">{student.matricule ?? '—'}</td><td className="px-5 py-3 text-slate-700">{student.program}</td><td className="px-5 py-3 text-slate-700">{student.level}</td></tr>)}</tbody></table></div>}
+        </section>
+      </>}
   </div>
 }
 
