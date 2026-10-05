@@ -7,6 +7,12 @@ function escapeXml(value: string) {
   return value.replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' })[character]!)
 }
 
+function normalizeArabicPunctuation(value: string) {
+  // Keep separators legible with the embedded Arabic font instead of relying
+  // on a missing glyph that some PDF viewers render as a small rectangle.
+  return value.replace(/[\u002D\u2010\u2011\u2012\u2013\u2014]/g, ' − ')
+}
+
 export function renderArabicHeader(input: { headerLanguageMode?: string; arabicCountry?: string; arabicMinistry?: string; arabicName?: string; headerLinesAr?: string[]; primaryColor?: string }): string | undefined {
   if (input.headerLanguageMode !== 'FR_AR') return undefined
   const lines = (input.headerLinesAr ?? [
@@ -27,7 +33,7 @@ export function renderArabicHeader(input: { headerLanguageMode?: string; arabicC
 export function renderArabicMotto(input: { headerLanguageMode?: string; arabicMotto?: string | null }): string | undefined {
   if (input.headerLanguageMode !== 'FR_AR' || !input.arabicMotto?.trim()) return undefined
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="560" height="56" viewBox="0 0 560 56">
-    <text x="280" y="39" text-anchor="middle" direction="rtl" font-family="Noto Naskh Arabic" font-size="29" fill="#111111">${escapeXml(input.arabicMotto.trim().slice(0, 130))}</text>
+    <text x="280" y="39" text-anchor="middle" direction="rtl" font-family="Noto Naskh Arabic" font-size="29" fill="#111111">${escapeXml(normalizeArabicPunctuation(input.arabicMotto.trim().slice(0, 130)))}</text>
   </svg>`
   const png = new Resvg(svg, { font: { loadSystemFonts: false, fontFiles: [fontFile], defaultFontFamily: 'Noto Naskh Arabic' } }).render().asPng()
   return `data:image/png;base64,${png.toString('base64')}`

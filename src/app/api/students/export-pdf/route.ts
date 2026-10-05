@@ -20,7 +20,7 @@ async function handlePost(_user: SessionUser, tenantId: string, request: NextReq
     const [tenantDb, currentYear, studentRows] = await Promise.all([
       db.tenant.findUnique({ where: { id: tenantId }, select: {
         id: true, name: true, shortName: true, address: true, city: true, country: true,
-        ministry: true, phone: true, email: true, website: true, logo: true,
+        ministry: true, phone: true, email: true, website: true, logo: true, secondaryLogo: true, thirdLogo: true,
         headerLanguageMode: true, arabicCountry: true, arabicName: true, arabicMinistry: true, arabicMotto: true, contactPlacement: true, headerLinesFr: true, headerLinesAr: true, motto: true,
       } }),
       db.academicYear.findFirst({ where: { tenantId, isCurrent: true }, select: { name: true } }),
@@ -37,7 +37,7 @@ async function handlePost(_user: SessionUser, tenantId: string, request: NextReq
       id: tenantDb.id, name: tenantDb.name, shortName: tenantDb.shortName || '',
       address: tenantDb.address || '', city: tenantDb.city || '', country: tenantDb.country || '',
       ministry: tenantDb.ministry || '', phone: tenantDb.phone || '', email: tenantDb.email || '',
-      website: tenantDb.website || '', logo: tenantDb.logo || '', motto: tenantDb.motto || '',
+      website: tenantDb.website || '', logo: tenantDb.logo || '', secondaryLogo: tenantDb.secondaryLogo || '', thirdLogo: tenantDb.thirdLogo || '', motto: tenantDb.motto || '',
       headerLinesFr: parseHeaderLines(tenantDb.headerLinesFr) ?? undefined,
       headerLinesAr: parseHeaderLines(tenantDb.headerLinesAr) ?? undefined,
       contactPlacement: tenantDb.contactPlacement,

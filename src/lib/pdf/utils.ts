@@ -50,6 +50,8 @@ export interface TenantInfo {
   email?: string
   website?: string
   logo?: string
+  secondaryLogo?: string
+  thirdLogo?: string
   stamp?: string
   signature?: string
   secondarySignature?: string

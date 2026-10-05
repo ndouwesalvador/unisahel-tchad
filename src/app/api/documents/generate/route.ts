@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
     // Fetch real tenant data
     const tenantDb = await db.tenant.findUnique({
       where: { id: tenantId },
-      select: { id: true, name: true, shortName: true, address: true, city: true, country: true, ministry: true, phone: true, email: true, website: true, logo: true, stamp: true, signature: true, secondarySignature: true, thirdSignature: true, secondaryStamp: true, thirdStamp: true, secondarySignerName: true, secondarySignerTitle: true, thirdSignerName: true, thirdSignerTitle: true, headerLanguageMode: true, arabicCountry: true, arabicName: true, arabicMinistry: true, arabicMotto: true, contactPlacement: true, sealSizeMm: true, headerLinesFr: true, headerLinesAr: true, rectorName: true, rectorTitle: true, motto: true },
+      select: { id: true, name: true, shortName: true, address: true, city: true, country: true, ministry: true, phone: true, email: true, website: true, logo: true, secondaryLogo: true, thirdLogo: true, stamp: true, signature: true, secondarySignature: true, thirdSignature: true, secondaryStamp: true, thirdStamp: true, secondarySignerName: true, secondarySignerTitle: true, thirdSignerName: true, thirdSignerTitle: true, headerLanguageMode: true, arabicCountry: true, arabicName: true, arabicMinistry: true, arabicMotto: true, contactPlacement: true, sealSizeMm: true, headerLinesFr: true, headerLinesAr: true, rectorName: true, rectorTitle: true, motto: true },
     })
 
     if (!tenantDb) {
@@ -99,6 +99,8 @@ export async function POST(request: NextRequest) {
       phone: tenantDb.phone || '',
       email: tenantDb.email || '',
       logo: tenantDb.logo || '',
+      secondaryLogo: tenantDb.secondaryLogo || '',
+      thirdLogo: tenantDb.thirdLogo || '',
       stamp: tenantDb.stamp || '',
       secondaryStamp: tenantDb.secondaryStamp || '',
       thirdStamp: tenantDb.thirdStamp || '',

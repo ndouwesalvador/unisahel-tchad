@@ -6,6 +6,7 @@ import { validBrandColor, validHeaderLines } from '@/lib/institution-branding'
 const TENANT_FIELDS = [
   'name', 'shortName', 'motto', 'ministry', 'country', 'city', 'address',
   'phone', 'email', 'website', 'rectorName', 'rectorTitle', 'secondarySignerName', 'secondarySignerTitle', 'thirdSignerName', 'thirdSignerTitle', 'academicSystem',
+  'secondaryLogo', 'thirdLogo',
   'headerLanguageMode', 'arabicCountry', 'arabicName', 'arabicMinistry',
   'headerLinesFr', 'headerLinesAr', 'arabicMotto', 'contactPlacement', 'sealSizeMm',
 ] as const

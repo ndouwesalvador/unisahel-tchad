@@ -125,6 +125,8 @@ interface TenantData {
   sealSizeMm: number
   academicSystem: string
   logo: string | null
+  secondaryLogo: string | null
+  thirdLogo: string | null
   stamp: string | null
   signature: string | null
   secondarySignature: string | null
@@ -304,6 +306,8 @@ function InformationsTab() {
     recteurNom: '',
     recteurTitre: 'Recteur',
     logo: '',
+    secondaryLogo: '',
+    thirdLogo: '',
     stamp: '',
     signature: '',
     secondarySignerName: '',
@@ -345,6 +349,8 @@ function InformationsTab() {
         recteurNom: t.rectorName || '',
         recteurTitre: t.rectorTitle || 'Recteur',
         logo: t.logo || '',
+        secondaryLogo: t.secondaryLogo || '',
+        thirdLogo: t.thirdLogo || '',
         stamp: t.stamp || '',
         signature: t.signature || '',
         secondarySignerName: t.secondarySignerName || '',
@@ -386,7 +392,7 @@ function InformationsTab() {
     })
   }
 
-  const handleAssetUpload = async (kind: 'logo' | 'stamp' | 'signature' | 'secondarySignature' | 'thirdSignature' | 'secondaryStamp' | 'thirdStamp', file?: File) => {
+  const handleAssetUpload = async (kind: 'logo' | 'secondaryLogo' | 'thirdLogo' | 'stamp' | 'signature' | 'secondarySignature' | 'thirdSignature' | 'secondaryStamp' | 'thirdStamp', file?: File) => {
     if (!file) return
     setUploadingKind(kind)
     try {
@@ -499,6 +505,31 @@ function InformationsTab() {
             </CardContent>
           </Card>
           </motion.div>
+
+          <Card className="border-l-4 border-l-[var(--institution-secondary)]">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Logos complémentaires</CardTitle>
+              <CardDescription>Jusqu’à deux logos supplémentaires, centrés avec le logo principal sur tous les documents officiels.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 bg-gray-50 p-3 min-h-20">
+                {[['logo', formData.logo, 'Principal'], ['secondaryLogo', formData.secondaryLogo, 'Secondaire'], ['thirdLogo', formData.thirdLogo, 'Troisième']].map(([kind, image, label]) => (
+                  <div key={kind} className="flex min-w-0 flex-1 flex-col items-center gap-1">
+                    <div className="h-14 w-14 overflow-hidden rounded-md border bg-white">
+                      {image ? <img src={image} alt={`Logo ${label}`} className="h-full w-full object-contain" /> : <Building2 className="mx-auto mt-3 size-7 text-gray-300" />}
+                    </div>
+                    <span className="text-[10px] text-gray-500">{label}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="grid gap-2">
+                {([['secondaryLogo', 'Téléverser le logo secondaire'], ['thirdLogo', 'Téléverser le troisième logo']] as const).map(([kind, label]) => (
+                  <Input key={kind} type="file" accept="image/png,image/jpeg,image/webp" aria-label={label} disabled={Boolean(uploadingKind)} onChange={(event) => void handleAssetUpload(kind, event.target.files?.[0])} />
+                ))}
+              </div>
+              <p className="text-[10px] text-gray-500">Les logos sont recadrés et optimisés automatiquement (PNG, JPEG ou WebP, 2 Mo maximum).</p>
+            </CardContent>
+          </Card>
 
           <motion.div whileHover={{ scale: 1.01 }} transition={{ duration: 0.2 }}>
           <Card className="border-l-4 border-l-[var(--institution-accent)]">

@@ -226,6 +226,9 @@ function DocumentHeader({ tenant, docNumber, compact = false, subtle = false }: 
   const ink = '#111111'
   const headerHeight = compact && tenant.contactPlacement === 'TOP' ? 64 : compact ? 72 : 90
   const columnHeight = headerHeight - (compact ? 6 : 14)
+  const logos = [tenant.logo, tenant.secondaryLogo, tenant.thirdLogo].filter((value): value is string => Boolean(value?.startsWith('data:image/')))
+  const logoWidth = logos.length > 1 ? (compact ? 39 : 47) : (compact ? 68 : 84)
+  const logoHeight = logos.length > 1 ? (compact ? 37 : 46) : (compact ? 48 : 61)
   return (
     <View wrap={false}>
       <View style={{ ...styles.topRule, height: subtle ? 2 : 4, backgroundColor: ink }} />
@@ -236,7 +239,9 @@ function DocumentHeader({ tenant, docNumber, compact = false, subtle = false }: 
         <View style={{ width: '26%', alignItems: 'center', justifyContent: 'center' }}>
           <Text style={{ fontSize: 7, fontWeight: 'bold', color: ink, textAlign: 'center' }}>{tenant.motto?.toUpperCase() || (isChad ? 'UNITÉ · TRAVAIL · PROGRÈS' : '')}</Text>
           {tenant.arabicMottoImage?.startsWith('data:image/png;base64,') && <Image src={tenant.arabicMottoImage} style={{ width: '100%', height: 11, objectFit: 'fill' }} />}
-          {tenant.logo?.startsWith('data:image/') ? <Image src={tenant.logo} style={{ width: compact ? 68 : 84, height: compact ? 48 : 61, objectFit: 'contain', marginTop: 2 }} />
+          {logos.length > 0 ? <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: compact ? 3 : 5, width: '100%', marginTop: 2 }}>
+            {logos.map((logo, index) => <Image key={`${index}-${logo.slice(0, 24)}`} src={logo} style={{ width: logoWidth, height: logoHeight, objectFit: 'contain' }} />)}
+          </View>
             : <View style={{ width: compact ? 43 : 55, height: compact ? 43 : 55, marginTop: 2, borderWidth: 1, borderColor: ink, borderRadius: 30, justifyContent: 'center' }}><Text style={{ fontSize: 9, color: ink, textAlign: 'center' }}>{shortName}</Text></View>}
         </View>
         <View style={{ width: '37%', height: columnHeight, alignItems: 'center', paddingLeft: 5, justifyContent: 'center' }}>

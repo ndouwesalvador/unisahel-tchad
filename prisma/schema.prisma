@@ -38,6 +38,8 @@ model Tenant {
   shortName              String?
   slug                   String                  @unique
   logo                   String?
+  secondaryLogo          String?
+  thirdLogo              String?
   stamp                  String?
   signature              String?
   headerLanguageMode     String                  @default("FR_ONLY")
