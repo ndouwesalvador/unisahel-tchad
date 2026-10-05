@@ -164,7 +164,7 @@ export function PlatformInstitutionsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 max-w-full space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-[var(--institution-primary)]">Institutions de la plateforme</h1>
@@ -176,7 +176,7 @@ export function PlatformInstitutionsPage() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-[var(--institution-primary-15)] flex items-center justify-center shrink-0">
@@ -235,8 +235,8 @@ export function PlatformInstitutionsPage() {
           ) : tenants.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-10">Aucune institution creee pour le moment.</p>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
+            <div className="max-w-full overflow-x-auto">
+              <Table className="min-w-[900px]">
                 <TableHeader>
                   <TableRow className="bg-gray-50">
                     <TableHead className="text-xs">Institution</TableHead>
@@ -274,7 +274,7 @@ export function PlatformInstitutionsPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-sm text-gray-500">{formatDateFr(t.createdAt)}</TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="whitespace-nowrap text-right">
                         <Button
                           variant="ghost"
                           size="sm"

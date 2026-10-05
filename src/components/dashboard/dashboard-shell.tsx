@@ -387,7 +387,7 @@ const viewLabels: Record<AppView, string> = {
 
 // ─── Sidebar Component ────────────────────────────────────────────────────────
 
-function SidebarContent() {
+function SidebarContent({ onNavigate }: { onNavigate?: () => void } = {}) {
   const { user, currentView, setView, logout, sidebarCollapsed } = useAppStore()
 
   if (!user) return null
@@ -471,7 +471,7 @@ function SidebarContent() {
             return (
               <button
                 key={item.view}
-                onClick={() => setView(item.view)}
+                onClick={() => { setView(item.view); onNavigate?.() }}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group relative overflow-hidden ${
                   sidebarCollapsed ? 'justify-center' : ''
                 } ${
@@ -507,7 +507,7 @@ function SidebarContent() {
       {/* Bottom actions */}
       <div className="border-t border-white/10 p-3 space-y-1">
         <button
-          onClick={() => setView(['ENSEIGNANT', 'FACULTE', 'DEPARTEMENT'].includes(user.role) ? 'profile' : 'settings')}
+          onClick={() => { setView(['ENSEIGNANT', 'FACULTE', 'DEPARTEMENT'].includes(user.role) ? 'profile' : 'settings'); onNavigate?.() }}
           className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-white/85 hover:text-white hover:bg-white/5 transition-colors ${sidebarCollapsed ? 'justify-center' : ''}`}
         >
           <Settings className="size-[18px] shrink-0" />
@@ -688,8 +688,17 @@ export function DashboardShell() {
   const { data: academicYearsData } = useAcademicYears({ enabled: Boolean(user?.tenantId) && user?.role !== 'SUPER_ADMIN' })
   const unreadCount: number = notificationsData?.unreadCount ?? 0
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [isDesktop, setIsDesktop] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const searchInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    const media = window.matchMedia('(min-width: 1024px)')
+    const sync = () => setIsDesktop(media.matches)
+    sync()
+    media.addEventListener('change', sync)
+    return () => media.removeEventListener('change', sync)
+  }, [])
 
   const handleLogout = async () => {
     await signOut({ redirect: false })
@@ -763,21 +772,21 @@ export function DashboardShell() {
 
       {/* Mobile Sidebar */}
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-        <SheetContent side="left" className="p-0 w-[260px] bg-[var(--institution-primary)]">
-          <SidebarContent />
+        <SheetContent side="left" className="w-[min(280px,85vw)] bg-[var(--institution-primary)] p-0">
+          <SidebarContent onNavigate={() => setMobileOpen(false)} />
         </SheetContent>
       </Sheet>
 
       {/* Main Area */}
       <motion.div
         initial={false}
-        animate={{ marginLeft: sidebarCollapsed ? 72 : 260 }}
+        animate={{ marginLeft: isDesktop ? (sidebarCollapsed ? 72 : 260) : 0 }}
         transition={{ duration: 0.2, ease: 'easeInOut' }}
-        className="flex-1 flex flex-col min-h-screen"
+        className="flex min-w-0 flex-1 flex-col min-h-screen"
       >
         {/* Top Header Bar */}
         <header className="sticky top-0 z-30 bg-white shadow-sm">
-          <div className="flex items-center justify-between h-14 px-4 lg:px-6">
+          <div className="flex h-14 items-center justify-between px-3 sm:px-4 lg:px-6">
             {/* Left: Mobile menu + Breadcrumb */}
             <div className="flex items-center gap-3">
               <button
@@ -787,10 +796,10 @@ export function DashboardShell() {
               >
                 <Menu className="size-5 text-gray-600" />
               </button>
-              <nav className="flex items-center gap-1.5 text-sm">
-                <span className="text-gray-500">UniSahel</span>
-                <span className="text-gray-400">/</span>
-                <span className="font-medium text-[var(--institution-primary)]">{user.role === 'ENSEIGNANT' && currentView === 'maquette' ? 'Mes UE' : viewLabels[currentView]}</span>
+              <nav className="flex min-w-0 items-center gap-1.5 text-sm">
+                <span className="hidden text-gray-500 sm:inline">UniSahel</span>
+                <span className="hidden text-gray-400 sm:inline">/</span>
+                <span className="max-w-[48vw] truncate font-medium text-[var(--institution-primary)]">{user.role === 'ENSEIGNANT' && currentView === 'maquette' ? 'Mes UE' : viewLabels[currentView]}</span>
               </nav>
             </div>
 
@@ -920,7 +929,7 @@ export function DashboardShell() {
         </header>
 
         {/* Content Area */}
-        <main className="flex-1 p-4 lg:p-6 overflow-auto">
+        <main className="min-w-0 flex-1 overflow-auto p-3 sm:p-4 lg:p-6">
           <motion.div
             key={currentView}
             initial={{ opacity: 0, y: 12, scale: 0.99 }}
