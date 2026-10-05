@@ -23,7 +23,7 @@ export function ForcedPasswordChange() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (newPassword.length < 8) {
-      toast.error('Le nouveau mot de passe doit contenir au moins 8 caracteres')
+      toast.error('Le nouveau mot de passe doit contenir au moins 8 caractères')
       return
     }
     if (newPassword !== confirmPassword) {
@@ -44,9 +44,9 @@ export function ForcedPasswordChange() {
         return
       }
       await update()
-      toast.success('Mot de passe mis a jour')
+      toast.success('Mot de passe mis à jour')
     } catch {
-      toast.error('Erreur reseau, veuillez reessayer')
+      toast.error('Erreur réseau, veuillez réessayer')
     } finally {
       setIsLoading(false)
     }
@@ -61,7 +61,7 @@ export function ForcedPasswordChange() {
           </div>
           <CardTitle className="text-[var(--institution-primary)]">Choisissez votre mot de passe</CardTitle>
           <CardDescription>
-            Votre compte a ete cree avec un mot de passe temporaire. Vous devez le remplacer avant de continuer.
+            Votre compte a été créé avec un mot de passe temporaire. Vous devez le remplacer avant de continuer.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -99,7 +99,7 @@ export function ForcedPasswordChange() {
               />
             </div>
             <Button type="submit" className="w-full bg-[var(--institution-primary)] hover:bg-[#243352] text-white" disabled={isLoading}>
-              {isLoading ? 'Enregistrement...' : 'Valider et continuer'}
+              {isLoading ? 'Enregistrement…' : 'Valider et continuer'}
             </Button>
             <Button
               type="button"
@@ -108,7 +108,7 @@ export function ForcedPasswordChange() {
               onClick={() => signOut({ callbackUrl: '/login' })}
             >
               <LogOut className="size-3.5 mr-1.5" />
-              Se deconnecter
+              Se déconnecter
             </Button>
           </form>
         </CardContent>

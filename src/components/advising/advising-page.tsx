@@ -247,7 +247,7 @@ const typeConfig: Record<string, { label: string; className: string }> = {
   'Orientation': { label: 'Orientation', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0' },
   'Suivi pedagogique': { label: 'Suivi ped.', className: 'bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0' },
   'Reorientation': { label: 'Reorientation', className: 'bg-[#ea580c15] text-[#ea580c] border-0' },
-  'Probleme personnel': { label: 'Perso.', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0' },
+  'Probleme personnel': { label: 'Problème personnel', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0' },
   'Projet professionnel': { label: 'Projet pro.', className: 'bg-[#8b5cf615] text-[#8b5cf6] border-0' },
 }
 
@@ -418,7 +418,7 @@ export function AdvisingPage() {
 
   const createAppointment = async () => {
     if (!newAppt.studentId || !newAppt.advisorId || !newAppt.date || !newAppt.time) {
-      toast.error('Champs requis manquants', { description: 'Etudiant, conseiller, date et heure sont obligatoires' })
+      toast.error('Champs requis manquants', { description: 'Étudiant, conseiller, date et heure sont obligatoires' })
       return
     }
     setIsSubmittingAppt(true)
@@ -439,13 +439,13 @@ export function AdvisingPage() {
         }),
       })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data.error || 'Echec de la planification')
+      if (!res.ok) throw new Error(data.error || 'Échec de la planification')
       toast.success('Rendez-vous planifie')
       queryClient.invalidateQueries({ queryKey: ['advising'] })
       setShowNewAppointment(false)
       setNewAppt({ studentId: '', advisorId: '', type: 'Suivi pedagogique', date: '', time: '', notes: '' })
     } catch (e) {
-      toast.error('Erreur', { description: e instanceof Error ? e.message : 'Echec de la planification' })
+      toast.error('Erreur', { description: e instanceof Error ? e.message : 'Échec de la planification' })
     } finally {
       setIsSubmittingAppt(false)
     }
@@ -469,13 +469,13 @@ export function AdvisingPage() {
         }),
       })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data.error || "Echec de l'ajout du conseiller")
+      if (!res.ok) throw new Error(data.error || "Échec de l'ajout du conseiller")
       toast.success('Conseiller ajoute')
       queryClient.invalidateQueries({ queryKey: ['advising'] })
       setShowNewAdvisor(false)
       setNewAdvisor({ name: '', title: '', department: '', specialties: [] })
     } catch (e) {
-      toast.error('Erreur', { description: e instanceof Error ? e.message : "Echec de l'ajout du conseiller" })
+      toast.error('Erreur', { description: e instanceof Error ? e.message : "Échec de l'ajout du conseiller" })
     } finally {
       setIsSubmittingAdvisor(false)
     }
@@ -489,11 +489,11 @@ export function AdvisingPage() {
         body: JSON.stringify({ status }),
       })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data.error || 'Echec de la mise a jour')
+      if (!res.ok) throw new Error(data.error || 'Échec de la mise à jour')
       toast.success('Statut mis a jour')
       queryClient.invalidateQueries({ queryKey: ['advising'] })
     } catch (e) {
-      toast.error('Erreur', { description: e instanceof Error ? e.message : 'Echec de la mise a jour' })
+      toast.error('Erreur', { description: e instanceof Error ? e.message : 'Échec de la mise à jour' })
     }
   }
 
@@ -971,7 +971,7 @@ export function AdvisingPage() {
                 </Select>
                 <Select value={filterFiliere} onValueChange={setFilterFiliere}>
                   <SelectTrigger className="w-[150px] h-9 text-xs">
-                    <SelectValue placeholder="Filiere" />
+                  <SelectValue placeholder="Filière" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="tous">Toutes filieres</SelectItem>
@@ -1012,7 +1012,7 @@ export function AdvisingPage() {
                 <TableHeader>
                   <TableRow className="bg-gray-50 sticky top-0 z-10">
                     <TableHead className="text-xs font-semibold">Étudiant</TableHead>
-                    <TableHead className="text-xs font-semibold">Filiere</TableHead>
+                        <TableHead className="text-xs font-semibold">Filière</TableHead>
                     <TableHead className="text-xs font-semibold text-center">Niveau</TableHead>
                     <TableHead className="text-xs font-semibold text-center">Moyenne</TableHead>
                     <TableHead className="text-xs font-semibold text-center">Credits</TableHead>
@@ -1326,7 +1326,7 @@ export function AdvisingPage() {
                   ))}
                 </div>
                 <Button size="sm" className="h-7 text-[10px] bg-[var(--institution-primary)] hover:bg-[var(--institution-primary)]/90 text-white" onClick={createAdvisor} disabled={isSubmittingAdvisor}>
-                  {isSubmittingAdvisor ? 'Ajout...' : 'Enregistrer'}
+                  {isSubmittingAdvisor ? 'Ajout…' : 'Enregistrer'}
                 </Button>
               </div>
             )}

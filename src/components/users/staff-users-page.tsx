@@ -69,7 +69,7 @@ const roleLabels: Record<string, string> = {
   FACULTE: 'Doyen / direction de faculté',
   DEPARTEMENT: 'Chef de département',
   ENSEIGNANT: 'Enseignant',
-  RESPONSABLE_FILIERE: 'Resp. Filiere',
+  RESPONSABLE_FILIERE: 'Resp. filière',
   JURY: 'Jury',
   CAISSE: 'Caisse',
   MAITRE_STAGE: 'Maitre de Stage',
@@ -106,7 +106,7 @@ export function StaffUsersPage() {
 
   const handleCreate = async () => {
     if (!form.firstName || !form.lastName || !form.email || !form.role) {
-      toast.error('Champs requis', { description: 'Nom, prenom, email et role sont obligatoires' })
+      toast.error('Champs requis', { description: 'Nom, prénom, e-mail et rôle sont obligatoires' })
       return
     }
     if ((form.role === 'FACULTE' && !form.facultyId) || (['DEPARTEMENT', 'JURY'].includes(form.role) && !form.departmentId)) {
@@ -121,14 +121,14 @@ export function StaffUsersPage() {
         body: JSON.stringify(form),
       })
       const json = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(json.error || 'Echec de la creation')
+      if (!res.ok) throw new Error(json.error || 'Échec de la création')
       toast.success('Compte cree', { description: `${form.firstName} ${form.lastName}` })
       queryClient.invalidateQueries({ queryKey: ['staffUsers'] })
       setShowCreate(false)
       setCreatedCredentials({ email: json.data.user.email, tempPassword: json.data.tempPassword, name: `${form.firstName} ${form.lastName}` })
       setForm(emptyForm)
     } catch (error) {
-      toast.error('Erreur', { description: error instanceof Error ? error.message : 'Echec de la creation' })
+      toast.error('Erreur', { description: error instanceof Error ? error.message : 'Échec de la création' })
     } finally {
       setIsCreating(false)
     }
@@ -167,11 +167,11 @@ export function StaffUsersPage() {
         body: JSON.stringify({ id: u.id, isActive: !u.isActive }),
       })
       const json = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(json.error || 'Echec de la mise a jour')
+      if (!res.ok) throw new Error(json.error || 'Échec de la mise à jour')
       toast.success(u.isActive ? 'Compte suspendu' : 'Compte reactive')
       queryClient.invalidateQueries({ queryKey: ['staffUsers'] })
     } catch (error) {
-      toast.error('Erreur', { description: error instanceof Error ? error.message : 'Echec de la mise a jour' })
+      toast.error('Erreur', { description: error instanceof Error ? error.message : 'Échec de la mise à jour' })
     } finally {
       setBusyId(null)
     }
@@ -186,11 +186,11 @@ export function StaffUsersPage() {
         body: JSON.stringify({ id: u.id, resetPassword: true }),
       })
       const json = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(json.error || 'Echec de la reinitialisation')
+      if (!res.ok) throw new Error(json.error || 'Échec de la réinitialisation')
       queryClient.invalidateQueries({ queryKey: ['staffUsers'] })
       setCreatedCredentials({ email: u.email || '', tempPassword: json.data.tempPassword, name: `${u.firstName} ${u.lastName}` })
     } catch (error) {
-      toast.error('Erreur', { description: error instanceof Error ? error.message : 'Echec de la reinitialisation' })
+      toast.error('Erreur', { description: error instanceof Error ? error.message : 'Échec de la réinitialisation' })
     } finally {
       setBusyId(null)
     }
@@ -274,7 +274,7 @@ export function StaffUsersPage() {
                     <TableHead className="text-xs">Role</TableHead>
                     <TableHead className="text-xs">Périmètre</TableHead>
                     <TableHead className="text-xs">Statut</TableHead>
-                    <TableHead className="text-xs">Derniere connexion</TableHead>
+                    <TableHead className="text-xs">Dernière connexion</TableHead>
                     <TableHead className="text-xs text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -302,7 +302,7 @@ export function StaffUsersPage() {
                       <TableCell className="text-sm text-gray-500">{formatDateFr(u.lastLoginAt)}</TableCell>
                       <TableCell className="text-right">
                         {u.role === 'ENSEIGNANT' ? (
-                          <span className="text-[10px] text-gray-400">Gere via Enseignants</span>
+                            <span className="text-[10px] text-gray-400">Géré via Enseignants</span>
                         ) : (
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -346,7 +346,7 @@ export function StaffUsersPage() {
           <div className="space-y-4 py-2">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label className="text-sm">Prenom</Label>
+                <Label className="text-sm">Prénom</Label>
                 <Input value={form.firstName} onChange={(e) => setForm((f) => ({ ...f, firstName: e.target.value }))} />
               </div>
               <div className="space-y-2">
@@ -359,13 +359,13 @@ export function StaffUsersPage() {
               <Input type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} placeholder="nom@institution.td" />
             </div>
             <div className="space-y-2">
-              <Label className="text-sm">Telephone</Label>
+              <Label className="text-sm">Téléphone</Label>
               <Input value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} placeholder="+235 66 XX XX XX" />
             </div>
             <div className="space-y-2">
               <Label className="text-sm">Role</Label>
               <Select value={form.role} onValueChange={(v) => setForm((f) => ({ ...f, role: v, facultyId: '', departmentId: '' }))}>
-                <SelectTrigger><SelectValue placeholder="Selectionner un role" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="Sélectionner un rôle" /></SelectTrigger>
                 <SelectContent>
                   {STAFF_ROLE_OPTIONS.map((r) => (
                     <SelectItem key={r} value={r}>{roleLabels[r]}</SelectItem>
@@ -387,9 +387,9 @@ export function StaffUsersPage() {
                 <SelectContent>{departments.map((department) => <SelectItem key={department.id} value={department.id}>{department.name} · {department.facultyName}</SelectItem>)}</SelectContent>
               </Select>
             </div>}
-            <p className="text-[11px] text-gray-400">Un mot de passe temporaire sera genere et affiche une seule fois apres la creation.</p>
+            <p className="text-[11px] text-gray-400">Un mot de passe temporaire sera généré et affiché une seule fois après la création.</p>
             <Button className="w-full bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white" disabled={isCreating} onClick={handleCreate}>
-              {isCreating ? 'Creation...' : 'Creer le compte'}
+              {isCreating ? 'Création…' : 'Créer le compte'}
             </Button>
           </div>
         </DialogContent>
@@ -439,7 +439,7 @@ export function StaffUsersPage() {
                   </div>
                 </div>
               </div>
-              <p className="text-[11px] text-[var(--institution-accent)]">Un changement de mot de passe sera demande a la premiere connexion.</p>
+              <p className="text-[11px] text-[var(--institution-accent)]">Un changement de mot de passe sera demandé à la première connexion.</p>
               <Button className="w-full" variant="outline" onClick={() => setCreatedCredentials(null)}>Fermer</Button>
             </div>
           )}

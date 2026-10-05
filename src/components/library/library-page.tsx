@@ -414,7 +414,7 @@ export function LibraryPage() {
         }),
       })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data.error || "Echec de l'ajout du document")
+      if (!res.ok) throw new Error(data.error || "Échec de l'ajout du document")
       toast.success('Document ajoute au catalogue', { description: newBook.title })
       queryClient.invalidateQueries({ queryKey: ['library'] })
       setShowAddBook(false)
@@ -440,7 +440,7 @@ export function LibraryPage() {
         }),
       })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data.error || "Echec de l'enregistrement de l'emprunt")
+      if (!res.ok) throw new Error(data.error || "Échec de l'enregistrement de l'emprunt")
       toast.success('Emprunt enregistre', { description: borrowFor.title })
       queryClient.invalidateQueries({ queryKey: ['library'] })
       setBorrowFor(null)
@@ -456,7 +456,7 @@ export function LibraryPage() {
     try {
       const res = await fetch(`/api/library?id=${loanId}&action=return`, { method: 'PUT' })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data.error || 'Echec du retour')
+      if (!res.ok) throw new Error(data.error || 'Échec du retour')
       toast.success('Ouvrage rendu')
       queryClient.invalidateQueries({ queryKey: ['library'] })
     } catch (e) {
@@ -480,7 +480,7 @@ export function LibraryPage() {
         body: JSON.stringify({ occupancy: value }),
       })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data.error || "Echec de la mise a jour")
+      if (!res.ok) throw new Error(data.error || "Échec de la mise à jour")
       toast.success('Effectif mis a jour')
       queryClient.invalidateQueries({ queryKey: ['library'] })
     } catch (e) {
@@ -881,14 +881,14 @@ export function LibraryPage() {
                   {!isLoading && catalog.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={7} className="text-center py-8 text-sm text-gray-400">
-                        Aucun ouvrage enregistre pour le moment
+                        Aucun ouvrage enregistré pour le moment
                       </TableCell>
                     </TableRow>
                   )}
                   {!isLoading && catalog.length > 0 && filteredCatalog.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={7} className="text-center py-8 text-sm text-gray-400">
-                        Aucun ouvrage trouve
+                        Aucun ouvrage trouvé
                       </TableCell>
                     </TableRow>
                   )}
@@ -1031,14 +1031,14 @@ export function LibraryPage() {
                   {!isLoading && borrows.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center py-8 text-sm text-gray-400">
-                        Aucun emprunt enregistre pour le moment
+                        Aucun emprunt enregistré pour le moment
                       </TableCell>
                     </TableRow>
                   )}
                   {!isLoading && borrows.length > 0 && filteredBorrows.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center py-8 text-sm text-gray-400">
-                        Aucun emprunt trouve
+                        Aucun emprunt trouvé
                       </TableCell>
                     </TableRow>
                   )}
@@ -1145,7 +1145,7 @@ export function LibraryPage() {
                 </div>
               )}
               {!isLoading && rooms.length === 0 && (
-                <p className="text-xs text-gray-400 text-center py-6">Aucune salle enregistree pour le moment</p>
+                <p className="text-xs text-gray-400 text-center py-6">Aucune salle enregistrée pour le moment</p>
               )}
               {!isLoading && rooms.length > 0 && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
@@ -1312,7 +1312,7 @@ export function LibraryPage() {
                   {stats?.avgBorrowDurationDays != null ? (
                     <>
                       <p className="text-2xl font-bold text-[var(--institution-secondary)]">{stats.avgBorrowDurationDays} <span className="text-sm font-normal text-gray-500">jours</span></p>
-                      <p className="text-[10px] text-gray-400 mt-1">Calculee sur les emprunts deja rendus</p>
+                      <p className="text-[10px] text-gray-400 mt-1">Calculée sur les emprunts déjà rendus</p>
                     </>
                   ) : (
                     <p className="text-xs text-gray-400 py-1">Aucune donnee disponible pour le moment</p>

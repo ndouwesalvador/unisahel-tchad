@@ -183,7 +183,7 @@ export function HealthPage() {
 
   const handleAddGarde = async () => {
     if (!newGarde.studentId || !newGarde.date) {
-      toast.error('Etudiant et date sont requis.')
+      toast.error('Étudiant et date sont requis.')
       return
     }
     setIsAddingGarde(true)
@@ -199,7 +199,7 @@ export function HealthPage() {
       setNewGarde({ studentId: '', date: '', shift: 'JOUR', service: '' })
       queryClient.invalidateQueries({ queryKey: ['health'] })
     } catch {
-      toast.error("Echec de l'ajout de la garde")
+      toast.error("Échec de l'ajout de la garde")
     } finally {
       setIsAddingGarde(false)
     }
@@ -265,7 +265,7 @@ export function HealthPage() {
             >
               <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/15">
                 <p className="text-2xl font-bold text-white">{animatedEtudiantsSante}</p>
-                <p className="text-[11px] text-white/70 mt-0.5">Etudiants sante</p>
+                <p className="text-[11px] text-white/70 mt-0.5">Étudiants en santé</p>
               </div>
               <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/15">
                 <p className="text-2xl font-bold text-white">{animatedStagesActifs}</p>
@@ -385,7 +385,7 @@ export function HealthPage() {
           {isLoading ? (
             <p className="text-sm text-gray-400 text-center py-6">Chargement...</p>
           ) : hospitals.length === 0 ? (
-            <Card><CardContent className="p-8 text-center text-sm text-gray-400">Aucun hopital partenaire enregistre pour le moment.</CardContent></Card>
+            <Card><CardContent className="p-8 text-center text-sm text-gray-400">Aucun hôpital partenaire enregistré pour le moment.</CardContent></Card>
           ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {hospitals.map((hopital, i) => {
@@ -509,7 +509,7 @@ export function HealthPage() {
 <TableHeader>
                   <TableRow className="bg-gray-50 sticky top-0 z-10">
                     <TableHead className="text-xs font-semibold">Étudiant</TableHead>
-                    <TableHead className="text-xs font-semibold">Filiere</TableHead>
+                    <TableHead className="text-xs font-semibold">Filière</TableHead>
                         <TableHead className="text-xs font-semibold">Hopital</TableHead>
                         <TableHead className="text-xs font-semibold">Service</TableHead>
                         <TableHead className="text-xs font-semibold">Periode</TableHead>
@@ -619,11 +619,11 @@ export function HealthPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Select value={effectiveCarnetStudent} onValueChange={setSelectedCarnetStudent}>
                     <SelectTrigger className="h-9 text-sm w-full">
-                      <SelectValue placeholder="Selectionner un etudiant" />
+                      <SelectValue placeholder="Sélectionner un étudiant" />
                     </SelectTrigger>
                     <SelectContent>
                       {carnetStudents.length === 0 ? (
-                        <div className="px-2 py-1.5 text-xs text-gray-400">Aucun etudiant en stage clinique</div>
+                        <div className="px-2 py-1.5 text-xs text-gray-400">Aucun étudiant en stage clinique</div>
                       ) : carnetStudents.map((s) => (
                         <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                       ))}
@@ -641,7 +641,7 @@ export function HealthPage() {
               <p className="text-sm text-gray-400 text-center py-6">Chargement...</p>
             ) : !carnetData ? (
               <Card><CardContent className="p-8 text-center text-sm text-gray-400">
-                {effectiveCarnetStudent ? 'Aucun stage clinique enregistre pour cet etudiant.' : 'Aucun etudiant en stage clinique pour le moment.'}
+                {effectiveCarnetStudent ? 'Aucun stage clinique enregistré pour cet étudiant.' : 'Aucun étudiant en stage clinique pour le moment.'}
               </CardContent></Card>
             ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -744,7 +744,7 @@ export function HealthPage() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {!carnetData.evaluation ? (
-                    <p className="text-xs text-gray-400 text-center py-4">Aucune evaluation enregistree pour le moment.</p>
+                    <p className="text-xs text-gray-400 text-center py-4">Aucune évaluation enregistrée pour le moment.</p>
                   ) : (
                   <>
                   <div className="space-y-2">
@@ -835,7 +835,7 @@ export function HealthPage() {
                     onChange={(e) => setNewGarde((f) => ({ ...f, service: e.target.value }))}
                   />
                   <Button size="sm" className="bg-[var(--institution-primary)] hover:bg-[var(--institution-primary)]/90 text-white text-xs" onClick={handleAddGarde} disabled={isAddingGarde}>
-                    {isAddingGarde ? 'Ajout...' : 'Enregistrer'}
+                        {isAddingGarde ? 'Ajout…' : 'Enregistrer'}
                   </Button>
                 </CardContent>
               </Card>

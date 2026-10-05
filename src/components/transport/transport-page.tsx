@@ -433,7 +433,7 @@ export function TransportPage() {
               <div className="flex flex-wrap gap-3">
                 <AnimatedStat value={activeBuses} label="Bus actifs" icon={Bus} />
                 <AnimatedStat value={todayTrips} label="Trajets du jour" icon={Route} />
-                <AnimatedStat value={studentsTransported} label="Etudiants transportes" icon={Users} />
+                <AnimatedStat value={studentsTransported} label="Étudiants transportés" icon={Users} />
               </div>
             </div>
           </div>
@@ -444,7 +444,7 @@ export function TransportPage() {
           {[
             { label: 'Bus actifs', value: activeBuses, color: 'var(--institution-primary)', icon: Bus, trend: '', trendUp: true },
             { label: 'Trajets du jour', value: todayTrips, color: 'var(--institution-secondary)', icon: Route, trend: '', trendUp: true },
-            { label: 'Etudiants transportes', value: studentsTransported, color: 'var(--institution-accent)', icon: Users, trend: '', trendUp: true },
+            { label: 'Étudiants transportés', value: studentsTransported, color: 'var(--institution-accent)', icon: Users, trend: '', trendUp: true },
             { label: 'Taux remplissage', value: occupancyRate, color: 'var(--institution-secondary)', icon: TrendingUp, trend: `${occupancyRate}%`, trendUp: true },
           ].map((stat) => (
             <motion.div
@@ -500,7 +500,7 @@ export function TransportPage() {
           {!isLoading && buses.length === 0 && (
             <Card>
               <CardContent className="py-10 text-center text-sm text-gray-400">
-                Aucun vehicule enregistre. Ajoutez un vehicule pour commencer a suivre votre flotte.
+                Aucun véhicule enregistré. Ajoutez un véhicule pour commencer à suivre votre flotte.
               </CardContent>
             </Card>
           )}
@@ -634,7 +634,7 @@ export function TransportPage() {
               )}
               {!isLoading && routes.length === 0 && (
                 <div className="text-center py-8 text-sm text-gray-400">
-                  Aucune route configuree. Ajoutez un trajet pour organiser vos navettes.
+                  Aucune route configurée. Ajoutez un trajet pour organiser vos navettes.
                 </div>
               )}
               {!isLoading && routes.length > 0 && (
@@ -830,14 +830,14 @@ export function TransportPage() {
                     {!isLoading && schedule.length === 0 && (
                       <TableRow>
                         <TableCell colSpan={6} className="text-center py-8 text-sm text-gray-400">
-                          Aucun trajet programme pour le moment.
+                          Aucun trajet programmé pour le moment.
                         </TableCell>
                       </TableRow>
                     )}
                     {!isLoading && schedule.length > 0 && filteredSchedule.length === 0 && (
                       <TableRow>
                         <TableCell colSpan={6} className="text-center py-8 text-sm text-gray-400">
-                          Aucun trajet ne correspond a votre recherche.
+                          Aucun trajet ne correspond à votre recherche.
                         </TableCell>
                       </TableRow>
                     )}
@@ -864,7 +864,7 @@ export function TransportPage() {
                   <p className="text-xs font-semibold text-gray-600 mb-3">Top 5 trajets par affluence</p>
                   {topRoutesByRidership.length === 0 ? (
                     <div className="text-xs text-gray-400 py-8 text-center border border-dashed border-gray-200 rounded-lg">
-                      Aucune donnee de frequentation disponible pour le moment.
+                      Aucune donnée de fréquentation disponible pour le moment.
                     </div>
                   ) : (
                     <div className="space-y-3">
@@ -988,7 +988,7 @@ export function TransportPage() {
                   <p className="text-xs font-semibold text-gray-600 mb-3">Historique de maintenance</p>
                   {maintenance.length === 0 ? (
                     <div className="text-center py-6 text-xs text-gray-400 border border-dashed border-gray-200 rounded-lg">
-                      Aucune maintenance enregistree pour le moment.
+                      Aucune maintenance enregistrée pour le moment.
                     </div>
                   ) : (
                     <div className="space-y-2">
@@ -1017,12 +1017,12 @@ export function TransportPage() {
                   <div className="mt-3 p-3 rounded-lg bg-[var(--institution-secondary-08)] border border-[var(--institution-secondary-20)]">
                     <div className="flex items-center gap-2">
                       <Clock className="size-3.5 text-[var(--institution-secondary)]" />
-                      <p className="text-xs font-medium text-[var(--institution-secondary)]">Derniere maintenance enregistree</p>
+                      <p className="text-xs font-medium text-[var(--institution-secondary)]">Dernière maintenance enregistrée</p>
                     </div>
                     <p className="text-[10px] text-gray-600 mt-1">
                       {lastMaintenance
                         ? `${lastMaintenance.bus} - ${lastMaintenance.type} le ${lastMaintenance.date}`
-                        : 'Aucune maintenance enregistree pour le moment.'}
+                        : 'Aucune maintenance enregistrée pour le moment.'}
                     </p>
                   </div>
                 </div>
@@ -1086,10 +1086,10 @@ export function TransportPage() {
                 <div className="border border-gray-100 rounded-lg p-3">
                   <div className="flex items-center gap-2 mb-2">
                     <Bus className="size-3.5 text-[var(--institution-primary)]" />
-                    <p className="text-xs font-semibold text-[var(--institution-primary)]">Donnees gerees</p>
+                    <p className="text-xs font-semibold text-[var(--institution-primary)]">Données gérées</p>
                   </div>
                   <p className="text-[10px] text-gray-600 leading-relaxed">
-                    Le module affiche les vehicules, trajets, departs, maintenances et alertes enregistres pour l&apos;institution.
+                    Le module affiche les véhicules, trajets, départs, maintenances et alertes enregistrés pour l&apos;institution.
                     Les taux d&apos;occupation viennent des abonnements transport existants.
                   </p>
                 </div>

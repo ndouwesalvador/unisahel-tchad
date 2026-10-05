@@ -48,7 +48,7 @@ const statusConfig: Record<string, { label: string; className: string }> = {
   PRE_INSCRIT: { label: 'Pré-inscrit', className: 'border border-amber-200 bg-amber-50 text-amber-950 hover:bg-amber-50' },
   SUSPENDU: { label: 'Suspendu', className: 'bg-[#ef6c0015] text-[#ef6c00] border-0 hover:bg-[#ef6c0015]' },
   EXCLU: { label: 'Exclu', className: 'bg-[#c6282815] text-[#c62828] border-0 hover:bg-[#c6282815]' },
-  DIPLOME: { label: 'Diplome', className: 'bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0 hover:bg-[var(--institution-primary-15)]' },
+  DIPLOME: { label: 'Diplôme', className: 'bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0 hover:bg-[var(--institution-primary-15)]' },
 }
 
 const mentionConfig: Record<string, string> = {
@@ -68,7 +68,7 @@ const paymentMethodLabels: Record<string, string> = {
 }
 
 const documentTypeLabels: Record<string, { label: string; icon: React.ElementType; color: string }> = {
-  RELEVE_NOTES: { label: 'Releve de notes', icon: FileText, color: 'var(--institution-secondary)' },
+  RELEVE_NOTES: { label: 'Relevé de notes', icon: FileText, color: 'var(--institution-secondary)' },
   ATTESTATION_INSCRIPTION: { label: "Attestation d'inscription", icon: Award, color: 'var(--institution-primary)' },
   CERTIFICAT_SCOLARITE: { label: 'Certificat de scolarite', icon: FileText, color: 'var(--institution-accent)' },
   PV_DELIBERATION: { label: 'PV de deliberation', icon: ClipboardList, color: '#5b8c5a' },
@@ -231,7 +231,7 @@ export function StudentDetail() {
       a.download = `${type}_${Date.now()}.pdf`
       a.click()
       window.URL.revokeObjectURL(url)
-      toast.success('Document genere avec succes', {
+      toast.success('Document généré avec succès', {
         description: verificationCode ? `Code: ${verificationCode}` : undefined,
       })
       queryClient.invalidateQueries({ queryKey: ['documents'] })
@@ -288,7 +288,7 @@ export function StudentDetail() {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center gap-3">
         <User className="size-10 text-gray-300" />
-        <p className="text-sm text-gray-400">Aucun etudiant selectionne.</p>
+        <p className="text-sm text-gray-400">Aucun étudiant sélectionné.</p>
         <Button variant="outline" size="sm" onClick={goBack}>
           <ArrowLeft className="size-3.5 mr-1.5" />
           Retour a la liste
@@ -431,7 +431,7 @@ export function StudentDetail() {
                 onClick={() => toast.info('Bientot disponible', { description: "La generation de carte etudiante n'est pas encore implementee." })}
               >
                 <IdCard className="size-3.5 mr-1.5" />
-                Carte etudiant
+                Carte étudiant
               </Button>
             </div>
           </div>
@@ -444,7 +444,7 @@ export function StudentDetail() {
           {canPreviewDashboard && <TabsTrigger value="dashboard" className="text-sm data-[state=active]:bg-white data-[state=active]:text-[var(--institution-primary)]">Tableau de bord</TabsTrigger>}
           <TabsTrigger value="informations" className="text-xs data-[state=active]:bg-white data-[state=active]:text-[var(--institution-primary)]">Informations</TabsTrigger>
           <TabsTrigger value="inscriptions" className="text-xs data-[state=active]:bg-white data-[state=active]:text-[var(--institution-primary)]">Inscriptions</TabsTrigger>
-          <TabsTrigger value="releve" className="text-xs data-[state=active]:bg-white data-[state=active]:text-[var(--institution-primary)]">Releve de notes</TabsTrigger>
+          <TabsTrigger value="releve" className="text-xs data-[state=active]:bg-white data-[state=active]:text-[var(--institution-primary)]">Relevé de notes</TabsTrigger>
           <TabsTrigger value="paiements" className="text-xs data-[state=active]:bg-white data-[state=active]:text-[var(--institution-primary)]">Paiements</TabsTrigger>
           {isHealthStudent && (
             <TabsTrigger value="stages" className="text-xs data-[state=active]:bg-white data-[state=active]:text-[var(--institution-primary)]">Stages</TabsTrigger>
@@ -471,7 +471,7 @@ export function StudentDetail() {
                   <div><span className="text-gray-400 text-xs">Lieu de naissance</span><p className="font-medium text-[var(--institution-primary)]">{s.placeOfBirth || '—'}</p></div>
                   <div><span className="text-gray-400 text-xs">Sexe</span><p className="font-medium text-[var(--institution-primary)]">{s.gender || '—'}</p></div>
                   <div><span className="text-gray-400 text-xs">Nationalite</span><p className="font-medium text-[var(--institution-primary)]">{s.nationality || '—'}</p></div>
-                  <div><span className="text-gray-400 text-xs">Telephone</span><p className="font-medium text-[var(--institution-primary)]">{s.phone || '—'}</p></div>
+                  <div><span className="text-gray-400 text-xs">Téléphone</span><p className="font-medium text-[var(--institution-primary)]">{s.phone || '—'}</p></div>
                 </div>
                 <div>
                   <span className="text-gray-400 text-xs">Adresse</span>
@@ -495,7 +495,7 @@ export function StudentDetail() {
                 <CardContent className="space-y-3 text-sm">
                   <div className="grid grid-cols-2 gap-2">
                     <div><span className="text-gray-400 text-xs">Serie</span><p className="font-medium text-[var(--institution-primary)]">{s.bacSeries || '—'}</p></div>
-                    <div><span className="text-gray-400 text-xs">Annee</span><p className="font-medium text-[var(--institution-primary)]">{s.bacYear || '—'}</p></div>
+                    <div><span className="text-gray-400 text-xs">Année</span><p className="font-medium text-[var(--institution-primary)]">{s.bacYear || '—'}</p></div>
                     <div><span className="text-gray-400 text-xs">Numero</span><p className="font-medium text-[var(--institution-primary)]">{s.bacNumber || '—'}</p></div>
                     <div><span className="text-gray-400 text-xs">Etablissement</span><p className="font-medium text-[var(--institution-primary)]">{s.highSchool || '—'}</p></div>
                   </div>
@@ -512,7 +512,7 @@ export function StudentDetail() {
                 <CardContent className="space-y-3 text-sm">
                   <div className="grid grid-cols-2 gap-2">
                     <div><span className="text-gray-400 text-xs">Nom</span><p className="font-medium text-[var(--institution-primary)]">{s.guardianName || '—'}</p></div>
-                    <div><span className="text-gray-400 text-xs">Telephone</span><p className="font-medium text-[var(--institution-primary)]">{s.guardianPhone || '—'}</p></div>
+                    <div><span className="text-gray-400 text-xs">Téléphone</span><p className="font-medium text-[var(--institution-primary)]">{s.guardianPhone || '—'}</p></div>
                   </div>
                 </CardContent>
               </Card>
@@ -539,14 +539,14 @@ export function StudentDetail() {
             </CardHeader>
             <CardContent>
               {(s.registrations ?? []).length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-6">Aucune inscription enregistree.</p>
+                <p className="text-sm text-gray-400 text-center py-6">Aucune inscription enregistrée.</p>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-gray-50">
-                      <TableHead className="text-xs">Annee academique</TableHead>
+                      <TableHead className="text-xs">Année académique</TableHead>
                       <TableHead className="text-xs">Niveau</TableHead>
-                      <TableHead className="text-xs">Filiere</TableHead>
+                      <TableHead className="text-xs">Filière</TableHead>
                       <TableHead className="text-xs">Statut</TableHead>
                       <TableHead className="text-xs">Date</TableHead>
                     </TableRow>
@@ -595,16 +595,16 @@ export function StudentDetail() {
                   <Separator className="my-2 bg-[var(--institution-primary-30)]" />
                   <p className="text-sm font-bold text-[var(--institution-primary)] tracking-wide">{s.tenant?.name?.toUpperCase() || 'ETABLISSEMENT'}</p>
                   <Separator className="my-2 bg-[var(--institution-primary-30)]" />
-                  <p className="text-base font-bold text-[var(--institution-primary)] tracking-[0.15em] uppercase mt-1">Releve de Notes</p>
+                  <p className="text-base font-bold text-[var(--institution-primary)] tracking-[0.15em] uppercase mt-1">Relevé de notes</p>
                 </div>
 
                 {/* Student Info Line */}
                 <div className="px-6 py-3 border-b border-gray-200 grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1 text-xs">
                   <div><span className="text-gray-400">Nom :</span> <span className="font-semibold text-[var(--institution-primary)]">{s.lastName}</span></div>
-                  <div><span className="text-gray-400">Prenom :</span> <span className="font-semibold text-[var(--institution-primary)]">{s.firstName}</span></div>
+                  <div><span className="text-gray-400">Prénom :</span> <span className="font-semibold text-[var(--institution-primary)]">{s.firstName}</span></div>
                   <div><span className="text-gray-400">Matricule :</span> <span className="font-mono font-semibold text-[var(--institution-primary)]">{s.matricule || '—'}</span></div>
                   <div><span className="text-gray-400">Date de naissance :</span> <span className="font-medium text-[var(--institution-primary)]">{formatDateFr(s.dateOfBirth) || '—'}</span></div>
-                  <div><span className="text-gray-400">Filiere :</span> <span className="font-medium text-[var(--institution-primary)]">{s.currentProgram?.name || '—'}</span></div>
+                  <div><span className="text-gray-400">Filière :</span> <span className="font-medium text-[var(--institution-primary)]">{s.currentProgram?.name || '—'}</span></div>
                   <div><span className="text-gray-400">Niveau :</span> <span className="font-medium text-[var(--institution-primary)]">{s.currentLevel?.name || '—'}</span></div>
                 </div>
 
@@ -747,7 +747,7 @@ export function StudentDetail() {
               </CardHeader>
               <CardContent className="p-0">
                 {payments.length === 0 ? (
-                  <p className="text-sm text-gray-400 text-center py-8">Aucun paiement enregistre.</p>
+                  <p className="text-sm text-gray-400 text-center py-8">Aucun paiement enregistré.</p>
                 ) : (
                   <div className="max-h-96 overflow-y-auto">
                     {payments.map((p: { id: string; status: string; comment: string | null; createdAt: string; paymentMethod: string; receiptNumber: string | null; transactionRef: string | null; amount: number }, i: number) => (
@@ -811,7 +811,7 @@ export function StudentDetail() {
               {!carnet ? (
                 <Card>
                   <CardContent className="py-8 text-center text-sm text-gray-400">
-                    Aucun stage clinique enregistre pour cet etudiant.
+                    Aucun stage clinique enregistré pour cet étudiant.
                   </CardContent>
                 </Card>
               ) : (
@@ -827,7 +827,7 @@ export function StudentDetail() {
                     <CardContent>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-2 text-sm">
-                          <div><span className="text-gray-400 text-xs">Hopital</span><p className="font-medium text-[var(--institution-primary)]">{carnet.hopital}</p></div>
+                          <div><span className="text-gray-400 text-xs">Hôpital</span><p className="font-medium text-[var(--institution-primary)]">{carnet.hopital}</p></div>
                           <div><span className="text-gray-400 text-xs">Service</span><p className="font-medium text-[var(--institution-primary)]">{carnet.service}</p></div>
                         </div>
                         <div className="space-y-2 text-sm">
@@ -903,7 +903,7 @@ export function StudentDetail() {
         <TabsContent value="documents" className="mt-4">
           <div className="space-y-4">
             <div className="flex items-center justify-between flex-wrap gap-2">
-              <h3 className="text-sm font-semibold text-[var(--institution-primary)]">Documents generes</h3>
+              <h3 className="text-sm font-semibold text-[var(--institution-primary)]">Documents générés</h3>
               <div className="flex gap-2">
                 {(['RELEVE_NOTES', 'ATTESTATION_INSCRIPTION', 'CERTIFICAT_SCOLARITE'] as const).map((type) => (
                   <Button
@@ -922,7 +922,7 @@ export function StudentDetail() {
             </div>
 
             {documents.length === 0 ? (
-              <p className="text-sm text-gray-400 text-center py-8">Aucun document genere pour cet etudiant.</p>
+              <p className="text-sm text-gray-400 text-center py-8">Aucun document généré pour cet étudiant.</p>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {documents.map((doc: { id: string; type: string; statut: string; date: string; codeVerification: string }) => {
@@ -938,7 +938,7 @@ export function StudentDetail() {
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-semibold text-[var(--institution-primary)] truncate">{meta.label}</p>
                             <Badge className={`text-[10px] mt-1 ${doc.statut === 'signe' ? 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0' : 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0'}`}>
-                              {doc.statut === 'signe' ? 'Valide' : doc.statut === 'genere' ? 'Genere' : 'En attente'}
+                              {doc.statut === 'signe' ? 'Valide' : doc.statut === 'genere' ? 'Généré' : 'En attente'}
                             </Badge>
                           </div>
                         </div>

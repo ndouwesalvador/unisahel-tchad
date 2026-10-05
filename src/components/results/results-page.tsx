@@ -416,7 +416,7 @@ export function ResultsPage() {
               </TabsTrigger>
               <TabsTrigger value="transcripts" className="text-xs data-[state=active]:bg-[var(--institution-primary)] data-[state=active]:text-white">
                 <FileText className="size-3.5 mr-1.5" />
-                Releves de Notes
+                Relevés de notes
               </TabsTrigger>
               <TabsTrigger value="progression" className="text-xs data-[state=active]:bg-[var(--institution-primary)] data-[state=active]:text-white">
                 <TrendingUp className="size-3.5 mr-1.5" />
@@ -532,7 +532,7 @@ export function ResultsPage() {
                                     </div>
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p>{student.decision === 'Admis' ? 'Etudiant admis a la session' : student.decision === 'Ajourne' ? 'Etudiant ajourne, rattrapage necessaire' : 'Decision calculee depuis les notes publiees'}</p>
+                                    <p>{student.decision === 'Admis' ? 'Étudiant admis à la session' : student.decision === 'Ajourne' ? 'Étudiant ajourné, rattrapage nécessaire' : 'Décision calculée depuis les notes publiées'}</p>
                                   </TooltipContent>
                                 </Tooltip>
                               </TableCell>
@@ -649,7 +649,7 @@ export function ResultsPage() {
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
                       <FileText className="size-4 text-[var(--institution-primary)]" />
-                      <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Releve de Notes</CardTitle>
+                      <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Relevé de notes</CardTitle>
                     </div>
                     <div className="flex items-center gap-2">
                       <Button size="sm" variant="outline" className="text-xs h-8" disabled={!transcript} onClick={printTranscript}>
@@ -666,11 +666,11 @@ export function ResultsPage() {
                 <CardContent className="p-4 pt-0">
                   {transcriptQuery.isLoading ? (
                     <div className="border-2 border-gray-200 rounded-lg p-8 text-center text-sm text-gray-400">
-                      Chargement du releve...
+                      Chargement du relevé…
                     </div>
                   ) : !transcript ? (
                     <div className="border-2 border-gray-200 rounded-lg p-8 text-center text-sm text-gray-400">
-                      Aucun resultat publie pour le moment
+                      Aucun résultat publié pour le moment
                     </div>
                   ) : (
                   <div className="border-2 border-gray-200 rounded-lg p-5">
@@ -729,7 +729,7 @@ export function ResultsPage() {
                         {transcript.ueGrades.length === 0 ? (
                           <TableRow>
                             <TableCell colSpan={5} className="text-center py-6 text-sm text-gray-400">
-                              Aucune note publiee pour cet etudiant sur cette periode
+                              Aucune note publiée pour cet étudiant sur cette période
                             </TableCell>
                           </TableRow>
                         ) : transcript.ueGrades.map((ue) => (
@@ -793,7 +793,7 @@ export function ResultsPage() {
                   <div className="flex items-center gap-3">
                     <Search className="size-4 text-gray-400 shrink-0" />
                     <Input
-                      placeholder="Rechercher un etudiant pour suivre sa progression..."
+                      placeholder="Rechercher un étudiant pour suivre sa progression…"
                       className="h-9 text-sm flex-1"
                       value={searchProgression}
                       onChange={(e) => setSearchProgression(e.target.value)}
@@ -809,7 +809,7 @@ export function ResultsPage() {
                   <CardHeader className="pb-3">
                     <div className="flex items-center gap-2">
                       <Target className="size-4 text-[var(--institution-primary)]" />
-                      <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Progression vers le diplome</CardTitle>
+                      <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Progression vers le diplôme</CardTitle>
                     </div>
                   </CardHeader>
                   <CardContent className="p-4 pt-0 space-y-4">
@@ -856,7 +856,7 @@ export function ResultsPage() {
                       </>
                     ) : (
                       <p className="text-sm text-gray-400 text-center py-8">
-                        {searchProgression ? 'Aucun etudiant trouve' : 'Recherchez un etudiant pour voir sa progression'}
+                        {searchProgression ? 'Aucun étudiant trouvé' : 'Recherchez un étudiant pour voir sa progression'}
                       </p>
                     )}
                   </CardContent>

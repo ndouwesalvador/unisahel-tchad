@@ -96,14 +96,14 @@ export function PlatformInstitutionsPage() {
         body: JSON.stringify(form),
       })
       const json = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(json.error || "Echec de la creation")
+      if (!res.ok) throw new Error(json.error || "Échec de la création")
       toast.success('Institution creee', { description: json.data.tenant.name })
       queryClient.invalidateQueries({ queryKey: ['tenants'] })
       setShowCreate(false)
       setCreatedCredentials({ email: json.data.admin.email, tempPassword: json.data.tempPassword, institutionName: json.data.tenant.name })
       resetForm()
     } catch (error) {
-      toast.error('Erreur', { description: error instanceof Error ? error.message : "Echec de la creation" })
+      toast.error('Erreur', { description: error instanceof Error ? error.message : "Échec de la création" })
     } finally {
       setIsCreating(false)
     }
@@ -117,11 +117,11 @@ export function PlatformInstitutionsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: tenant.id, isActive: !tenant.isActive }),
       })
-      if (!res.ok) throw new Error("Echec de la mise a jour")
+      if (!res.ok) throw new Error("Échec de la mise à jour")
       toast.success(tenant.isActive ? 'Institution suspendue' : 'Institution reactivee')
       queryClient.invalidateQueries({ queryKey: ['tenants'] })
     } catch (error) {
-      toast.error('Erreur', { description: error instanceof Error ? error.message : "Echec de la mise a jour" })
+      toast.error('Erreur', { description: error instanceof Error ? error.message : "Échec de la mise à jour" })
     } finally {
       setTogglingId(null)
     }
@@ -144,7 +144,7 @@ export function PlatformInstitutionsPage() {
         </div>
         <Button className="bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white" onClick={() => setShowCreate(true)}>
           <Plus className="size-4 mr-1.5" />
-          Creer une institution
+          Créer une institution
         </Button>
       </div>
 
@@ -178,7 +178,7 @@ export function PlatformInstitutionsPage() {
             </div>
             <div>
               <p className="text-2xl font-bold text-[var(--institution-primary)]">{stats?.totalStudents ?? 0}</p>
-              <p className="text-[11px] text-gray-500">Etudiants (toutes institutions)</p>
+              <p className="text-[11px] text-gray-500">Étudiants (toutes institutions)</p>
             </div>
           </CardContent>
         </Card>
@@ -271,12 +271,12 @@ export function PlatformInstitutionsPage() {
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Creer une institution</DialogTitle>
+            <DialogTitle>Créer une institution</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2 max-h-[70vh] overflow-y-auto pr-1">
             <div className="space-y-2">
               <Label className="text-sm">Nom de l&apos;institution</Label>
-              <Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="Universite de N'Djamena" />
+              <Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="Université de N'Djamena" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
@@ -311,7 +311,7 @@ export function PlatformInstitutionsPage() {
               <p className="text-xs font-semibold text-[var(--institution-primary)]">Compte administrateur de l&apos;institution</p>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label className="text-sm">Prenom</Label>
+                  <Label className="text-sm">Prénom</Label>
                   <Input value={form.adminFirstName} onChange={(e) => setForm((f) => ({ ...f, adminFirstName: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
@@ -323,10 +323,10 @@ export function PlatformInstitutionsPage() {
                 <Label className="text-sm">Email</Label>
                 <Input type="email" value={form.adminEmail} onChange={(e) => setForm((f) => ({ ...f, adminEmail: e.target.value }))} placeholder="admin@institution.td" />
               </div>
-              <p className="text-[11px] text-gray-400">Un mot de passe temporaire sera genere et affiche une seule fois apres la creation.</p>
+              <p className="text-[11px] text-gray-400">Un mot de passe temporaire sera généré et affiché une seule fois après la création.</p>
             </div>
             <Button className="w-full bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white" disabled={isCreating} onClick={handleCreate}>
-              {isCreating ? 'Creation...' : "Creer l'institution"}
+              {isCreating ? 'Création…' : "Créer l'institution"}
             </Button>
           </div>
         </DialogContent>
@@ -359,7 +359,7 @@ export function PlatformInstitutionsPage() {
                   </div>
                 </div>
               </div>
-              <p className="text-[11px] text-[var(--institution-accent)]">Un changement de mot de passe sera demande a la premiere connexion.</p>
+              <p className="text-[11px] text-[var(--institution-accent)]">Un changement de mot de passe sera demandé à la première connexion.</p>
               <Button className="w-full" variant="outline" onClick={() => setCreatedCredentials(null)}>Fermer</Button>
             </div>
           )}

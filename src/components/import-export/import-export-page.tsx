@@ -126,7 +126,7 @@ function computeStudentRowIssues(rows: Record<string, unknown>[]): RowIssue[] {
     const dob = String(row['Date naissance'] ?? '').trim()
 
     if (!firstName || !lastName) {
-      issues.push({ line, matricule: matricule || '—', issue: 'Nom ou prenom manquant' })
+      issues.push({ line, matricule: matricule || '—', issue: 'Nom ou prénom manquant' })
       return
     }
     if (dob && !/^\d{1,2}[/\-]\d{1,2}[/\-]\d{4}$/.test(dob)) {
@@ -157,7 +157,7 @@ function computeTeacherRowIssues(rows: Record<string, unknown>[]): RowIssue[] {
     const email = String(row['Email'] ?? row['email'] ?? '').trim()
 
     if (!firstName || !lastName) {
-      issues.push({ line, matricule: email || '—', issue: 'Nom ou prenom manquant' })
+      issues.push({ line, matricule: email || '—', issue: 'Nom ou prénom manquant' })
       return
     }
     if (!email) {
@@ -362,7 +362,7 @@ export function ImportExportPage() {
     }
 
     if (dataToExport.length === 0) {
-      toast.error('Aucune donnee disponible pour cet export pour le moment.')
+      toast.error('Aucune donnée disponible pour cet export pour le moment.')
       return
     }
 
@@ -421,8 +421,8 @@ export function ImportExportPage() {
 
   const handlePreview = () => {
     if (fullParsedRows.length === 0) {
-      toast.error('Aucun fichier charge.', {
-        description: 'Choisissez un fichier Excel ou CSV avant de previsualiser les donnees.',
+      toast.error('Aucun fichier chargé.', {
+        description: 'Choisissez un fichier Excel ou CSV avant de prévisualiser les données.',
       })
       return
     }
@@ -443,7 +443,7 @@ export function ImportExportPage() {
   const handleImport = useCallback(async () => {
     if (importType !== 'Etudiants' && importType !== 'Enseignants') {
       toast.error(`L'import de type "${importTypeMap[importType]}" n'est pas encore disponible.`, {
-        description: 'Types pris en charge : Etudiants et Enseignants.',
+        description: 'Types pris en charge : Étudiants et Enseignants.',
       })
       return
     }
@@ -463,7 +463,7 @@ export function ImportExportPage() {
       const result = await res.json()
       setImportProgress(100)
       if (!res.ok) {
-        toast.error(result.message || "Echec de l'import")
+        toast.error(result.message || "Échec de l'import")
         return
       }
       if (result.errorRows > 0 && result.successRows > 0) {
@@ -476,7 +476,7 @@ export function ImportExportPage() {
       } else {
         const noun = importType === 'Enseignants' ? 'enseignant(s)' : 'etudiant(s)'
         toast.success('Import terminé avec succès', {
-          description: `${result.successRows} ${noun} importe(s)${result.portalAccountsCreated ? `, ${result.portalAccountsCreated} compte(s) Espace Etudiant cree(s) (PIN a communiquer via la fiche etudiant)` : ''}.`,
+          description: `${result.successRows} ${noun} importé(s)${result.portalAccountsCreated ? `, ${result.portalAccountsCreated} compte(s) Espace étudiant créé(s) (PIN à communiquer via la fiche étudiant)` : ''}.`,
         })
       }
       queryClient.invalidateQueries({ queryKey: ['importExport'] })
@@ -562,8 +562,8 @@ export function ImportExportPage() {
         <div className="relative z-10 px-6 py-8">
           <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-white">Centre de donnees</h1>
-              <p className="text-sm text-white/70 mt-1">Import, export et validation des donnees institutionnelles</p>
+              <h1 className="text-2xl font-bold text-white">Centre de données</h1>
+              <p className="text-sm text-white/70 mt-1">Import, export et validation des données institutionnelles</p>
             </div>
             <div className="flex flex-wrap gap-3">
               <AnimatedStat value={importsThisMonth} label="Imports du mois" icon={ArrowRightLeft} />
@@ -957,14 +957,14 @@ export function ImportExportPage() {
                                 <TableRow className="bg-gray-50">
                                   <TableHead className="text-xs font-semibold">Ligne</TableHead>
                                   <TableHead className="text-xs font-semibold">Matricule</TableHead>
-                                  <TableHead className="text-xs font-semibold">Probleme</TableHead>
+                                  <TableHead className="text-xs font-semibold">Problème</TableHead>
                                 </TableRow>
                               </TableHeader>
                               <TableBody>
                                 {rowIssues.length === 0 ? (
                                   <TableRow>
                                     <TableCell colSpan={3} className="py-3 text-xs text-gray-400 text-center">
-                                      Aucun probleme detecte
+                                      Aucun problème détecté
                                     </TableCell>
                                   </TableRow>
                                 ) : rowIssues.slice(0, 20).map((issue, idx) => (
@@ -1266,7 +1266,7 @@ export function ImportExportPage() {
                                 </TableRow>
                               ) : !importExportData?.exportHistory?.length ? (
                                 <TableRow>
-                                  <TableCell colSpan={5} className="py-6 text-center text-xs text-gray-400">Aucun export genere pour le moment</TableCell>
+                                  <TableCell colSpan={5} className="py-6 text-center text-xs text-gray-400">Aucun export généré pour le moment</TableCell>
                                 </TableRow>
                               ) : importExportData.exportHistory.map((record: any) => (
                                 <TableRow key={record.id} className="hover:bg-gray-50/50">
@@ -1318,7 +1318,7 @@ export function ImportExportPage() {
             <p>1. Telechargez ou preparez un fichier Excel avec une ligne d en-tete claire.</p>
             <p>2. Choisissez le type d import, puis deposez le fichier dans la zone d import.</p>
             <p>3. Verifiez la previsualisation et les erreurs ligne par ligne avant de lancer l import.</p>
-            <p>4. Pour les etudiants, les colonnes minimales sont Nom et Prenom. Le matricule peut etre genere si absent.</p>
+            <p>4. Pour les étudiants, les colonnes minimales sont Nom et prénom. Le matricule peut être généré s&apos;il est absent.</p>
           </div>
         </DialogContent>
       </Dialog>
@@ -1334,12 +1334,12 @@ export function ImportExportPage() {
               <p>Excel .xlsx, .xls et CSV avec encodage UTF-8 recommande.</p>
             </div>
             <div>
-              <p className="font-semibold text-[var(--institution-primary)]">Etudiants</p>
-              <p>Colonnes recommandees : Matricule, Nom, Prenom, Date naissance, Filiere, Statut.</p>
+              <p className="font-semibold text-[var(--institution-primary)]">Étudiants</p>
+              <p>Colonnes recommandées : Matricule, Nom, Prénom, Date de naissance, Filière, Statut.</p>
             </div>
             <div>
               <p className="font-semibold text-[var(--institution-primary)]">Enseignants</p>
-              <p>Colonnes recommandees : Nom, Prenom, Email, Grade, Specialisation, Departement.</p>
+              <p>Colonnes recommandées : Nom, Prénom, E-mail, Grade, Spécialisation, Département.</p>
             </div>
           </div>
         </DialogContent>

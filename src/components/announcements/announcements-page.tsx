@@ -356,7 +356,7 @@ export function AnnouncementsPage() {
 
       if (!res.ok) {
         const errBody = await res.json().catch(() => ({}))
-        throw new Error(errBody.error || 'Echec de la publication')
+          throw new Error(errBody.error || 'Échec de la publication')
       }
 
       toast.success('Annonce publiee', { description: newTitle })
@@ -368,7 +368,7 @@ export function AnnouncementsPage() {
       setScheduleMode(false)
       refetch()
     } catch (error) {
-      toast.error('Erreur', { description: error instanceof Error ? error.message : 'Echec de la publication' })
+       toast.error('Erreur', { description: error instanceof Error ? error.message : 'Échec de la publication' })
     } finally {
       setIsSubmitting(false)
     }
@@ -382,7 +382,7 @@ export function AnnouncementsPage() {
       toast.success('Annonce supprimee')
       refetch()
     } catch {
-      toast.error('Echec de la suppression')
+       toast.error('Échec de la suppression')
     } finally {
       setDeletingId(null)
     }
@@ -596,10 +596,10 @@ export function AnnouncementsPage() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-gray-600">Categorie</Label>
+                    <Label className="text-xs font-medium text-gray-600">Catégorie</Label>
                   <Select value={newCategory} onValueChange={setNewCategory}>
                     <SelectTrigger className="h-9 text-xs">
-                      <SelectValue placeholder="Selectionner une categorie" />
+                       <SelectValue placeholder="Sélectionner une catégorie" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="academique">Academique</SelectItem>
@@ -610,10 +610,10 @@ export function AnnouncementsPage() {
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-gray-600">Priorite</Label>
+                    <Label className="text-xs font-medium text-gray-600">Priorité</Label>
                   <Select value={newPriority} onValueChange={setNewPriority}>
                     <SelectTrigger className="h-9 text-xs">
-                      <SelectValue placeholder="Selectionner une priorite" />
+                       <SelectValue placeholder="Sélectionner une priorité" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="urgent">Urgent</SelectItem>
@@ -636,7 +636,7 @@ export function AnnouncementsPage() {
                   <Label className="text-xs font-medium text-gray-600">Public cible</Label>
                   <Select value={newTarget} onValueChange={setNewTarget}>
                     <SelectTrigger className="h-9 text-xs">
-                      <SelectValue placeholder="Selectionner le public" />
+                       <SelectValue placeholder="Sélectionner le public" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="tous">Tous</SelectItem>
@@ -668,7 +668,7 @@ export function AnnouncementsPage() {
                   disabled={isSubmitting}
                 >
                   <Send className="size-3.5 mr-1.5" />
-                  {isSubmitting ? 'Publication...' : 'Publier'}
+                   {isSubmitting ? 'Publication…' : 'Publier'}
                 </Button>
               </CardContent>
             </Card>

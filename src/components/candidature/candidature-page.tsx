@@ -123,7 +123,7 @@ function mapCandidature(r: AdmissionRecord): Candidature {
     id: r.id,
     numero: r.numero || r.id,
     candidat: `${r.candidateFirstName || ''} ${r.candidateLastName || ''}`.trim(),
-    filiere: r.program?.name || 'Non specifie',
+    filiere: r.program?.name || 'Non spécifié',
     niveau: r.niveau || '',
     date: new Date(r.createdAt).toLocaleDateString('fr-FR'),
     statut: isCandidatureStatut(r.status) ? r.status : 'en_attente',
@@ -419,8 +419,8 @@ export function CandidaturePage() {
                 className="bg-white/10 backdrop-blur border border-white/20 hover:bg-white/20 text-white text-xs"
                 onClick={() => exportToExcel(
                   filteredCandidatures.map((c) => ({
-                    Numero: c.numero, Candidat: c.candidat, Filiere: c.filiere, Niveau: c.niveau,
-                    Type: c.type, Statut: statutConfig[c.statut].label, Email: c.email, Telephone: c.telephone, Date: c.date,
+                    Numéro: c.numero, Candidat: c.candidat, Filière: c.filiere, Niveau: c.niveau,
+                    Type: c.type, Statut: statutConfig[c.statut].label, 'E-mail': c.email, Téléphone: c.telephone, Date: c.date,
                   })),
                   'export_candidatures',
                 )}>
@@ -435,9 +435,9 @@ export function CandidaturePage() {
                   'Liste des candidatures',
                   `${filteredCandidatures.length} candidature(s)`,
                   [
-                    { header: 'Numero', width: 0.15, value: (c: Candidature) => c.numero },
+                    { header: 'Numéro', width: 0.15, value: (c: Candidature) => c.numero },
                     { header: 'Candidat', width: 0.22, value: (c: Candidature) => c.candidat },
-                    { header: 'Filiere', width: 0.22, value: (c: Candidature) => c.filiere },
+                    { header: 'Filière', width: 0.22, value: (c: Candidature) => c.filiere },
                     { header: 'Niveau', width: 0.1, value: (c: Candidature) => c.niveau },
                     { header: 'Statut', width: 0.16, value: (c: Candidature) => statutConfig[c.statut].label },
                     { header: 'Date', width: 0.15, value: (c: Candidature) => c.date },

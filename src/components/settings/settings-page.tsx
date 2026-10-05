@@ -105,11 +105,11 @@ export function SettingsPage() {
         body: JSON.stringify(next),
       })
       const body = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(body.error || "Echec de l'enregistrement")
+      if (!res.ok) throw new Error(body.error || "Échec de l'enregistrement")
       toast.success('Préférences de notification enregistrées')
       queryClient.invalidateQueries({ queryKey: ['institution'] })
     } catch (error) {
-      toast.error('Erreur', { description: error instanceof Error ? error.message : "Echec de l'enregistrement" })
+      toast.error('Erreur', { description: error instanceof Error ? error.message : "Échec de l'enregistrement" })
     } finally {
       setIsSavingChannels(false)
     }

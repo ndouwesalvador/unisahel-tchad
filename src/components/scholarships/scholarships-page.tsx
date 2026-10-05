@@ -347,13 +347,13 @@ export function ScholarshipsPage() {
         body: JSON.stringify(editingScholarship ? { id: editingScholarship.id, ...payload } : payload),
       })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data.error || 'Echec de l enregistrement')
-      toast.success(editingScholarship ? 'Bourse modifiee' : 'Bourse creee')
+      if (!res.ok) throw new Error(data.error || 'Échec de l’enregistrement')
+      toast.success(editingScholarship ? 'Bourse modifiée' : 'Bourse créée')
       queryClient.invalidateQueries({ queryKey: ['scholarships'] })
       setShowNewScholarship(false)
       resetScholarshipForm()
     } catch (error) {
-      toast.error('Erreur', { description: error instanceof Error ? error.message : 'Echec de l enregistrement' })
+      toast.error('Erreur', { description: error instanceof Error ? error.message : 'Échec de l’enregistrement' })
     } finally {
       setIsSavingScholarship(false)
     }
@@ -365,11 +365,11 @@ export function ScholarshipsPage() {
     try {
       const res = await fetch(`/api/scholarships?id=${encodeURIComponent(scholarship.id)}`, { method: 'DELETE' })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data.error || 'Echec de la suppression')
+      if (!res.ok) throw new Error(data.error || 'Échec de la suppression')
       toast.success('Bourse supprimee')
       queryClient.invalidateQueries({ queryKey: ['scholarships'] })
     } catch (error) {
-      toast.error('Suppression impossible', { description: error instanceof Error ? error.message : 'Echec de la suppression' })
+      toast.error('Suppression impossible', { description: error instanceof Error ? error.message : 'Échec de la suppression' })
     } finally {
       setDeletingScholarshipId(null)
     }
@@ -424,7 +424,7 @@ export function ScholarshipsPage() {
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>{editingScholarship ? 'Modifier la bourse' : 'Creer une nouvelle bourse'}</DialogTitle>
+                <DialogTitle>{editingScholarship ? 'Modifier la bourse' : 'Créer une nouvelle bourse'}</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
@@ -435,7 +435,7 @@ export function ScholarshipsPage() {
                   <Label className="text-sm">Type</Label>
                   <Select value={newScholarshipForm.type} onValueChange={(v) => setNewScholarshipForm(f => ({ ...f, type: v }))}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Selectionner le type" />
+                      <SelectValue placeholder="Sélectionner le type" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="merite">Merite</SelectItem>
@@ -484,7 +484,7 @@ export function ScholarshipsPage() {
                 </div>
                 <div className="flex gap-2 pt-2">
                   <Button className="flex-1 bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white" onClick={saveScholarship} disabled={isSavingScholarship}>
-                    {isSavingScholarship ? 'Enregistrement...' : editingScholarship ? 'Enregistrer' : 'Creer la bourse'}
+                    {isSavingScholarship ? 'Enregistrement…' : editingScholarship ? 'Enregistrer' : 'Créer la bourse'}
                   </Button>
                   <Button variant="outline" className="flex-1" onClick={() => setShowNewScholarship(false)}>
                     Annuler
@@ -699,7 +699,7 @@ export function ScholarshipsPage() {
                   {!isLoading && filteredScholarships.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={7} className="text-center py-8 text-sm text-gray-400">
-                        Aucun programme trouve
+                        Aucun programme trouvé
                       </TableCell>
                     </TableRow>
                   )}
@@ -861,14 +861,14 @@ export function ScholarshipsPage() {
                   {!isLoading && beneficiaries.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={7} className="text-center py-8 text-sm text-gray-400">
-                        Aucun beneficiaire pour le moment
+                        Aucun bénéficiaire pour le moment
                       </TableCell>
                     </TableRow>
                   )}
                   {!isLoading && beneficiaries.length > 0 && filteredBeneficiaries.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={7} className="text-center py-8 text-sm text-gray-400">
-                        Aucun beneficiaire trouve
+                        Aucun bénéficiaire trouvé
                       </TableCell>
                     </TableRow>
                   )}
@@ -943,7 +943,7 @@ export function ScholarshipsPage() {
                 <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-2">Repartition visuelle</p>
                 {budgetByType.length === 0 ? (
                   <p className="text-xs text-gray-500">
-                    Aucune bourse financee n&apos;est encore enregistree.
+                    Aucune bourse financée n&apos;est encore enregistrée.
                   </p>
                 ) : (
                   <div className="flex flex-wrap gap-2">
@@ -977,7 +977,7 @@ export function ScholarshipsPage() {
               <div className="p-3 rounded-lg bg-[var(--institution-accent-08)] border border-[var(--institution-accent-15)]">
                 <div className="flex items-center gap-2 mb-2">
                   <Banknote className="size-4 text-[var(--institution-accent)]" />
-                  <span className="text-sm font-semibold text-[var(--institution-primary)]">Budgets enregistres</span>
+                  <span className="text-sm font-semibold text-[var(--institution-primary)]">Budgets enregistrés</span>
                 </div>
                 <p className="text-xs text-gray-600 leading-relaxed">
                   Les budgets, plafonds et beneficiaires sont suivis dans la base de l&apos;institution. Les montants affiches ici servent au pilotage administratif des aides.
@@ -985,7 +985,7 @@ export function ScholarshipsPage() {
                 <div className="flex items-center gap-2 mt-2">
                   <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-white border border-gray-100">
                     <CheckCircle2 className="size-3 text-[var(--institution-secondary)]" />
-                    <span className="text-[10px] text-gray-600">Donnees sauvegardees</span>
+                    <span className="text-[10px] text-gray-600">Données sauvegardées</span>
                   </div>
                   <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-white border border-gray-100">
                     <CheckCircle2 className="size-3 text-[var(--institution-secondary)]" />
@@ -1000,7 +1000,7 @@ export function ScholarshipsPage() {
                   <span className="text-sm font-semibold text-[var(--institution-primary)]">Versements non connectes</span>
                 </div>
                 <p className="text-xs text-gray-600 leading-relaxed">
-                  Cet onglet ne declenche aucun paiement externe. Les virements, paiements mobiles ou validations comptables restent a effectuer dans les outils financiers officiels de l&apos;institution.
+                  Cet onglet ne déclenche aucun paiement externe. Les virements, paiements mobiles ou validations comptables restent à effectuer dans les outils financiers officiels de l&apos;institution.
                 </p>
                 <div className="flex items-center gap-1.5 mt-2">
                   <div className="w-2 h-2 rounded-full bg-[var(--institution-accent)]" />

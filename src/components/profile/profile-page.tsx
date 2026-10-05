@@ -50,7 +50,7 @@ type ActivityType = 'login' | 'edit' | 'create' | 'delete'
 const activityConfig: Record<ActivityType, { icon: React.ElementType; color: string; bg: string; label: string }> = {
   login: { icon: LogIn, color: 'text-[var(--institution-secondary)]', bg: 'bg-[var(--institution-secondary-10)]', label: 'Connexion' },
   edit: { icon: Pencil, color: 'text-[var(--institution-accent)]', bg: 'bg-[var(--institution-accent-10)]', label: 'Modification' },
-  create: { icon: Edit3, color: 'text-[var(--institution-secondary)]', bg: 'bg-[var(--institution-secondary-10)]', label: 'Creation' },
+  create: { icon: Edit3, color: 'text-[var(--institution-secondary)]', bg: 'bg-[var(--institution-secondary-10)]', label: 'Création' },
   delete: { icon: Trash2, color: 'text-red-500', bg: 'bg-red-50', label: 'Suppression' },
 }
 
@@ -65,14 +65,14 @@ const roleLabels: Record<string, string> = {
   ADMIN_INSTITUTION: 'Admin Institution',
   RECTORAT: 'Rectorat',
   SCOLARITE: 'Scolarite',
-  FACULTE: 'Faculte',
-  DEPARTEMENT: 'Departement',
+  FACULTE: 'Faculté',
+  DEPARTEMENT: 'Département',
   ENSEIGNANT: 'Enseignant',
-  RESPONSABLE_FILIERE: 'Resp. Filiere',
+  RESPONSABLE_FILIERE: 'Resp. Filière',
   JURY: 'Jury',
   CAISSE: 'Caisse',
-  ETUDIANT: 'Etudiant',
-  ETUDIANT_SANTE: 'Etudiant Sante',
+  ETUDIANT: 'Étudiant',
+  ETUDIANT_SANTE: 'Étudiant en santé',
   MAITRE_STAGE: 'Maitre de Stage',
   PARENT: 'Parent',
 }
@@ -136,13 +136,13 @@ export function ProfilePage() {
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
-        throw new Error(err.error || 'Echec de la mise a jour')
+        throw new Error(err.error || 'Échec de la mise à jour')
       }
       toast.success('Profil mis a jour')
       queryClient.invalidateQueries({ queryKey: ['profileActivity'] })
       setIsEditing(false)
     } catch (error) {
-      toast.error('Erreur', { description: error instanceof Error ? error.message : 'Echec de la mise a jour' })
+      toast.error('Erreur', { description: error instanceof Error ? error.message : 'Échec de la mise à jour' })
     } finally {
       setIsSavingProfile(false)
     }
@@ -176,12 +176,12 @@ export function ProfilePage() {
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
-        throw new Error(err.error || 'Echec du changement de mot de passe')
+        throw new Error(err.error || 'Échec du changement de mot de passe')
       }
       toast.success('Mot de passe mis a jour')
       setPasswordData({ current: '', new: '', confirm: '' })
     } catch (error) {
-      toast.error('Erreur', { description: error instanceof Error ? error.message : 'Echec du changement de mot de passe' })
+      toast.error('Erreur', { description: error instanceof Error ? error.message : 'Échec du changement de mot de passe' })
     } finally {
       setIsChangingPassword(false)
     }
@@ -253,7 +253,7 @@ export function ProfilePage() {
               </TabsTrigger>
               <TabsTrigger value="securite" className="gap-1.5">
                 <Shield className="size-4" />
-                <span className="hidden sm:inline">Securite</span>
+                <span className="hidden sm:inline">Sécurité</span>
               </TabsTrigger>
               <TabsTrigger value="preferences" className="gap-1.5">
                 <Settings className="size-4" />
@@ -304,7 +304,7 @@ export function ProfilePage() {
                         )}
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs text-gray-500">Prenom</Label>
+                        <Label className="text-xs text-gray-500">Prénom</Label>
                         {isEditing ? (
                           <Input
                             value={formData.firstName}
@@ -330,7 +330,7 @@ export function ProfilePage() {
                       )}
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs text-gray-500">Telephone</Label>
+                        <Label className="text-xs text-gray-500">Téléphone</Label>
                       {isEditing ? (
                         <Input
                           value={formData.phone}
@@ -350,7 +350,7 @@ export function ProfilePage() {
                           onClick={handleSaveProfile}
                         >
                           <Save className="size-4 mr-1" />
-                          {isSavingProfile ? 'Enregistrement...' : 'Enregistrer'}
+                          {isSavingProfile ? 'Enregistrement…' : 'Enregistrer'}
                         </Button>
                         <Button
                           variant="outline"
@@ -384,19 +384,19 @@ export function ProfilePage() {
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-xs text-gray-500">Institution</Label>
-                      <p className="text-sm font-medium text-[var(--institution-primary)]">{user.tenantName || 'Universite Abdou Moumouni de Niamey'}</p>
+                      <p className="text-sm font-medium text-[var(--institution-primary)]">{user.tenantName || 'Université Abdou Moumouni de Niamey'}</p>
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs text-gray-500">Departement</Label>
+                          <Label className="text-xs text-gray-500">Département</Label>
                       <p className="text-sm font-medium text-[var(--institution-primary)]">Informatique et Mathematiques</p>
                     </div>
                     <Separator />
                     <div className="space-y-1.5">
-                      <Label className="text-xs text-gray-500">Date de creation du compte</Label>
+                          <Label className="text-xs text-gray-500">Date de création du compte</Label>
                       <p className="text-sm text-[var(--institution-primary)]">15 Janvier 2024</p>
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs text-gray-500">Derniere mise a jour</Label>
+                      <Label className="text-xs text-gray-500">Dernière mise à jour</Label>
                       <p className="text-sm text-[var(--institution-primary)]">28 Fevrier 2026</p>
                     </div>
                   </CardContent>
@@ -454,7 +454,7 @@ export function ProfilePage() {
                     onClick={handleChangePassword}
                   >
                     <Lock className="size-4 mr-1" />
-                    {isChangingPassword ? 'Mise a jour...' : 'Mettre a jour le mot de passe'}
+                    {isChangingPassword ? 'Mise à jour…' : 'Mettre à jour le mot de passe'}
                   </Button>
                 </CardContent>
               </Card>
@@ -471,7 +471,7 @@ export function ProfilePage() {
                   <div className="flex items-center justify-between">
                     <div className="space-y-1">
                       <p className="text-sm font-medium text-[var(--institution-primary)]">Verification en deux etapes</p>
-                      <p className="text-xs text-gray-500">Ajoutez une couche de securite supplementaire a votre compte en requiring un code lors de la connexion.</p>
+                      <p className="text-xs text-gray-500">Ajoutez une couche de sécurité supplémentaire à votre compte en exigeant un code lors de la connexion.</p>
                     </div>
                     <Switch
                       checked={twoFactor}
@@ -491,7 +491,7 @@ export function ProfilePage() {
                 </CardHeader>
                 <CardContent>
                   {(profileQuery?.loginHistory ?? []).length === 0 ? (
-                    <p className="text-sm text-gray-400 text-center py-6">Aucune connexion enregistree.</p>
+                    <p className="text-sm text-gray-400 text-center py-6">Aucune connexion enregistrée.</p>
                   ) : (
                     <Table>
                       <TableHeader>
@@ -650,7 +650,7 @@ export function ProfilePage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-1.5 max-w-xs">
-                    <Label className="text-xs text-gray-500">Annee academique par defaut</Label>
+                    <Label className="text-xs text-gray-500">Année académique par défaut</Label>
                     <Select defaultValue="2024-2025">
                       <SelectTrigger className="w-full">
                         <SelectValue />
@@ -663,14 +663,14 @@ export function ProfilePage() {
                     </Select>
                   </div>
                   <div className="space-y-1.5 max-w-xs">
-                    <Label className="text-xs text-gray-500">Vue par defaut a la connexion</Label>
+                    <Label className="text-xs text-gray-500">Vue par défaut à la connexion</Label>
                     <Select defaultValue="dashboard">
                       <SelectTrigger className="w-full">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="dashboard">Tableau de bord</SelectItem>
-                        <SelectItem value="students">Liste des etudiants</SelectItem>
+                        <SelectItem value="students">Liste des étudiants</SelectItem>
                         <SelectItem value="grades">Gestion des notes</SelectItem>
                         <SelectItem value="statistics">Statistiques</SelectItem>
                       </SelectContent>
@@ -744,7 +744,7 @@ export function ProfilePage() {
                   <Clock className="size-4 text-[var(--institution-secondary)]" />
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">Derniere connexion</p>
+                  <p className="text-xs text-gray-500">Dernière connexion</p>
                   <p className="text-sm font-semibold text-[var(--institution-primary)]">Aujourd&apos;hui, 08:23</p>
                 </div>
               </div>
@@ -754,7 +754,7 @@ export function ProfilePage() {
                   <LogIn className="size-4 text-[var(--institution-accent)]" />
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">Connexions ce mois</p>
+                  <p className="text-xs text-gray-500">Connexions ce mois-ci</p>
                   <p className="text-sm font-semibold text-[var(--institution-primary)]">24</p>
                 </div>
               </div>

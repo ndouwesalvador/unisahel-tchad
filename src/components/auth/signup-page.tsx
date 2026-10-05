@@ -95,14 +95,14 @@ export function SignupPage() {
       const data = await res.json().catch(() => ({}))
 
       if (!res.ok) {
-        toast.error(data.error || "Echec de la creation du compte")
+        toast.error(data.error || "Échec de la création du compte")
         setIsLoading(false)
         return
       }
 
       const result = await signIn('credentials', { email, password, redirect: false })
       if (result?.error) {
-        toast.error('Compte cree, mais la connexion automatique a echoue', { description: 'Connectez-vous manuellement.' })
+        toast.error('Compte créé, mais la connexion automatique a échoué', { description: 'Connectez-vous manuellement.' })
         setView('login')
         setIsLoading(false)
         return
@@ -111,7 +111,7 @@ export function SignupPage() {
       toast.success('Bienvenue sur UniSahel !', { description: 'Votre établissement a été créé.' })
       window.location.href = '/'
     } catch {
-      toast.error('Erreur', { description: 'Impossible de creer le compte. Veuillez reessayer.' })
+        toast.error('Erreur', { description: 'Impossible de créer le compte. Veuillez réessayer.' })
       setIsLoading(false)
     }
   }
@@ -190,7 +190,7 @@ export function SignupPage() {
                       <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
                       <Input
                         id="institutionName"
-                        placeholder="Universite de N'Djamena"
+                        placeholder="Université de N'Djamena"
                         className="pl-10"
                         value={institutionName}
                         onChange={(e) => setInstitutionName(e.target.value)}
@@ -205,7 +205,7 @@ export function SignupPage() {
                       <Label className="text-sm font-medium text-gray-700">Pays</Label>
                       <Select value={country} onValueChange={setCountry} disabled={isLoading}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Selectionner" />
+                          <SelectValue placeholder="Sélectionner" />
                         </SelectTrigger>
                         <SelectContent>
                           {countries.map((c) => (
@@ -246,7 +246,7 @@ export function SignupPage() {
 
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-2">
-                      <Label htmlFor="firstName" className="text-sm font-medium text-gray-700">Prenom</Label>
+                      <Label htmlFor="firstName" className="text-sm font-medium text-gray-700">Prénom</Label>
                       <div className="relative">
                         <User className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
                         <Input
@@ -335,7 +335,7 @@ export function SignupPage() {
                   {isLoading ? (
                     <>
                       <Loader2 className="size-4 mr-2 animate-spin" />
-                      Creation en cours...
+                      Création en cours…
                     </>
                   ) : (
                     'Creer mon etablissement'
@@ -344,7 +344,7 @@ export function SignupPage() {
               </form>
 
               <p className="mt-5 text-center text-sm text-gray-500">
-                Deja un compte ?{' '}
+                Déjà un compte ?{' '}
                 <button
                   onClick={() => setView('login')}
                   className="text-[var(--institution-secondary)] font-medium hover:underline"

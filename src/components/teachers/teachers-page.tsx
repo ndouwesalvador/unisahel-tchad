@@ -187,7 +187,7 @@ function mapTeacher(t: TeacherListApiRecord): Teacher {
     nom: t.user?.lastName || '',
     prenom: t.user?.firstName || '',
     grade: gradeApiToUi[t.grade as string] || 'Non renseigné',
-    departement: t.department?.name || 'Non affecte',
+    departement: t.department?.name || 'Non affecté',
     specialisation: t.specialization || '',
     heuresSem: t.currentHours ?? 0,
     statut: t.isActive ? 'Actif' : 'Inactif',
@@ -225,7 +225,7 @@ export function TeachersPage() {
   const handleCreateTeacher = async () => {
     const f = newTeacherForm
     if (!f.firstName || !f.lastName || !f.email || !f.grade || !f.departmentId) {
-      toast.error('Champs requis', { description: 'Nom, prenom, email, grade et departement sont obligatoires' })
+      toast.error('Champs requis', { description: 'Nom, prénom, e-mail, grade et département sont obligatoires' })
       return
     }
     setIsCreating(true)
@@ -246,14 +246,14 @@ export function TeachersPage() {
         }),
       })
       const json = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(json.error || 'Echec de la creation')
+      if (!res.ok) throw new Error(json.error || 'Échec de la création')
       toast.success('Enseignant ajoute', { description: `${f.firstName} ${f.lastName}` })
       queryClient.invalidateQueries({ queryKey: ['teachers'] })
       setShowNewTeacher(false)
       setCreatedCredentials({ email: json.data.user.email, tempPassword: json.data.tempPassword, name: `${f.firstName} ${f.lastName}` })
       setNewTeacherForm(emptyNewTeacherForm)
     } catch (error) {
-      toast.error('Erreur', { description: error instanceof Error ? error.message : 'Echec de la creation' })
+      toast.error('Erreur', { description: error instanceof Error ? error.message : 'Échec de la création' })
     } finally {
       setIsCreating(false)
     }
@@ -270,9 +270,9 @@ export function TeachersPage() {
   const handleExportExcel = () => {
     exportToExcel(
       filteredTeachers.map((t) => ({
-        Matricule: t.matricule, Nom: t.nom, Prenom: t.prenom, Grade: gradeFullNames[t.grade] || t.grade,
-        Departement: t.departement, Specialisation: t.specialisation, Statut: t.statut,
-        Email: t.email || '', Telephone: t.telephone || '',
+        Matricule: t.matricule, Nom: t.nom, Prénom: t.prenom, Grade: gradeFullNames[t.grade] || t.grade,
+        Département: t.departement, Spécialisation: t.specialisation, Statut: t.statut,
+        'E-mail': t.email || '', Téléphone: t.telephone || '',
       })),
       'annuaire_enseignants',
     )
@@ -286,9 +286,9 @@ export function TeachersPage() {
       [
         { header: 'Matricule', width: 0.18, value: (t: Teacher) => t.matricule },
         { header: 'Nom', width: 0.15, value: (t: Teacher) => t.nom },
-        { header: 'Prenom', width: 0.15, value: (t: Teacher) => t.prenom },
+        { header: 'Prénom', width: 0.15, value: (t: Teacher) => t.prenom },
         { header: 'Grade', width: 0.16, value: (t: Teacher) => gradeFullNames[t.grade] || t.grade },
-        { header: 'Departement', width: 0.2, value: (t: Teacher) => t.departement },
+        { header: 'Département', width: 0.2, value: (t: Teacher) => t.departement },
         { header: 'Email', width: 0.16, value: (t: Teacher) => t.email || '' },
       ],
       filteredTeachers,
@@ -492,7 +492,7 @@ export function TeachersPage() {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
                 <Input
-                  placeholder="Rechercher par nom, matricule, specialisation..."
+                  placeholder="Rechercher par nom, matricule, spécialisation…"
                   className="pl-9 h-9 text-sm"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
@@ -500,7 +500,7 @@ export function TeachersPage() {
               </div>
               <Select value={filterDept} onValueChange={setFilterDept}>
                 <SelectTrigger className="w-full sm:w-[180px] h-9 text-sm">
-                  <SelectValue placeholder="Departement" />
+                  <SelectValue placeholder="Département" />
                 </SelectTrigger>
                 <SelectContent>
                   {departements.map(d => (
@@ -559,8 +559,8 @@ export function TeachersPage() {
                       <TableHead className="text-xs font-semibold">Matricule</TableHead>
                       <TableHead className="text-xs font-semibold">Enseignant</TableHead>
                       <TableHead className="text-xs font-semibold">Grade</TableHead>
-                      <TableHead className="text-xs font-semibold">Departement</TableHead>
-                      <TableHead className="text-xs font-semibold">Specialisation</TableHead>
+                      <TableHead className="text-xs font-semibold">Département</TableHead>
+                      <TableHead className="text-xs font-semibold">Spécialisation</TableHead>
                       <TableHead className="text-xs font-semibold text-center">Charge h/sem</TableHead>
                       <TableHead className="text-xs font-semibold">Statut</TableHead>
                       <TableHead className="text-xs font-semibold text-right">Actions</TableHead>
@@ -663,7 +663,7 @@ export function TeachersPage() {
                     {!isLoading && filteredTeachers.length === 0 && (
                       <TableRow>
                         <TableCell colSpan={8} className="text-center py-8 text-sm text-gray-400">
-                          Aucun enseignant trouve
+                          Aucun enseignant trouvé
                         </TableCell>
                       </TableRow>
                     )}
@@ -710,7 +710,7 @@ export function TeachersPage() {
                 <Building2 className="size-4 text-[var(--institution-primary)]" />
               </div>
               <div>
-                <p className="text-xs text-gray-500">Departements couverts</p>
+                <p className="text-xs text-gray-500">Départements couverts</p>
                 <p className="text-lg font-bold text-[var(--institution-primary)]">{departements.length - 1}</p>
               </div>
             </div>
@@ -731,20 +731,20 @@ export function TeachersPage() {
                 <Input placeholder="Nom de famille" value={newTeacherForm.lastName} onChange={(e) => setNewTeacherForm((f) => ({ ...f, lastName: e.target.value }))} />
               </div>
               <div className="space-y-2">
-                <Label className="text-sm">Prenom</Label>
-                <Input placeholder="Prenom" value={newTeacherForm.firstName} onChange={(e) => setNewTeacherForm((f) => ({ ...f, firstName: e.target.value }))} />
+                <Label className="text-sm">Prénom</Label>
+                <Input placeholder="Prénom" value={newTeacherForm.firstName} onChange={(e) => setNewTeacherForm((f) => ({ ...f, firstName: e.target.value }))} />
               </div>
             </div>
             <div className="space-y-2">
               <Label className="text-sm">Matricule (optionnel)</Label>
-              <Input placeholder="Genere automatiquement si vide" value={newTeacherForm.employeeId} onChange={(e) => setNewTeacherForm((f) => ({ ...f, employeeId: e.target.value }))} />
+              <Input placeholder="Généré automatiquement si vide" value={newTeacherForm.employeeId} onChange={(e) => setNewTeacherForm((f) => ({ ...f, employeeId: e.target.value }))} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-sm">Grade</Label>
                 <Select value={newTeacherForm.grade} onValueChange={(v) => setNewTeacherForm((f) => ({ ...f, grade: v }))}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Selectionner" />
+                    <SelectValue placeholder="Sélectionner" />
                   </SelectTrigger>
                   <SelectContent>
                     {grades.filter(g => g !== 'Tous' && g !== 'Non renseigné').map(g => (
@@ -754,10 +754,10 @@ export function TeachersPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label className="text-sm">Departement</Label>
+                <Label className="text-sm">Département</Label>
                 <Select value={newTeacherForm.departmentId} onValueChange={(v) => setNewTeacherForm((f) => ({ ...f, departmentId: v }))}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Selectionner" />
+                    <SelectValue placeholder="Sélectionner" />
                   </SelectTrigger>
                   <SelectContent>
                     {realDepartments.map(d => (
@@ -768,12 +768,12 @@ export function TeachersPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label className="text-sm">Specialisation</Label>
-              <Input placeholder="Domaine de specialisation" value={newTeacherForm.specialization} onChange={(e) => setNewTeacherForm((f) => ({ ...f, specialization: e.target.value }))} />
+              <Label className="text-sm">Spécialisation</Label>
+              <Input placeholder="Domaine de spécialisation" value={newTeacherForm.specialization} onChange={(e) => setNewTeacherForm((f) => ({ ...f, specialization: e.target.value }))} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-sm">Telephone</Label>
+                <Label className="text-sm">Téléphone</Label>
                 <Input placeholder="+235 66 XX XX XX" value={newTeacherForm.phone} onChange={(e) => setNewTeacherForm((f) => ({ ...f, phone: e.target.value }))} />
               </div>
               <div className="space-y-2">
@@ -781,9 +781,9 @@ export function TeachersPage() {
                 <Input placeholder="email@univ.td" type="email" value={newTeacherForm.email} onChange={(e) => setNewTeacherForm((f) => ({ ...f, email: e.target.value }))} />
               </div>
             </div>
-            <p className="text-[11px] text-gray-400">Un compte de connexion sera cree avec un mot de passe temporaire, affiche une seule fois.</p>
+            <p className="text-[11px] text-gray-400">Un compte de connexion sera créé avec un mot de passe temporaire, affiché une seule fois.</p>
             <Button className="w-full bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white" disabled={isCreating} onClick={handleCreateTeacher}>
-              {isCreating ? 'Creation...' : "Enregistrer l'enseignant"}
+              {isCreating ? 'Création…' : "Enregistrer l’enseignant"}
             </Button>
           </div>
         </DialogContent>

@@ -205,7 +205,7 @@ export function StudentsList() {
 
   const handleCreateStudent = async () => {
     if (!form.firstName || !form.lastName || !form.gender || !form.dateOfBirth || !form.placeOfBirth || !form.currentProgramId || !form.currentLevelId) {
-      toast.error('Champs requis', { description: 'Nom, prenom, sexe, date/lieu de naissance, filiere et niveau sont obligatoires' })
+      toast.error('Champs requis', { description: 'Nom, prénom, sexe, date/lieu de naissance, filière et niveau sont obligatoires' })
       return
     }
     setIsCreating(true)
@@ -231,8 +231,8 @@ export function StudentsList() {
         }),
       })
       const body = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(body.error || 'Echec de la creation')
-      toast.success('Etudiant enregistre', { description: `Matricule ${body.data?.matricule}` })
+      if (!res.ok) throw new Error(body.error || 'Échec de la création')
+      toast.success('Étudiant enregistré', { description: `Matricule ${body.data?.matricule}` })
       queryClient.invalidateQueries({ queryKey: ['students'] })
       setShowCreate(false)
       setForm(emptyStudentForm)
@@ -245,7 +245,7 @@ export function StudentsList() {
         })
       }
     } catch (e) {
-      toast.error('Erreur', { description: e instanceof Error ? e.message : 'Echec de la creation' })
+      toast.error('Erreur', { description: e instanceof Error ? e.message : 'Échec de la création' })
     } finally {
       setIsCreating(false)
     }
@@ -279,7 +279,7 @@ export function StudentsList() {
   const handleUpdateStudent = async () => {
     if (!editingStudent) return
     if (!form.firstName || !form.lastName || !form.gender || !form.dateOfBirth || !form.placeOfBirth || !form.currentProgramId || !form.currentLevelId) {
-      toast.error('Champs requis', { description: 'Nom, prenom, sexe, date/lieu de naissance, filiere et niveau sont obligatoires' })
+      toast.error('Champs requis', { description: 'Nom, prénom, sexe, date/lieu de naissance, filière et niveau sont obligatoires' })
       return
     }
     setIsUpdating(true)
@@ -310,13 +310,13 @@ export function StudentsList() {
         body: JSON.stringify(updatePayload),
       })
       const body = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(body.error || 'Echec de la mise a jour')
-      toast.success('Dossier etudiant mis a jour')
+      if (!res.ok) throw new Error(body.error || 'Échec de la mise à jour')
+      toast.success('Dossier étudiant mis à jour')
       queryClient.invalidateQueries({ queryKey: ['students'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })
       closeEditDialog()
     } catch (e) {
-      toast.error('Erreur', { description: e instanceof Error ? e.message : 'Echec de la mise a jour' })
+      toast.error('Erreur', { description: e instanceof Error ? e.message : 'Échec de la mise à jour' })
     } finally {
       setIsUpdating(false)
     }
@@ -328,12 +328,12 @@ export function StudentsList() {
     try {
       const res = await fetch(`/api/students?id=${encodeURIComponent(student.id)}`, { method: 'DELETE' })
       const body = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(body.error || 'Echec de la suspension')
-      toast.success('Dossier etudiant suspendu')
+      if (!res.ok) throw new Error(body.error || 'Échec de la suspension')
+      toast.success('Dossier étudiant suspendu')
       queryClient.invalidateQueries({ queryKey: ['students'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })
     } catch (e) {
-      toast.error('Erreur', { description: e instanceof Error ? e.message : 'Echec de la suspension' })
+      toast.error('Erreur', { description: e instanceof Error ? e.message : 'Échec de la suspension' })
     } finally {
       setIsChangingStatus(false)
     }
@@ -348,12 +348,12 @@ export function StudentsList() {
         body: JSON.stringify({ id: student.id, status: 'INSCRIT' }),
       })
       const body = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(body.error || 'Echec de la reactivation')
-      toast.success('Dossier etudiant reactive')
+      if (!res.ok) throw new Error(body.error || 'Échec de la réactivation')
+      toast.success('Dossier étudiant réactivé')
       queryClient.invalidateQueries({ queryKey: ['students'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })
     } catch (e) {
-      toast.error('Erreur', { description: e instanceof Error ? e.message : 'Echec de la reactivation' })
+      toast.error('Erreur', { description: e instanceof Error ? e.message : 'Échec de la réactivation' })
     } finally {
       setIsChangingStatus(false)
     }
@@ -490,7 +490,7 @@ export function StudentsList() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4 }}
               >
-                Gestion des etudiants
+                Gestion des étudiants
               </motion.h1>
               <motion.p
                 className="text-white/70 text-sm mt-1"
@@ -498,7 +498,7 @@ export function StudentsList() {
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.4, delay: 0.1 }}
               >
-                {filteredStudents.length} etudiants trouves
+                {filteredStudents.length} étudiants trouvés
               </motion.p>
             </div>
             <div className="flex items-center gap-2">
@@ -526,7 +526,7 @@ export function StudentsList() {
               </Button>
               {canManageStudents && <Button size="sm" className="bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white text-xs border border-white/20" onClick={() => setShowCreate(true)}>
                 <UserPlus className="size-3.5 mr-1.5" />
-                Nouvel etudiant
+                Nouvel étudiant
               </Button>}
             </div>
           </div>
@@ -542,7 +542,7 @@ export function StudentsList() {
         <Card>
           <CardContent className="p-4">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <StatIndicator value={totalStudents} label="Total etudiants" icon={Users} color="var(--institution-primary)" />
+              <StatIndicator value={totalStudents} label="Total étudiants" icon={Users} color="var(--institution-primary)" />
               <StatIndicator value={maleCount} label="Hommes" icon={UserCheck} color="var(--institution-secondary)" />
               <StatIndicator value={femaleCount} label="Femmes" icon={UserCheck} color="var(--institution-accent)" />
               <StatIndicator value={averageAge} label="Age moyen" icon={Calendar} color="var(--institution-primary)" />
@@ -558,7 +558,7 @@ export function StudentsList() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
               <Input
-                placeholder="Rechercher par nom, prenom, matricule..."
+                  placeholder="Rechercher par nom, prénom, matricule…"
                 className="pl-9 h-9 text-sm"
                 value={search}
                 onChange={(e) => { setSearch(e.target.value); setCurrentPage(1) }}
@@ -566,7 +566,7 @@ export function StudentsList() {
             </div>
             <Select value={filiereFilter} onValueChange={(v) => { setFiliereFilter(v); setCurrentPage(1) }}>
               <SelectTrigger className="h-9 text-sm">
-                <SelectValue placeholder="Filiere" />
+                <SelectValue placeholder="Filière" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Toutes les filieres</SelectItem>
@@ -610,8 +610,8 @@ export function StudentsList() {
                 <TableRow className="bg-gray-50 hover:bg-gray-50">
                   <TableHead className="text-xs font-semibold text-gray-500 uppercase">Matricule</TableHead>
                   <TableHead className="text-xs font-semibold text-gray-500 uppercase">Nom</TableHead>
-                  <TableHead className="text-xs font-semibold text-gray-500 uppercase">Prenom</TableHead>
-                  <TableHead className="text-xs font-semibold text-gray-500 uppercase">Filiere</TableHead>
+                  <TableHead className="text-xs font-semibold text-gray-500 uppercase">Prénom</TableHead>
+                  <TableHead className="text-xs font-semibold text-gray-500 uppercase">Filière</TableHead>
                   <TableHead className="text-xs font-semibold text-gray-500 uppercase">Niveau</TableHead>
                   <TableHead className="text-xs font-semibold text-gray-500 uppercase">Statut</TableHead>
                   <TableHead className="text-xs font-semibold text-gray-500 uppercase text-center">Credits</TableHead>
@@ -747,7 +747,7 @@ export function StudentsList() {
       <Dialog open={showCreate} onOpenChange={(o) => { setShowCreate(o); if (!o) setForm(emptyStudentForm) }}>
         <DialogContent className="sm:max-w-[560px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-[var(--institution-primary)]">Nouvel etudiant</DialogTitle>
+            <DialogTitle className="text-[var(--institution-primary)]">Nouvel étudiant</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="grid grid-cols-2 gap-3">
@@ -756,7 +756,7 @@ export function StudentsList() {
                 <Input value={form.lastName} onChange={(e) => setForm((f) => ({ ...f, lastName: e.target.value }))} />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-sm">Prenom</Label>
+                <Label className="text-sm">Prénom</Label>
                 <Input value={form.firstName} onChange={(e) => setForm((f) => ({ ...f, firstName: e.target.value }))} />
               </div>
             </div>
@@ -764,7 +764,7 @@ export function StudentsList() {
               <div className="space-y-1.5">
                 <Label className="text-sm">Sexe</Label>
                 <Select value={form.gender} onValueChange={(v) => setForm((f) => ({ ...f, gender: v }))}>
-                  <SelectTrigger><SelectValue placeholder="Selectionner" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Sélectionner" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="M">Masculin</SelectItem>
                     <SelectItem value="F">Feminin</SelectItem>
@@ -788,9 +788,9 @@ export function StudentsList() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-sm">Filiere</Label>
+                <Label className="text-sm">Filière</Label>
                 <Select value={form.currentProgramId} onValueChange={(v) => setForm((f) => ({ ...f, currentProgramId: v, currentLevelId: '' }))}>
-                  <SelectTrigger><SelectValue placeholder="Selectionner" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Sélectionner" /></SelectTrigger>
                   <SelectContent>
                     {realPrograms.map((p) => (
                       <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
@@ -801,7 +801,7 @@ export function StudentsList() {
               <div className="space-y-1.5">
                 <Label className="text-sm">Niveau</Label>
                 <Select value={form.currentLevelId} onValueChange={(v) => setForm((f) => ({ ...f, currentLevelId: v }))} disabled={!form.currentProgramId}>
-                  <SelectTrigger><SelectValue placeholder={form.currentProgramId ? 'Selectionner' : "Choisir d'abord une filiere"} /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={form.currentProgramId ? 'Sélectionner' : "Choisir d’abord une filière"} /></SelectTrigger>
                   <SelectContent>
                     {selectedProgramLevels.map((l) => (
                       <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
@@ -838,7 +838,7 @@ export function StudentsList() {
               {form.photo && <p className="text-xs text-emerald-700">Photo prête à enregistrer.</p>}
             </div>
             <Button className="w-full bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white" disabled={isCreating} onClick={handleCreateStudent}>
-              {isCreating ? 'Enregistrement...' : "Enregistrer l'etudiant"}
+              {isCreating ? 'Enregistrement…' : 'Enregistrer l’étudiant'}
             </Button>
           </div>
         </DialogContent>
@@ -848,7 +848,7 @@ export function StudentsList() {
       <Dialog open={Boolean(editingStudent)} onOpenChange={(o) => { if (!o) closeEditDialog() }}>
         <DialogContent className="sm:max-w-[560px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-[var(--institution-primary)]">Modifier le dossier etudiant</DialogTitle>
+            <DialogTitle className="text-[var(--institution-primary)]">Modifier le dossier étudiant</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="grid grid-cols-2 gap-3">
@@ -857,7 +857,7 @@ export function StudentsList() {
                 <Input value={form.lastName} onChange={(e) => setForm((f) => ({ ...f, lastName: e.target.value }))} />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-sm">Prenom</Label>
+                <Label className="text-sm">Prénom</Label>
                 <Input value={form.firstName} onChange={(e) => setForm((f) => ({ ...f, firstName: e.target.value }))} />
               </div>
             </div>
@@ -865,7 +865,7 @@ export function StudentsList() {
               <div className="space-y-1.5">
                 <Label className="text-sm">Sexe</Label>
                 <Select value={form.gender} onValueChange={(v) => setForm((f) => ({ ...f, gender: v }))}>
-                  <SelectTrigger><SelectValue placeholder="Selectionner" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Sélectionner" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="M">Masculin</SelectItem>
                     <SelectItem value="F">Feminin</SelectItem>
@@ -902,9 +902,9 @@ export function StudentsList() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-sm">Filiere</Label>
+                <Label className="text-sm">Filière</Label>
                 <Select value={form.currentProgramId} onValueChange={(v) => setForm((f) => ({ ...f, currentProgramId: v, currentLevelId: '' }))}>
-                  <SelectTrigger><SelectValue placeholder="Selectionner" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Sélectionner" /></SelectTrigger>
                   <SelectContent>
                     {realPrograms.map((p) => (
                       <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
@@ -915,7 +915,7 @@ export function StudentsList() {
               <div className="space-y-1.5">
                 <Label className="text-sm">Niveau</Label>
                 <Select value={form.currentLevelId} onValueChange={(v) => setForm((f) => ({ ...f, currentLevelId: v }))} disabled={!form.currentProgramId}>
-                  <SelectTrigger><SelectValue placeholder={form.currentProgramId ? 'Selectionner' : "Choisir d'abord une filiere"} /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={form.currentProgramId ? 'Sélectionner' : "Choisir d’abord une filière"} /></SelectTrigger>
                   <SelectContent>
                     {selectedProgramLevels.map((l) => (
                       <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
@@ -951,7 +951,7 @@ export function StudentsList() {
               {form.photo && <p className="text-xs text-emerald-700">Nouvelle photo prête à enregistrer.</p>}
             </div>
             <Button className="w-full bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white" disabled={isUpdating} onClick={handleUpdateStudent}>
-              {isUpdating ? 'Mise a jour...' : 'Enregistrer les modifications'}
+              {isUpdating ? 'Mise à jour…' : 'Enregistrer les modifications'}
             </Button>
           </div>
         </DialogContent>
@@ -961,13 +961,13 @@ export function StudentsList() {
       <Dialog open={Boolean(createdCredentials)} onOpenChange={(o) => { if (!o) setCreatedCredentials(null) }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Etudiant enregistre</DialogTitle>
+            <DialogTitle>Étudiant enregistré</DialogTitle>
           </DialogHeader>
           {createdCredentials && (
             <div className="space-y-4 py-2">
               <p className="text-sm text-gray-600">
-                Le compte Espace Etudiant de <span className="font-semibold text-[var(--institution-primary)]">{createdCredentials.name}</span> est pret.
-                Transmettez ces identifiants — le code PIN ne sera plus jamais affiche.
+                Le compte Espace Étudiant de <span className="font-semibold text-[var(--institution-primary)]">{createdCredentials.name}</span> est prêt.
+                Transmettez ces identifiants — le code PIN ne sera plus jamais affiché.
               </p>
               <div className="rounded-lg border bg-gray-50 p-3 space-y-2">
                 <div>

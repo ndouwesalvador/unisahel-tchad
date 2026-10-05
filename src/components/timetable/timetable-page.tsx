@@ -526,7 +526,7 @@ export function TimetablePage() {
 
   const handleCreateSlot = async () => {
     if (!canCreateTimetableSlot) {
-      toast.error('Creation impossible', {
+      toast.error('Création impossible', {
         description: `Il manque ${timetablePrerequisites.join(', ')}.`,
       })
       return
@@ -639,7 +639,7 @@ export function TimetablePage() {
   })
   const nextCourseText = upcomingSlot
     ? `${upcomingSlot.course} à ${formatHour(upcomingSlot.startHour)}`
-    : 'Aucun cours prevu'
+    : 'Aucun cours prévu'
 
   return (
     <div className="space-y-6">
@@ -1124,7 +1124,7 @@ export function TimetablePage() {
                       </div>
                       {timeSlots.length === 0 && (
                         <div className="py-8 text-center text-sm text-gray-400 border-t border-gray-100">
-                          Aucun creneau planifie
+                          Aucun créneau planifié
                         </div>
                       )}
                     </div>
@@ -1171,7 +1171,7 @@ export function TimetablePage() {
                       </div>
                       {daySlots.length === 0 && (
                         <div className="py-12 text-center text-sm text-gray-400">
-                          Aucun cours programme ce jour
+                          Aucun cours programmé ce jour
                         </div>
                       )}
                     </>
@@ -1197,7 +1197,7 @@ export function TimetablePage() {
                   <div className="py-6 text-center text-xs text-gray-400">Chargement des salles...</div>
                 )}
                 {!isRoomsLoading && rooms.length === 0 && (
-                  <div className="py-6 text-center text-xs text-gray-400">Aucune salle enregistree</div>
+                  <div className="py-6 text-center text-xs text-gray-400">Aucune salle enregistrée</div>
                 )}
                 <div className="space-y-3">
                   {rooms.map(room => {
