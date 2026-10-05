@@ -739,18 +739,18 @@ function AddEntityDialog({
           {triggerLabel}
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="flex max-h-[min(90dvh,780px)] flex-col gap-3 overflow-hidden sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="text-[var(--institution-primary)]">{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
-        <div className="space-y-4 py-4">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto py-2 pr-1 sm:py-3">
           {fields.map(field => (
             <div key={field.id} className="space-y-2">
               <Label className="text-sm font-medium">{field.label}</Label>
               {field.options ? (
                 <Select value={values[field.id] ?? ''} onValueChange={(v) => setField(field.id, v)}>
-                  <SelectTrigger className="h-10">
+                    <SelectTrigger className="h-10 min-w-0 [&>span]:truncate">
                     <SelectValue placeholder={field.placeholder || 'Sélectionner...'} />
                   </SelectTrigger>
                   <SelectContent>
@@ -771,7 +771,7 @@ function AddEntityDialog({
             </div>
           ))}
         </div>
-        <DialogFooter>
+        <DialogFooter className="shrink-0 border-t pt-3">
           <Button variant="outline" onClick={() => { reset(); setOpen(false) }} className="text-xs" disabled={submitting}>
             Annuler
           </Button>
