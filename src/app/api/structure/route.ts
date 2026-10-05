@@ -798,10 +798,40 @@ async function updateEntityHandler(user: SessionUser, tenantId: string, request:
     }
 
     const updated = await delegate(type).update({ where: { id }, data })
+    let serviceSynchronized = false
     await db.auditLog.create({
       data: { tenantId, userId: user.id, action: 'UPDATE', entity: ENTITY_LABEL[type], entityId: id, details: JSON.stringify(data) },
     })
-    return NextResponse.json({ data: updated })
+    // The maquette keeps a legacy teacherId for display, but the teacher
+    // workspace is intentionally driven by annual TeachingService records.
+    // Synchronise an assignment made here so it becomes visible immediately
+    // in grades, attendance and timetable without forcing a duplicate request.
+    if (type === 'course-element' && typeof data.teacherId === 'string') {
+      const [currentYear, context, teacher] = await Promise.all([
+        db.academicYear.findFirst({ where: { tenantId, isCurrent: true }, select: { id: true } }),
+        db.courseElement.findUnique({ where: { id }, select: { hoursCM: true, hoursTD: true, hoursTP: true, hoursStage: true, hoursPersonal: true, teachingUnit: { select: { semester: { select: { level: { select: { program: { select: { departmentId: true, department: { select: { isActive: true } } } } } } } } } } } }),
+        db.teacher.findFirst({ where: { id: data.teacherId, tenantId, isActive: true }, select: { departmentId: true, department: { select: { isActive: true } } } }),
+      ])
+      const requestingDepartmentId = context?.teachingUnit?.semester?.level?.program?.departmentId
+      const homeDepartmentId = teacher?.departmentId
+      if (currentYear && requestingDepartmentId && homeDepartmentId && context?.teachingUnit?.semester?.level?.program?.department?.isActive && teacher.department?.isActive) {
+        const plannedHours = Math.max(1, (context.hoursCM ?? 0) + (context.hoursTD ?? 0) + (context.hoursTP ?? 0) + (context.hoursStage ?? 0) + (context.hoursPersonal ?? 0))
+        const existing = await db.teachingService.findFirst({ where: { tenantId, academicYearId: currentYear.id, courseElementId: id, teacherId: data.teacherId, status: { not: 'REJECTED' } }, select: { id: true } })
+        if (!existing) {
+          const service = await db.teachingService.create({ data: {
+            tenantId, academicYearId: currentYear.id, courseElementId: id, teacherId: data.teacherId,
+            requestingDepartmentId, homeDepartmentId, plannedHours,
+            requestReason: 'Affectation directe depuis la maquette', isCommon: false,
+            status: 'APPROVED', requestedById: user.id,
+            centralDecidedById: user.id, centralDecisionReason: 'Affectation validée dans la maquette', centralDecidedAt: new Date(),
+          } })
+          await db.auditLog.create({ data: { tenantId, userId: user.id, action: 'CREATE', entity: 'TeachingService', entityId: service.id,
+            details: JSON.stringify({ source: 'maquette', courseElementId: id, teacherId: data.teacherId, academicYearId: currentYear.id }) } })
+        }
+        serviceSynchronized = true
+      }
+    }
+    return NextResponse.json({ data: updated, serviceSynchronized })
   } catch (error) {
     console.error(`Update ${type} error:`, error)
     return NextResponse.json({ error: `Failed to update ${type}` }, { status: 500 })

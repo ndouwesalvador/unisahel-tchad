@@ -515,7 +515,7 @@ function EditCourseElementDialog({ ecue, teachers }: { ecue: ECUE; teachers: Tea
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(json.error || 'Modification impossible')
-      toast.success('Matière mise à jour')
+      toast.success(json.serviceSynchronized ? 'Matière mise à jour et affectation enseignant activée' : 'Matière mise à jour')
       queryClient.invalidateQueries({ queryKey: ['structure'] })
       setOpen(false)
     } catch (e) {
@@ -862,7 +862,7 @@ export function MaquettePage() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <h1 className="text-xl md:text-2xl font-bold text-white">Maquettes pedagogiques</h1>
-              <p className="text-sm text-white/70 mt-1">Programmes, unites d&apos;enseignement et regles de compensation</p>
+              <p className="text-sm text-white/70 mt-1">UE, matières, volumes horaires et affectations pédagogiques par année</p>
             </div>
             <div className="flex gap-2 flex-wrap">
               {canManage && <Button

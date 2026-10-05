@@ -7,6 +7,8 @@ const { authMock, dbMock } = vi.hoisted(() => ({
     teachingUnit: { findFirst: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
     courseElement: { findFirst: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
     teacher: { findFirst: vi.fn() },
+    academicYear: { findFirst: vi.fn() },
+    teachingService: { findFirst: vi.fn(), create: vi.fn() },
     auditLog: { create: vi.fn() },
   },
 }))
@@ -38,6 +40,7 @@ beforeEach(() => {
   dbMock.teachingUnit.findUnique.mockResolvedValue({ responsibleId: null })
   dbMock.courseElement.findUnique.mockResolvedValue({ teacherId: null })
   dbMock.auditLog.create.mockResolvedValue({ id: 'caudit000000000000000001' })
+  dbMock.academicYear.findFirst.mockResolvedValue(null)
 })
 
 describe('PUT /api/structure', () => {

@@ -537,7 +537,8 @@ function MainContent({ view }: { view: AppView }) {
     if (view === 'students') return <StudentsList />
     if (view === 'teachers') return <TeachersPage />
     if (view === 'structure') return <StructurePage />
-    if (view === 'maquette' || view === 'programs') return <MaquettePage />
+    if (view === 'programs') return <StructurePage />
+    if (view === 'maquette') return <MaquettePage />
     if (view === 'grades') return <GradesPage />
     if (view === 'reports') return <ReportsPage />
     if (view === 'timetable') return <TimetablePage />
@@ -600,6 +601,7 @@ function MainContent({ view }: { view: AppView }) {
     case 'teacher-detail':
       return <TeacherDetail />
     case 'programs':
+      return <StructurePage />
     case 'maquette':
       return <MaquettePage />
     case 'announcements':
