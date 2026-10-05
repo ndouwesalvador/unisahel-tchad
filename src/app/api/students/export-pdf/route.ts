@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import React from 'react'
 import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
-import { renderArabicHeader } from '@/lib/pdf/arabic-header'
+import { renderArabicHeader, renderArabicMotto } from '@/lib/pdf/arabic-header'
 import { parseHeaderLines } from '@/lib/institution-branding'
 import { prepareDocumentArtwork } from '@/lib/pdf/artwork'
 import { ListeEtudiantsPDF, paginateStudentList, renderPDF } from '@/lib/pdf/templates'
@@ -21,8 +21,7 @@ async function handlePost(_user: SessionUser, tenantId: string, request: NextReq
       db.tenant.findUnique({ where: { id: tenantId }, select: {
         id: true, name: true, shortName: true, address: true, city: true, country: true,
         ministry: true, phone: true, email: true, website: true, logo: true,
-        headerLanguageMode: true, arabicCountry: true, arabicName: true, arabicMinistry: true, headerLinesFr: true, headerLinesAr: true, motto: true,
-        settings: { select: { primaryColor: true, secondaryColor: true, accentColor: true } },
+        headerLanguageMode: true, arabicCountry: true, arabicName: true, arabicMinistry: true, arabicMotto: true, contactPlacement: true, headerLinesFr: true, headerLinesAr: true, motto: true,
       } }),
       db.academicYear.findFirst({ where: { tenantId, isCurrent: true }, select: { name: true } }),
       db.student.findMany({ where: { tenantId, id: { in: uniqueIds } },
@@ -41,13 +40,12 @@ async function handlePost(_user: SessionUser, tenantId: string, request: NextReq
       website: tenantDb.website || '', logo: tenantDb.logo || '', motto: tenantDb.motto || '',
       headerLinesFr: parseHeaderLines(tenantDb.headerLinesFr) ?? undefined,
       headerLinesAr: parseHeaderLines(tenantDb.headerLinesAr) ?? undefined,
-      primaryColor: tenantDb.settings?.primaryColor || undefined,
-      secondaryColor: tenantDb.settings?.secondaryColor || undefined,
-      accentColor: tenantDb.settings?.accentColor || undefined,
+      contactPlacement: tenantDb.contactPlacement,
+      arabicMottoImage: renderArabicMotto({ headerLanguageMode: tenantDb.headerLanguageMode, arabicMotto: tenantDb.arabicMotto }),
       arabicHeaderImage: renderArabicHeader({ headerLanguageMode: tenantDb.headerLanguageMode,
         headerLinesAr: parseHeaderLines(tenantDb.headerLinesAr) ?? undefined,
         arabicCountry: tenantDb.arabicCountry || '', arabicMinistry: tenantDb.arabicMinistry || '',
-        arabicName: tenantDb.arabicName || '', primaryColor: tenantDb.settings?.primaryColor || undefined }),
+        arabicName: tenantDb.arabicName || '' }),
     })
     const students = studentRows.map((student) => ({
       name: `${student.lastName} ${student.firstName}`.trim(), matricule: student.matricule || '',

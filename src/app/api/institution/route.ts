@@ -7,7 +7,7 @@ const TENANT_FIELDS = [
   'name', 'shortName', 'motto', 'ministry', 'country', 'city', 'address',
   'phone', 'email', 'website', 'rectorName', 'rectorTitle', 'secondarySignerName', 'secondarySignerTitle', 'thirdSignerName', 'thirdSignerTitle', 'academicSystem',
   'headerLanguageMode', 'arabicCountry', 'arabicName', 'arabicMinistry',
-  'headerLinesFr', 'headerLinesAr',
+  'headerLinesFr', 'headerLinesAr', 'arabicMotto', 'contactPlacement', 'sealSizeMm',
 ] as const
 
 const SETTINGS_FIELDS = [
@@ -58,6 +58,15 @@ async function handlePut(user: SessionUser, tenantId: string, request: NextReque
     }
     if (body.headerLanguageMode !== undefined && !['FR_ONLY', 'FR_AR'].includes(body.headerLanguageMode)) {
       return NextResponse.json({ error: 'Langue d’en-tête invalide' }, { status: 400 })
+    }
+    if (body.arabicMotto !== undefined && (typeof body.arabicMotto !== 'string' || body.arabicMotto.length > 130)) {
+      return NextResponse.json({ error: 'Devise arabe invalide (130 caractères maximum)' }, { status: 400 })
+    }
+    if (body.contactPlacement !== undefined && !['TOP', 'BOTTOM'].includes(body.contactPlacement)) {
+      return NextResponse.json({ error: 'Position des coordonnées invalide' }, { status: 400 })
+    }
+    if (body.sealSizeMm !== undefined && (!Number.isInteger(body.sealSizeMm) || body.sealSizeMm < 30 || body.sealSizeMm > 40)) {
+      return NextResponse.json({ error: 'Le diamètre du cachet doit être compris entre 30 et 40 mm' }, { status: 400 })
     }
     for (const field of ['arabicCountry', 'arabicName', 'arabicMinistry'] as const) {
       if (body[field] !== undefined && (typeof body[field] !== 'string' || body[field].length > 130)) {

@@ -58,6 +58,8 @@ export interface TenantInfo {
   thirdSignature?: string
   thirdSignerName?: string
   thirdSignerTitle?: string
+  secondaryStamp?: string
+  thirdStamp?: string
   arabicName?: string
   arabicMinistry?: string
   arabicHeaderImage?: string
@@ -71,6 +73,10 @@ export interface TenantInfo {
   rectorName?: string
   rectorTitle?: string
   motto?: string
+  arabicMottoImage?: string
+  arabicMotto?: string
+  contactPlacement?: string
+  sealSizeMm?: number
 }
 
 export interface StudentInfo {

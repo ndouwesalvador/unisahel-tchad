@@ -10,6 +10,7 @@ export type PvStudentRow = {
   name: string
   matricule: string
   grades: Record<string, number>
+  components?: Record<string, { cc?: number; tp?: number; exam?: number; final: number }>
   average: number
   decision: string
 }
@@ -52,7 +53,7 @@ type TeachingUnit = {
 }
 
 type PedagogicalRegistration = { studentId: string; teachingUnitId: string; teachingUnit: TeachingUnit }
-type Grade = { studentId: string; teachingUnitId: string | null; courseElementId: string | null; finalGrade: number | null; isLocked: boolean }
+type Grade = { studentId: string; teachingUnitId: string | null; courseElementId: string | null; finalGrade: number | null; isLocked: boolean; ccGrade?: number | null; tpGrade?: number | null; examGrade?: number | null }
 type Student = { id: string; firstName: string; lastName: string; matricule: string | null }
 type Decision = { studentId: string; average: number | null; decision: string }
 
@@ -127,6 +128,7 @@ export function buildPvMatrix(input: {
           throw new PvMatrixError('Identité ou décision finale manquante pour un étudiant du PV.')
         }
         const grades: Record<string, number> = {}
+        const components: NonNullable<PvStudentRow['components']> = {}
         for (const unit of units) {
           if (!section.registeredUnits.get(studentId)?.has(unit.id)) continue
           if (unit.courseElements.length === 0) {
@@ -143,6 +145,16 @@ export function buildPvMatrix(input: {
               throw new PvMatrixError('Note de matière manquante ou non verrouillée dans le PV.')
             }
             grades[`EC:${element.id}`] = grade.finalGrade
+            const partials = [grade.ccGrade, grade.tpGrade, grade.examGrade].filter((value): value is number => value != null)
+            if (partials.some((value) => !Number.isFinite(value) || value < 0 || value > 20)) {
+              throw new PvMatrixError('Une composante de note est hors barème dans le PV.')
+            }
+            components[`EC:${element.id}`] = {
+              ...(grade.ccGrade == null ? {} : { cc: grade.ccGrade }),
+              ...(grade.tpGrade == null ? {} : { tp: grade.tpGrade }),
+              ...(grade.examGrade == null ? {} : { exam: grade.examGrade }),
+              final: grade.finalGrade,
+            }
             weighted += grade.finalGrade * element.coefficient
             totalWeight += element.coefficient
           }
@@ -150,7 +162,7 @@ export function buildPvMatrix(input: {
           grades[`UE:${unit.id}`] = Math.round((weighted / totalWeight + Number.EPSILON) * 100) / 100
         }
         return { name: `${student.lastName.toUpperCase()} ${student.firstName}`.trim(),
-          matricule: student.matricule || '—', grades, average: decision.average, decision: decision.decision }
+          matricule: student.matricule || '—', grades, components, average: decision.average, decision: decision.decision }
       }).sort((a, b) => a.name.localeCompare(b.name) || a.matricule.localeCompare(b.matricule))
       return { program: section.program, level: section.level, columns, students }
     })

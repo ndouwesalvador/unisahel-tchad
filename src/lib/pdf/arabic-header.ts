@@ -17,9 +17,17 @@ export function renderArabicHeader(input: { headerLanguageMode?: string; arabicC
   if (!lines.some(Boolean)) return undefined
   const fontSize = Math.min(27, Math.floor(150 / lines.length * 0.95))
   const step = 150 / lines.length
-  const color = /^#[0-9a-fA-F]{6}$/.test(input.primaryColor || '') ? input.primaryColor : '#1a2744'
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="560" height="160" viewBox="0 0 560 160">
-    ${lines.map((line, index) => `<text x="280" y="${8 + step * (index + 0.75)}" text-anchor="middle" direction="rtl" font-family="Noto Naskh Arabic" font-size="${fontSize}" fill="${color}">${escapeXml(line.slice(0, 130))}</text>`).join('')}
+    ${lines.map((line, index) => `<text x="280" y="${8 + step * (index + 0.75)}" text-anchor="middle" direction="rtl" font-family="Noto Naskh Arabic" font-size="${fontSize}" fill="#111111">${escapeXml(line.slice(0, 130))}</text>`).join('')}
+  </svg>`
+  const png = new Resvg(svg, { font: { loadSystemFonts: false, fontFiles: [fontFile], defaultFontFamily: 'Noto Naskh Arabic' } }).render().asPng()
+  return `data:image/png;base64,${png.toString('base64')}`
+}
+
+export function renderArabicMotto(input: { headerLanguageMode?: string; arabicMotto?: string | null }): string | undefined {
+  if (input.headerLanguageMode !== 'FR_AR' || !input.arabicMotto?.trim()) return undefined
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="560" height="56" viewBox="0 0 560 56">
+    <text x="280" y="39" text-anchor="middle" direction="rtl" font-family="Noto Naskh Arabic" font-size="29" fill="#111111">${escapeXml(input.arabicMotto.trim().slice(0, 130))}</text>
   </svg>`
   const png = new Resvg(svg, { font: { loadSystemFonts: false, fontFiles: [fontFile], defaultFontFamily: 'Noto Naskh Arabic' } }).render().asPng()
   return `data:image/png;base64,${png.toString('base64')}`

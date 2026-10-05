@@ -11,7 +11,7 @@ import { getOrganizationScope, isOrganizationManager } from '@/lib/auth/organiza
 import { parseJuryMembers } from '@/lib/deliberations/jury'
 import { buildPvMatrix, expectedPvSheetCount, PvMatrixError, type PvSection } from '@/lib/pdf/pv-matrix'
 import { countPdfPages } from '@/lib/pdf/utils'
-import { renderArabicHeader } from '@/lib/pdf/arabic-header'
+import { renderArabicHeader, renderArabicMotto } from '@/lib/pdf/arabic-header'
 import { parseHeaderLines } from '@/lib/institution-branding'
 import { prepareDocumentArtwork, prepareDocumentPhoto } from '@/lib/pdf/artwork'
 
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
     // Fetch real tenant data
     const tenantDb = await db.tenant.findUnique({
       where: { id: tenantId },
-      select: { id: true, name: true, shortName: true, address: true, city: true, country: true, ministry: true, phone: true, email: true, logo: true, stamp: true, signature: true, secondarySignature: true, thirdSignature: true, secondarySignerName: true, secondarySignerTitle: true, thirdSignerName: true, thirdSignerTitle: true, headerLanguageMode: true, arabicCountry: true, arabicName: true, arabicMinistry: true, headerLinesFr: true, headerLinesAr: true, settings: { select: { primaryColor: true, secondaryColor: true, accentColor: true } }, rectorName: true, rectorTitle: true, motto: true },
+      select: { id: true, name: true, shortName: true, address: true, city: true, country: true, ministry: true, phone: true, email: true, website: true, logo: true, stamp: true, signature: true, secondarySignature: true, thirdSignature: true, secondaryStamp: true, thirdStamp: true, secondarySignerName: true, secondarySignerTitle: true, thirdSignerName: true, thirdSignerTitle: true, headerLanguageMode: true, arabicCountry: true, arabicName: true, arabicMinistry: true, arabicMotto: true, contactPlacement: true, sealSizeMm: true, headerLinesFr: true, headerLinesAr: true, rectorName: true, rectorTitle: true, motto: true },
     })
 
     if (!tenantDb) {
@@ -79,13 +79,14 @@ export async function POST(request: NextRequest) {
     if (type === 'DIPLOME' && !tenantDb.logo?.startsWith('data:image/')) {
       return NextResponse.json({ error: 'Téléversez le logo officiel de l’institution avant d’émettre un diplôme.' }, { status: 409 })
     }
-    if (type === 'RELEVE_NOTES' && sign && (
+    if (['RELEVE_NOTES', 'DIPLOME'].includes(type) && sign && (
       !tenantDb.rectorName?.trim() || !tenantDb.signature?.startsWith('data:image/') ||
       !tenantDb.secondarySignerName?.trim() || !tenantDb.secondarySignature?.startsWith('data:image/') ||
-      !tenantDb.thirdSignerName?.trim() || !tenantDb.thirdSignature?.startsWith('data:image/') ||
-      !tenantDb.stamp?.startsWith('data:image/')
+      !tenantDb.stamp?.startsWith('data:image/') ||
+      ((Boolean(tenantDb.thirdSignerName?.trim()) || Boolean(tenantDb.thirdSignature)) &&
+        (!tenantDb.thirdSignerName?.trim() || !tenantDb.thirdSignature?.startsWith('data:image/')))
     )) {
-      return NextResponse.json({ error: 'Pour valider un relevé officiel, renseignez les trois noms, leurs signatures et le cachet dans Institution.' }, { status: 409 })
+      return NextResponse.json({ error: 'Pour valider cette pièce, renseignez les deux signataires obligatoires, leurs signatures et le cachet de droite. Si un signataire central est indiqué, son nom et sa signature sont aussi requis.' }, { status: 409 })
     }
     const tenant = await prepareDocumentArtwork({
       id: tenantDb.id,
@@ -99,6 +100,8 @@ export async function POST(request: NextRequest) {
       email: tenantDb.email || '',
       logo: tenantDb.logo || '',
       stamp: tenantDb.stamp || '',
+      secondaryStamp: tenantDb.secondaryStamp || '',
+      thirdStamp: tenantDb.thirdStamp || '',
       signature: tenantDb.signature || '',
       secondarySignature: tenantDb.secondarySignature || '',
       thirdSignature: tenantDb.thirdSignature || '',
@@ -110,12 +113,13 @@ export async function POST(request: NextRequest) {
       arabicMinistry: tenantDb.arabicMinistry || '',
       arabicCountry: tenantDb.arabicCountry || '',
       headerLanguageMode: tenantDb.headerLanguageMode,
+      arabicMotto: tenantDb.arabicMotto || '',
+      arabicMottoImage: renderArabicMotto({ headerLanguageMode: tenantDb.headerLanguageMode, arabicMotto: tenantDb.arabicMotto }),
+      contactPlacement: tenantDb.contactPlacement,
+      sealSizeMm: tenantDb.sealSizeMm,
       headerLinesFr: parseHeaderLines(tenantDb.headerLinesFr) ?? undefined,
       headerLinesAr: parseHeaderLines(tenantDb.headerLinesAr) ?? undefined,
-      primaryColor: tenantDb.settings?.primaryColor || undefined,
-      secondaryColor: tenantDb.settings?.secondaryColor || undefined,
-      accentColor: tenantDb.settings?.accentColor || undefined,
-      arabicHeaderImage: renderArabicHeader({ headerLanguageMode: tenantDb.headerLanguageMode, headerLinesAr: parseHeaderLines(tenantDb.headerLinesAr) ?? undefined, arabicCountry: tenantDb.arabicCountry || '', arabicMinistry: tenantDb.arabicMinistry || '', arabicName: tenantDb.arabicName || '', primaryColor: tenantDb.settings?.primaryColor }),
+      arabicHeaderImage: renderArabicHeader({ headerLanguageMode: tenantDb.headerLanguageMode, headerLinesAr: parseHeaderLines(tenantDb.headerLinesAr) ?? undefined, arabicCountry: tenantDb.arabicCountry || '', arabicMinistry: tenantDb.arabicMinistry || '', arabicName: tenantDb.arabicName || '' }),
       rectorName: tenantDb.rectorName || '',
       rectorTitle: tenantDb.rectorTitle || 'Recteur',
       motto: tenantDb.motto || '',
@@ -499,7 +503,7 @@ export async function POST(request: NextRequest) {
           db.grade.findMany({
             where: { studentId: { in: decisionIds }, academicYearId: acYearId,
               session: delib.type === 'RATTRAPAGE' ? 'RATTRAPAGE' : 'NORMALE', student: { tenantId } },
-            select: { studentId: true, teachingUnitId: true, courseElementId: true, finalGrade: true, isLocked: true },
+            select: { studentId: true, teachingUnitId: true, courseElementId: true, ccGrade: true, tpGrade: true, examGrade: true, finalGrade: true, isLocked: true },
           }),
         ])
         const [programs, levels] = await Promise.all([

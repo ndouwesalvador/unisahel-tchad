@@ -54,6 +54,15 @@ describe('department PV matrix', () => {
       grade.studentId === 's-1' ? { ...grade, isLocked: false } : grade) })).toThrow(PvMatrixError)
   })
 
+  it('carries CC, TP, examination and final marks to each course cell', () => {
+    const grades = input.grades.map((grade) => ({ ...grade,
+      ccGrade: 11, tpGrade: 14, examGrade: 16 }))
+    const [section] = buildPvMatrix({ ...input, grades })
+    expect(section.students[1].components?.['EC:ec-1']).toEqual({ cc: 11, tp: 14, exam: 16, final: 12 })
+    expect(() => buildPvMatrix({ ...input, grades: grades.map((grade, index) =>
+      index === 0 ? { ...grade, examGrade: 21 } : grade) })).toThrow('hors barème')
+  })
+
   it('rejects a registration assigned to another academic level', () => {
     const pedagogicalRegistrations = [{ ...input.pedagogicalRegistrations[0], teachingUnit: {
       ...unit, semester: { levelId: 'level-2', orderIndex: 1 },

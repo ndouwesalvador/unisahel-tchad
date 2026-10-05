@@ -213,25 +213,27 @@ function DocumentHeader({ tenant, docNumber, compact = false, subtle = false }: 
   const contact = [tenant.address, tenant.city, tenant.phone, tenant.email, tenant.website].filter(Boolean).join('  ·  ')
   const isChad = /tchad|chad/i.test(tenant.country || '')
   const frenchLines = tenant.headerLinesFr ?? [isChad ? 'RÉPUBLIQUE DU TCHAD' : (tenant.country || ''), tenant.ministry || '', tenant.name]
-  const primary = tenant.primaryColor || colors.primary
-  const accent = tenant.accentColor || '#c7a44b'
+  const ink = '#111111'
+  const headerHeight = compact && tenant.contactPlacement === 'TOP' ? 64 : compact ? 72 : 90
+  const columnHeight = headerHeight - (compact ? 6 : 14)
   return (
     <View wrap={false}>
-      <View style={{ ...styles.topRule, height: subtle ? 2 : 5, backgroundColor: subtle ? accent : primary }} />
-      <View style={{ flexDirection: 'row', height: compact ? 72 : 90, alignItems: 'center', justifyContent: 'space-between' }}>
-        <View style={{ width: '37%', height: compact ? 66 : 76, alignItems: 'center', paddingRight: 5, justifyContent: 'space-around' }}>
-          {frenchLines.filter(Boolean).slice(0, 10).map((line, index) => <Text key={`${index}-${line}`} style={{ fontSize: Math.max(4.2, Math.min(frenchLines.length > 6 ? 5.2 : frenchLines.length > 4 ? 6 : 7, 330 / line.length)), fontWeight: index === 0 || index === frenchLines.length - 1 ? 'bold' : 'normal', textAlign: 'center', color: primary }}>{line.toUpperCase()}</Text>)}
+      <View style={{ ...styles.topRule, height: subtle ? 2 : 4, backgroundColor: ink }} />
+      <View style={{ flexDirection: 'row', height: headerHeight, alignItems: 'center', justifyContent: 'space-between' }}>
+        <View style={{ width: '37%', height: columnHeight, alignItems: 'center', paddingRight: 5, justifyContent: 'space-around' }}>
+          {frenchLines.filter(Boolean).slice(0, 10).map((line, index) => <Text key={`${index}-${line}`} style={{ fontSize: Math.max(4.2, Math.min(frenchLines.length > 6 ? 5.2 : frenchLines.length > 4 ? 6 : 7, 330 / line.length)), fontWeight: index === 0 || index === frenchLines.length - 1 ? 'bold' : 'normal', textAlign: 'center', color: ink }}>{line.toUpperCase()}</Text>)}
         </View>
         <View style={{ width: '26%', alignItems: 'center', justifyContent: 'center' }}>
-          <Text style={{ fontSize: 7, fontWeight: 'bold', color: primary, textAlign: 'center' }}>{tenant.motto?.toUpperCase() || (isChad ? 'UNITÉ · TRAVAIL · PROGRÈS' : '')}</Text>
-          {tenant.logo?.startsWith('data:image/') ? <Image src={tenant.logo} style={{ width: compact ? 62 : 76, height: compact ? 52 : 66, objectFit: 'contain', marginTop: 3 }} />
-            : <View style={{ width: compact ? 52 : 62, height: compact ? 52 : 62, marginTop: 3, borderWidth: 1, borderColor: colors.secondary, borderRadius: 31, justifyContent: 'center' }}><Text style={{ fontSize: 9, color: colors.secondary, textAlign: 'center' }}>{shortName}</Text></View>}
+          <Text style={{ fontSize: 7, fontWeight: 'bold', color: ink, textAlign: 'center' }}>{tenant.motto?.toUpperCase() || (isChad ? 'UNITÉ · TRAVAIL · PROGRÈS' : '')}</Text>
+          {tenant.arabicMottoImage?.startsWith('data:image/png;base64,') && <Image src={tenant.arabicMottoImage} style={{ width: '100%', height: 11, objectFit: 'fill' }} />}
+          {tenant.logo?.startsWith('data:image/') ? <Image src={tenant.logo} style={{ width: compact ? 62 : 76, height: compact ? 43 : 55, objectFit: 'contain', marginTop: 2 }} />
+            : <View style={{ width: compact ? 43 : 55, height: compact ? 43 : 55, marginTop: 2, borderWidth: 1, borderColor: ink, borderRadius: 30, justifyContent: 'center' }}><Text style={{ fontSize: 9, color: ink, textAlign: 'center' }}>{shortName}</Text></View>}
         </View>
-        <View style={{ width: '37%', height: compact ? 66 : 76, alignItems: 'center', paddingLeft: 5, justifyContent: 'center' }}>
-          {tenant.arabicHeaderImage?.startsWith('data:image/png;base64,') && <Image src={tenant.arabicHeaderImage} style={{ width: '100%', height: compact ? 66 : 76, objectFit: 'fill' }} />}
+        <View style={{ width: '37%', height: columnHeight, alignItems: 'center', paddingLeft: 5, justifyContent: 'center' }}>
+          {tenant.arabicHeaderImage?.startsWith('data:image/png;base64,') && <Image src={tenant.arabicHeaderImage} style={{ width: '100%', height: columnHeight, objectFit: 'fill' }} />}
         </View>
       </View>
-      <Text style={{ ...styles.contactLine, marginBottom: 10, textAlign: 'center' }}>{contact || 'Coordonnées de l’établissement non renseignées'}{docNumber ? `  ·  RÉF. ${docNumber.replace(/^[^-]+-/, '')}` : ''}</Text>
+      {tenant.contactPlacement === 'TOP' && <Text style={{ ...styles.contactLine, paddingVertical: compact ? 3 : 6, marginBottom: compact ? 4 : 10, textAlign: 'center' }}>{contact || 'Coordonnées de l’établissement non renseignées'}{docNumber ? `  ·  RÉF. ${docNumber.replace(/^[^-]+-/, '')}` : ''}</Text>}
     </View>
   )
 }
@@ -253,19 +255,24 @@ function SignatureField({ title, name, image }: { title: string; name?: string; 
 }
 
 function DocumentSignatories({ tenant, compact = false, anchored = false, bottom = 98 }: { tenant: TenantInfo; compact?: boolean; anchored?: boolean; bottom?: number }) {
+  const seal = Math.max(30, Math.min(40, tenant.sealSizeMm ?? 35)) * 72 / 25.4
+  const centerConfigured = Boolean(tenant.thirdSignerName?.trim() || tenant.thirdSignature?.startsWith('data:image/'))
   const signers = [
-    { title: tenant.secondarySignerTitle || 'Signataire de gauche', name: tenant.secondarySignerName, image: tenant.secondarySignature },
-    { title: tenant.thirdSignerTitle || 'Signataire central', name: tenant.thirdSignerName, image: tenant.thirdSignature },
-    { title: tenant.rectorTitle || 'Responsable de l’établissement', name: tenant.rectorName, image: tenant.signature },
+    { title: tenant.secondarySignerTitle || 'Président du jury', name: tenant.secondarySignerName, image: tenant.secondarySignature, mark: tenant.secondaryStamp },
+    ...(centerConfigured ? [{ title: tenant.thirdSignerTitle || 'Chef de département', name: tenant.thirdSignerName, image: tenant.thirdSignature, mark: tenant.thirdStamp }] : []),
+    { title: tenant.rectorTitle || 'Responsable de l’établissement', name: tenant.rectorName, image: tenant.signature, mark: tenant.stamp },
   ]
-  return <View style={{ ...(anchored ? { position: 'absolute' as const, bottom, left: 31, right: 31, height: 67 } : { marginTop: compact ? 8 : 18, minHeight: compact ? 67 : 76 }), flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }} wrap={false} fixed={anchored}>
-    {signers.map((signer, index) => <View key={index} style={{ width: '31%', height: compact ? 64 : 72, alignItems: 'center', justifyContent: 'flex-end' }}>
-      {signer.image?.startsWith('data:image/')
-        ? <Image src={signer.image} style={{ width: index === 2 ? 96 : 125, height: 34, objectFit: 'contain', marginBottom: 2 }} />
-        : <View style={{ width: '82%', borderBottomWidth: 0.7, borderBottomColor: '#c7a44b', marginBottom: 5, marginTop: 29 }} />}
-      <Text style={{ fontSize: compact ? 7 : 7.5, fontWeight: 'bold', color: colors.primary, textAlign: 'center' }}>{signer.title}</Text>
-      <Text style={{ fontSize: compact ? 6.6 : 7.2, color: colors.primary, textAlign: 'center', marginTop: 1 }}>{signer.name || 'À renseigner'}</Text>
-      {index === 2 && tenant.stamp?.startsWith('data:image/') && <Image src={tenant.stamp} style={{ width: 50, height: 43, objectFit: 'contain', position: 'absolute', right: -7, top: 0 }} />}
+  const height = seal + 28
+  return <View style={{ ...(anchored ? { position: 'absolute' as const, bottom, left: 31, right: 31, height } : { marginTop: compact ? 4 : 12, minHeight: height }), flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }} wrap={false} fixed={anchored}>
+    {signers.map((signer, index) => <View key={index} style={{ width: centerConfigured ? '31%' : '44%', height, alignItems: 'center', justifyContent: 'flex-end' }}>
+      <View style={{ width: '100%', height: seal + 2, alignItems: 'center', justifyContent: 'center' }}>
+        {signer.mark?.startsWith('data:image/') && <Image src={signer.mark} style={{ position: 'absolute', width: seal, height: seal, objectFit: 'contain', top: 0, left: '50%', marginLeft: -seal / 2, opacity: 0.75 }} />}
+        {signer.image?.startsWith('data:image/')
+          ? <Image src={signer.image} style={{ position: 'absolute', width: Math.min(centerConfigured ? 130 : 155, seal * 1.55), height: Math.min(51, seal * 0.55), objectFit: 'contain', top: seal * 0.34, left: '50%', marginLeft: -Math.min(centerConfigured ? 130 : 155, seal * 1.55) / 2 }} />
+          : <View style={{ width: '75%', borderBottomWidth: 0.7, borderBottomColor: '#777777', marginTop: seal * 0.4 }} />}
+      </View>
+      <Text style={{ fontSize: compact ? 6.7 : 7.2, fontWeight: 'bold', color: '#111111', textAlign: 'center' }}>{signer.title}</Text>
+      <Text style={{ fontSize: compact ? 6.4 : 7, color: '#111111', textAlign: 'center', marginTop: 1 }}>{signer.name || 'À renseigner'}</Text>
     </View>)}
   </View>
 }
@@ -283,9 +290,9 @@ function DiplomaSecurityFrame({ tenant }: { tenant: TenantInfo }) {
   }).join(' ')
   return <View style={{ position: 'absolute', left: 0, top: 0, width: 842, height: 595 }} fixed>
   <Svg width={842} height={595} viewBox="0 0 842 595">
-    <Rect x={15} y={15} width={812} height={565} fill="none" stroke={colors.primary} strokeWidth={2} />
-    <Rect x={22} y={22} width={798} height={551} fill="none" stroke={colors.accent} strokeWidth={0.9} />
-    <Rect x={29} y={29} width={784} height={537} fill="none" stroke={colors.primary} strokeWidth={0.35} />
+    <Rect x={15} y={15} width={812} height={565} fill="none" stroke={colors.accent} strokeWidth={2} />
+    <Rect x={22} y={22} width={798} height={551} fill="none" stroke="#c2a257" strokeWidth={0.9} />
+    <Rect x={29} y={29} width={784} height={537} fill="none" stroke={colors.accent} strokeWidth={0.35} />
     <Path d={loops} fill="none" stroke={colors.secondary} strokeWidth={0.7} opacity={0.11} />
     {[0, 1, 2, 3].map((corner) => {
       const x = corner % 2 ? 776 : 66
@@ -324,11 +331,11 @@ function JurySignatures({ members, tenant, compact = false }: { members: Array<{
   </View>
 }
 
-function Footer({ tenant, docNumber, verificationCode, qrCodeDataUrl, isSigned = false, qrInBody = false }: { tenant: TenantInfo; docNumber?: string; verificationCode?: string; qrCodeDataUrl?: string; isSigned?: boolean; qrInBody?: boolean }) {
+function Footer({ tenant, docNumber, verificationCode, qrCodeDataUrl, isSigned = false, qrInBody = false, diploma = false }: { tenant: TenantInfo; docNumber?: string; verificationCode?: string; qrCodeDataUrl?: string; isSigned?: boolean; qrInBody?: boolean; diploma?: boolean }) {
   return (
     <>
       {verificationCode && !qrInBody && (
-        <View style={styles.verificationBar} wrap={false} fixed>
+        <View style={diploma ? { ...styles.verificationBar, bottom: 58 } : styles.verificationBar} wrap={false} fixed>
           {qrCodeDataUrl && <Image src={qrCodeDataUrl} style={styles.qrCode} />}
           <View style={styles.verificationTextGroup}>
             <Text style={[styles.verificationText, { fontWeight: 'bold' }]}>{isSigned ? 'Référence institutionnelle' : 'Document non validé'} · {verificationCode}</Text>
@@ -336,13 +343,14 @@ function Footer({ tenant, docNumber, verificationCode, qrCodeDataUrl, isSigned =
           </View>
         </View>
       )}
-      <View style={styles.footer} wrap={false} fixed>
-        <Text>
+      <View style={diploma ? { ...styles.footer, bottom: 30, paddingTop: 3 } : styles.footer} wrap={false} fixed>
+        {tenant.contactPlacement !== 'TOP' && <Text style={{ fontSize: 6.5, marginBottom: 2 }}>{[tenant.address, tenant.city, tenant.phone, tenant.email, tenant.website].filter(Boolean).join('  ·  ')}{docNumber ? `  ·  RÉF. ${docNumber.replace(/^[^-]+-/, '')}` : ''}</Text>}
+        {!diploma && <Text>
           {tenant.name}{docNumber ? ` · ${docNumber}` : ''}
-        </Text>
+        </Text>}
         <Text>{isSigned ? `Référence consultable par ${qrInBody ? 'le QR du relevé' : 'le code ci-dessus'}. Les visuels de cachet et signature ne sont pas des signatures cryptographiques.` : 'APERÇU NON VALIDÉ - ne constitue pas une pièce officielle.'}</Text>
       </View>
-      <Text style={styles.pageNumber} fixed render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`} />
+      <Text style={diploma ? { ...styles.pageNumber, bottom: 30 } : styles.pageNumber} fixed render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`} />
     </>
   )
 }
@@ -368,11 +376,12 @@ export function ReleveNotesPDF({
   ]
   const initials = `${student.firstName?.[0] || ''}${student.lastName?.[0] || ''}`.toUpperCase()
   const inlineQr = Boolean(qrCodeDataUrl?.startsWith('data:image/'))
+  const denseTop = density > 34 && tenant.contactPlacement === 'TOP'
   return (
     <Document>
       <Page size="A4" style={{ ...styles.page, paddingTop: 15, paddingHorizontal: 29, paddingBottom: 104 }}>
         <View style={{ position: 'absolute', top: 12, bottom: 12, left: 17, right: 17, borderWidth: 0.65, borderColor: '#d4b96e' }} fixed />
-        <DocumentSignatories tenant={tenant} compact={density > 24} anchored bottom={inlineQr ? 43 : 98} />
+        <DocumentSignatories tenant={tenant} compact={density > 24} anchored bottom={inlineQr ? 58 : 116} />
         <DocumentHeader tenant={tenant} docNumber={docNumber} compact subtle />
         <DocumentHeading title="RELEVÉ DE NOTES" subtitle={`${semester || 'Année complète'} · ${academicYear}`} isSigned={isSigned} compact subtle />
 
@@ -383,7 +392,7 @@ export function ReleveNotesPDF({
           <View style={{ width: '13%' }}><Text style={{ fontSize: 6, color: colors.muted }}>CRÉDITS</Text><Text style={{ fontSize: 8.3, color: colors.primary, fontWeight: 'bold', marginTop: 1 }}>{credits} ECTS</Text></View>
         </View>
 
-        <View style={{ flexDirection: 'row', borderWidth: 0.8, borderColor: paper.rule, borderLeftWidth: 2, borderLeftColor: paper.gold, marginBottom: 7, minHeight: density > 34 ? 60 : 69 }} wrap={false}>
+        <View style={{ flexDirection: 'row', borderWidth: 0.8, borderColor: paper.rule, borderLeftWidth: 2, borderLeftColor: paper.gold, marginBottom: denseTop ? 4 : 7, minHeight: denseTop ? 54 : density > 34 ? 60 : 69 }} wrap={false}>
           <View style={{ width: density > 34 ? 57 : 65, padding: 4, borderRightWidth: 0.5, borderRightColor: colors.border, justifyContent: 'center' }}>
             {student.photo?.startsWith('data:image/') ? <Image src={student.photo} style={{ width: density > 34 ? 49 : 57, height: density > 34 ? 49 : 57, objectFit: 'cover' }} />
               : <View style={{ width: density > 34 ? 49 : 57, height: density > 34 ? 49 : 57, backgroundColor: paper.tint, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 18, fontWeight: 'bold', color: paper.ink }}>{initials}</Text></View>}
@@ -427,7 +436,7 @@ export function ReleveNotesPDF({
 
         <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: density > 34 ? 5 : 8, marginBottom: 4 }} wrap={false}>
           <View style={{ height: 0.7, backgroundColor: colors.border, flexGrow: 1 }} />
-          <Text style={{ fontSize: 7, color: colors.muted, fontWeight: 'bold', letterSpacing: 1.1, marginHorizontal: 8 }}>RÉSULTATS ACADÉMIQUES</Text>
+          <Text style={{ fontSize: 7, color: colors.muted, fontWeight: 'bold', letterSpacing: 1.1, marginHorizontal: 8 }}>RÉSULTATS ACADÉMIQUES{denseTop && jury ? ` · JURY DU ${formatDate(jury.date).toUpperCase()}` : ''}</Text>
           <View style={{ height: 0.7, backgroundColor: colors.border, flexGrow: 1 }} />
         </View>
         <View style={{ flexDirection: 'row', gap: 5 }} wrap={false}>
@@ -445,7 +454,7 @@ export function ReleveNotesPDF({
             <Text style={{ fontSize: density > 34 ? 9 : 11, fontWeight: 'bold', color: jury ? paper.ink : paper.muted, marginTop: 4, textAlign: 'center' }}>{jury ? decisionLabel(jury.decision) : 'Non publiée'}</Text>
           </View>
         </View>
-        <Text style={{ fontSize: density > 34 ? 6 : 7, color: colors.muted, marginTop: 5 }}>{jury ? `Résultats arrêtés par le jury le ${formatDate(jury.date)}. ` : ''}CC : contrôle continu · TP : travaux pratiques · EC : élément constitutif · UE : unité d’enseignement.</Text>
+        {!denseTop && <Text style={{ fontSize: density > 34 ? 6 : 7, color: colors.muted, marginTop: 5 }}>{jury ? `Résultats arrêtés par le jury le ${formatDate(jury.date)}. ` : ''}CC : contrôle continu · TP : travaux pratiques · EC : élément constitutif · UE : unité d’enseignement.</Text>}
         <Footer tenant={tenant} docNumber={docNumber} verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} isSigned={isSigned} qrInBody={inlineQr} />
       </Page>
     </Document>
@@ -561,7 +570,7 @@ export function DiplomePDF({
         <DocumentHeader tenant={tenant} docNumber={docNumber} />
         <DocumentHeading title="DIPLÔME" subtitle={diploma.program} isSigned={isSigned} compact />
 
-        <View style={{ flexGrow: 1, minHeight: 190, marginVertical: 5, paddingVertical: 15, paddingHorizontal: 18, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: colors.accent, backgroundColor: '#ffffffde' }} wrap={false}>
+        <View style={{ height: 160, marginVertical: 5, paddingVertical: 8, paddingHorizontal: 18, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: colors.accent, backgroundColor: '#ffffffde' }} wrap={false}>
           <Text style={{ fontSize: 9, color: colors.muted, marginBottom: 8, letterSpacing: 1 }}>DÉCERNÉ À</Text>
           <Text style={{ fontSize: 19, fontWeight: 'bold', color: colors.primary, marginVertical: 8, textAlign: 'center' }}>
             {student.firstName} {student.lastName}
@@ -576,9 +585,9 @@ export function DiplomePDF({
           <Text style={{ fontSize: 9, color: colors.muted, marginTop: 8 }}>Décision finale du jury du {formatDate(diploma.date)}</Text>
         </View>
 
-        <DocumentSignatories tenant={tenant} compact />
+        <DocumentSignatories tenant={tenant} compact anchored bottom={108} />
 
-        <Footer tenant={tenant} docNumber={docNumber} verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} isSigned={isSigned} />
+        <Footer tenant={tenant} docNumber={docNumber} verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} isSigned={isSigned} diploma />
       </Page>
     </Document>
   )
@@ -624,6 +633,7 @@ function PVMatrixPDF({ tenant, departmentName, departmentHeadName, session, memb
       const columnWidth = dataWidth / maxColumns
       const headStyle = { fontSize: 6.5, color: '#ffffff', textAlign: 'center' as const, fontWeight: 'bold' as const }
       const cellStyle = { fontSize: 7.4, color: colors.text, textAlign: 'center' as const }
+      const compactGrade = (value?: number) => value == null ? '—' : formatNumber(value).replace('.', ',')
       return <Page key={sheetIndex} size={pageFormat} orientation="landscape" style={{ ...styles.page, paddingTop: pageFormat === 'A4' ? 17 : 29, paddingHorizontal: 34, paddingBottom: 90 }}>
         <DocumentHeader tenant={tenant} docNumber={docNumber} />
         <DocumentHeading title="PROCÈS-VERBAL DES RÉSULTATS" subtitle={`${departmentName} · ${academicYear} · ${session.name}`} isSigned={isSigned} compact={pageFormat === 'A4'} />
@@ -646,28 +656,33 @@ function PVMatrixPDF({ tenant, departmentName, departmentHeadName, session, memb
             {columns.map(column => <View key={column.key} style={{ width: columnWidth, paddingHorizontal: 2, alignItems: 'center' }}>
               <Text style={{ ...headStyle, fontSize: 6 }}>{column.ueCode.slice(0, 13)}</Text>
               <Text style={headStyle}>{column.code.slice(0, 13)}</Text>
-              <Text style={{ ...headStyle, fontSize: 5.7, color: '#bce3cc' }}>{column.kind === 'UE' ? 'MOY. UE' : 'MATIÈRE'}</Text>
+              <Text style={{ ...headStyle, fontSize: 5.7, color: '#e1e6e9' }}>{column.kind === 'UE' ? 'MOY. UE' : 'C / T / E / F'}</Text>
             </View>)}
             {isLastPanel && <>
               <Text style={{ ...headStyle, width: pageFormat === 'A4' ? 50 : 65 }}>MOY. /20</Text>
               <Text style={{ ...headStyle, width: pageFormat === 'A4' ? 100 : 105 }}>DÉCISION DU JURY</Text>
             </>}
           </View>
-          {rows.students.map((student, index) => <View key={student.matricule} style={{ flexDirection: 'row', minHeight: 18, alignItems: 'center', backgroundColor: index % 2 ? '#f5f8fa' : '#ffffff', borderTopWidth: 0.5, borderTopColor: colors.border }} wrap={false}>
-            <Text style={{ ...cellStyle, width: pageFormat === 'A4' ? 20 : 26 }}>{rows.start + index + 1}</Text>
-            <Text style={{ ...cellStyle, width: pageFormat === 'A4' ? 80 : 108, textAlign: 'left', fontSize: 6.8 }}>{student.matricule}</Text>
+          {rows.students.map((student, index) => <View key={student.matricule} style={{ flexDirection: 'row', minHeight: pageFormat === 'A4' ? 22 : 20, alignItems: 'center', backgroundColor: (rows.start + index) % 2 ? '#eef1f4' : '#ffffff', borderTopWidth: 0.8, borderTopColor: '#b6bec7', borderLeftWidth: 2, borderLeftColor: (rows.start + index) % 2 ? '#687889' : '#b29a56' }} wrap={false}>
+            <Text style={{ ...cellStyle, width: pageFormat === 'A4' ? 20 : 26, fontWeight: 'bold', fontSize: 6.7 }}>{rows.start + index + 1}</Text>
+            <Text style={{ ...cellStyle, width: pageFormat === 'A4' ? 80 : 108, textAlign: 'left', fontSize: 6.8, fontWeight: 'bold' }}>{student.matricule}</Text>
             <Text style={{ ...cellStyle, width: pageFormat === 'A4' ? 130 : 170, textAlign: 'left', fontWeight: 'bold' }}>{student.name}</Text>
-            {columns.map(column => <Text key={column.key} style={{ ...cellStyle, width: columnWidth,
-              fontWeight: column.kind === 'UE' ? 'bold' : 'normal',
-              color: column.kind === 'UE' ? colors.secondary : colors.text }}>
-              {student.grades[column.key] == null ? '—' : formatNumber(student.grades[column.key])}
-            </Text>)}
+            {columns.map(column => {
+              const parts = student.components?.[column.key]
+              return <View key={column.key} style={{ width: columnWidth, minHeight: pageFormat === 'A4' ? 22 : 20, alignItems: 'center', justifyContent: 'center', borderLeftWidth: 0.35, borderLeftColor: '#d5dbe0', backgroundColor: column.kind === 'UE' ? '#f5f3e9' : 'transparent' }}>
+                {column.kind === 'UE' || !parts ? <Text style={{ ...cellStyle, fontWeight: column.kind === 'UE' ? 'bold' : 'normal' }}>{student.grades[column.key] == null ? '—' : compactGrade(student.grades[column.key])}</Text> : <>
+                  <Text style={{ fontSize: 5.6, color: colors.text, textAlign: 'center' }}>C {compactGrade(parts.cc)}  T {compactGrade(parts.tp)}</Text>
+                  <Text style={{ fontSize: 5.6, color: colors.text, textAlign: 'center' }}>E {compactGrade(parts.exam)}  <Text style={{ fontWeight: 'bold' }}>F {compactGrade(parts.final)}</Text></Text>
+                </>}
+              </View>
+            })}
             {isLastPanel && <>
               <Text style={{ ...cellStyle, width: pageFormat === 'A4' ? 50 : 65, fontWeight: 'bold' }}>{formatNumber(student.average)}</Text>
               <Text style={{ ...cellStyle, width: pageFormat === 'A4' ? 100 : 105, fontWeight: 'bold', color: ['ADMI', 'ADMI_DETTE', 'COMPENSE'].includes(student.decision) ? colors.secondary : '#9b3030', fontSize: 6.8 }}>{decisionLabel(student.decision)}</Text>
             </>}
           </View>)}
         </View>
+        <Text style={{ marginTop: 4, fontSize: 6.5, color: colors.muted }}>Lecture des cases : C = contrôle continu · T = travaux pratiques · E = examen · F = note finale. Numéro de ligne et matricule identiques sur tous les volets.</Text>
         <View style={{ marginTop: pageFormat === 'A4' ? 4 : 10, flexDirection: 'row', flexWrap: 'wrap' }} wrap={false}>
           {columns.map(column => <Text key={column.key} style={{ width: '25%', fontSize: 6.7, color: colors.muted, paddingRight: 9, marginBottom: 3 }}>
             <Text style={{ fontWeight: 'bold', color: colors.primary }}>{column.code}</Text> · {column.label}

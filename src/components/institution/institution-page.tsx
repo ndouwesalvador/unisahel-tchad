@@ -118,6 +118,11 @@ interface TenantData {
   thirdSignerName: string | null
   thirdSignerTitle: string | null
   thirdSignature: string | null
+  secondaryStamp: string | null
+  thirdStamp: string | null
+  arabicMotto: string | null
+  contactPlacement: string
+  sealSizeMm: number
   academicSystem: string
   logo: string | null
   stamp: string | null
@@ -307,6 +312,11 @@ function InformationsTab() {
     thirdSignerName: '',
     thirdSignerTitle: '',
     thirdSignature: '',
+    secondaryStamp: '',
+    thirdStamp: '',
+    arabicMotto: '',
+    contactPlacement: 'BOTTOM',
+    sealSizeMm: 35,
     headerLanguageMode: 'FR_ONLY',
     arabicCountry: '',
     arabicName: '',
@@ -343,6 +353,11 @@ function InformationsTab() {
         thirdSignerName: t.thirdSignerName || '',
         thirdSignerTitle: t.thirdSignerTitle || '',
         thirdSignature: t.thirdSignature || '',
+        secondaryStamp: t.secondaryStamp || '',
+        thirdStamp: t.thirdStamp || '',
+        arabicMotto: t.arabicMotto || '',
+        contactPlacement: t.contactPlacement || 'BOTTOM',
+        sealSizeMm: t.sealSizeMm || 35,
         headerLanguageMode: t.headerLanguageMode || 'FR_ONLY',
         arabicCountry: t.arabicCountry || '',
         arabicName: t.arabicName || '',
@@ -371,7 +386,7 @@ function InformationsTab() {
     })
   }
 
-  const handleAssetUpload = async (kind: 'logo' | 'stamp' | 'signature' | 'secondarySignature' | 'thirdSignature', file?: File) => {
+  const handleAssetUpload = async (kind: 'logo' | 'stamp' | 'signature' | 'secondarySignature' | 'thirdSignature' | 'secondaryStamp' | 'thirdStamp', file?: File) => {
     if (!file) return
     setUploadingKind(kind)
     try {
@@ -426,6 +441,9 @@ function InformationsTab() {
           secondarySignerTitle: formData.secondarySignerTitle,
           thirdSignerName: formData.thirdSignerName,
           thirdSignerTitle: formData.thirdSignerTitle,
+          arabicMotto: formData.arabicMotto,
+          contactPlacement: formData.contactPlacement,
+          sealSizeMm: formData.sealSizeMm,
           headerLanguageMode: formData.headerLanguageMode,
           arabicCountry: formData.arabicCountry,
           arabicName: formData.arabicName,
@@ -514,23 +532,35 @@ function InformationsTab() {
             </CardContent>
           </Card>
           <Card className="border-l-4 border-l-[#176341]">
-            <CardHeader className="pb-3"><CardTitle className="text-base">Signataire de gauche</CardTitle><CardDescription>Nom et signature requis pour valider un relevé officiel.</CardDescription></CardHeader>
+            <CardHeader className="pb-3"><CardTitle className="text-base">Signataire de gauche</CardTitle><CardDescription>Nom et signature requis pour valider un relevé officiel. Son cachet ou logo est facultatif.</CardDescription></CardHeader>
             <CardContent className="space-y-3">
               {formData.secondarySignature && <div className="h-20 border rounded-lg bg-white p-2">
                 {/* eslint-disable-next-line @next/next/no-img-element -- stored institution artwork */}
                 <img src={formData.secondarySignature} alt="Signature du second signataire" className="h-full w-full object-contain" />
               </div>}
               <Input type="file" accept="image/png,image/jpeg,image/webp" aria-label="Téléverser la signature du second signataire" disabled={Boolean(uploadingKind)} onChange={(event) => void handleAssetUpload('secondarySignature', event.target.files?.[0])} />
+              {formData.secondaryStamp && <div className="h-20 border rounded-lg bg-white p-2">
+                {/* eslint-disable-next-line @next/next/no-img-element -- stored institution artwork */}
+                <img src={formData.secondaryStamp} alt="Cachet du signataire de gauche" className="h-full w-full object-contain" />
+              </div>}
+              <Label>Cachet ou logo du signataire de gauche (facultatif)</Label>
+              <Input type="file" accept="image/png,image/jpeg,image/webp" aria-label="Téléverser le cachet du signataire de gauche" disabled={Boolean(uploadingKind)} onChange={(event) => void handleAssetUpload('secondaryStamp', event.target.files?.[0])} />
             </CardContent>
           </Card>
           <Card className="border-l-4 border-l-[#c6a142]">
-            <CardHeader className="pb-3"><CardTitle className="text-base">Troisième signataire</CardTitle><CardDescription>Sa signature apparaît au centre du relevé ; le cachet reste associé au signataire de droite.</CardDescription></CardHeader>
+            <CardHeader className="pb-3"><CardTitle className="text-base">Signataire central facultatif</CardTitle><CardDescription>Deux signataires par défaut ; ajoutez un troisième nom et sa signature si nécessaire.</CardDescription></CardHeader>
             <CardContent className="space-y-3">
               {formData.thirdSignature && <div className="h-20 border rounded-lg bg-white p-2">
                 {/* eslint-disable-next-line @next/next/no-img-element -- stored institution artwork */}
                 <img src={formData.thirdSignature} alt="Signature du troisième signataire" className="h-full w-full object-contain" />
               </div>}
               <Input type="file" accept="image/png,image/jpeg,image/webp" aria-label="Téléverser la signature du troisième signataire" disabled={Boolean(uploadingKind)} onChange={(event) => void handleAssetUpload('thirdSignature', event.target.files?.[0])} />
+              {formData.thirdStamp && <div className="h-20 border rounded-lg bg-white p-2">
+                {/* eslint-disable-next-line @next/next/no-img-element -- stored institution artwork */}
+                <img src={formData.thirdStamp} alt="Cachet du signataire central" className="h-full w-full object-contain" />
+              </div>}
+              <Label>Cachet ou logo du signataire central (facultatif)</Label>
+              <Input type="file" accept="image/png,image/jpeg,image/webp" aria-label="Téléverser le cachet du signataire central" disabled={Boolean(uploadingKind)} onChange={(event) => void handleAssetUpload('thirdStamp', event.target.files?.[0])} />
             </CardContent>
           </Card>
         </div>
@@ -571,6 +601,10 @@ function InformationsTab() {
                     className="mt-1.5"
                   />
                 </div>
+                {formData.headerLanguageMode === 'FR_AR' && <div>
+                  <Label htmlFor="arabicMotto">Devise en arabe (rédigée par l’institution)</Label>
+                  <Input id="arabicMotto" dir="rtl" maxLength={130} value={formData.arabicMotto} onChange={(event) => handleChange('arabicMotto', event.target.value)} className="mt-1.5" />
+                </div>}
                 <div className="sm:col-span-2">
                   <Label htmlFor="ministere">Ministere de tutelle</Label>
                   <Input
@@ -587,6 +621,17 @@ function InformationsTab() {
                     <SelectContent><SelectItem value="FR_ONLY">Français uniquement</SelectItem><SelectItem value="FR_AR">Français et arabe</SelectItem></SelectContent>
                   </Select>
                   <p className="text-xs text-gray-500 mt-1">L’arabe est facultatif et rédigé par votre institution, jamais ajouté automatiquement.</p>
+                </div>
+                <div>
+                  <Label>Coordonnées et référence sur les documents</Label>
+                  <Select value={formData.contactPlacement} onValueChange={(value) => handleChange('contactPlacement', value)}>
+                    <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
+                    <SelectContent><SelectItem value="BOTTOM">En bas (recommandé)</SelectItem><SelectItem value="TOP">Sous l’en-tête</SelectItem></SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="sealSizeMm">Diamètre des cachets : {formData.sealSizeMm} mm</Label>
+                  <Input id="sealSizeMm" type="range" min={30} max={40} step={1} value={formData.sealSizeMm} onChange={(event) => setFormData((prev) => ({ ...prev, sealSizeMm: Number(event.target.value) }))} className="mt-3" />
                 </div>
                 <div className="sm:col-span-2 grid gap-5 sm:grid-cols-2">
                   {(['headerLinesFr', ...(formData.headerLanguageMode === 'FR_AR' ? ['headerLinesAr'] : [])] as Array<'headerLinesFr' | 'headerLinesAr'>).map((side) => <div key={side} className="rounded-lg border p-3 space-y-2">

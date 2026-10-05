@@ -2,8 +2,8 @@ import React from 'react'
 import { describe, expect, it } from 'vitest'
 import { countPdfPages } from './utils'
 import { AttestationInscriptionPDF, AttestationNiveauPDF, CertificatScolaritePDF, DiplomePDF, ListeEtudiantsPDF, PVDeliberationPDF, ReleveNotesPDF, renderPDF } from './templates'
-import type { PvSection } from './pv-matrix'
-import { renderArabicHeader } from './arabic-header'
+import { expectedPvSheetCount, type PvSection } from './pv-matrix'
+import { renderArabicHeader, renderArabicMotto } from './arabic-header'
 import { prepareDocumentArtwork, prepareDocumentPhoto } from './artwork'
 import sharp from 'sharp'
 import QRCode from 'qrcode'
@@ -27,6 +27,8 @@ describe('printed academic documents', () => {
     expect(renderArabicHeader({ arabicCountry: 'جمهورية تشاد', arabicName: 'جامعة مونقو التقنية' })).toBeUndefined()
     expect(renderArabicHeader({ headerLanguageMode: 'FR_ONLY', arabicCountry: 'جمهورية تشاد' })).toBeUndefined()
     expect(renderArabicHeader({ headerLanguageMode: 'FR_AR', arabicCountry: 'جمهورية تشاد', arabicName: 'جامعة مونقو التقنية' })).toMatch(/^data:image\/png;base64,/)
+    expect(renderArabicMotto({ headerLanguageMode: 'FR_ONLY', arabicMotto: 'وحدة - عمل - تقدم' })).toBeUndefined()
+    expect(renderArabicMotto({ headerLanguageMode: 'FR_AR', arabicMotto: 'وحدة - عمل - تقدم' })).toMatch(/^data:image\/png;base64,/)
   })
 
   it('prints configurable institution lines in both columns on a single A4 page', async () => {
@@ -35,6 +37,7 @@ describe('printed academic documents', () => {
       headerLinesFr: Array.from({ length: 8 }, (_, index) => `Autorité académique ${index + 1}`),
       headerLinesAr: arabicLines,
       arabicHeaderImage: renderArabicHeader({ headerLanguageMode: 'FR_AR', headerLinesAr: arabicLines }),
+      arabicMottoImage: renderArabicMotto({ headerLanguageMode: 'FR_AR', arabicMotto: 'وحدة - عمل - تقدم' }),
       primaryColor: '#374151', accentColor: '#b08c37',
     }
     const pdf = await renderPDF(React.createElement(AttestationInscriptionPDF, {
@@ -99,13 +102,31 @@ describe('printed academic documents', () => {
       notes: Array.from({ length: 3 }, (_, j) => ({ ec: `Matière professionnelle ${i + 1}.${j + 1}`,
         code: `EC${i + 1}${j + 1}`, coef: 1, cc: 12, exam: 14, final: 13 })),
     }))
+    const sealSvg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><circle cx="200" cy="200" r="165" fill="none" stroke="#3b6385" stroke-width="20"/><text x="200" y="220" text-anchor="middle" font-size="60" fill="#3b6385">UPDM</text></svg>')
+    const signatureSvg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="500" height="160"><path d="M10 118 Q 55 5 82 115 T 162 97 Q 220 18 251 103 T 390 88 L 485 56" fill="none" stroke="#142a52" stroke-width="7"/></svg>')
+    const seal = `data:image/png;base64,${(await sharp(sealSvg).png().toBuffer()).toString('base64')}`
+    const signature = `data:image/png;base64,${(await sharp(signatureSvg).png().toBuffer()).toString('base64')}`
+    const qrCodeDataUrl = await QRCode.toDataURL('https://unisahel-tchad.vercel.app/verify?code=DENSETEST')
     const pdf = await renderPDF(React.createElement(ReleveNotesPDF, { tenant: { ...tenant,
-      logo: tenant.arabicHeaderImage, stamp: tenant.arabicHeaderImage, signature: tenant.arabicHeaderImage }, student, ueGrades,
+      logo: seal, stamp: seal, secondaryStamp: seal, signature, secondarySignature: signature,
+      rectorName: 'Responsable de l’établissement', secondarySignerName: 'Président du jury', sealSizeMm: 40,
+      address: 'Abéché, Tchad', city: 'Mongo', phone: '+235 63 44 37 31', email: 'insta-abeche@gmail.com' }, student, ueGrades, qrCodeDataUrl,
       semester: 'Deux semestres', academicYear: '2026-2027', docNumber: 'RN-DEV-DENSE',
-      verificationCode: 'DENSETEST', isSigned: true }))
+      verificationCode: 'DENSETEST', isSigned: false,
+      jury: { average: 13, creditsAcquired: 60, decision: 'ADMI', date: '2026-10-01' } }))
     await savePreview('releve-design-dense.pdf', pdf)
     expect(countPdfPages(pdf)).toBe(1)
+    expect((pdf.toString('latin1').match(/\/Subtype \/Image/g) || []).length).toBeGreaterThanOrEqual(6)
     expect(pdf.toString('latin1')).toMatch(/\/MediaBox \[0 0 595\.28\d* 841\.89\d*\]/)
+    const topContactPdf = await renderPDF(React.createElement(ReleveNotesPDF, { tenant: { ...tenant,
+      contactPlacement: 'TOP', address: 'Abéché, Tchad', city: 'Mongo', phone: '+235 63 44 37 31',
+      email: 'insta-abeche@gmail.com', stamp: seal, secondaryStamp: seal, signature, secondarySignature: signature,
+      rectorName: 'Responsable de l’établissement', secondarySignerName: 'Président du jury', sealSizeMm: 40 },
+      student, ueGrades, qrCodeDataUrl, semester: 'Deux semestres', academicYear: '2026-2027',
+      docNumber: 'RN-DEV-DENSE-TOP', verificationCode: 'DENSETESTTOP', isSigned: false,
+      jury: { average: 13, creditsAcquired: 60, decision: 'ADMI', date: '2026-10-01' } }))
+    expect(countPdfPages(topContactPdf)).toBe(1)
+    await savePreview('releve-design-dense-contact-haut.pdf', topContactPdf)
   })
 
   it('keeps a licence-style transcript with twenty subjects on one A4 sheet', async () => {
@@ -135,7 +156,11 @@ describe('printed academic documents', () => {
     const branded = await prepareDocumentArtwork(raw)
     const diploma = await renderPDF(React.createElement(DiplomePDF, { tenant: branded, student,
       diploma: { title: 'Licence en génie industriel', program: 'Génie industriel', date: '2026-10-01', credits: 180 },
-      docNumber: 'DIP-BRAND-001', verificationCode: 'BRANDTEST', isSigned: true }))
+      docNumber: 'DIP-BRAND-001', verificationCode: 'BRANDTEST', isSigned: false }))
+    const diplomaTwoSigners = await renderPDF(React.createElement(DiplomePDF, {
+      tenant: { ...branded, thirdSignerName: undefined, thirdSignerTitle: undefined, thirdSignature: undefined, thirdStamp: undefined },
+      student, diploma: { title: 'Licence en génie industriel', program: 'Génie industriel', date: '2026-10-01', credits: 180 },
+      docNumber: 'DIP-BRAND-002', verificationCode: 'BRANDTEST2', isSigned: false }))
     const photoSvg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240"><rect width="240" height="240" fill="#dbe9e2"/><circle cx="120" cy="85" r="40" fill="#176341"/><path d="M35 220 Q40 145 120 145 Q200 145 205 220" fill="#176341"/></svg>')
     const photo = await prepareDocumentPhoto(`data:image/png;base64,${(await sharp(photoSvg).png().toBuffer()).toString('base64')}`)
     const qrCodeDataUrl = await QRCode.toDataURL('https://unisahel-tchad.vercel.app/verify?code=BRANDTEST')
@@ -143,12 +168,14 @@ describe('printed academic documents', () => {
       ueGrades: [{ ue: 'Génie industriel', code: 'UE1', credits: 30, moyenne: 15,
         notes: [{ ec: 'Mécanique appliquée', coef: 1, cc: 15, exam: 15, final: 15 }] }],
       semester: 'Semestre 1', academicYear: '2026-2027', docNumber: 'RN-BRAND-001',
-      verificationCode: 'BRANDTEST', isSigned: true }))
+      verificationCode: 'BRANDTEST', isSigned: false }))
     expect(countPdfPages(diploma)).toBe(1)
+    expect(countPdfPages(diplomaTwoSigners)).toBe(1)
     expect(countPdfPages(transcript)).toBe(1)
     expect((diploma.toString('latin1').match(/\/Subtype \/Image/g) || []).length).toBeGreaterThanOrEqual(3)
     expect((transcript.toString('latin1').match(/\/Subtype \/Image/g) || []).length).toBeGreaterThanOrEqual(7)
-    await savePreview('diplome-deux-signataires.pdf', diploma)
+    await savePreview('diplome-trois-signataires.pdf', diploma)
+    await savePreview('diplome-deux-signataires.pdf', diplomaTwoSigners)
     await savePreview('releve-trois-signataires.pdf', transcript)
   })
 
@@ -208,6 +235,36 @@ describe('printed academic documents', () => {
     expect(pdf.toString('latin1')).toMatch(/\/MediaBox \[0 0 1190\.55\d* 841\.89\d*\]/)
     await savePreview('pv-affichage-a3.pdf', pdf)
   })
+
+  it('renders sixty students and thirty course elements with every mark component on A3 panels', async () => {
+    const columns: PvSection['columns'] = Array.from({ length: 10 }, (_, unit) => [
+      ...Array.from({ length: 3 }, (_, course) => ({ key: `EC:${unit}-${course}`,
+        ueCode: `UE-${unit + 1}`, code: `EC-${unit + 1}-${course + 1}`,
+        label: `Matière technique ${unit + 1}.${course + 1}`, kind: 'EC' as const })),
+      { key: `UE:${unit}`, ueCode: `UE-${unit + 1}`, code: `UE-${unit + 1}`,
+        label: `Unité d’enseignement ${unit + 1}`, kind: 'UE' as const },
+    ]).flat()
+    const sections: PvSection[] = [{ program: 'Génie industriel — MAQUETTE DE VALIDATION',
+      level: 'Licence 1', columns, students: Array.from({ length: 60 }, (_, index) => ({
+        name: `ÉTUDIANT TEST ${String(index + 1).padStart(2, '0')}`,
+        matricule: `UPDM-TEST-${String(index + 1).padStart(3, '0')}`,
+        grades: Object.fromEntries(columns.map((column) => [column.key, 12 + index % 5])),
+        components: Object.fromEntries(columns.filter((column) => column.kind === 'EC').map((column) =>
+          [column.key, { cc: 11 + index % 6, tp: 12 + index % 5, exam: 13 + index % 4, final: 12 + index % 5 }])),
+        average: 12 + index % 5, decision: index % 7 ? 'ADMI' : 'AJOURNE',
+      })) }]
+    expect(columns.filter((column) => column.kind === 'EC')).toHaveLength(30)
+    expect(expectedPvSheetCount(sections)).toBe(24)
+    const pdf = await renderPDF(React.createElement(PVDeliberationPDF, { tenant,
+      departmentName: 'Génie industriel', departmentHeadName: 'Chef de département — test',
+      session: { name: 'Délibération annuelle', date: '2026-10-01', type: 'ANNUEL' },
+      members: Array.from({ length: 12 }, (_, index) => ({ name: `Membre ${index + 1}`, role: index ? 'Membre' : 'President' })),
+      sections, students: [], academicYear: '2026-2027', docNumber: 'PV-TEST-60-30',
+      verificationCode: 'VALIDATION6030', isSigned: false }))
+    await savePreview('pv-validation-60-etudiants-30-matieres-a3.pdf', pdf)
+    expect(countPdfPages(pdf)).toBe(expectedPvSheetCount(sections))
+    expect(pdf.toString('latin1')).toContain('/MediaBox [0 0 1190.55')
+  }, 20_000)
 
   it('prints a compact A4 landscape PV with the complete twelve-member jury', async () => {
     const columns: PvSection['columns'] = Array.from({ length: 6 }, (_, index) => ({ key: `EC:${index}`,

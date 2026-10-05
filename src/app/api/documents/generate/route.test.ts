@@ -205,6 +205,16 @@ describe('POST /api/documents/generate', () => {
     expect(snapshot.awards[0].decisionId).toBe('decision-A')
   })
 
+  it('issues a diploma with the two required signers when no central signer is configured', async () => {
+    dbMock.tenant.findUnique.mockResolvedValue({ id: tenantId, name: 'Université A',
+      logo: signature, stamp: signature, rectorName: 'Rectrice A', signature,
+      secondarySignerName: 'Président B', secondarySignature: signature,
+      thirdSignerName: null, thirdSignature: null })
+    const response = await POST(request({ type: 'DIPLOME', tenantId, studentId, academicYearId: 'year-A', sign: true }))
+    expect(response.status).toBe(200)
+    expect(dbMock.officialDocument.create).toHaveBeenCalledOnce()
+  })
+
   it('returns a conflict and stores nothing when a prior level is in debt', async () => {
     eligibilityMock.diploma.mockRejectedValue(new AwardEligibilityError('Un niveau antérieur reste en dette'))
     const response = await POST(request({ type: 'DIPLOME', tenantId, studentId, academicYearId: 'year-A', sign: true }))
@@ -313,7 +323,7 @@ describe('POST /api/documents/generate', () => {
     dbMock.tenant.findUnique.mockResolvedValue({ id: tenantId, name: 'Université A', rectorName: 'Rectrice A', signature })
     const response = await POST(request({ type: 'RELEVE_NOTES', tenantId, studentId, sign: true }))
     expect(response.status).toBe(409)
-    expect((await response.json()).error).toContain('trois noms')
+    expect((await response.json()).error).toContain('deux signataires obligatoires')
     expect(dbMock.officialDocument.create).not.toHaveBeenCalled()
   })
 

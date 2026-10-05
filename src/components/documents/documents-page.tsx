@@ -534,7 +534,7 @@ export function DocumentsPage() {
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
                   <Input
-                    placeholder="Rechercher un etudiant..."
+                    placeholder="Rechercher un étudiant…"
                     className="pl-9 h-9 text-sm"
                     value={studentSearch}
                     onChange={(e) => setStudentSearch(e.target.value)}
@@ -542,7 +542,7 @@ export function DocumentsPage() {
                   {showStudentDropdown && (
                     <div className="absolute z-10 mt-1 w-full rounded-md border bg-white shadow-lg max-h-48 overflow-y-auto">
                       {(studentMatches?.data ?? []).length === 0 ? (
-                        <p className="px-3 py-2 text-xs text-gray-400">Aucun etudiant trouve</p>
+                        <p className="px-3 py-2 text-xs text-gray-400">Aucun étudiant trouvé</p>
                       ) : (
                         studentMatches.data.map((s: { id: string; firstName: string; lastName: string; matricule?: string }) => (
                           <button
@@ -573,7 +573,7 @@ export function DocumentsPage() {
                   onClick={() => generateDoc(false)}
                 >
                   {isGenerating ? <Loader2 className="size-3.5 mr-1.5 animate-spin" /> : <Eye className="size-3.5 mr-1.5" />}
-                  Generer PDF
+                  Générer PDF
                 </Button>
               </div>
               <Button
