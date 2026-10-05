@@ -714,7 +714,7 @@ export function DashboardShell() {
   const visibleNavItems = useMemo(() => getVisibleNavItems(user), [user])
   useEffect(() => {
     if (user?.role !== 'ENSEIGNANT') return
-    if (!['dashboard', 'maquette', 'grades', 'timetable', 'attendance', 'online-exam', 'communication', 'profile'].includes(currentView)) setView('dashboard')
+    if (!['dashboard', 'maquette', 'students', 'grades', 'timetable', 'attendance', 'online-exam', 'communication', 'profile'].includes(currentView)) setView('dashboard')
   }, [user?.role, currentView, setView])
   useEffect(() => {
     if (user?.role !== 'FACULTE' && user?.role !== 'DEPARTEMENT') return
