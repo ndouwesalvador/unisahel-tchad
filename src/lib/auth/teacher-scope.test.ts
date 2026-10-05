@@ -48,8 +48,8 @@ describe('teacher perimeter', () => {
     expect(mocks.services).not.toHaveBeenCalled()
   })
 
-  it('denies direct administration APIs and write methods outside the teacher workflow', () => {
-    expect(isTeacherApiAllowed('/api/students', 'GET')).toBe(false)
+  it('allows assigned-student reads but denies direct administration APIs and unrelated writes', () => {
+    expect(isTeacherApiAllowed('/api/students', 'GET')).toBe(true)
     expect(isTeacherApiAllowed('/api/teachers', 'GET')).toBe(false)
     expect(isTeacherApiAllowed('/api/structure', 'POST')).toBe(false)
     expect(isTeacherApiAllowed('/api/timetable', 'POST')).toBe(false)

@@ -412,7 +412,7 @@ export function TeacherDetail() {
   const [courseElementId, setCourseElementId] = useState("");
   const [teachingUnitId, setTeachingUnitId] = useState("");
   const [assignmentBusy, setAssignmentBusy] = useState(false);
-  const canManageAssignments = ["SUPER_ADMIN", "ADMIN_INSTITUTION"].includes(user?.role ?? "");
+  const canManageAssignments = ["SUPER_ADMIN", "ADMIN_INSTITUTION", "SCOLARITE", "DEPARTEMENT"].includes(user?.role ?? "");
   const { data: structure, isError: structureError } = useStructure() as {
     data: AssignmentStructure | undefined;
     isError: boolean;

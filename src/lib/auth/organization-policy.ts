@@ -2,8 +2,9 @@
 // handling or contain shared scheduling prerequisites. Expand this list only
 // after auditing both reads and writes for the new organization boundary.
 const methods: Record<string, readonly string[]> = {
-  '/api/structure': ['GET'],
-  '/api/teachers': ['GET'],
+  '/api/structure': ['GET', 'POST', 'PUT', 'DELETE'],
+  '/api/teachers': ['GET', 'POST', 'PUT', 'DELETE'],
+  '/api/students': ['GET'],
   '/api/timetable': ['GET', 'POST', 'PUT', 'DELETE'],
   '/api/timetable-publications': ['GET', 'POST', 'PATCH'],
   '/api/teaching-services': ['GET', 'POST', 'PATCH'],

@@ -19,6 +19,25 @@ import {
   formatZodError,
 } from '@/lib/validations/api'
 
+async function assertDepartmentWriteScope(user: SessionUser, tenantId: string, departmentId: string | null | undefined) {
+  if (user.role !== 'DEPARTEMENT') return null
+  const scope = await getOrganizationScope(user, tenantId)
+  if (!departmentId || !scope?.departmentIds.includes(departmentId)) {
+    return NextResponse.json({ error: 'Cette action est limitée à votre département.' }, { status: 403 })
+  }
+  return null
+}
+
+async function assertTeacherReferenceScope(user: SessionUser, tenantId: string, teacherId: string | null | undefined) {
+  if (user.role !== 'DEPARTEMENT' || !teacherId) return null
+  const teacher = await db.teacher.findFirst({ where: { id: teacherId, tenantId, isActive: true, user: { isActive: true } }, select: { departmentId: true } })
+  const scope = await getOrganizationScope(user, tenantId)
+  if (!teacher || !teacher.departmentId || !scope?.departmentIds.includes(teacher.departmentId)) {
+    return NextResponse.json({ error: 'Cet enseignant est hors de votre département.' }, { status: 403 })
+  }
+  return null
+}
+
 async function handler(user: SessionUser, tenantId: string, request: NextRequest) {
   try {
     const teacherScope = user.role === 'ENSEIGNANT'
@@ -296,6 +315,7 @@ async function handler(user: SessionUser, tenantId: string, request: NextRequest
 // handler to call.
 async function createFacultyHandler(user: SessionUser, tenantId: string, request: NextRequest) {
   try {
+    if (user.role === 'DEPARTEMENT') return NextResponse.json({ error: 'Un chef de département ne crée pas de faculté.' }, { status: 403 })
     const body = await request.json()
     const data = validateBody(createFacultySchema, body)
     const faculty = await db.faculty.create({ data: { ...data, tenantId } })
@@ -314,6 +334,7 @@ async function createFacultyHandler(user: SessionUser, tenantId: string, request
 
 async function createDepartmentHandler(user: SessionUser, tenantId: string, request: NextRequest) {
   try {
+    if (user.role === 'DEPARTEMENT') return NextResponse.json({ error: 'Un chef de département ne crée pas de département.' }, { status: 403 })
     const body = await request.json()
     const data = validateBody(createDepartmentSchema, body)
 
@@ -350,6 +371,8 @@ async function createProgramHandler(user: SessionUser, tenantId: string, request
   try {
     const body = await request.json()
     const data = validateBody(createProgramSchema, body)
+    const scopeError = await assertDepartmentWriteScope(user, tenantId, data.departmentId)
+    if (scopeError) return scopeError
 
     const faculty = await db.faculty.findFirst({ where: { id: data.facultyId, tenantId } })
     if (!faculty) {
@@ -394,10 +417,12 @@ async function createLevelHandler(user: SessionUser, tenantId: string, request: 
     const body = await request.json()
     const data = validateBody(createLevelSchema, body)
 
-    const program = await db.program.findFirst({ where: { id: data.programId, tenantId } })
+    const program = await db.program.findFirst({ where: { id: data.programId, tenantId }, select: { id: true, departmentId: true } })
     if (!program) {
       return NextResponse.json({ error: 'Program not found in this tenant' }, { status: 404 })
     }
+    const scopeError = await assertDepartmentWriteScope(user, tenantId, program.departmentId)
+    if (scopeError) return scopeError
     const siblingLevels = await db.level.findMany({
       where: { programId: data.programId, isActive: true },
       select: { id: true, name: true, code: true },
@@ -436,6 +461,11 @@ async function createSemesterHandler(user: SessionUser, tenantId: string, reques
     const level = await db.level.findFirst({ where: { id: data.levelId, program: { tenantId } } })
     if (!level) {
       return NextResponse.json({ error: 'Level not found in this tenant' }, { status: 404 })
+    }
+    if (user.role === 'DEPARTEMENT') {
+      const scopedLevel = await db.level.findFirst({ where: { id: data.levelId, program: { tenantId } }, select: { program: { select: { departmentId: true } } } })
+      const scopeError = await assertDepartmentWriteScope(user, tenantId, scopedLevel?.program.departmentId)
+      if (scopeError) return scopeError
     }
     const siblingSemesters = await db.semester.findMany({
       where: { levelId: data.levelId },
@@ -477,12 +507,19 @@ async function createTeachingUnitHandler(user: SessionUser, tenantId: string, re
     if (!semester) {
       return NextResponse.json({ error: 'Semester not found in this tenant' }, { status: 404 })
     }
+    if (user.role === 'DEPARTEMENT') {
+      const scopedSemester = await db.semester.findFirst({ where: { id: data.semesterId, level: { program: { tenantId } } }, select: { level: { select: { program: { select: { departmentId: true } } } } } })
+      const scopeError = await assertDepartmentWriteScope(user, tenantId, scopedSemester?.level.program.departmentId)
+      if (scopeError) return scopeError
+    }
     if (data.responsibleId) {
       const teacher = await db.teacher.findFirst({ where: { id: data.responsibleId, tenantId, isActive: true, user: { isActive: true } } })
       if (!teacher) {
         return NextResponse.json({ error: 'Responsible teacher not found in this tenant' }, { status: 404 })
       }
     }
+    const teacherScopeError = await assertTeacherReferenceScope(user, tenantId, data.responsibleId)
+    if (teacherScopeError) return teacherScopeError
 
     const unit = await db.teachingUnit.create({
       data: {
@@ -518,12 +555,19 @@ async function createCourseElementHandler(user: SessionUser, tenantId: string, r
     if (!unit) {
       return NextResponse.json({ error: 'Teaching unit not found in this tenant' }, { status: 404 })
     }
+    if (user.role === 'DEPARTEMENT') {
+      const scopedUnit = await db.teachingUnit.findFirst({ where: { id: data.teachingUnitId, semester: { level: { program: { tenantId } } } }, select: { semester: { select: { level: { select: { program: { select: { departmentId: true } } } } } } } })
+      const scopeError = await assertDepartmentWriteScope(user, tenantId, scopedUnit?.semester.level.program.departmentId)
+      if (scopeError) return scopeError
+    }
     if (data.teacherId) {
       const teacher = await db.teacher.findFirst({ where: { id: data.teacherId, tenantId, isActive: true, user: { isActive: true } } })
       if (!teacher) {
         return NextResponse.json({ error: 'Teacher not found in this tenant' }, { status: 404 })
       }
     }
+    const teacherScopeError = await assertTeacherReferenceScope(user, tenantId, data.teacherId)
+    if (teacherScopeError) return teacherScopeError
 
     const element = await db.courseElement.create({
       data: {
@@ -635,6 +679,42 @@ async function ownsEntity(type: EntityType, id: string, tenantId: string): Promi
   return Boolean(found)
 }
 
+async function entityDepartmentId(type: EntityType, id: string, tenantId: string): Promise<string | null> {
+  switch (type) {
+    case 'faculty':
+    case 'department': return null
+    case 'program': {
+      const row = await db.program.findFirst({ where: { id, tenantId }, select: { departmentId: true } })
+      return row?.departmentId ?? null
+    }
+    case 'level': {
+      const row = await db.level.findFirst({ where: { id, program: { tenantId } }, select: { program: { select: { departmentId: true } } } })
+      return row?.program.departmentId ?? null
+    }
+    case 'semester': {
+      const row = await db.semester.findFirst({ where: { id, level: { program: { tenantId } } }, select: { level: { select: { program: { select: { departmentId: true } } } } } })
+      return row?.level.program.departmentId ?? null
+    }
+    case 'teaching-unit': {
+      const row = await db.teachingUnit.findFirst({ where: { id, semester: { level: { program: { tenantId } } } }, select: { semester: { select: { level: { select: { program: { select: { departmentId: true } } } } } } } })
+      return row?.semester.level.program.departmentId ?? null
+    }
+    case 'course-element': {
+      const row = await db.courseElement.findFirst({ where: { id, teachingUnit: { semester: { level: { program: { tenantId } } } } }, select: { teachingUnit: { select: { semester: { select: { level: { select: { program: { select: { departmentId: true } } } } } } } } } })
+      return row?.teachingUnit.semester.level.program.departmentId ?? null
+    }
+  }
+}
+
+async function assertEntityWriteScope(user: SessionUser, tenantId: string, type: EntityType, id: string) {
+  if (user.role !== 'DEPARTEMENT') return null
+  if (type === 'faculty' || type === 'department') {
+    return NextResponse.json({ error: 'Un chef de département ne modifie pas la faculté ou les départements.' }, { status: 403 })
+  }
+  const departmentId = await entityDepartmentId(type, id, tenantId)
+  return assertDepartmentWriteScope(user, tenantId, departmentId)
+}
+
 async function updateEntityHandler(user: SessionUser, tenantId: string, request: NextRequest, type: EntityType) {
   try {
     const body = await request.json()
@@ -645,6 +725,8 @@ async function updateEntityHandler(user: SessionUser, tenantId: string, request:
     if (!(await ownsEntity(type, id, tenantId))) {
       return NextResponse.json({ error: 'Entity not found in this tenant' }, { status: 404 })
     }
+    const scopeError = await assertEntityWriteScope(user, tenantId, type, id)
+    if (scopeError) return scopeError
 
     if (ROOT_TYPES.has(type) && body.isActive !== undefined) {
       return NextResponse.json({ error: 'La désactivation est interdite : utilisez la suppression contrôlée pour un élément inutilisé.' }, { status: 400 })
@@ -673,10 +755,14 @@ async function updateEntityHandler(user: SessionUser, tenantId: string, request:
     if (type === 'teaching-unit' && body.responsibleId) {
       const t = await db.teacher.findFirst({ where: { id: body.responsibleId, tenantId, isActive: true, user: { isActive: true } }, select: { id: true } })
       if (!t) return NextResponse.json({ error: 'Responsible teacher not found in this tenant' }, { status: 404 })
+      const teacherScopeError = await assertTeacherReferenceScope(user, tenantId, body.responsibleId)
+      if (teacherScopeError) return teacherScopeError
     }
     if (type === 'course-element' && body.teacherId) {
       const t = await db.teacher.findFirst({ where: { id: body.teacherId, tenantId, isActive: true, user: { isActive: true } }, select: { id: true } })
       if (!t) return NextResponse.json({ error: 'Teacher not found in this tenant' }, { status: 404 })
+      const teacherScopeError = await assertTeacherReferenceScope(user, tenantId, body.teacherId)
+      if (teacherScopeError) return teacherScopeError
     }
 
     if (type === 'teaching-unit' && body.responsibleId) {
@@ -781,6 +867,8 @@ async function deleteEntityHandler(user: SessionUser, tenantId: string, request:
     if (!(await ownsEntity(type, id, tenantId))) {
       return NextResponse.json({ error: 'Entity not found in this tenant' }, { status: 404 })
     }
+    const scopeError = await assertEntityWriteScope(user, tenantId, type, id)
+    if (scopeError) return scopeError
 
     if (ROOT_TYPES.has(type)) {
       await deleteEmptyRoot(type, id, tenantId, user.id)
@@ -835,7 +923,7 @@ export const POST = withTenantAuth(async (user: SessionUser, tenantId: string, r
     case 'faculty':
     default: return createFacultyHandler(user, tenantId, request)
   }
-}, ['SUPER_ADMIN', 'ADMIN_INSTITUTION'])
+}, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE', 'DEPARTEMENT'])
 
 // PUT /api/structure?type=<entity> — edit any node in the hierarchy (id in body).
 export const PUT = withTenantAuth(async (user: SessionUser, tenantId: string, request: NextRequest) => {
@@ -844,7 +932,7 @@ export const PUT = withTenantAuth(async (user: SessionUser, tenantId: string, re
     return NextResponse.json({ error: `Unknown type: ${type}` }, { status: 400 })
   }
   return updateEntityHandler(user, tenantId, request, type as EntityType)
-}, ['SUPER_ADMIN', 'ADMIN_INSTITUTION'])
+}, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE', 'DEPARTEMENT'])
 
 // DELETE /api/structure?type=<entity>&id=<id> — soft-delete (faculty/department/
 // program/level) or guarded hard-delete (semester/teaching-unit/course-element).
@@ -854,4 +942,4 @@ export const DELETE = withTenantAuth(async (user: SessionUser, tenantId: string,
     return NextResponse.json({ error: `Unknown type: ${type}` }, { status: 400 })
   }
   return deleteEntityHandler(user, tenantId, request, type as EntityType)
-}, ['SUPER_ADMIN', 'ADMIN_INSTITUTION'])
+}, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE', 'DEPARTEMENT'])

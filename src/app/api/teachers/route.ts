@@ -133,6 +133,12 @@ async function createTeacherHandler(user: SessionUser, tenantId: string, request
         )
       }
     }
+    if (user.role === 'DEPARTEMENT') {
+      const scope = await getOrganizationScope(user, tenantId)
+      if (!departmentId || !scope?.departmentIds.includes(departmentId)) {
+        return NextResponse.json({ error: 'Vous ne pouvez créer un enseignant que dans votre département.' }, { status: 403 })
+      }
+    }
 
     // Auto-generate a teacher matricule (employeeId) when the caller doesn't
     // supply one -- same auto-numbering UX as student matricules, using the
@@ -247,6 +253,16 @@ async function updateTeacherHandler(user: SessionUser, tenantId: string, request
         { error: 'Teacher not found' },
         { status: 404 }
       )
+    }
+
+    if (user.role === 'DEPARTEMENT') {
+      const scope = await getOrganizationScope(user, tenantId)
+      if (!existing.departmentId || !scope?.departmentIds.includes(existing.departmentId)) {
+        return NextResponse.json({ error: 'Cet enseignant est hors de votre département.' }, { status: 403 })
+      }
+      if (teacherData.departmentId && !scope.departmentIds.includes(teacherData.departmentId)) {
+        return NextResponse.json({ error: 'Le rattachement doit rester dans votre département.' }, { status: 403 })
+      }
     }
 
     // Check department if changed
@@ -365,6 +381,13 @@ async function deleteTeacherHandler(user: SessionUser, tenantId: string, request
         { error: 'Teacher not found' },
         { status: 404 }
       )
+    }
+
+    if (user.role === 'DEPARTEMENT') {
+      const scope = await getOrganizationScope(user, tenantId)
+      if (!existing.departmentId || !scope?.departmentIds.includes(existing.departmentId)) {
+        return NextResponse.json({ error: 'Cet enseignant est hors de votre département.' }, { status: 403 })
+      }
     }
 
     // Soft delete - set isActive to false, and lock out the linked login too
@@ -571,9 +594,10 @@ async function getTeacherScheduleHandler(user: SessionUser, tenantId: string, re
 export const GET = withTenantAuth(async (user: SessionUser, tenantId: string, request: NextRequest) => {
   const { searchParams } = new URL(request.url)
   if (searchParams.get('options') === 'true') {
-    if (!['SUPER_ADMIN', 'ADMIN_INSTITUTION'].includes(user.role)) return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
+    if (!['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE', 'DEPARTEMENT'].includes(user.role)) return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
+    const organizationScope = await getOrganizationScope(user, tenantId)
     const teachers = await db.teacher.findMany({
-      where: { tenantId, isActive: true, user: { isActive: true } },
+      where: { tenantId, isActive: true, user: { isActive: true }, ...(organizationScope ? { departmentId: { in: organizationScope.departmentIds } } : {}) },
       select: { id: true, departmentId: true, user: { select: { firstName: true, lastName: true } } },
       orderBy: { user: { lastName: 'asc' } },
     })
@@ -592,8 +616,8 @@ export const GET = withTenantAuth(async (user: SessionUser, tenantId: string, re
   return getTeachersHandler(user, tenantId, request)
 })
 
-export const POST = withTenantAuth(createTeacherHandler, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'RECTORAT'])
+export const POST = withTenantAuth(createTeacherHandler, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE', 'RECTORAT', 'DEPARTEMENT'])
 
-export const PUT = withTenantAuth(updateTeacherHandler, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'RECTORAT'])
+export const PUT = withTenantAuth(updateTeacherHandler, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE', 'RECTORAT', 'DEPARTEMENT'])
 
-export const DELETE = withTenantAuth(deleteTeacherHandler, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'RECTORAT'])
+export const DELETE = withTenantAuth(deleteTeacherHandler, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE', 'RECTORAT', 'DEPARTEMENT'])

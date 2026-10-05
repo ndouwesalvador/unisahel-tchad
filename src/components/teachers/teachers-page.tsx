@@ -202,6 +202,9 @@ const grades = ['Tous', 'Professeur', 'MCF', 'MA', 'Assistant', 'Vacataire', 'No
 
 export function TeachersPage() {
   const { selectTeacher, setView } = useAppStore()
+  const role = useAppStore((state) => state.user?.role)
+  const canCreateTeacher = ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE', 'DEPARTEMENT'].includes(role ?? '')
+  const canImportTeachers = ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE'].includes(role ?? '')
   const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
   const [filterDept, setFilterDept] = useState('Tous')
@@ -516,10 +519,10 @@ export function TeachersPage() {
                 </SelectContent>
               </Select>
               <div className="flex gap-2 flex-wrap">
-                <Button variant="outline" size="sm" className="text-xs h-9 border-[var(--institution-primary-30)] text-[var(--institution-primary)] hover:bg-[var(--institution-primary-08)]" onClick={() => setView('import-export')}>
+                {canImportTeachers && <Button variant="outline" size="sm" className="text-xs h-9 border-[var(--institution-primary-30)] text-[var(--institution-primary)] hover:bg-[var(--institution-primary-08)]" onClick={() => setView('import-export')}>
                   <Upload className="size-3.5 mr-1.5" />
                   Importer
-                </Button>
+                </Button>}
                 <Button variant="outline" size="sm" className="text-xs h-9 border-[var(--institution-primary-30)] text-[var(--institution-primary)] hover:bg-[var(--institution-primary-08)]" onClick={handleExportExcel}>
                   <FileSpreadsheet className="size-3.5 mr-1.5" />
                   Excel
@@ -528,10 +531,10 @@ export function TeachersPage() {
                   <FileText className="size-3.5 mr-1.5" />
                   PDF
                 </Button>
-                <Button size="sm" className="bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white text-xs h-9" onClick={() => setShowNewTeacher(true)}>
+                {canCreateTeacher && <Button size="sm" className="bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white text-xs h-9" onClick={() => setShowNewTeacher(true)}>
                   <Plus className="size-3.5 mr-1.5" />
                   Nouvel enseignant
-                </Button>
+                </Button>}
               </div>
             </div>
           </CardContent>

@@ -17,9 +17,10 @@ describe('organization API policy', () => {
     expect(isOrganizationApiAllowed('/api/teaching-services', 'POST')).toBe(true)
     expect(isOrganizationApiAllowed('/api/teaching-services', 'PATCH')).toBe(true)
   })
-  it('denies institution-wide grade and administrative operations', () => {
+  it('denies institution-wide operations while allowing scoped curriculum management', () => {
     expect(isOrganizationApiAllowed('/api/grades', 'GET')).toBe(false)
-    expect(isOrganizationApiAllowed('/api/structure', 'POST')).toBe(false)
+    expect(isOrganizationApiAllowed('/api/structure', 'POST')).toBe(true)
+    expect(isOrganizationApiAllowed('/api/teachers', 'POST')).toBe(true)
     expect(isOrganizationApiAllowed('/api/users', 'GET')).toBe(false)
   })
 })

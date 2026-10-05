@@ -159,6 +159,9 @@ const emptyStudentForm = {
 
 export function StudentsList() {
   const { setView, selectStudent } = useAppStore()
+  const role = useAppStore((state) => state.user?.role)
+  const canManageStudents = ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE'].includes(role ?? '')
+  const canImportStudents = canManageStudents
   const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
   const [filiereFilter, setFiliereFilter] = useState('all')
@@ -499,7 +502,7 @@ export function StudentsList() {
               </motion.p>
             </div>
             <div className="flex items-center gap-2">
-              <Button
+              {canImportStudents && <Button
                 variant="outline"
                 size="sm"
                 className="text-xs bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"
@@ -507,7 +510,7 @@ export function StudentsList() {
               >
                 <Upload className="size-3.5 mr-1.5" />
                 Importer
-              </Button>
+              </Button>}
               <Button
                 variant="outline"
                 size="sm"
@@ -521,10 +524,10 @@ export function StudentsList() {
                 <FileText className="size-3.5 mr-1.5" />
                 {isExportingPDF ? 'Préparation…' : 'PDF'}
               </Button>
-              <Button size="sm" className="bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white text-xs border border-white/20" onClick={() => setShowCreate(true)}>
+              {canManageStudents && <Button size="sm" className="bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white text-xs border border-white/20" onClick={() => setShowCreate(true)}>
                 <UserPlus className="size-3.5 mr-1.5" />
                 Nouvel etudiant
-              </Button>
+              </Button>}
             </div>
           </div>
         </div>
@@ -642,7 +645,7 @@ export function StudentsList() {
                     </TableCell>
                     <TableCell className="text-sm text-center font-medium text-[var(--institution-primary)] py-3">{student.credits}</TableCell>
                     <TableCell className="text-right py-3 whitespace-nowrap">
-                      <Button
+                      {canManageStudents && <Button
                         variant="ghost"
                         size="sm"
                         className="h-7 w-7 p-0 opacity-50 group-hover:opacity-100 transition-opacity"
@@ -650,7 +653,7 @@ export function StudentsList() {
                         title="Voir le dossier"
                       >
                         <Eye className="size-3.5 text-gray-400" />
-                      </Button>
+                      </Button>}
                       <Button
                         variant="ghost"
                         size="sm"
@@ -660,7 +663,7 @@ export function StudentsList() {
                       >
                         <Pencil className="size-3.5 text-gray-400" />
                       </Button>
-                      {student.statut === 'SUSPENDU' ? (
+                      {canManageStudents && (student.statut === 'SUSPENDU' ? (
                         <Button
                           variant="ghost"
                           size="sm"
@@ -682,7 +685,7 @@ export function StudentsList() {
                         >
                           <Trash2 className="size-3.5 text-[#c62828]" />
                         </Button>
-                      )}
+                      ))}
                     </TableCell>
                   </motion.tr>
                 )})}

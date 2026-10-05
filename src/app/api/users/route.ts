@@ -193,6 +193,6 @@ async function updateStaffHandler(user: SessionUser, tenantId: string, request: 
   }
 }
 
-export const GET = withTenantAuth(getUsersHandler, ['SUPER_ADMIN', 'ADMIN_INSTITUTION'])
-export const POST = withTenantAuth(createStaffHandler, ['SUPER_ADMIN', 'ADMIN_INSTITUTION'])
-export const PUT = withTenantAuth(updateStaffHandler, ['SUPER_ADMIN', 'ADMIN_INSTITUTION'])
+export const GET = withTenantAuth(getUsersHandler, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE'])
+export const POST = withTenantAuth(createStaffHandler, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE'])
+export const PUT = withTenantAuth(updateStaffHandler, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE'])

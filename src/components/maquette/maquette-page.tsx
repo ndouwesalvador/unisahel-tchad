@@ -769,7 +769,7 @@ function SemesterView({ semester, canManage, teachers }: { semester: Semester; c
 
 export function MaquettePage() {
   const setView = useAppStore((s) => s.setView)
-  const canManage = useAppStore((s) => ['SUPER_ADMIN', 'ADMIN_INSTITUTION'].includes(s.user?.role ?? ''))
+  const canManage = useAppStore((s) => ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE', 'DEPARTEMENT'].includes(s.user?.role ?? ''))
   const { data: teacherOptions } = useQuery<{ data: TeacherOption[] }>({ queryKey: ['teacher-options'], enabled: canManage, queryFn: async () => { const response = await fetch('/api/teachers?options=true'); if (!response.ok) throw new Error('Enseignants indisponibles'); return response.json() } })
   const teachers = teacherOptions?.data ?? []
   const { data: structureData, isLoading } = useStructure()

@@ -428,6 +428,8 @@ function NodeActions({ apiType, id, name }: { apiType: 'faculty' | 'department' 
 // ─── Org Node Component ────────────────────────────────────────────────────
 
 function OrgNodeComponent({ node, depth = 0 }: { node: OrgNode; depth?: number }) {
+  const role = useAppStore((state) => state.user?.role)
+  const canEditNode = role === 'SUPER_ADMIN' || role === 'ADMIN_INSTITUTION' || role === 'SCOLARITE' || (role === 'DEPARTEMENT' && node.apiType === 'program')
   const [expanded, setExpanded] = useState(depth < 2)
   const hasChildren = node.children && node.children.length > 0
   const Icon = node.icon
@@ -484,7 +486,7 @@ function OrgNodeComponent({ node, depth = 0 }: { node: OrgNode; depth?: number }
         </Badge>
 
         {/* Edit / delete (faculties, departments, programs) */}
-        {node.apiType && (
+        {node.apiType && canEditNode && (
           <div className="opacity-0 group-hover:opacity-100 transition-opacity">
             <NodeActions apiType={node.apiType} id={node.id} name={node.name} />
           </div>
@@ -682,6 +684,7 @@ function AddEntityDialog({
   fields,
   type,
   buildBody,
+  hidden = false,
 }: {
   triggerLabel: string
   triggerIcon: React.ElementType
@@ -690,6 +693,7 @@ function AddEntityDialog({
   fields: DialogField[]
   type: string
   buildBody: (values: Record<string, string>) => Record<string, unknown> | string
+  hidden?: boolean
 }) {
   const [open, setOpen] = useState(false)
   const [values, setValues] = useState<Record<string, string>>({})
@@ -726,6 +730,7 @@ function AddEntityDialog({
     }
   }
 
+  if (hidden) return null
   return (
     <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) reset() }}>
       <DialogTrigger asChild>
@@ -789,6 +794,9 @@ function AddEntityDialog({
 export function StructurePage() {
   const queryClient = useQueryClient()
   const [deletingLevelId, setDeletingLevelId] = useState<string | null>(null)
+  const role = useAppStore((state) => state.user?.role)
+  const canManageInstitutionRoots = ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE'].includes(role ?? '')
+  const canManageCurriculum = canManageInstitutionRoots || role === 'DEPARTEMENT'
   const canAudit = useAppStore((state) => ['SUPER_ADMIN', 'ADMIN_INSTITUTION'].includes(state.user?.role ?? ''))
   const { data: duplicateAudit, isError: duplicateAuditError } = useQuery<{ data: DuplicateAuditGroup[] }>({
     queryKey: ['structure-duplicate-audit'],
@@ -916,6 +924,7 @@ export function StructurePage() {
         <div className="flex items-center gap-2 flex-wrap">
           <AddEntityDialog
             triggerLabel="Faculté"
+            hidden={!canManageInstitutionRoots}
             triggerIcon={Building2}
             title="Nouvelle faculté"
             description="Ajoutez une nouvelle faculté à l'institution."
@@ -933,6 +942,7 @@ export function StructurePage() {
           />
           <AddEntityDialog
             triggerLabel="Département"
+            hidden={!canManageInstitutionRoots}
             triggerIcon={BookOpen}
             title="Nouveau département"
             description="Ajoutez un département à une faculté existante."
@@ -951,6 +961,7 @@ export function StructurePage() {
           />
           <AddEntityDialog
             triggerLabel="Programme"
+            hidden={!canManageCurriculum}
             triggerIcon={GraduationCap}
             title="Nouveau programme (filière)"
             description="Ajoutez un programme diplômant à un département existant."
@@ -980,6 +991,7 @@ export function StructurePage() {
           />
           <AddEntityDialog
             triggerLabel="Niveau"
+            hidden={!canManageCurriculum}
             triggerIcon={Layers}
             title="Nouveau niveau"
             description="Ajoutez un niveau (ex: Licence 1) à un programme."
@@ -998,6 +1010,7 @@ export function StructurePage() {
           />
           <AddEntityDialog
             triggerLabel="Semestre"
+            hidden={!canManageCurriculum}
             triggerIcon={CalendarRange}
             title="Nouveau semestre"
             description="Ajoutez un semestre à un niveau."
@@ -1016,6 +1029,7 @@ export function StructurePage() {
           />
           <AddEntityDialog
             triggerLabel="UE"
+            hidden={!canManageCurriculum}
             triggerIcon={BookMarked}
             title="Nouvelle unité d'enseignement (UE)"
             description="Ajoutez une UE à un semestre."
@@ -1036,6 +1050,7 @@ export function StructurePage() {
           />
           <AddEntityDialog
             triggerLabel="EC / Matière"
+            hidden={!canManageCurriculum}
             triggerIcon={FileText}
             title="Nouvel élément constitutif (EC)"
             description="Ajoutez une matière (EC) à une UE."

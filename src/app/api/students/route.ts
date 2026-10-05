@@ -6,6 +6,8 @@ import { studentQuerySchema, createStudentSchema, updateStudentSchema, validateQ
 import { Prisma } from '@prisma/client'
 import { createStudentPortalCredentials } from '@/lib/student-portal'
 import { prepareDocumentPhoto } from '@/lib/pdf/artwork'
+import { getTeacherScope } from '@/lib/auth/teacher-scope'
+import { getOrganizationScope } from '@/lib/auth/organization-scope'
 
 // Credits are awarded by a finalized jury, not by the mutable Student cache.
 // A second session in the same year may replace the first decision; count the
@@ -42,6 +44,14 @@ async function getStudentsHandler(user: SessionUser, tenantId: string, request: 
 
     const where: Prisma.StudentWhereInput = {
       tenantId,
+    }
+
+    if (user.role === 'DEPARTEMENT') {
+      const scope = await getOrganizationScope(user, tenantId)
+      where.currentProgram = { departmentId: { in: scope?.departmentIds ?? [] } }
+    } else if (user.role === 'ENSEIGNANT') {
+      const scope = await getTeacherScope(user, tenantId)
+      where.pedagogicalRegistrations = { some: { teachingUnitId: { in: scope.teachingUnitIds }, status: 'ACTIVE' } }
     }
 
     if (search) {
@@ -381,8 +391,13 @@ async function getStudentDetailHandler(user: SessionUser, tenantId: string, requ
       )
     }
 
+    const scopeFilter = user.role === 'DEPARTEMENT'
+      ? { currentProgram: { departmentId: { in: (await getOrganizationScope(user, tenantId))?.departmentIds ?? [] } } }
+      : user.role === 'ENSEIGNANT'
+        ? { pedagogicalRegistrations: { some: { teachingUnitId: { in: (await getTeacherScope(user, tenantId)).teachingUnitIds }, status: 'ACTIVE' } } }
+        : {}
     const student = await db.student.findFirst({
-      where: { id, tenantId },
+      where: { id, tenantId, ...scopeFilter },
       include: {
         currentProgram: {
           select: { id: true, name: true, code: true, cycle: true, department: { select: { name: true } } },
@@ -451,8 +466,13 @@ async function getStudentTranscriptHandler(user: SessionUser, tenantId: string, 
       )
     }
 
+    const scopeFilter = user.role === 'DEPARTEMENT'
+      ? { currentProgram: { departmentId: { in: (await getOrganizationScope(user, tenantId))?.departmentIds ?? [] } } }
+      : user.role === 'ENSEIGNANT'
+        ? { pedagogicalRegistrations: { some: { teachingUnitId: { in: (await getTeacherScope(user, tenantId)).teachingUnitIds }, status: 'ACTIVE' } } }
+        : {}
     const student = await db.student.findFirst({
-      where: { id, tenantId },
+      where: { id, tenantId, ...scopeFilter },
       include: {
         currentProgram: {
           select: { id: true, name: true, code: true, cycle: true, duration: true },
