@@ -13,6 +13,16 @@ const colors = {
   border: '#cbd5e1',
 }
 
+// Development fixtures used to append a visible marker to academic labels
+// (for example "— VALIDATION DEV") and prefix codes with "DEV-". Keep the
+// stored academic data untouched, but present clean official labels in PDFs.
+function cleanAcademicLabel(value?: string | null): string {
+  return (value || '')
+    .replace(/\s*[—–-]\s*VALIDATION(?:\s+DEV)?\s*$/i, '')
+    .replace(/^DEV-/i, '')
+    .trim()
+}
+
 
 const styles = StyleSheet.create({
   page: {
@@ -425,7 +435,8 @@ export function ReleveNotesPDF({
 
         <View style={{ borderWidth: 0.7, borderColor: paper.rule }}>
           <View style={{ flexDirection: 'row', backgroundColor: '#edf1f2', borderBottomWidth: 0.8, borderBottomColor: '#cbd4d8', paddingVertical: density > 34 ? 3 : 5, paddingHorizontal: 5 }}>
-            <Text style={{ width: '42%', fontSize: tableFont, color: paper.ink, fontWeight: 'bold' }}>UE / MATIÈRE</Text>
+            <Text style={{ width: '12%', fontSize: tableFont, color: paper.ink, fontWeight: 'bold', textAlign: 'center' }}>UE</Text>
+            <Text style={{ width: '30%', fontSize: tableFont, color: paper.ink, fontWeight: 'bold' }}>MATIÈRE</Text>
             <Text style={{ width: '11%', fontSize: tableFont, color: paper.ink, textAlign: 'center' }}>CODE</Text>
             <Text style={{ width: '10%', fontSize: tableFont, color: paper.ink, textAlign: 'center' }}>CRÉDITS</Text>
             <Text style={{ width: '15%', fontSize: tableFont, color: paper.ink, textAlign: 'center' }}>MOY. MATIÈRE</Text>
@@ -442,16 +453,18 @@ export function ReleveNotesPDF({
                 .sort((a, b) => b.fraction - a.fraction).slice(0, remaining).forEach(({ index }) => { baseCredits[index] += 1 })
               return <>
                 <View style={{ flexDirection: 'row', backgroundColor: ueTints[i % ueTints.length].fill, borderTopWidth: 0.55, borderTopColor: paper.rule, borderLeftWidth: 2, borderLeftColor: ueTints[i % ueTints.length].edge, paddingVertical: rowPadding + 0.8, paddingHorizontal: 5 }}>
-                  <Text style={{ width: '42%', fontSize: tableFont + 0.3, color: paper.ink, fontWeight: 'bold' }}>{ue.code ? `${ue.code} · ` : ''}{ue.ue}</Text>
-                  <Text style={{ width: '11%', fontSize: tableFont + 0.3, color: paper.ink, textAlign: 'center' }}>{ue.code || '—'}</Text>
+                  <Text style={{ width: '12%', fontSize: tableFont + 0.3, color: paper.ink, fontWeight: 'bold', textAlign: 'center' }}>{cleanAcademicLabel(ue.code)}</Text>
+                  <Text style={{ width: '30%', fontSize: tableFont + 0.3, color: paper.ink, fontWeight: 'bold' }}>{cleanAcademicLabel(ue.ue)}</Text>
+                  <Text style={{ width: '11%', fontSize: tableFont + 0.3, color: paper.ink, textAlign: 'center' }}></Text>
                   <Text style={{ width: '10%', fontSize: tableFont + 0.3, color: paper.ink, fontWeight: 'bold', textAlign: 'center' }}>{ue.credits}</Text>
                   <Text style={{ width: '15%', fontSize: tableFont + 0.3, color: paper.ink, textAlign: 'center' }}></Text>
                   <Text style={{ width: '12%', fontSize: tableFont + 0.3, color: paper.ink, fontWeight: 'bold', textAlign: 'center' }}>{note(ue.moyenne)}</Text>
                   <Text style={{ width: '10%', fontSize: tableFont + 0.3, color: ue.moyenne != null && ue.moyenne >= 10 ? '#176341' : paper.ink, fontWeight: 'bold', textAlign: 'center' }}>{matterStatus(ue.moyenne)}</Text>
                 </View>
                 {ue.notes.map((entry, j) => <View key={j} style={{ flexDirection: 'row', paddingVertical: rowPadding, paddingHorizontal: 5, backgroundColor: j % 2 ? paper.tintAlt : '#ffffff', borderTopWidth: 0.3, borderTopColor: paper.rule, borderLeftWidth: 2, borderLeftColor: '#e3e8e9' }} wrap={false}>
-                  <Text style={{ width: '42%', fontSize: tableFont, color: colors.text, paddingLeft: 4 }}>{entry.ec}</Text>
-                  <Text style={{ width: '11%', fontSize: tableFont, color: colors.text, textAlign: 'center' }}>{entry.code || ''}</Text>
+                  <Text style={{ width: '12%', fontSize: tableFont, color: colors.text, textAlign: 'center' }}></Text>
+                  <Text style={{ width: '30%', fontSize: tableFont, color: colors.text, paddingLeft: 4 }}>{cleanAcademicLabel(entry.ec)}</Text>
+                  <Text style={{ width: '11%', fontSize: tableFont, color: colors.text, textAlign: 'center' }}>{cleanAcademicLabel(entry.code)}</Text>
                   <Text style={{ width: '10%', fontSize: tableFont, textAlign: 'center' }}>{baseCredits[j] ?? 0}</Text>
                   <Text style={{ width: '15%', fontSize: tableFont, textAlign: 'center', fontWeight: 'bold' }}>{note(entry.final)}</Text>
                   <Text style={{ width: '12%', fontSize: tableFont, textAlign: 'center' }}></Text>
