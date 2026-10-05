@@ -136,7 +136,7 @@ export function GradeEntryPage() {
       : isLoading ? <Card><CardContent className="p-5 text-sm">Chargement…</CardContent></Card>
       : !data?.courses.length ? <Card><CardContent className="p-5 text-sm text-slate-700">{jury
         ? 'Aucune matière n’est rattachée à votre département. Vérifiez votre affectation dans Utilisateurs et la structure des programmes.'
-        : 'Aucun service d’enseignement approuvé pour cette année. Demandez son approbation avant la saisie.'}</CardContent></Card>
+        : 'Aucun service d’enseignement approuvé pour cette année. L’administration doit vous affecter une matière avant la saisie.'}</CardContent></Card>
       : <>
         <Card className="border-slate-200 bg-white"><CardContent className="grid gap-4 p-5 md:grid-cols-[1fr_180px]">
           <div className="space-y-2"><Label htmlFor="grade-course">Matière</Label>

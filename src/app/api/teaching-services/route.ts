@@ -11,7 +11,9 @@ const createSchema = z.object({
   courseElementId: z.string().min(1),
   teacherId: z.string().min(1),
   plannedHours: z.number().finite().positive().max(1000),
-  reason: z.string().trim().min(10).max(2000),
+  reason: z.string().trim().max(2000).optional().default('Affectation directe du département'),
+  isCommon: z.boolean().optional().default(false),
+  commonProgramIds: z.array(z.string().min(1)).max(100).optional().default([]),
 })
 const decisionSchema = z.object({
   id: z.string().min(1),
@@ -58,7 +60,7 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
     db.courseElement.findMany({ where: { teachingUnit: { semester: { level: { program: {
       tenantId, isActive: true, departmentId: departmentIds ? { in: departmentIds } : { not: null },
     } } } } }, select: { id: true, name: true, code: true, hoursCM: true, hoursTD: true, hoursTP: true,
-      teachingUnit: { select: { name: true, code: true, semester: { select: { name: true, level: { select: { name: true, program: { select: { name: true, departmentId: true, department: { select: { name: true } } } } } } } } } } },
+      teachingUnit: { select: { name: true, code: true, semester: { select: { name: true, level: { select: { name: true, program: { select: { id: true, name: true, departmentId: true, department: { select: { name: true } } } } } } } } } } },
       orderBy: { name: 'asc' }, take: 1000 }),
   ])
   return NextResponse.json({ services, teachers, elements, departmentIds: departmentIds ?? null })
@@ -66,13 +68,13 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
 
 async function handlePost(user: SessionUser, tenantId: string, request: NextRequest) {
   const parsed = createSchema.safeParse(await request.json().catch(() => null))
-  if (!parsed.success) return NextResponse.json({ error: 'Année, matière, enseignant, volume et motif (10 caractères minimum) requis.' }, { status: 400 })
-  const { academicYearId, courseElementId, teacherId, plannedHours, reason } = parsed.data
+  if (!parsed.success) return NextResponse.json({ error: 'Année, matière, enseignant et volume requis.' }, { status: 400 })
+  const { academicYearId, courseElementId, teacherId, plannedHours, reason, isCommon, commonProgramIds } = parsed.data
   const scope = await getOrganizationScope(user, tenantId)
   const [year, element, teacher] = await Promise.all([
     db.academicYear.findFirst({ where: { id: academicYearId, tenantId }, select: { id: true } }),
     db.courseElement.findFirst({ where: { id: courseElementId, teachingUnit: { semester: { level: { program: { tenantId, isActive: true } } } } },
-      select: { teachingUnit: { select: { semester: { select: { level: { select: { program: { select: { departmentId: true, department: { select: { isActive: true } } } } } } } } } } } }),
+      select: { code: true, name: true, teachingUnit: { select: { semester: { select: { level: { select: { program: { select: { id: true, departmentId: true, department: { select: { isActive: true } } } } } } } } } } } }),
     db.teacher.findFirst({ where: { id: teacherId, tenantId, isActive: true }, select: { departmentId: true, department: { select: { isActive: true } } } }),
   ])
   if (!year || !element || !teacher) return NextResponse.json({ error: 'Année, matière ou enseignant introuvable.' }, { status: 404 })
@@ -82,18 +84,48 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
     return NextResponse.json({ error: 'Les deux départements doivent être actifs et définis.' }, { status: 400 })
   }
   if (scope && !scope.departmentIds.includes(requestingDepartmentId)) return NextResponse.json({ error: 'Matière hors de votre département.' }, { status: 403 })
+  const primaryProgramId = element.teachingUnit.semester.level.program.id ?? requestingDepartmentId
+  const elementCode = element.code ?? null
+  const elementName = element.name ?? ''
+  const targetProgramIds = isCommon ? [...new Set([primaryProgramId, ...commonProgramIds])] : [primaryProgramId]
+  const targetElements = isCommon && targetProgramIds.length > 1
+    ? await db.courseElement.findMany({
+      where: { teachingUnit: { semester: { level: { program: { id: { in: targetProgramIds }, tenantId, isActive: true } } } } },
+      select: { id: true, code: true, name: true, teachingUnit: { select: { semester: { select: { level: { select: { program: { select: { id: true, departmentId: true, department: { select: { isActive: true } } } } } } } } } } },
+    })
+    : [{ id: courseElementId, code: elementCode, name: elementName, teachingUnit: { semester: { level: { program: { id: primaryProgramId, departmentId: requestingDepartmentId, department: { isActive: true } } } } } }]
+  const matchingElements = targetElements.filter(candidate => {
+    if (!candidate.teachingUnit.semester.level.program.departmentId) return false
+    if (candidate.id === courseElementId) return true
+    return elementCode ? candidate.code === elementCode : candidate.name.trim().toLocaleLowerCase() === elementName.trim().toLocaleLowerCase()
+  })
+  if (matchingElements.length < targetProgramIds.length) return NextResponse.json({ error: 'La matière équivalente n’existe pas dans toutes les filières sélectionnées.' }, { status: 400 })
+  const centralAssignment = ['ADMIN_INSTITUTION', 'SUPER_ADMIN', 'SCOLARITE'].includes(user.role)
+  const assignments = matchingElements.map(candidate => ({
+    courseElementId: candidate.id,
+    requestingDepartmentId: candidate.teachingUnit.semester.level.program.departmentId!,
+    homeDepartmentId,
+    status: candidate.teachingUnit.semester.level.program.departmentId === homeDepartmentId || centralAssignment ? 'APPROVED' : 'PENDING_HOME',
+  }))
+  if (scope && assignments.some(assignment => !scope.departmentIds.includes(assignment.requestingDepartmentId))) return NextResponse.json({ error: 'Une filière sélectionnée est hors de votre périmètre.' }, { status: 403 })
   try {
-    const service = await db.$transaction(async (tx) => {
-      const created = await tx.teachingService.create({ data: {
-        tenantId, academicYearId, courseElementId, teacherId, requestingDepartmentId, homeDepartmentId,
-        plannedHours, requestReason: reason, requestedById: user.id,
-        status: homeDepartmentId === requestingDepartmentId ? 'PENDING_CENTRAL' : 'PENDING_HOME',
-      } })
-      await tx.auditLog.create({ data: { tenantId, userId: user.id, action: 'CREATE', entity: 'TeachingService', entityId: created.id,
-        details: JSON.stringify({ academicYearId, courseElementId, teacherId, requestingDepartmentId, homeDepartmentId, plannedHours, reason, status: created.status }) } })
+    const services = await db.$transaction(async (tx) => {
+      const created = []
+      for (const assignment of assignments) {
+        const service = await tx.teachingService.create({ data: {
+          tenantId, academicYearId, courseElementId: assignment.courseElementId, teacherId,
+          requestingDepartmentId: assignment.requestingDepartmentId, homeDepartmentId,
+          plannedHours, requestReason: reason, isCommon, requestedById: user.id,
+          status: assignment.status,
+          ...(assignment.status === 'APPROVED' ? { centralDecidedById: user.id, centralDecisionReason: 'Affectation directe validée', centralDecidedAt: new Date() } : {}),
+        } })
+        await tx.auditLog.create({ data: { tenantId, userId: user.id, action: 'CREATE', entity: 'TeachingService', entityId: service.id,
+          details: JSON.stringify({ academicYearId, courseElementId: assignment.courseElementId, teacherId, requestingDepartmentId: assignment.requestingDepartmentId, homeDepartmentId, plannedHours, reason, isCommon, status: service.status }) } })
+        created.push(service)
+      }
       return created
     })
-    return NextResponse.json({ service }, { status: 201 })
+    return NextResponse.json({ service: services[0], services }, { status: 201 })
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
       return NextResponse.json({ error: 'Une demande non rejetée existe déjà pour cet enseignant, cette matière et cette année.' }, { status: 409 })

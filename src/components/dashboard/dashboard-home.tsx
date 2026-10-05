@@ -363,7 +363,7 @@ function TeacherDashboardHome({ data }: { data: TeacherDashboardResponse }) {
           )}
           {data.linked && data.assignments.length === 0 && (
             <p role="status" className="mt-4 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm font-medium text-amber-950">
-              Aucun service d’enseignement approuvé pour cette année. Le département doit demander votre service ; le département de rattachement et l’administration centrale valident ensuite les étapes requises.
+              Aucun service d’enseignement approuvé pour cette année. Le département doit vous affecter une matière ; une intervention extérieure peut ensuite nécessiter l’accord de votre département de rattachement.
             </p>
           )}
         </CardContent>
@@ -394,7 +394,7 @@ function TeacherDashboardHome({ data }: { data: TeacherDashboardResponse }) {
               <p className="font-semibold text-slate-950">{element.code ? `${element.code} · ` : ''}{element.name}</p>
               <p className="mt-1 text-sm text-slate-700">{element.teachingUnit} · {element.program} · {element.level} · {element.semester}</p>
             </li>)}
-          </ul> : <p className="text-sm text-slate-700">Aucun service d’enseignement approuvé pour cette année. Le département doit demander votre service, puis obtenir les accords requis.</p>}
+          </ul> : <p className="text-sm text-slate-700">Aucun service d’enseignement approuvé pour cette année. Le département doit vous affecter une matière ; les interventions inter-départements suivent le circuit d’accord prévu.</p>}
         </CardContent>
       </Card>
 

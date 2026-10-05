@@ -46,11 +46,11 @@ describe('annual teaching-service workflow', () => {
     expect(mocks.create).toHaveBeenCalledWith({ data: expect.objectContaining({ status: 'PENDING_HOME', requestingDepartmentId: 'department-A', homeDepartmentId: 'department-B', academicYearId: 'year-A' }) })
     expect(mocks.audit).toHaveBeenCalledWith({ data: expect.objectContaining({ action: 'CREATE', entity: 'TeachingService' }) })
   })
-  it('sends a same-department request directly to central arbitration', async () => {
+  it('activates a same-department assignment immediately without a request', async () => {
     mocks.teacher.mockResolvedValue({ departmentId: 'department-A', department: { isActive: true } })
     const response = await post(manager, 'tenant-A', request('POST', application))
     expect(response.status).toBe(201)
-    expect(mocks.create).toHaveBeenCalledWith({ data: expect.objectContaining({ status: 'PENDING_CENTRAL' }) })
+    expect(mocks.create).toHaveBeenCalledWith({ data: expect.objectContaining({ status: 'APPROVED', isCommon: false }) })
   })
   it('rejects a request for an EC outside the manager perimeter', async () => {
     mocks.element.mockResolvedValue({ teachingUnit: { semester: { level: { program: { departmentId: 'department-C', department: { isActive: true } } } } } })

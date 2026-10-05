@@ -1128,6 +1128,7 @@ model TeachingService {
   homeDepartment         Department    @relation("ServiceHomeDepartment", fields: [homeDepartmentId], references: [id], onDelete: Restrict)
   plannedHours           Float
   requestReason          String
+  isCommon               Boolean       @default(false)
   status                 String        @default("PENDING_HOME")
   requestedById          String
   homeDecidedById        String?

@@ -94,7 +94,7 @@ export function TeacherUnitsPage() {
   return <div className="space-y-6 text-slate-900">
     <PageHeading icon={BookOpen} title="Mes UE et matières" description="Uniquement vos services d’enseignement approuvés pour l’année académique sélectionnée." />
     {academicYear && <p className="text-sm font-semibold text-slate-700">Année académique : {academicYear.name}</p>}
-    {isLoading ? <Empty>Chargement de vos affectations…</Empty> : isError ? <Empty>Impossible de charger vos UE. <button className="font-bold underline" onClick={() => refetch()}>Réessayer</button></Empty> : groups.length === 0 ? <Empty>Aucun service d’enseignement approuvé pour cette année. Le département doit faire valider votre service avant qu’il apparaisse ici.</Empty> :
+    {isLoading ? <Empty>Chargement de vos affectations…</Empty> : isError ? <Empty>Impossible de charger vos UE. <button className="font-bold underline" onClick={() => refetch()}>Réessayer</button></Empty> : groups.length === 0 ? <Empty>Aucun service d’enseignement approuvé pour cette année. Le département doit vous affecter une matière avant qu’elle apparaisse ici.</Empty> :
       groups.map(([label, entries]) => <section key={label} className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
         <h2 className="text-lg font-bold text-slate-950">{label}</h2>
         <div className="mt-4 space-y-3">{entries.map((course) => <div key={course.id} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
