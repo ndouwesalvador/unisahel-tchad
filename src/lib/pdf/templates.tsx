@@ -19,6 +19,8 @@ const colors = {
 function cleanAcademicLabel(value?: string | null): string {
   return (value || '')
     .replace(/\s*[—–-]\s*VALIDATION(?:\s+DEV)?\s*$/i, '')
+    .replace(/^DEV-(?=(?:UE|EC)\d+\b)/i, '')
+    .replace(/^(?:UE|EC)\d+\s*[·•]\s*/i, '')
     .replace(/^DEV-/i, '')
     .trim()
 }
@@ -685,7 +687,7 @@ function PVMatrixPDF({ tenant, departmentName, departmentHeadName, session, memb
         <DocumentHeading title="PROCÈS-VERBAL DES RÉSULTATS" subtitle={`${departmentName} · ${academicYear} · ${session.name}`} isSigned={isSigned} compact={pageFormat === 'A4'} />
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: pageFormat === 'A4' ? 4 : 10, padding: pageFormat === 'A4' ? 5 : 9, backgroundColor: '#edf5f0', borderLeftWidth: 3, borderLeftColor: colors.secondary }} wrap={false}>
           <View style={{ width: '58%' }}>
-            <Text style={{ fontSize: 11, fontWeight: 'bold', color: colors.primary }}>{section.program}</Text>
+            <Text style={{ fontSize: 11, fontWeight: 'bold', color: colors.primary }}>{cleanAcademicLabel(section.program)}</Text>
             <Text style={{ fontSize: 8, marginTop: 3, color: colors.muted }}>{section.level} · {section.students.length} étudiants · {session.type} · Jury du {formatDate(session.date)}</Text>
           </View>
           <View style={{ alignItems: 'flex-end', width: '42%' }}>
@@ -700,8 +702,8 @@ function PVMatrixPDF({ tenant, departmentName, departmentHeadName, session, memb
             <Text style={{ ...headStyle, width: pageFormat === 'A4' ? 80 : 108, textAlign: 'left' }}>MATRICULE</Text>
             <Text style={{ ...headStyle, width: pageFormat === 'A4' ? 130 : 170, textAlign: 'left' }}>NOM ET PRÉNOM</Text>
             {columns.map(column => <View key={column.key} style={{ width: columnWidth, paddingHorizontal: 2, alignItems: 'center' }}>
-              <Text style={{ ...headStyle, fontSize: 6 }}>{column.ueCode.slice(0, 13)}</Text>
-              <Text style={headStyle}>{column.code.slice(0, 13)}</Text>
+              <Text style={{ ...headStyle, fontSize: 6 }}>{cleanAcademicLabel(column.ueCode).slice(0, 13)}</Text>
+              <Text style={headStyle}>{cleanAcademicLabel(column.code).slice(0, 13)}</Text>
               <Text style={{ ...headStyle, fontSize: 5.7, color: '#e1e6e9' }}>{column.kind === 'UE' ? `${column.credits ?? 0} CRÉDITS · MOY. UE` : 'C / T / E / F'}</Text>
             </View>)}
             {isLastPanel && <>
@@ -731,7 +733,7 @@ function PVMatrixPDF({ tenant, departmentName, departmentHeadName, session, memb
         <Text style={{ marginTop: 4, fontSize: 6.5, color: colors.muted }}>Lecture des cases : C = contrôle continu · T = travaux pratiques · E = examen · F = note finale. Numéro de ligne et matricule identiques sur tous les volets.</Text>
         <View style={{ marginTop: pageFormat === 'A4' ? 4 : 10, flexDirection: 'row', flexWrap: 'wrap' }} wrap={false}>
           {columns.map(column => <Text key={column.key} style={{ width: '25%', fontSize: 6.7, color: colors.muted, paddingRight: 9, marginBottom: 3 }}>
-            <Text style={{ fontWeight: 'bold', color: colors.primary }}>{column.code}</Text> · {column.label}{column.kind === 'UE' ? ` · ${column.credits ?? 0} crédits` : ''}
+            <Text style={{ fontWeight: 'bold', color: colors.primary }}>{cleanAcademicLabel(column.code)}</Text> · {cleanAcademicLabel(column.label)}{column.kind === 'UE' ? ` · ${column.credits ?? 0} crédits` : ''}
           </Text>)}
         </View>
         <View style={{ marginTop: 9, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 7, flexDirection: 'row', justifyContent: 'space-between' }} wrap={false}>

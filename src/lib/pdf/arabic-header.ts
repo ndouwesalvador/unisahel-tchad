@@ -10,7 +10,9 @@ function escapeXml(value: string) {
 function normalizeArabicPunctuation(value: string) {
   // Keep separators legible with the embedded Arabic font instead of relying
   // on a missing glyph that some PDF viewers render as a small rectangle.
-  return value.replace(/[\u002D\u2010\u2011\u2012\u2013\u2014]/g, ' − ')
+  // U+2010 is present in Noto Naskh Arabic; U+2212 is not and becomes a tofu
+  // rectangle in several PDF viewers.
+  return value.replace(/[\u002D\u2010\u2011\u2012\u2013\u2014\u2212]/g, ' ‐ ')
 }
 
 export function renderArabicHeader(input: { headerLanguageMode?: string; arabicCountry?: string; arabicMinistry?: string; arabicName?: string; headerLinesAr?: string[]; primaryColor?: string }): string | undefined {
