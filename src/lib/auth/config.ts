@@ -145,7 +145,10 @@ export const authConfig = {
         // headers() is only available inside a request context - best effort only
       }
 
-      await db.auditLog.create({
+      // Do not make the user wait for the audit insert. Authentication has
+      // already succeeded; the audit write is best effort and failures are
+      // logged without turning a valid login into a timeout.
+      void db.auditLog.create({
         data: {
           tenantId,
           userId: user.id,
@@ -155,7 +158,7 @@ export const authConfig = {
           ipAddress,
           details: JSON.stringify({ signInMethod: 'credentials', isNewUser, userAgent }),
         },
-      })
+      }).catch((error) => console.error('Sign-in audit log error:', error))
     },
   },
 }

@@ -95,7 +95,7 @@ function FloatingShape({
 }
 
 export function LoginPage() {
-  const { setView, login } = useAppStore()
+  const { setView } = useAppStore()
   const searchParams = useSearchParams()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -104,28 +104,10 @@ export function LoginPage() {
   const safeCallbackUrl = rawCallbackUrl.startsWith('/') && !rawCallbackUrl.startsWith('//') ? rawCallbackUrl : '/'
   const callbackUrl = safeCallbackUrl.startsWith('/dashboard') ? '/' : safeCallbackUrl
 
-  const syncSessionAndRedirect = async () => {
-    const session = await fetch('/api/auth/session', { cache: 'no-store' })
-      .then((res) => res.json())
-      .catch(() => null)
-    const user = session?.user
-    if (user?.id) {
-      login({
-        id: user.id,
-        tenantId: user.tenantId || '',
-        email: user.email,
-        login: user.login,
-        firstName: user.firstName || user.name?.split(' ').slice(1).join(' ') || '',
-        lastName: user.lastName || user.name?.split(' ')[0] || '',
-        role: user.role || 'ETUDIANT',
-        photo: user.photo,
-        tenantName: user.tenantName,
-        tenantLogo: user.tenantLogo,
-        tenantSlug: user.tenantSlug,
-        tenantAcademicSystem: user.tenantAcademicSystem,
-        mustChangePassword: Boolean(user.mustChangePassword),
-      })
-    }
+  // signIn already updates the NextAuth session cookie. Let SessionProvider
+  // hydrate the local store on the destination page instead of making a
+  // second /api/auth/session request before redirecting.
+  const syncSessionAndRedirect = () => {
     window.location.href = callbackUrl
   }
 
