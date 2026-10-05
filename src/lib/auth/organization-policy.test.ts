@@ -17,6 +17,10 @@ describe('organization API policy', () => {
     expect(isOrganizationApiAllowed('/api/teaching-services', 'POST')).toBe(true)
     expect(isOrganizationApiAllowed('/api/teaching-services', 'PATCH')).toBe(true)
   })
+  it('allows organization users to change their own password', () => {
+    expect(isOrganizationApiAllowed('/api/profile', 'GET')).toBe(true)
+    expect(isOrganizationApiAllowed('/api/profile', 'PUT')).toBe(true)
+  })
   it('denies institution-wide operations while allowing scoped curriculum management', () => {
     expect(isOrganizationApiAllowed('/api/grades', 'GET')).toBe(false)
     expect(isOrganizationApiAllowed('/api/structure', 'POST')).toBe(true)

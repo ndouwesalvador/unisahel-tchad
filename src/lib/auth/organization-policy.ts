@@ -14,7 +14,10 @@ const methods: Record<string, readonly string[]> = {
   '/api/deliberation/signature': ['POST'],
   '/api/documents/generate': ['POST'],
   '/api/documents/download': ['GET'],
-  '/api/profile': ['GET'],
+  // Every organization role may update its own profile and password. This
+  // endpoint only targets the authenticated user's record; it is not an
+  // institution-wide administration operation.
+  '/api/profile': ['GET', 'PUT'],
   '/api/notifications': ['GET', 'PUT'],
 }
 
