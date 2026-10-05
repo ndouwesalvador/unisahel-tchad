@@ -105,7 +105,7 @@ async function createStaffHandler(user: SessionUser, tenantId: string, request: 
     const body = await request.json()
     const parsed = createStaffSchema.safeParse(body)
     if (!parsed.success) {
-      return NextResponse.json({ error: 'Donnees invalides', details: parsed.error.flatten() }, { status: 400 })
+      return NextResponse.json({ error: 'Données invalides', details: parsed.error.flatten() }, { status: 400 })
     }
     const { firstName, lastName, email, phone, role, facultyId, departmentId } = parsed.data
     const scope = await resolveStaffScope(tenantId, role, facultyId, departmentId)
@@ -114,7 +114,7 @@ async function createStaffHandler(user: SessionUser, tenantId: string, request: 
     // User.email is unique platform-wide
     const existing = await db.user.findUnique({ where: { email }, select: { id: true } })
     if (existing) {
-      return NextResponse.json({ error: 'Un compte existe deja avec cet email' }, { status: 409 })
+      return NextResponse.json({ error: 'Un compte existe déjà avec cet e-mail' }, { status: 409 })
     }
 
     const tempPassword = generateTempPassword()
@@ -148,7 +148,7 @@ async function updateStaffHandler(user: SessionUser, tenantId: string, request: 
     const body = await request.json()
     const parsed = updateStaffSchema.safeParse(body)
     if (!parsed.success) {
-      return NextResponse.json({ error: 'Donnees invalides', details: parsed.error.flatten() }, { status: 400 })
+      return NextResponse.json({ error: 'Données invalides', details: parsed.error.flatten() }, { status: 400 })
     }
     const { id, isActive, role, facultyId, departmentId, resetPassword } = parsed.data
 

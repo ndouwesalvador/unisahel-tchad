@@ -65,14 +65,14 @@ const STAFF_ROLE_OPTIONS = [
 const roleLabels: Record<string, string> = {
   ADMIN_INSTITUTION: 'Admin Institution',
   RECTORAT: 'Rectorat',
-  SCOLARITE: 'Scolarite',
+  SCOLARITE: 'Scolarité',
   FACULTE: 'Doyen / direction de faculté',
   DEPARTEMENT: 'Chef de département',
   ENSEIGNANT: 'Enseignant',
   RESPONSABLE_FILIERE: 'Resp. filière',
   JURY: 'Jury',
   CAISSE: 'Caisse',
-  MAITRE_STAGE: 'Maitre de Stage',
+  MAITRE_STAGE: 'Maître de stage',
 }
 
 const emptyForm = { firstName: '', lastName: '', email: '', phone: '', role: '', facultyId: '', departmentId: '' }
@@ -122,7 +122,7 @@ export function StaffUsersPage() {
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(json.error || 'Échec de la création')
-      toast.success('Compte cree', { description: `${form.firstName} ${form.lastName}` })
+      toast.success('Compte créé', { description: `${form.firstName} ${form.lastName}` })
       queryClient.invalidateQueries({ queryKey: ['staffUsers'] })
       setShowCreate(false)
       setCreatedCredentials({ email: json.data.user.email, tempPassword: json.data.tempPassword, name: `${form.firstName} ${form.lastName}` })
@@ -168,7 +168,7 @@ export function StaffUsersPage() {
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(json.error || 'Échec de la mise à jour')
-      toast.success(u.isActive ? 'Compte suspendu' : 'Compte reactive')
+      toast.success(u.isActive ? 'Compte suspendu' : 'Compte réactivé')
       queryClient.invalidateQueries({ queryKey: ['staffUsers'] })
     } catch (error) {
       toast.error('Erreur', { description: error instanceof Error ? error.message : 'Échec de la mise à jour' })
@@ -199,7 +199,7 @@ export function StaffUsersPage() {
   const copyPassword = () => {
     if (!createdCredentials) return
     navigator.clipboard.writeText(createdCredentials.tempPassword).then(
-      () => toast.success('Mot de passe copie'),
+      () => toast.success('Mot de passe copié'),
       () => toast.error('Copie impossible')
     )
   }
@@ -209,7 +209,7 @@ export function StaffUsersPage() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-[var(--institution-primary)]">Gestion des utilisateurs</h1>
-          <p className="text-sm text-gray-500 mt-1">Cree et gere les comptes du personnel de votre institution</p>
+          <p className="text-sm text-gray-500 mt-1">Créez et gérez les comptes du personnel de votre institution</p>
         </div>
         <Button className="bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white" onClick={() => setShowCreate(true)}>
           <Plus className="size-4 mr-1.5" />
