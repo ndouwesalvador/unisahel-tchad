@@ -156,11 +156,14 @@ describe('printed academic documents', () => {
     const branded = await prepareDocumentArtwork(raw)
     const diploma = await renderPDF(React.createElement(DiplomePDF, { tenant: branded, student,
       diploma: { title: 'Licence en génie industriel', program: 'Génie industriel', date: '2026-10-01', credits: 180 },
-      docNumber: 'DIP-BRAND-001', verificationCode: 'BRANDTEST', isSigned: false }))
+      docNumber: 'DIP-BRAND-001', verificationCode: 'BRANDTEST', isSigned: false,
+      qrCodeDataUrl: await QRCode.toDataURL('https://unisahel-tchad.vercel.app/verify?code=BRANDTEST') }))
     const diplomaTwoSigners = await renderPDF(React.createElement(DiplomePDF, {
-      tenant: { ...branded, thirdSignerName: undefined, thirdSignerTitle: undefined, thirdSignature: undefined, thirdStamp: undefined },
+      tenant: { ...branded, thirdSignerName: undefined, thirdSignerTitle: undefined, thirdSignature: undefined, thirdStamp: undefined,
+        arabicMottoImage: renderArabicMotto({ headerLanguageMode: 'FR_AR', arabicMotto: 'وحدة - عمل - تقدم' }) },
       student, diploma: { title: 'Licence en génie industriel', program: 'Génie industriel', date: '2026-10-01', credits: 180 },
-      docNumber: 'DIP-BRAND-002', verificationCode: 'BRANDTEST2', isSigned: false }))
+      docNumber: 'DIP-BRAND-002', verificationCode: 'BRANDTEST2', isSigned: false,
+      qrCodeDataUrl: await QRCode.toDataURL('https://unisahel-tchad.vercel.app/verify?code=BRANDTEST2') }))
     const photoSvg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240"><rect width="240" height="240" fill="#dbe9e2"/><circle cx="120" cy="85" r="40" fill="#176341"/><path d="M35 220 Q40 145 120 145 Q200 145 205 220" fill="#176341"/></svg>')
     const photo = await prepareDocumentPhoto(`data:image/png;base64,${(await sharp(photoSvg).png().toBuffer()).toString('base64')}`)
     const qrCodeDataUrl = await QRCode.toDataURL('https://unisahel-tchad.vercel.app/verify?code=BRANDTEST')
@@ -242,7 +245,7 @@ describe('printed academic documents', () => {
         ueCode: `UE-${unit + 1}`, code: `EC-${unit + 1}-${course + 1}`,
         label: `Matière technique ${unit + 1}.${course + 1}`, kind: 'EC' as const })),
       { key: `UE:${unit}`, ueCode: `UE-${unit + 1}`, code: `UE-${unit + 1}`,
-        label: `Unité d’enseignement ${unit + 1}`, kind: 'UE' as const },
+        label: `Unité d’enseignement ${unit + 1}`, kind: 'UE' as const, credits: 6 },
     ]).flat()
     const sections: PvSection[] = [{ program: 'Génie industriel — MAQUETTE DE VALIDATION',
       level: 'Licence 1', columns, students: Array.from({ length: 60 }, (_, index) => ({

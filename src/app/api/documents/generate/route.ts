@@ -495,7 +495,7 @@ export async function POST(request: NextRequest) {
           db.pedagogicalRegistration.findMany({
             where: { academicYearId: acYearId, status: 'ACTIVE', studentId: { in: decisionIds }, student: { tenantId } },
             select: { studentId: true, teachingUnitId: true, teachingUnit: { select: {
-              id: true, code: true, name: true, orderIndex: true,
+              id: true, code: true, name: true, credits: true, orderIndex: true,
               semester: { select: { levelId: true, orderIndex: true } },
               courseElements: { select: { id: true, code: true, name: true, coefficient: true, orderIndex: true } },
             } } },

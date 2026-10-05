@@ -4,6 +4,7 @@ export type PvColumn = {
   code: string
   label: string
   kind: 'EC' | 'UE'
+  credits?: number
 }
 
 export type PvStudentRow = {
@@ -47,6 +48,7 @@ type TeachingUnit = {
   id: string
   code: string | null
   name: string
+  credits?: number
   orderIndex: number
   semester: { levelId: string; orderIndex: number }
   courseElements: Array<{ id: string; code: string | null; name: string; coefficient: number; orderIndex: number }>
@@ -117,7 +119,7 @@ export function buildPvMatrix(input: {
           .map((element) => ({ key: `EC:${element.id}`, ueCode: unit.code || unit.name,
             code: element.code || element.name, label: element.name, kind: 'EC' as const })),
         { key: `UE:${unit.id}`, ueCode: unit.code || unit.name,
-          code: unit.code || unit.name, label: unit.name, kind: 'UE' as const },
+          code: unit.code || unit.name, label: unit.name, kind: 'UE' as const, credits: unit.credits },
       ])
       if (columns.length === 0) throw new PvMatrixError('Aucune matière inscrite pour cette filière et ce niveau.')
 

@@ -288,12 +288,25 @@ function DiplomaSecurityFrame({ tenant }: { tenant: TenantInfo }) {
     const y = 296 + Math.sin(angle) * (64 + seed % 13)
     return `M 420 296 Q ${x.toFixed(1)} ${(y - 36).toFixed(1)} ${x.toFixed(1)} ${y.toFixed(1)} Q ${(x + 21).toFixed(1)} ${(y + 27).toFixed(1)} 420 296`
   }).join(' ')
+  const braid = Array.from({ length: 18 }, (_, index) => {
+    const y = 74 + index * 26
+    const offset = (seed % 19) + (index % 2 ? 11 : 0)
+    return `M 38 ${y} Q ${86 + offset} ${y - 9} ${134 + offset} ${y} T ${230 + offset} ${y} M 612 ${y} Q ${660 - offset} ${y - 9} ${708 - offset} ${y} T ${804 - offset} ${y}`
+  }).join(' ')
+  const diamonds = Array.from({ length: 7 }, (_, index) => {
+    const x = 270 + index * 50 + (seed % 7)
+    return `M ${x} 48 l 12 12 l -12 12 l -12 -12 Z M ${x} 523 l 12 12 l -12 12 l -12 -12 Z`
+  }).join(' ')
   return <View style={{ position: 'absolute', left: 0, top: 0, width: 842, height: 595 }} fixed>
   <Svg width={842} height={595} viewBox="0 0 842 595">
     <Rect x={15} y={15} width={812} height={565} fill="none" stroke={colors.accent} strokeWidth={2} />
     <Rect x={22} y={22} width={798} height={551} fill="none" stroke="#c2a257" strokeWidth={0.9} />
     <Rect x={29} y={29} width={784} height={537} fill="none" stroke={colors.accent} strokeWidth={0.35} />
     <Path d={loops} fill="none" stroke={colors.secondary} strokeWidth={0.7} opacity={0.11} />
+    <Path d={braid} fill="none" stroke={colors.accent} strokeWidth={0.35} opacity={0.2} />
+    <Path d={diamonds} fill="none" stroke={colors.secondary} strokeWidth={0.55} opacity={0.25} />
+    <Ellipse cx={421} cy={298} rx={155 + seed % 12} ry={103 + seed % 9} fill="none" stroke={colors.secondary} strokeWidth={0.7} opacity={0.07} />
+    <Ellipse cx={421} cy={298} rx={137 + seed % 10} ry={87 + seed % 8} fill="none" stroke={colors.accent} strokeWidth={0.45} opacity={0.08} />
     {[0, 1, 2, 3].map((corner) => {
       const x = corner % 2 ? 776 : 66
       const y = corner > 1 ? 531 : 64
@@ -377,6 +390,7 @@ export function ReleveNotesPDF({
   const initials = `${student.firstName?.[0] || ''}${student.lastName?.[0] || ''}`.toUpperCase()
   const inlineQr = Boolean(qrCodeDataUrl?.startsWith('data:image/'))
   const denseTop = density > 34 && tenant.contactPlacement === 'TOP'
+  const decisionText = jury ? decisionLabel(jury.decision) : 'Non publiée'
   return (
     <Document>
       <Page size="A4" style={{ ...styles.page, paddingTop: 15, paddingHorizontal: 29, paddingBottom: 104 }}>
@@ -411,26 +425,40 @@ export function ReleveNotesPDF({
 
         <View style={{ borderWidth: 0.7, borderColor: paper.rule }}>
           <View style={{ flexDirection: 'row', backgroundColor: '#edf1f2', borderBottomWidth: 0.8, borderBottomColor: '#cbd4d8', paddingVertical: density > 34 ? 3 : 5, paddingHorizontal: 5 }}>
-            <Text style={{ width: '39%', fontSize: tableFont, color: paper.ink, fontWeight: 'bold' }}>ÉLÉMENT CONSTITUTIF / UE</Text>
-            <Text style={{ width: '10%', fontSize: tableFont, color: paper.ink, textAlign: 'center' }}>CC</Text>
-            <Text style={{ width: '10%', fontSize: tableFont, color: paper.ink, textAlign: 'center' }}>TP</Text>
-            <Text style={{ width: '14%', fontSize: tableFont, color: paper.ink, textAlign: 'center' }}>EXAMEN</Text>
-            <Text style={{ width: '11%', fontSize: tableFont, color: paper.ink, textAlign: 'center' }}>COEF.</Text>
-            <Text style={{ width: '16%', fontSize: tableFont, color: paper.ink, textAlign: 'center' }}>MOY. / 20</Text>
+            <Text style={{ width: '42%', fontSize: tableFont, color: paper.ink, fontWeight: 'bold' }}>UE / MATIÈRE</Text>
+            <Text style={{ width: '11%', fontSize: tableFont, color: paper.ink, textAlign: 'center' }}>CODE</Text>
+            <Text style={{ width: '10%', fontSize: tableFont, color: paper.ink, textAlign: 'center' }}>CRÉDITS</Text>
+            <Text style={{ width: '15%', fontSize: tableFont, color: paper.ink, textAlign: 'center' }}>MOY. MATIÈRE</Text>
+            <Text style={{ width: '12%', fontSize: tableFont, color: paper.ink, textAlign: 'center' }}>MOY. UE</Text>
+            <Text style={{ width: '10%', fontSize: tableFont, color: paper.ink, textAlign: 'center' }}>DÉCISION</Text>
           </View>
           {ueGrades.map((ue, i) => <View key={`${ue.code}-${i}`} wrap={false}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', backgroundColor: ueTints[i % ueTints.length].fill, borderTopWidth: 0.55, borderTopColor: paper.rule, borderLeftWidth: 2, borderLeftColor: ueTints[i % ueTints.length].edge, paddingVertical: rowPadding + 0.8, paddingHorizontal: 5 }}>
-              <Text style={{ fontSize: tableFont + 0.3, color: paper.ink, fontWeight: 'bold', width: '72%' }}>{ue.code ? `${ue.code} · ` : ''}{ue.ue}</Text>
-              <Text style={{ fontSize: tableFont + 0.3, color: paper.ink, fontWeight: 'bold', width: '28%', textAlign: 'right' }}>{ue.credits} ECTS · UE {note(ue.moyenne)}</Text>
-            </View>
-            {ue.notes.map((entry, j) => <View key={j} style={{ flexDirection: 'row', paddingVertical: rowPadding, paddingHorizontal: 5, backgroundColor: j % 2 ? paper.tintAlt : '#ffffff', borderTopWidth: 0.3, borderTopColor: paper.rule, borderLeftWidth: 2, borderLeftColor: '#e3e8e9' }} wrap={false}>
-              <Text style={{ width: '39%', fontSize: tableFont, color: colors.text }}>{entry.code ? `${entry.code} · ` : ''}{entry.ec}</Text>
-              <Text style={{ width: '10%', fontSize: tableFont, textAlign: 'center' }}>{note(entry.cc)}</Text>
-              <Text style={{ width: '10%', fontSize: tableFont, textAlign: 'center' }}>{note(entry.tp)}</Text>
-              <Text style={{ width: '14%', fontSize: tableFont, textAlign: 'center' }}>{note(entry.exam)}</Text>
-              <Text style={{ width: '11%', fontSize: tableFont, textAlign: 'center' }}>{entry.coef}</Text>
-              <Text style={{ width: '16%', fontSize: tableFont, textAlign: 'center', fontWeight: 'bold', color: entry.final == null ? paper.muted : paper.ink }}>{note(entry.final)}</Text>
-            </View>)}
+            {(() => {
+              const totalWeight = ue.notes.reduce((sum, entry) => sum + Math.max(0, entry.coef), 0)
+              const rawCredits = ue.notes.map((entry) => totalWeight > 0 ? (ue.credits * Math.max(0, entry.coef)) / totalWeight : 0)
+              const baseCredits = rawCredits.map((value) => Math.floor(value))
+              const remaining = Math.max(0, ue.credits - baseCredits.reduce((sum, value) => sum + value, 0))
+              rawCredits.map((value, index) => ({ index, fraction: value - Math.floor(value) }))
+                .sort((a, b) => b.fraction - a.fraction).slice(0, remaining).forEach(({ index }) => { baseCredits[index] += 1 })
+              return <>
+                <View style={{ flexDirection: 'row', backgroundColor: ueTints[i % ueTints.length].fill, borderTopWidth: 0.55, borderTopColor: paper.rule, borderLeftWidth: 2, borderLeftColor: ueTints[i % ueTints.length].edge, paddingVertical: rowPadding + 0.8, paddingHorizontal: 5 }}>
+                  <Text style={{ width: '42%', fontSize: tableFont + 0.3, color: paper.ink, fontWeight: 'bold' }}>{ue.code ? `${ue.code} · ` : ''}{ue.ue}</Text>
+                  <Text style={{ width: '11%', fontSize: tableFont + 0.3, color: paper.ink, textAlign: 'center' }}>{ue.code || '—'}</Text>
+                  <Text style={{ width: '10%', fontSize: tableFont + 0.3, color: paper.ink, fontWeight: 'bold', textAlign: 'center' }}>{ue.credits}</Text>
+                  <Text style={{ width: '15%', fontSize: tableFont + 0.3, color: paper.ink, textAlign: 'center' }}>—</Text>
+                  <Text style={{ width: '12%', fontSize: tableFont + 0.3, color: paper.ink, fontWeight: 'bold', textAlign: 'center' }}>{note(ue.moyenne)}</Text>
+                  <Text style={{ width: '10%', fontSize: tableFont + 0.3, color: paper.ink, fontWeight: 'bold', textAlign: 'center' }}>{jury ? decisionText : '—'}</Text>
+                </View>
+                {ue.notes.map((entry, j) => <View key={j} style={{ flexDirection: 'row', paddingVertical: rowPadding, paddingHorizontal: 5, backgroundColor: j % 2 ? paper.tintAlt : '#ffffff', borderTopWidth: 0.3, borderTopColor: paper.rule, borderLeftWidth: 2, borderLeftColor: '#e3e8e9' }} wrap={false}>
+                  <Text style={{ width: '42%', fontSize: tableFont, color: colors.text, paddingLeft: 4 }}>{entry.ec}</Text>
+                  <Text style={{ width: '11%', fontSize: tableFont, color: colors.text, textAlign: 'center' }}>{entry.code || '—'}</Text>
+                  <Text style={{ width: '10%', fontSize: tableFont, textAlign: 'center' }}>{baseCredits[j] ?? 0}</Text>
+                  <Text style={{ width: '15%', fontSize: tableFont, textAlign: 'center', fontWeight: 'bold' }}>{note(entry.final)}</Text>
+                  <Text style={{ width: '12%', fontSize: tableFont, textAlign: 'center' }}>—</Text>
+                  <Text style={{ width: '10%', fontSize: tableFont, textAlign: 'center' }}>—</Text>
+                </View>)}
+              </>
+            })()}
           </View>)}
         </View>
 
@@ -656,7 +684,7 @@ function PVMatrixPDF({ tenant, departmentName, departmentHeadName, session, memb
             {columns.map(column => <View key={column.key} style={{ width: columnWidth, paddingHorizontal: 2, alignItems: 'center' }}>
               <Text style={{ ...headStyle, fontSize: 6 }}>{column.ueCode.slice(0, 13)}</Text>
               <Text style={headStyle}>{column.code.slice(0, 13)}</Text>
-              <Text style={{ ...headStyle, fontSize: 5.7, color: '#e1e6e9' }}>{column.kind === 'UE' ? 'MOY. UE' : 'C / T / E / F'}</Text>
+              <Text style={{ ...headStyle, fontSize: 5.7, color: '#e1e6e9' }}>{column.kind === 'UE' ? `${column.credits ?? 0} CRÉDITS · MOY. UE` : 'C / T / E / F'}</Text>
             </View>)}
             {isLastPanel && <>
               <Text style={{ ...headStyle, width: pageFormat === 'A4' ? 50 : 65 }}>MOY. /20</Text>
@@ -685,7 +713,7 @@ function PVMatrixPDF({ tenant, departmentName, departmentHeadName, session, memb
         <Text style={{ marginTop: 4, fontSize: 6.5, color: colors.muted }}>Lecture des cases : C = contrôle continu · T = travaux pratiques · E = examen · F = note finale. Numéro de ligne et matricule identiques sur tous les volets.</Text>
         <View style={{ marginTop: pageFormat === 'A4' ? 4 : 10, flexDirection: 'row', flexWrap: 'wrap' }} wrap={false}>
           {columns.map(column => <Text key={column.key} style={{ width: '25%', fontSize: 6.7, color: colors.muted, paddingRight: 9, marginBottom: 3 }}>
-            <Text style={{ fontWeight: 'bold', color: colors.primary }}>{column.code}</Text> · {column.label}
+            <Text style={{ fontWeight: 'bold', color: colors.primary }}>{column.code}</Text> · {column.label}{column.kind === 'UE' ? ` · ${column.credits ?? 0} crédits` : ''}
           </Text>)}
         </View>
         <View style={{ marginTop: 9, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 7, flexDirection: 'row', justifyContent: 'space-between' }} wrap={false}>
