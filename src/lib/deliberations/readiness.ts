@@ -26,13 +26,27 @@ export async function computeGradeReadiness(tenantId: string, academicYearId: st
   const programs = await db.program.findMany({
     where: { tenantId, departmentId }, select: { id: true },
   })
-  const enrolments = await db.administrativeRegistration.findMany({
+  // The annual registration is preferred, but development and migration data
+  // can legitimately have a validated current student without a separate
+  // registration row. Keep the jury pipeline aligned with the teacher roster
+  // in that case instead of silently producing a 0/0 deliberation.
+  let enrolments = await db.administrativeRegistration.findMany({
     where: { tenantId, academicYearId, status: 'INSCRIT', programId: { in: programs.map((program) => program.id) } },
     select: { studentId: true, student: { select: { id: true, firstName: true, lastName: true, matricule: true } } },
   })
+  if (enrolments.length === 0 && programs.length > 0) {
+    const currentStudents = await db.student.findMany({
+      where: { tenantId, OR: [
+        { currentProgramId: { in: programs.map((program) => program.id) } },
+        { currentLevel: { programId: { in: programs.map((program) => program.id) } } },
+      ] },
+      select: { id: true, firstName: true, lastName: true, matricule: true },
+    })
+    enrolments = currentStudents.map((student) => ({ studentId: student.id, student }))
+  }
   const enrolled = new Map(enrolments.map((entry) => [entry.studentId, entry.student]))
   const studentIds = Array.from(enrolled.keys())
-  const registrations = await db.pedagogicalRegistration.findMany({
+  let registrations = await db.pedagogicalRegistration.findMany({
     where: { academicYearId, status: 'ACTIVE', studentId: { in: studentIds }, student: { tenantId } },
     select: {
       studentId: true,
@@ -46,6 +60,34 @@ export async function computeGradeReadiness(tenantId: string, academicYearId: st
       },
     },
   })
+
+  // If no pedagogical registrations were created yet, derive the expected
+  // subjects from the department curriculum. This is the same source used by
+  // the teacher's level roster and prevents entered grades from disappearing
+  // from the jury view merely because an optional registration step was
+  // skipped.
+  const studentsWithoutPedagogicalRegistration = Array.from(enrolled.values())
+    .filter((student) => !registrations.some((registration) => registration.studentId === student.id))
+  if (registrations.length === 0 && studentsWithoutPedagogicalRegistration.length > 0 && programs.length > 0) {
+    const units = await db.teachingUnit.findMany({
+      where: { semester: { level: { programId: { in: programs.map((program) => program.id) } } } },
+      select: {
+        id: true, code: true, name: true,
+        semester: { select: { levelId: true } },
+        courseElements: { orderBy: { orderIndex: 'asc' }, select: { id: true, code: true, name: true } },
+      },
+    })
+    const fallback = studentsWithoutPedagogicalRegistration.flatMap((student) => units.map((unit) => ({
+      studentId: student.id,
+      teachingUnitId: unit.id,
+      student,
+      teachingUnit: {
+        id: unit.id, code: unit.code, name: unit.name,
+        courseElements: unit.courseElements,
+      },
+    })))
+    registrations = [...registrations, ...fallback]
+  }
 
   const expected: ExpectedGradeItem[] = registrations.flatMap((registration): ExpectedGradeItem[] => {
     const elements = registration.teachingUnit.courseElements
