@@ -492,7 +492,7 @@ export async function POST(request: NextRequest) {
         })
         const studentMap = new Map(decisionStudents.map(s => [s.id, s]))
 
-        const [annualRegistrations, pedagogicalRegistrations, gradeRows] = await Promise.all([
+        const [annualRegistrations, pedagogicalRegistrationsResult, gradeRows] = await Promise.all([
           db.administrativeRegistration.findMany({
             where: { tenantId, academicYearId: acYearId, status: 'INSCRIT', studentId: { in: decisionIds } },
             select: { studentId: true, programId: true, levelId: true },
@@ -511,6 +511,7 @@ export async function POST(request: NextRequest) {
             select: { studentId: true, teachingUnitId: true, courseElementId: true, ccGrade: true, tpGrade: true, examGrade: true, finalGrade: true, isLocked: true },
           }),
         ])
+        let pedagogicalRegistrations = pedagogicalRegistrationsResult
         // Keep PV generation aligned with the deliberation roster when a
         // current enrolled student has not yet received an annual row.
         const annualByStudent = new Map(annualRegistrations.map((registration) => [registration.studentId, registration]))
@@ -519,6 +520,24 @@ export async function POST(request: NextRequest) {
           if (annualByStudent.has(student.id)) continue
           if (!student.currentProgram || !student.currentLevel || student.currentLevel.programId !== student.currentProgram.id) continue
           effectiveAnnualRegistrations.push({ studentId: student.id, programId: student.currentProgram.id, levelId: student.currentLevel.id })
+        }
+        const registeredPedagogicalStudents = new Set(pedagogicalRegistrations.map((registration) => registration.studentId))
+        const missingPedagogicalStudents = decisionStudents.filter((student) => !registeredPedagogicalStudents.has(student.id))
+        if (missingPedagogicalStudents.length > 0) {
+          const units = await db.teachingUnit.findMany({
+            where: { semester: { level: { programId: { in: effectiveAnnualRegistrations.map((registration) => registration.programId) } } } },
+            select: {
+              id: true, code: true, name: true, credits: true, orderIndex: true,
+              semester: { select: { levelId: true, orderIndex: true } },
+              courseElements: { select: { id: true, code: true, name: true, coefficient: true, orderIndex: true } },
+            },
+          })
+          const annualLevelByStudent = new Map(effectiveAnnualRegistrations.map((registration) => [registration.studentId, registration.levelId]))
+          pedagogicalRegistrations = [...pedagogicalRegistrations, ...missingPedagogicalStudents.flatMap((student) =>
+            units.filter((unit) => unit.semester.levelId === annualLevelByStudent.get(student.id)).map((unit) => ({
+              studentId: student.id, teachingUnitId: unit.id, teachingUnit: unit,
+            }))
+          )]
         }
         const [programs, levels] = await Promise.all([
           db.program.findMany({ where: { id: { in: effectiveAnnualRegistrations.map(r => r.programId) }, tenantId, departmentId: department.id },
