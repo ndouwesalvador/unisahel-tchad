@@ -228,7 +228,7 @@ export function TeacherAttendancePage() {
   }
 
   return <div className="space-y-6 text-slate-900">
-    <PageHeading icon={ClipboardCheck} title="Présences de mes cours" description="Seuls les étudiants inscrits pédagogiquement à votre UE pour l’année sélectionnée peuvent figurer dans cette feuille." />
+    <PageHeading icon={ClipboardCheck} title="Présences de mes cours" description="Les étudiants inscrits dans le niveau de votre matière pour l’année sélectionnée figurent automatiquement dans cette feuille." />
     {coursesLoading || yearLoading ? <Empty>Chargement de vos affectations…</Empty> : courses.length === 0 ? <Empty>Aucun service annuel approuvé. La feuille de présence restera vide jusqu’à la validation de votre service d’enseignement.</Empty> : !academicYear ? <Empty>Aucune année académique active. La saisie des présences est indisponible.</Empty> : <>
       <div className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-5 sm:grid-cols-3">
         <label className="grid gap-2 text-sm font-semibold text-slate-800">Matière<CourseSelect id="attendance-course" courses={courses} value={courseId} onChange={(value) => { setSelectedCourseId(value); setOverrides({}) }} /></label>
