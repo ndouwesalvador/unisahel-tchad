@@ -54,4 +54,4 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
   }
 }
 
-export const POST = withTenantAuth(handlePost, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'FACULTE', 'DEPARTEMENT'])
+export const POST = withTenantAuth(handlePost, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'FACULTE', 'DEPARTEMENT', 'JURY'])
