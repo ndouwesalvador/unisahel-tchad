@@ -89,10 +89,13 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
     // student validated in this level must be immediately visible to the
     // teacher of every course in that level.
     const registrations = await db.student.findMany({
-      where: { tenantId, registrations: { some: {
-        tenantId, academicYearId: selectedYear.id, status: 'INSCRIT',
-        levelId: course.teachingUnit.semester.level.id,
-      } } },
+      where: { tenantId, OR: [
+        { currentLevelId: course.teachingUnit.semester.level.id },
+        { registrations: { some: {
+          tenantId, academicYearId: selectedYear.id, status: 'INSCRIT',
+          levelId: course.teachingUnit.semester.level.id,
+        } } },
+      ] },
       select: { id: true, matricule: true, firstName: true, lastName: true },
       orderBy: { lastName: 'asc' },
     })
@@ -157,12 +160,19 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
       throw new EntryError('Rattachez le programme à un département avant la saisie.', 409)
     }
     if (input.component === 'tpGrade' && course.hoursTP <= 0) throw new EntryError('Cette matière ne comporte pas de TP.', 409)
-    const registration = await db.administrativeRegistration.findFirst({ where: {
-      tenantId, studentId: input.studentId, academicYearId: input.academicYearId,
-      status: 'INSCRIT', programId: course.teachingUnit.semester.level.programId,
-      levelId: course.teachingUnit.semester.levelId,
+    const studentEnrollment = await db.student.findFirst({ where: {
+      id: input.studentId,
+      tenantId,
+      OR: [
+        { currentLevelId: course.teachingUnit.semester.levelId },
+        { registrations: { some: {
+          tenantId, academicYearId: input.academicYearId, status: 'INSCRIT',
+          programId: course.teachingUnit.semester.level.programId,
+          levelId: course.teachingUnit.semester.levelId,
+        } } },
+      ],
     }, select: { id: true } })
-    if (!registration) throw new EntryError('Étudiant non inscrit à cette matière pour cette année.', 403)
+    if (!studentEnrollment) throw new EntryError('Étudiant hors du niveau de cette matière.', 403)
     const settings = await db.tenantSettings.findUnique({ where: { tenantId } })
     const policy = resolveGradingPolicy(settings)
     const applicablePolicy = { ...policy, tpWeight: course.hoursTP > 0 ? policy.tpWeight : 0,

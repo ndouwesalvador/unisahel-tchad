@@ -4,7 +4,7 @@ import { NextRequest } from 'next/server'
 const mocks = vi.hoisted(() => ({
   auth: vi.fn(), year: vi.fn(), teacher: vi.fn(), user: vi.fn(), services: vi.fn(),
   courses: vi.fn(), course: vi.fn(), registrations: vi.fn(), registration: vi.fn(),
-  grades: vi.fn(), studentFindMany: vi.fn(), administrativeRegistration: vi.fn(), gradeCreate: vi.fn(), gradeUpdate: vi.fn(), gradeFind: vi.fn(), gradeUpdateMany: vi.fn(),
+  grades: vi.fn(), studentFindMany: vi.fn(), studentFindFirst: vi.fn(), administrativeRegistration: vi.fn(), gradeCreate: vi.fn(), gradeUpdate: vi.fn(), gradeFind: vi.fn(), gradeUpdateMany: vi.fn(),
   settings: vi.fn(), deliberation: vi.fn(), changeLog: vi.fn(), audit: vi.fn(),
   transaction: vi.fn(), advisory: vi.fn(),
 }))
@@ -14,7 +14,7 @@ vi.mock('@/lib/db', () => ({ db: {
   teachingService: { findMany: mocks.services }, courseElement: { findMany: mocks.courses, findFirst: mocks.course },
   pedagogicalRegistration: { findMany: mocks.registrations, findFirst: mocks.registration },
   administrativeRegistration: { findFirst: mocks.administrativeRegistration },
-  student: { findMany: mocks.studentFindMany },
+  student: { findMany: mocks.studentFindMany, findFirst: mocks.studentFindFirst },
   grade: { findMany: mocks.grades, create: mocks.gradeCreate, update: mocks.gradeUpdate,
     findFirst: mocks.gradeFind, updateMany: mocks.gradeUpdateMany },
   tenantSettings: { findUnique: mocks.settings }, deliberation: { findFirst: mocks.deliberation },
@@ -59,6 +59,7 @@ beforeEach(() => {
   mocks.registration.mockResolvedValue({ id: 'cregistration0000000000001' })
   mocks.administrativeRegistration.mockResolvedValue({ id: 'cregistration0000000000001' })
   mocks.studentFindMany.mockResolvedValue([{ id: studentId, firstName: 'Awa', lastName: 'Tahir', matricule: 'UPM-001' }])
+  mocks.studentFindFirst.mockResolvedValue({ id: studentId })
   mocks.registrations.mockResolvedValue([{ student: { id: studentId, firstName: 'Awa', lastName: 'Tahir', matricule: 'UPM-001' } }])
   mocks.grades.mockResolvedValue([])
   mocks.gradeCreate.mockImplementation(async ({ data }) => ({ id: gradeId, ...data }))
@@ -88,7 +89,7 @@ describe('scoped grade entry', () => {
     expect(mocks.services).toHaveBeenCalledWith({ where: { tenantId, academicYearId, teacherId, status: 'APPROVED' },
       select: { courseElementId: true } })
     expect(mocks.studentFindMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({
-      registrations: { some: expect.objectContaining({ status: 'INSCRIT', levelId: 'clevel000000000000000001' }) },
+      OR: expect.arrayContaining([expect.objectContaining({ currentLevelId: 'clevel000000000000000001' })]),
     }) }))
   })
 
@@ -132,7 +133,7 @@ describe('scoped grade entry', () => {
   })
 
   it('refuses any note for a student without active annual enrollment', async () => {
-    mocks.administrativeRegistration.mockResolvedValue(null)
+    mocks.studentFindFirst.mockResolvedValue(null)
     const response = await post(body('ccGrade'))
     expect(response.status).toBe(403)
     expect(mocks.gradeCreate).not.toHaveBeenCalled()

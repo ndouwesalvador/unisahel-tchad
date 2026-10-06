@@ -81,10 +81,13 @@ async function getGradeRosterHandler(user: SessionUser, tenantId: string, reques
   // notes and attendance usable immediately after a student is enrolled in a
   // level, without requiring a second manual UE-by-UE action.
   const students = await db.student.findMany({
-    where: { tenantId, registrations: { some: {
-      tenantId, academicYearId, status: 'INSCRIT',
-      levelId: element.teachingUnit.semester.levelId,
-    } } },
+    where: { tenantId, OR: [
+      { currentLevelId: element.teachingUnit.semester.levelId },
+      { registrations: { some: {
+        tenantId, academicYearId, status: 'INSCRIT',
+        levelId: element.teachingUnit.semester.levelId,
+      } } },
+    ] },
     select: { id: true, matricule: true, firstName: true, lastName: true },
     orderBy: { lastName: 'asc' },
   })

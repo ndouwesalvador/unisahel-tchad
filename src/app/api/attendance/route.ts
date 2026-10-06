@@ -67,15 +67,17 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
             } } } } } },
           },
         }),
-        db.student.findFirst({ where: { id: studentId, tenantId }, select: { id: true, firstName: true, lastName: true, matricule: true } }),
+        db.student.findFirst({ where: { id: studentId, tenantId }, select: { id: true, firstName: true, lastName: true, matricule: true, currentLevelId: true } }),
         db.academicYear.findFirst({ where: { id: academicYearId, tenantId }, select: { id: true } }),
       ])
       if (!element || !student || !year) return NextResponse.json({ error: 'Données académiques introuvables' }, { status: 404 })
-      const registration = await db.administrativeRegistration.findFirst({ where: {
-        tenantId, studentId, academicYearId, status: 'INSCRIT',
-        levelId: element.teachingUnit.semester.level.id,
-      }, select: { id: true } })
-      if (!registration) return NextResponse.json({ error: 'Étudiant non inscrit à cette UE pour cette année' }, { status: 403 })
+      const registration = student.currentLevelId === element.teachingUnit.semester.level.id
+        ? { id: 'current-level' }
+        : await db.administrativeRegistration.findFirst({ where: {
+          tenantId, studentId, academicYearId, status: 'INSCRIT',
+          levelId: element.teachingUnit.semester.level.id,
+        }, select: { id: true } })
+      if (!registration) return NextResponse.json({ error: 'Étudiant hors du niveau de cette matière' }, { status: 403 })
 
       const sessionKey = { tenantId, studentId, courseElementId, academicYearId, date: sessionDate, timeSlot: timeSlot.trim() }
       const duplicate = await db.attendance.findFirst({ where: sessionKey, select: { id: true } })
