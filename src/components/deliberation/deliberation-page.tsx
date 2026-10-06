@@ -213,6 +213,7 @@ export function DeliberationPage() {
   }, [isLocked, deliberationData?.selected?.juryMembers, selectedSession])
   const currentSession = deliberations.find(d => d.id === selectedSession)
   const hasStudents = deliberationStudents.length > 0
+  const trackedStudentCount = deliberationStudents.length || readiness?.studentsTotal || 0
   const canExportPV = Boolean(selectedSession && isLocked && hasStudents && isReadyForJury &&
     juryMembers.length > 0 && juryMembers.every((member) => Boolean(member.signature)))
   const canLock = Boolean(selectedSession && !isLocked && hasStudents && isReadyForJury && juryMembers.filter((member) => member.role === 'President').length === 1)
@@ -1057,7 +1058,7 @@ export function DeliberationPage() {
                     </Badge>
                   )}
                   <Badge className="text-[10px] bg-[var(--institution-primary-10)] text-[var(--institution-primary)] border-0">
-                    {deliberationStudents.length} etudiants
+                    {trackedStudentCount} étudiant{trackedStudentCount === 1 ? '' : 's'} suivi{trackedStudentCount === 1 ? '' : 's'}
                   </Badge>
                 </div>
                 <div className="flex items-center gap-2">
@@ -1104,7 +1105,9 @@ export function DeliberationPage() {
                     {!isDeliberationLoading && deliberationStudents.length === 0 && (
                       <TableRow>
                         <TableCell colSpan={8} className="text-center py-6 text-xs text-gray-400">
-                          Aucune note trouvee pour l&apos;annee academique en cours
+                          {readiness && readiness.studentsTotal > 0
+                            ? `${readiness.studentsTotal} étudiant(s) identifié(s). Les résultats apparaîtront après la saisie des examens et le verrouillage par le jury.`
+                            : 'Aucune inscription ou note trouvée pour l’année académique en cours.'}
                         </TableCell>
                       </TableRow>
                     )}
