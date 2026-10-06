@@ -788,7 +788,7 @@ export function DeliberationPage() {
                             </Badge>
                             {isLocked && <div className="mt-1 space-y-1">
                               <span className="text-[10px] text-gray-600">{member.signature ? 'Signature scannée enregistrée' : 'Signature à apposer sur le PV'}</span>
-                              {['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'FACULTE', 'DEPARTEMENT'].includes(userRole || '') && <Input type="file" accept="image/png,image/jpeg,image/webp" aria-label={`Signature de ${member.name}`} disabled={uploadingMember !== null} onChange={(event) => void uploadJurySignature(idx, event.target.files?.[0])} className="h-8 text-xs max-w-52" />}
+                              {['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'FACULTE', 'DEPARTEMENT', 'JURY'].includes(userRole || '') && <Input type="file" accept="image/png,image/jpeg,image/webp" aria-label={`Signature de ${member.name}`} disabled={uploadingMember !== null} onChange={(event) => void uploadJurySignature(idx, event.target.files?.[0])} className="h-8 text-xs max-w-52" />}
                             </div>}
                           </div>
                         </div>
