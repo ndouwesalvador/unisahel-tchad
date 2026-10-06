@@ -485,7 +485,10 @@ export async function POST(request: NextRequest) {
 
         const decisionStudents = await db.student.findMany({
           where: { id: { in: delib.decisions.map(d => d.studentId) }, tenantId },
-          select: { id: true, firstName: true, lastName: true, matricule: true },
+          select: { id: true, firstName: true, lastName: true, matricule: true,
+            currentProgram: { select: { id: true, name: true } },
+            currentLevel: { select: { id: true, name: true, orderIndex: true, programId: true } },
+          },
         })
         const studentMap = new Map(decisionStudents.map(s => [s.id, s]))
 
@@ -508,22 +511,31 @@ export async function POST(request: NextRequest) {
             select: { studentId: true, teachingUnitId: true, courseElementId: true, ccGrade: true, tpGrade: true, examGrade: true, finalGrade: true, isLocked: true },
           }),
         ])
+        // Keep PV generation aligned with the deliberation roster when a
+        // current enrolled student has not yet received an annual row.
+        const annualByStudent = new Map(annualRegistrations.map((registration) => [registration.studentId, registration]))
+        const effectiveAnnualRegistrations = [...annualRegistrations]
+        for (const student of decisionStudents) {
+          if (annualByStudent.has(student.id)) continue
+          if (!student.currentProgram || !student.currentLevel || student.currentLevel.programId !== student.currentProgram.id) continue
+          effectiveAnnualRegistrations.push({ studentId: student.id, programId: student.currentProgram.id, levelId: student.currentLevel.id })
+        }
         const [programs, levels] = await Promise.all([
-          db.program.findMany({ where: { id: { in: annualRegistrations.map(r => r.programId) }, tenantId, departmentId: department.id },
+          db.program.findMany({ where: { id: { in: effectiveAnnualRegistrations.map(r => r.programId) }, tenantId, departmentId: department.id },
             select: { id: true, name: true } }),
-          db.level.findMany({ where: { id: { in: annualRegistrations.map(r => r.levelId) }, program: { tenantId, departmentId: department.id } },
+          db.level.findMany({ where: { id: { in: effectiveAnnualRegistrations.map(r => r.levelId) }, program: { tenantId, departmentId: department.id } },
             select: { id: true, programId: true, name: true, orderIndex: true } }),
         ])
         const programById = new Map(programs.map(p => [p.id, p]))
         const levelById = new Map(levels.map(l => [l.id, l]))
-        if (annualRegistrations.length !== decisionIds.length || annualRegistrations.some(r =>
+        if (effectiveAnnualRegistrations.length !== decisionIds.length || effectiveAnnualRegistrations.some(r =>
           !programById.has(r.programId) || levelById.get(r.levelId)?.programId !== r.programId)) {
           return NextResponse.json({ error: 'Inscriptions annuelles incohérentes avec les filières du département' }, { status: 409 })
         }
         let sections
         try {
           sections = buildPvMatrix({
-            registrations: annualRegistrations.map(r => ({ ...r, program: programById.get(r.programId)!, level: levelById.get(r.levelId)! })),
+            registrations: effectiveAnnualRegistrations.map(r => ({ ...r, program: programById.get(r.programId)!, level: levelById.get(r.levelId)! })),
             pedagogicalRegistrations, grades: gradeRows, students: decisionStudents, decisions: delib.decisions,
           })
         } catch (error) {
