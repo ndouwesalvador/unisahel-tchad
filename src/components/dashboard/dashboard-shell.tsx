@@ -247,6 +247,7 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
     { icon: Calendar, label: 'Emploi du temps', view: 'timetable' },
     { icon: BookOpenCheck, label: 'Services enseignants', view: 'teaching-services' },
     { icon: CheckSquare, label: 'Délibérations', view: 'deliberation' },
+    { icon: FileText, label: 'Documents et bulletins', view: 'documents' },
   ],
   DEPARTEMENT: [
     { icon: LayoutDashboard, label: 'Tableau de bord', view: 'dashboard' },
@@ -257,6 +258,7 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
     { icon: Calendar, label: 'Emploi du temps', view: 'timetable' },
     { icon: BookOpenCheck, label: 'Services enseignants', view: 'teaching-services' },
     { icon: CheckSquare, label: 'Délibérations', view: 'deliberation' },
+    { icon: FileText, label: 'Documents et bulletins', view: 'documents' },
   ],
   ENSEIGNANT: [
     { icon: LayoutDashboard, label: 'Tableau de bord', view: 'dashboard' },
@@ -541,6 +543,7 @@ function MainContent({ view }: { view: AppView }) {
     if (view === 'programs') return <StructurePage />
     if (view === 'maquette') return <MaquettePage />
     if (view === 'grades') return <GradesPage />
+    if (view === 'documents') return <DocumentsPage />
     if (view === 'reports') return <ReportsPage />
     if (view === 'timetable') return <TimetablePage />
     if (view === 'teaching-services') return <TeachingServicesPage />
@@ -718,7 +721,7 @@ export function DashboardShell() {
   }, [user?.role, currentView, setView])
   useEffect(() => {
     if (user?.role !== 'FACULTE' && user?.role !== 'DEPARTEMENT') return
-    if (!['dashboard', 'timetable', 'teaching-services', 'deliberation', 'profile'].includes(currentView)) setView('dashboard')
+    if (!['dashboard', 'students', 'teachers', 'structure', 'programs', 'maquette', 'timetable', 'teaching-services', 'grades', 'deliberation', 'documents', 'reports', 'profile'].includes(currentView)) setView('dashboard')
   }, [user?.role, currentView, setView])
   const searchTerm = searchQuery.trim().toLowerCase()
   const searchResults = searchTerm
