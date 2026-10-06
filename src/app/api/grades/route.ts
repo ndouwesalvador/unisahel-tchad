@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
 import { resolveOwnStudentId, isStudentSelfRole } from '@/lib/auth/student-scope'
+import { getJuryScope } from '@/lib/auth/jury-scope'
 import { isValidGradingPolicy, resolveGradingPolicy } from '@/lib/grading-policy'
 import { gradeQuerySchema, validateQuery } from '@/lib/validations/api'
 
@@ -140,13 +141,18 @@ async function getGradesHandler(user: SessionUser, tenantId: string, request: Ne
       // An absent current year must not fall back to all historical grades.
       where.academicYearId = yearId ?? { in: [] }
       if (yearId) {
+        const registration = await db.administrativeRegistration.findFirst({
+          where: { tenantId, studentId: ownStudentId!, academicYearId: yearId, status: 'INSCRIT' },
+          select: { programId: true, levelId: true },
+        })
         where.student = {
           tenantId,
           registrations: { some: { tenantId, academicYearId: yearId, status: 'INSCRIT' } },
         }
-        where.teachingUnit = { pedagogicalRegistrations: { some: {
-          studentId: ownStudentId!, academicYearId: yearId, status: 'ACTIVE',
-        } } }
+        where.teachingUnit = registration
+          ? { semester: { levelId: registration.levelId,
+              level: { programId: registration.programId, program: { tenantId } } } }
+          : { id: { in: [] } }
       }
     }
     const teacherId = await assignedTeacherId(user, tenantId)
@@ -164,12 +170,13 @@ async function getGradesHandler(user: SessionUser, tenantId: string, request: Ne
       where.courseElementId = { in: teacherCourseIds }
     }
     if (user.role === 'JURY') {
-      const jury = await db.user.findFirst({
-        where: { id: user.id, tenantId, role: 'JURY', isActive: true, department: { isActive: true } },
-        select: { departmentId: true },
-      })
-      if (!jury?.departmentId) return NextResponse.json({ error: 'Jury sans département actif' }, { status: 403 })
-      where.AND = [{ teachingUnit: { semester: { level: { program: { tenantId, departmentId: jury.departmentId } } } } }]
+      const juryYearId = await resolveAcademicYearId(tenantId, academicYearId ?? null)
+      const juryScope = await getJuryScope(user, tenantId, juryYearId)
+      if (!juryYearId || juryScope.levelIds.length === 0) {
+        return NextResponse.json({ error: 'Jury sans programme ni niveau actif' }, { status: 403 })
+      }
+      where.academicYearId = juryYearId
+      where.AND = [{ teachingUnit: { semester: { levelId: { in: juryScope.levelIds } } } }]
     }
 
     if (studentId) {

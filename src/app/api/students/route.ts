@@ -8,6 +8,7 @@ import { createStudentPortalCredentials } from '@/lib/student-portal'
 import { prepareDocumentPhoto } from '@/lib/pdf/artwork'
 import { getTeacherScope } from '@/lib/auth/teacher-scope'
 import { getOrganizationScope } from '@/lib/auth/organization-scope'
+import { getJuryScope } from '@/lib/auth/jury-scope'
 
 // Credits are awarded by a finalized jury, not by the mutable Student cache.
 // A second session in the same year may replace the first decision; count the
@@ -52,6 +53,13 @@ async function getStudentsHandler(user: SessionUser, tenantId: string, request: 
     } else if (user.role === 'ENSEIGNANT') {
       const scope = await getTeacherScope(user, tenantId)
       where.pedagogicalRegistrations = { some: { teachingUnitId: { in: scope.teachingUnitIds }, status: 'ACTIVE' } }
+    } else if (user.role === 'JURY') {
+      const scope = await getJuryScope(user, tenantId)
+      where.AND = [{ OR: [
+        { currentLevelId: { in: scope.levelIds } },
+        { registrations: { some: { tenantId, academicYearId: scope.academicYearId,
+          status: 'INSCRIT', levelId: { in: scope.levelIds } } } },
+      ] }]
     }
 
     if (search) {
@@ -503,13 +511,14 @@ async function getStudentTranscriptHandler(user: SessionUser, tenantId: string, 
     }
     const annualRegistration = academicYear ? await db.administrativeRegistration.findFirst({
       where: { tenantId, studentId: id, academicYearId: academicYear.id, status: 'INSCRIT' },
-      select: { id: true },
+      select: { id: true, programId: true, levelId: true },
     }) : null
 
     // This is an annual published-grade preview, not a dump of historical drafts.
     const grades = annualRegistration && academicYear ? await db.grade.findMany({
       where: { studentId: id, student: { tenantId }, academicYearId: academicYear.id, session: 'NORMALE', isLocked: true,
-        teachingUnit: { pedagogicalRegistrations: { some: { studentId: id, academicYearId: academicYear.id, status: 'ACTIVE' } } } },
+        teachingUnit: { semester: { levelId: annualRegistration.levelId,
+          level: { programId: annualRegistration.programId, program: { tenantId } } } } },
       include: {
         teachingUnit: {
           select: {

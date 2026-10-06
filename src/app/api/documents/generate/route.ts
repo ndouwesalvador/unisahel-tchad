@@ -8,6 +8,7 @@ import { isStudentSelfRole, resolveOwnStudentId } from '@/lib/auth/student-scope
 import { AwardEligibilityError, getValidatedDiplomaAward, getValidatedLevelAward } from '@/lib/documents/eligibility'
 import { computeGradeReadiness } from '@/lib/deliberations/readiness'
 import { getOrganizationScope, isOrganizationManager } from '@/lib/auth/organization-scope'
+import { getJuryScope } from '@/lib/auth/jury-scope'
 import { parseJuryMembers } from '@/lib/deliberations/jury'
 import { buildPvMatrix, expectedPvSheetCount, PvMatrixError, type PvSection } from '@/lib/pdf/pv-matrix'
 import { countPdfPages } from '@/lib/pdf/utils'
@@ -224,8 +225,8 @@ export async function POST(request: NextRequest) {
               session: 'NORMALE',
               student: { tenantId },
               teachingUnit: {
-                semester: { level: { program: { tenantId } } },
-                pedagogicalRegistrations: { some: { studentId, academicYearId: acYearId, status: 'ACTIVE' } },
+                semester: { levelId: registration.levelId,
+                  level: { programId: registration.programId, program: { tenantId } } },
               },
               OR: [
                 { courseElementId: null },
@@ -249,14 +250,14 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Toutes les notes du relevé doivent être verrouillées avant publication' }, { status: 409 })
           }
           if (sign) {
-            const registrations = await db.pedagogicalRegistration.findMany({
-              where: { studentId, academicYearId: acYearId, status: 'ACTIVE', teachingUnit: { semester: { level: { program: { tenantId } } } } },
-              include: { teachingUnit: { include: { courseElements: { select: { id: true } } } } },
+            const curriculumUnits = await db.teachingUnit.findMany({
+              where: { semester: { levelId: registration.levelId,
+                level: { programId: registration.programId, program: { tenantId } } } },
+              include: { courseElements: { select: { id: true } } },
             })
             const completeGrades = new Set(grades.filter((grade) => grade.isLocked && grade.finalGrade !== null).map((grade) => grade.courseElementId))
-            if (registrations.length === 0 || registrations.some((registration) =>
-              registration.teachingUnit.courseElements.length === 0 ||
-              registration.teachingUnit.courseElements.some((element) => !completeGrades.has(element.id)))) {
+            if (curriculumUnits.length === 0 || curriculumUnits.some((unit) =>
+              unit.courseElements.length === 0 || unit.courseElements.some((element) => !completeGrades.has(element.id)))) {
               return NextResponse.json({ error: 'Relevé incomplet : toutes les matières inscrites doivent avoir une note définitive verrouillée' }, { status: 409 })
             }
           }
@@ -307,6 +308,7 @@ export async function POST(request: NextRequest) {
           const juryRows = await db.deliberationDecision.findMany({
             where: { studentId: studentId!, deliberation: {
               tenantId, academicYearId: acYearId, departmentId: annualContext.departmentId,
+              programId: registration.programId, levelId: registration.levelId,
               status: 'TERMINEE', isLocked: true,
             } },
             select: { average: true, creditsAcquired: true, decision: true,
@@ -456,6 +458,13 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Département inaccessible' }, { status: 403 })
           }
         }
+        if (sessionUser.role === 'JURY') {
+          const scope = await getJuryScope(sessionUser, tenantId, delib.academicYearId)
+          const allowed = scope.assignments.some((assignment) =>
+            assignment.departmentId === delib.departmentId && assignment.programId === delib.programId &&
+            assignment.levelId === delib.levelId)
+          if (!allowed) return NextResponse.json({ error: 'PV hors du périmètre du jury' }, { status: 403 })
+        }
         if (!delib.isLocked || delib.status !== 'TERMINEE') {
           return NextResponse.json({ error: 'Le PV exige une délibération finale verrouillée' }, { status: 409 })
         }
@@ -463,7 +472,8 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: 'Aucune décision de jury à publier' }, { status: 409 })
         }
         const readiness = await computeGradeReadiness(
-          tenantId, delib.academicYearId, delib.type === 'RATTRAPAGE' ? 'RATTRAPAGE' : 'NORMALE', department.id
+          tenantId, delib.academicYearId, delib.type === 'RATTRAPAGE' ? 'RATTRAPAGE' : 'NORMALE', department.id,
+          delib.programId, delib.levelId
         )
         if (!readiness.ready) {
           return NextResponse.json({ error: 'Le PV officiel exige toutes les notes définitives verrouillées', readiness }, { status: 409 })

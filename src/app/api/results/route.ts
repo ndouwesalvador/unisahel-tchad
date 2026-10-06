@@ -114,12 +114,9 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
 
       const grades = await db.grade.findMany({
         where: { studentId, academicYearId, session: sessionType, finalGrade: { not: null },
-          ...(isStudentSelfRole(user.role) ? {
-            isLocked: true,
-            teachingUnit: { pedagogicalRegistrations: { some: {
-              studentId, academicYearId, status: 'ACTIVE',
-            } } },
-          } : {}),
+          teachingUnit: { semester: { levelId: registration.levelId,
+            level: { programId: registration.programId, program: { tenantId } } } },
+          ...(isStudentSelfRole(user.role) ? { isLocked: true } : {}),
         },
         select: {
           finalGrade: true,
@@ -183,6 +180,7 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
         const decisions = await db.deliberationDecision.findMany({
           where: { studentId, deliberation: {
             tenantId, academicYearId, departmentId: program.departmentId,
+            programId: registration.programId, levelId: registration.levelId,
             status: 'TERMINEE', isLocked: true,
           } },
           select: { average: true, creditsAcquired: true, decision: true,

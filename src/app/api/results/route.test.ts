@@ -77,7 +77,7 @@ describe('GET /api/results — étudiant', () => {
     expect(result.transcript).toMatchObject({ filiere: 'Programme de l’inscription', niveau: 'Année 1' })
     expect(dbMock.grade.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({
       studentId: 'student-A', isLocked: true,
-      teachingUnit: { pedagogicalRegistrations: { some: { studentId: 'student-A', academicYearId: 'year-A', status: 'ACTIVE' } } },
+      teachingUnit: { semester: { levelId: 'level-A', level: { programId: 'program-A', program: { tenantId: 'tenant-A' } } } },
     }) }))
     expect(dbMock.officialDocument.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({
       tenantId: 'tenant-A', type: 'PV_DELIBERATION', validatedAt: { not: null },
@@ -93,6 +93,7 @@ describe('GET /api/results — étudiant', () => {
     expect(dbMock.deliberationDecision.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: {
       studentId: 'student-A', deliberation: {
         tenantId: 'tenant-A', academicYearId: 'year-A', departmentId: 'department-A',
+        programId: 'program-A', levelId: 'level-A',
         status: 'TERMINEE', isLocked: true,
       },
     } }))

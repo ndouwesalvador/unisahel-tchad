@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
 import { calculateFinalGrade, isValidGradingPolicy, resolveGradingPolicy } from '@/lib/grading-policy'
+import { getJuryScope } from '@/lib/auth/jury-scope'
 
 const componentSchema = z.object({
   academicYearId: z.string().cuid(),
@@ -23,14 +24,11 @@ async function scope(user: SessionUser, tenantId: string) {
   if (user.role === 'ENSEIGNANT') {
     const teacher = await db.teacher.findFirst({ where: { userId: user.id, tenantId, isActive: true }, select: { id: true } })
     if (!teacher) throw new EntryError('Profil enseignant actif introuvable.', 403)
-    return { teacherId: teacher.id, departmentId: null }
+    return { teacherId: teacher.id, departmentId: null, levelIds: null as string[] | null }
   }
-  const jury = await db.user.findFirst({
-    where: { id: user.id, tenantId, role: 'JURY', isActive: true, department: { isActive: true } },
-    select: { departmentId: true },
-  })
-  if (!jury?.departmentId) throw new EntryError('Affectez d’abord ce jury à un département actif.', 403)
-  return { teacherId: null, departmentId: jury.departmentId }
+  const jury = await getJuryScope(user, tenantId)
+  if (jury.levelIds.length === 0) throw new EntryError('Affectez d’abord ce jury à au moins un programme et un niveau pour l’année courante.', 403)
+  return { teacherId: null, departmentId: jury.departmentIds.length === 1 ? jury.departmentIds[0] : null, levelIds: jury.levelIds }
 }
 
 async function year(tenantId: string, requestedId: string | null) {
@@ -69,7 +67,7 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
         teachingUnit: { semester: { level: { program: {
           tenantId, departmentId: { not: null },
           ...(allowed.departmentId ? { departmentId: allowed.departmentId } : {}),
-        } } } },
+        }, ...(allowed.levelIds ? { id: { in: allowed.levelIds } } : {}) } } },
       },
       select: {
         id: true, code: true, name: true, hoursTP: true,
@@ -121,7 +119,9 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
       const { gradeId } = lockSchema.parse(raw)
       const allowed = await scope(user, tenantId)
       const grade = await db.grade.findFirst({ where: { id: gradeId, student: { tenantId },
-        teachingUnit: { semester: { level: { program: { tenantId, departmentId: allowed.departmentId! } } } },
+        teachingUnit: { semester: { level: { id: { in: allowed.levelIds ?? [] }, program: { tenantId,
+          ...(allowed.departmentId ? { departmentId: allowed.departmentId } : {}),
+        } } } },
       }, select: { id: true, finalGrade: true, isLocked: true, academicYearId: true,
         ccGrade: true, tpGrade: true, examGrade: true, courseElement: { select: { hoursTP: true } } } })
       if (!grade) throw new EntryError('Note hors du département du jury.', 403)
@@ -149,7 +149,7 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
     if (serviceIds && !serviceIds.includes(input.courseElementId)) throw new EntryError('Service annuel non approuvé pour cette matière.', 403)
     const course = await db.courseElement.findFirst({ where: {
       id: input.courseElementId,
-      teachingUnit: { semester: { level: { program: { tenantId,
+      teachingUnit: { semester: { level: { ...(allowed.levelIds ? { id: { in: allowed.levelIds } } : {}), program: { tenantId,
         ...(allowed.departmentId ? { departmentId: allowed.departmentId } : {}),
       } } } },
     }, select: { teachingUnitId: true, hoursTP: true, hoursStage: true, teachingUnit: { select: {

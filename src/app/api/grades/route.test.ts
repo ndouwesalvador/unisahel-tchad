@@ -4,7 +4,7 @@ import { NextRequest } from 'next/server'
 const mocks = vi.hoisted(() => ({
   auth: vi.fn(), teacher: vi.fn(), services: vi.fn(), year: vi.fn(), student: vi.fn(),
   user: vi.fn(), grades: vi.fn(), count: vi.fn(), course: vi.fn(), registrations: vi.fn(),
-  settings: vi.fn(),
+  annualRegistration: vi.fn(), juryScope: vi.fn(), settings: vi.fn(),
 }))
 vi.mock('@/lib/auth/config', () => ({ auth: mocks.auth }))
 vi.mock('@/lib/db', () => ({ db: {
@@ -12,8 +12,10 @@ vi.mock('@/lib/db', () => ({ db: {
   academicYear: { findFirst: mocks.year }, student: { findFirst: mocks.student, findMany: mocks.student },
   user: { findFirst: mocks.user }, grade: { findMany: mocks.grades, count: mocks.count },
   courseElement: { findFirst: mocks.course }, pedagogicalRegistration: { findMany: mocks.registrations },
+  administrativeRegistration: { findFirst: mocks.annualRegistration },
   tenantSettings: { findUnique: mocks.settings },
 } }))
+vi.mock('@/lib/auth/jury-scope', () => ({ getJuryScope: mocks.juryScope }))
 
 const { GET, POST, PUT } = await import('./route')
 const tenantId = 'ctenant0000000000000000a1'
@@ -40,6 +42,9 @@ beforeEach(() => {
   mocks.course.mockResolvedValue({ teachingUnitId: 'cteachingunit0000000000001',
     teachingUnit: { semester: { levelId: 'clevel000000000000000001' } } })
   mocks.registrations.mockResolvedValue([])
+  mocks.annualRegistration.mockResolvedValue({ programId: 'program-A', levelId: 'level-A' })
+  mocks.juryScope.mockResolvedValue({ academicYearId: yearId, assignments: [{ departmentId, programId: 'program-A', levelId: 'level-A' }],
+    departmentIds: [departmentId], programIds: ['program-A'], levelIds: ['level-A'] })
   mocks.settings.mockResolvedValue(null)
 })
 
@@ -83,12 +88,13 @@ describe('legacy notes endpoint is read-only', () => {
     expect(mocks.grades).not.toHaveBeenCalled()
   })
 
-  it('scopes jury grade reads to their department', async () => {
+  it('scopes jury grade reads to its assigned levels', async () => {
     mocks.auth.mockResolvedValue({ user: { ...user, role: 'JURY' } })
     const response = await GET(request('/api/grades'))
     expect(response.status).toBe(200)
     expect(mocks.grades).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({
-      AND: [{ teachingUnit: { semester: { level: { program: { tenantId, departmentId } } } } }],
+      academicYearId: yearId,
+      AND: [{ teachingUnit: { semester: { levelId: { in: ['level-A'] } } } }],
     }) }))
     expect((await GET(request('/api/grades?action=stats'))).status).toBe(403)
   })
@@ -100,7 +106,7 @@ describe('legacy notes endpoint is read-only', () => {
     expect(mocks.grades).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({
       studentId, isLocked: true, academicYearId: yearId,
       student: { tenantId, registrations: { some: { tenantId, academicYearId: yearId, status: 'INSCRIT' } } },
-      teachingUnit: { pedagogicalRegistrations: { some: { studentId, academicYearId: yearId, status: 'ACTIVE' } } },
+      teachingUnit: { semester: { levelId: 'level-A', level: { programId: 'program-A', program: { tenantId } } } },
     }) }))
   })
 

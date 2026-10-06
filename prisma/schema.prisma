@@ -83,7 +83,8 @@ model Tenant {
   domains                Domain[]
   programs               Program[]
   academicYears          AcademicYear[]
-  timetablePublications TimetablePublication[]
+  timetablePublications  TimetablePublication[]
+  juryAssignments        JuryAssignment[]
   users                  User[]
   students               Student[]
   teachers               Teacher[]
@@ -218,23 +219,24 @@ model Institute {
 }
 
 model Department {
-  id                String            @id @default(cuid())
-  tenantId          String
-  tenant            Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  facultyId         String?
-  faculty           Faculty?          @relation(fields: [facultyId], references: [id], onDelete: SetNull)
-  name              String
-  shortName         String?
-  headName          String?
-  isActive          Boolean           @default(true)
-  teachers          Teacher[]
-  requestedServices TeachingService[] @relation("ServiceRequestDepartment")
-  homeServices      TeachingService[] @relation("ServiceHomeDepartment")
+  id                    String                 @id @default(cuid())
+  tenantId              String
+  tenant                Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  facultyId             String?
+  faculty               Faculty?               @relation(fields: [facultyId], references: [id], onDelete: SetNull)
+  name                  String
+  shortName             String?
+  headName              String?
+  isActive              Boolean                @default(true)
+  teachers              Teacher[]
+  requestedServices     TeachingService[]      @relation("ServiceRequestDepartment")
+  homeServices          TeachingService[]      @relation("ServiceHomeDepartment")
   timetablePublications TimetablePublication[]
-  managers          User[]            @relation("DepartmentManagers")
-  programs          Program[]
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  managers              User[]                 @relation("DepartmentManagers")
+  juryAssignments       JuryAssignment[]
+  programs              Program[]
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
 }
 
 model Domain {
@@ -282,40 +284,42 @@ model Track {
 }
 
 model Program {
-  id           String      @id @default(cuid())
-  tenantId     String
-  tenant       Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  facultyId    String?
-  faculty      Faculty?    @relation(fields: [facultyId], references: [id], onDelete: SetNull)
-  departmentId String?
-  department   Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
-  mentionId    String?
-  mention      Mention?    @relation(fields: [mentionId], references: [id], onDelete: SetNull)
-  name         String
-  code         String?
-  cycle        String      @default("LICENCE")
-  diplomaType  String?
-  duration     Int         @default(3)
-  isActive     Boolean     @default(true)
-  levels       Level[]
-  students     Student[]
-  admissions   Admission[]
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
+  id              String           @id @default(cuid())
+  tenantId        String
+  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  facultyId       String?
+  faculty         Faculty?         @relation(fields: [facultyId], references: [id], onDelete: SetNull)
+  departmentId    String?
+  department      Department?      @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  mentionId       String?
+  mention         Mention?         @relation(fields: [mentionId], references: [id], onDelete: SetNull)
+  name            String
+  code            String?
+  cycle           String           @default("LICENCE")
+  diplomaType     String?
+  duration        Int              @default(3)
+  isActive        Boolean          @default(true)
+  levels          Level[]
+  students        Student[]
+  admissions      Admission[]
+  juryAssignments JuryAssignment[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 }
 
 model Level {
-  id         String     @id @default(cuid())
-  programId  String
-  program    Program    @relation(fields: [programId], references: [id], onDelete: Cascade)
-  name       String
-  code       String?
-  orderIndex Int        @default(0)
-  isActive   Boolean    @default(true)
-  semesters  Semester[]
-  students   Student[]
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
+  id              String           @id @default(cuid())
+  programId       String
+  program         Program          @relation(fields: [programId], references: [id], onDelete: Cascade)
+  name            String
+  code            String?
+  orderIndex      Int              @default(0)
+  isActive        Boolean          @default(true)
+  semesters       Semester[]
+  students        Student[]
+  juryAssignments JuryAssignment[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 }
 
 model Semester {
@@ -377,21 +381,22 @@ model CourseElement {
 // ============================================
 
 model AcademicYear {
-  id               String                       @id @default(cuid())
-  tenantId         String
-  tenant           Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  name             String
-  startDate        DateTime
-  endDate          DateTime
-  isActive         Boolean                      @default(false)
-  isCurrent        Boolean                      @default(false)
-  sessions         ExamSession[]
-  teachingServices TeachingService[]
+  id                    String                       @id @default(cuid())
+  tenantId              String
+  tenant                Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name                  String
+  startDate             DateTime
+  endDate               DateTime
+  isActive              Boolean                      @default(false)
+  isCurrent             Boolean                      @default(false)
+  sessions              ExamSession[]
+  teachingServices      TeachingService[]
   timetablePublications TimetablePublication[]
-  admissions       Admission[]
-  registrations    AdministrativeRegistration[]
-  createdAt        DateTime                     @default(now())
-  updatedAt        DateTime                     @updatedAt
+  admissions            Admission[]
+  registrations         AdministrativeRegistration[]
+  juryAssignments       JuryAssignment[]
+  createdAt             DateTime                     @default(now())
+  updatedAt             DateTime                     @updatedAt
 }
 
 model ExamSession {
@@ -412,40 +417,65 @@ model ExamSession {
 // ============================================
 
 model User {
-  id                 String      @id @default(cuid())
+  id                 String           @id @default(cuid())
   // Nullable: a SUPER_ADMIN manages the whole platform and belongs to no
   // single institution (mirrors a real multi-tenant SaaS control plane).
   tenantId           String?
-  tenant             Tenant?     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  email              String?     @unique
+  tenant             Tenant?          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  email              String?          @unique
   passwordHash       String?
-  login              String?     @unique
+  login              String?          @unique
   pinHash            String?
   firstName          String
   lastName           String
   middleName         String?
   phone              String?
   photo              String?
-  role               UserRole    @default(ETUDIANT)
+  role               UserRole         @default(ETUDIANT)
   facultyId          String?
-  faculty            Faculty?    @relation("FacultyManagers", fields: [facultyId], references: [id], onDelete: SetNull)
+  faculty            Faculty?         @relation("FacultyManagers", fields: [facultyId], references: [id], onDelete: SetNull)
   departmentId       String?
-  department         Department? @relation("DepartmentManagers", fields: [departmentId], references: [id], onDelete: SetNull)
-  isActive           Boolean     @default(true)
-  emailVerified      Boolean     @default(false)
+  department         Department?      @relation("DepartmentManagers", fields: [departmentId], references: [id], onDelete: SetNull)
+  isActive           Boolean          @default(true)
+  emailVerified      Boolean          @default(false)
   lastLoginAt        DateTime?
   lastLoginIp        String?
-  mustChangePassword Boolean     @default(false)
+  mustChangePassword Boolean          @default(false)
   teacher            Teacher?
   student            Student?
   auditLogs          AuditLog[]
-  createdAt          DateTime    @default(now())
-  updatedAt          DateTime    @updatedAt
+  juryAssignments    JuryAssignment[]
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
 
   @@index([tenantId, email])
   @@index([tenantId, login])
   @@index([tenantId, facultyId])
   @@index([tenantId, departmentId])
+}
+
+// A jury account is scoped to one or more exact programme levels for an
+// academic year. Multiple rows allow the same jury to cover Licence, Master
+// or several programmes without exposing the rest of the department.
+model JuryAssignment {
+  id             String       @id @default(cuid())
+  tenantId       String
+  tenant         Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  academicYearId String
+  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  departmentId   String
+  department     Department   @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  programId      String
+  program        Program      @relation(fields: [programId], references: [id], onDelete: Cascade)
+  levelId        String
+  level          Level        @relation(fields: [levelId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+
+  @@unique([tenantId, userId, academicYearId, levelId])
+  @@index([tenantId, academicYearId, departmentId])
+  @@index([tenantId, academicYearId, programId])
 }
 
 // ============================================
@@ -859,25 +889,25 @@ model DocumentTemplate {
 }
 
 model OfficialDocument {
-  id               String    @id @default(cuid())
+  id               String               @id @default(cuid())
   tenantId         String
   studentId        String?
-  student          Student?  @relation(fields: [studentId], references: [id], onDelete: SetNull)
-  type             String    @default("RELEVE_SEMESTRIEL")
-  number           String?   @unique
+  student          Student?             @relation(fields: [studentId], references: [id], onDelete: SetNull)
+  type             String               @default("RELEVE_SEMESTRIEL")
+  number           String?              @unique
   academicYearId   String?
   content          String
   hash             String?
   pdfArtifact      OfficialDocumentPdf?
-  verificationCode String?   @unique
+  verificationCode String?              @unique
   qrCodeData       String?
-  status           String    @default("DRAFT")
+  status           String               @default("DRAFT")
   generatedBy      String?
   validatedBy      String?
   validatedAt      DateTime?
   filePath         String?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
 }
 
 // The exact bytes issued to a recipient are retained separately from the
@@ -1612,17 +1642,17 @@ model RoomReservation {
 // ============================================
 
 model Notification {
-  id          String   @id @default(cuid())
-  tenantId    String
-  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   recipientUserId String?
-  type        String   @default("info") // success, info, warning, mention, error
-  category    String   @default("Systeme") // Academique, Paiement, Administratif, Systeme
-  title       String
-  description String
-  link        String?
-  isRead      Boolean  @default(false)
-  createdAt   DateTime @default(now())
+  type            String   @default("info") // success, info, warning, mention, error
+  category        String   @default("Systeme") // Academique, Paiement, Administratif, Systeme
+  title           String
+  description     String
+  link            String?
+  isRead          Boolean  @default(false)
+  createdAt       DateTime @default(now())
 
   @@index([tenantId])
   @@index([tenantId, isRead])

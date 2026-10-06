@@ -19,6 +19,7 @@ const { authMock, dbMock, renderPDFMock, eligibilityMock, readinessMock } = vi.h
     level: { findFirst: vi.fn(), findMany: vi.fn() },
     semester: { findMany: vi.fn() },
     student: { findFirst: vi.fn(), findMany: vi.fn() },
+    teachingUnit: { findMany: vi.fn() },
     tenant: { findUnique: vi.fn() },
   },
 }))
@@ -68,6 +69,7 @@ beforeEach(() => {
   dbMock.grade.findMany.mockResolvedValue([])
   dbMock.pedagogicalRegistration.findMany.mockResolvedValue([])
   dbMock.semester.findMany.mockResolvedValue([])
+  dbMock.teachingUnit.findMany.mockResolvedValue([])
   dbMock.administrativeRegistration.findFirst.mockResolvedValue({ id: 'registration-A', programId: 'program-A', levelId: 'level-A', academicYear: { name: '2026-2027' } })
   dbMock.administrativeRegistration.findMany.mockResolvedValue([])
   dbMock.program.findFirst.mockResolvedValue({ name: 'Génie informatique', departmentId: 'department-A' })
@@ -287,8 +289,8 @@ describe('POST /api/documents/generate', () => {
       teachingUnit: { id: 'unit-A', name: 'Mathématiques', code: 'MAT101', credits: 6, semester: { id: 'sem-A' } },
       courseElement: { teachingUnitId: 'unit-A', name: 'Algèbre', coefficient: 2 },
     }])
-    dbMock.pedagogicalRegistration.findMany.mockResolvedValue([{
-      teachingUnit: { courseElements: [{ id: 'element-A' }, { id: 'element-B' }] },
+    dbMock.teachingUnit.findMany.mockResolvedValue([{
+      courseElements: [{ id: 'element-A' }, { id: 'element-B' }],
     }])
 
     const response = await POST(request({ type: 'RELEVE_NOTES', tenantId, studentId, sign: true }))
@@ -305,8 +307,8 @@ describe('POST /api/documents/generate', () => {
         teachingUnit: { id: 'unit-A', name: 'Mathématiques', code: 'MAT101', credits: 6, semester: { id: 'sem-A' } },
         courseElement: { teachingUnitId: 'unit-A', name: 'Analyse', coefficient: 2 } },
     ])
-    dbMock.pedagogicalRegistration.findMany.mockResolvedValue([{
-      teachingUnit: { courseElements: [{ id: 'element-A' }, { id: 'element-B' }] },
+    dbMock.teachingUnit.findMany.mockResolvedValue([{
+      courseElements: [{ id: 'element-A' }, { id: 'element-B' }],
     }])
     dbMock.semester.findMany.mockResolvedValue([{ name: 'Semestre 1' }])
 

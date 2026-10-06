@@ -7,10 +7,12 @@ const mocks = vi.hoisted(() => ({
   grades: vi.fn(), studentFindMany: vi.fn(), studentFindFirst: vi.fn(), administrativeRegistration: vi.fn(), gradeCreate: vi.fn(), gradeUpdate: vi.fn(), gradeFind: vi.fn(), gradeUpdateMany: vi.fn(),
   settings: vi.fn(), deliberation: vi.fn(), changeLog: vi.fn(), audit: vi.fn(),
   transaction: vi.fn(), advisory: vi.fn(),
+  juryAssignments: vi.fn(),
 }))
 vi.mock('@/lib/auth/config', () => ({ auth: mocks.auth }))
 vi.mock('@/lib/db', () => ({ db: {
   academicYear: { findFirst: mocks.year }, teacher: { findFirst: mocks.teacher }, user: { findFirst: mocks.user },
+  juryAssignment: { findMany: mocks.juryAssignments },
   teachingService: { findMany: mocks.services }, courseElement: { findMany: mocks.courses, findFirst: mocks.course },
   pedagogicalRegistration: { findMany: mocks.registrations, findFirst: mocks.registration },
   administrativeRegistration: { findFirst: mocks.administrativeRegistration },
@@ -51,6 +53,8 @@ beforeEach(() => {
   mocks.year.mockResolvedValue({ id: academicYearId, name: '2026-2027' })
   mocks.teacher.mockResolvedValue({ id: teacherId })
   mocks.user.mockResolvedValue({ departmentId })
+  mocks.juryAssignments.mockResolvedValue([{ departmentId, programId: 'cprogram000000000000000001',
+    levelId: 'clevel000000000000000001', program: { name: 'Informatique' }, level: { name: 'L1' } }])
   mocks.services.mockResolvedValue([{ courseElementId }])
   mocks.course.mockResolvedValue(course)
   mocks.courses.mockResolvedValue([{ id: courseElementId, code: 'EC1', name: 'Algorithmique', hoursTP: 12,
@@ -141,7 +145,7 @@ describe('scoped grade entry', () => {
 
   it('requires a scoped department for a jury account', async () => {
     mocks.auth.mockResolvedValue({ user: jury })
-    mocks.user.mockResolvedValue({ departmentId: null })
+    mocks.juryAssignments.mockResolvedValue([])
     expect((await get()).status).toBe(403)
     expect((await post(body('examGrade'))).status).toBe(403)
   })

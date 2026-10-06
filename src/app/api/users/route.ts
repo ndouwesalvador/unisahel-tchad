@@ -44,6 +44,7 @@ const createStaffSchema = z.object({
   role: z.enum(STAFF_ROLES),
   facultyId: optionalCuid,
   departmentId: optionalCuid,
+  juryLevelIds: z.array(z.string().cuid()).max(30).optional(),
 })
 
 const updateStaffSchema = z.object({
@@ -52,8 +53,22 @@ const updateStaffSchema = z.object({
   role: z.enum(STAFF_ROLES).optional(),
   facultyId: nullableCuid,
   departmentId: nullableCuid,
+  juryLevelIds: z.array(z.string().cuid()).max(30).optional(),
   resetPassword: z.boolean().optional(),
 })
+
+async function resolveJuryLevels(tenantId: string, departmentId: string | null | undefined, levelIds?: string[]) {
+  if (!departmentId || !levelIds?.length) return { error: 'Sélectionnez au moins un niveau pour ce jury.' } as const
+  const [year, levels] = await Promise.all([
+    db.academicYear.findFirst({ where: { tenantId, isCurrent: true }, select: { id: true } }),
+    db.level.findMany({ where: { id: { in: [...new Set(levelIds)] }, isActive: true,
+      program: { tenantId, departmentId, isActive: true } },
+      select: { id: true, programId: true, program: { select: { departmentId: true } } } }),
+  ])
+  if (!year) return { error: 'Configurez l’année académique courante avant d’affecter un jury.' } as const
+  if (levels.length !== new Set(levelIds).size) return { error: 'Un niveau sélectionné est inactif ou hors du département.' } as const
+  return { yearId: year.id, levels } as const
+}
 
 async function resolveStaffScope(tenantId: string, role: string, facultyId?: string | null, departmentId?: string | null) {
   if (role === 'FACULTE') {
@@ -86,6 +101,10 @@ async function getUsersHandler(user: SessionUser, tenantId: string) {
         role: true,
         facultyId: true,
         departmentId: true,
+        juryAssignments: { where: { academicYear: { isCurrent: true } }, select: {
+          levelId: true, programId: true, departmentId: true,
+          program: { select: { name: true } }, level: { select: { name: true } },
+        } },
         isActive: true,
         mustChangePassword: true,
         lastLoginAt: true,
@@ -107,9 +126,11 @@ async function createStaffHandler(user: SessionUser, tenantId: string, request: 
     if (!parsed.success) {
       return NextResponse.json({ error: 'Données invalides', details: parsed.error.flatten() }, { status: 400 })
     }
-    const { firstName, lastName, email, phone, role, facultyId, departmentId } = parsed.data
+    const { firstName, lastName, email, phone, role, facultyId, departmentId, juryLevelIds } = parsed.data
     const scope = await resolveStaffScope(tenantId, role, facultyId, departmentId)
     if ('error' in scope) return NextResponse.json({ error: scope.error }, { status: 400 })
+    const juryScope = role === 'JURY' ? await resolveJuryLevels(tenantId, scope.departmentId, juryLevelIds) : null
+    if (juryScope && 'error' in juryScope) return NextResponse.json({ error: juryScope.error }, { status: 400 })
 
     // User.email is unique platform-wide
     const existing = await db.user.findUnique({ where: { email }, select: { id: true } })
@@ -120,20 +141,21 @@ async function createStaffHandler(user: SessionUser, tenantId: string, request: 
     const tempPassword = generateTempPassword()
     const passwordHash = await bcrypt.hash(tempPassword, 12)
 
-    const account = await db.user.create({
-      data: { tenantId, firstName, lastName, email, phone, role, facultyId: scope.facultyId, departmentId: scope.departmentId, passwordHash, mustChangePassword: true },
-      select: { id: true, firstName: true, lastName: true, email: true, phone: true, role: true, facultyId: true, departmentId: true, isActive: true },
-    })
-
-    await db.auditLog.create({
-      data: {
-        tenantId,
-        userId: user.id,
-        action: 'CREATE',
-        entity: 'User',
-        entityId: account.id,
-        details: JSON.stringify({ role, email, firstName, lastName, facultyId: scope.facultyId, departmentId: scope.departmentId }),
-      },
+    const account = await db.$transaction(async (tx) => {
+      const created = await tx.user.create({
+        data: { tenantId, firstName, lastName, email, phone, role, facultyId: scope.facultyId, departmentId: scope.departmentId,
+          passwordHash, mustChangePassword: true,
+          ...(juryScope && !('error' in juryScope) ? { juryAssignments: { create: juryScope.levels.map((level) => ({
+            tenantId, academicYearId: juryScope.yearId, departmentId: level.program.departmentId!,
+            programId: level.programId, levelId: level.id,
+          })) } } : {}),
+        },
+        select: { id: true, firstName: true, lastName: true, email: true, phone: true, role: true, facultyId: true, departmentId: true, isActive: true },
+      })
+      await tx.auditLog.create({ data: { tenantId, userId: user.id, action: 'CREATE', entity: 'User', entityId: created.id,
+        details: JSON.stringify({ role, email, firstName, lastName, facultyId: scope.facultyId,
+          departmentId: scope.departmentId, juryLevelIds: juryLevelIds ?? [] }) } })
+      return created
     })
 
     return NextResponse.json({ data: { user: account, tempPassword } }, { status: 201 })
@@ -150,7 +172,7 @@ async function updateStaffHandler(user: SessionUser, tenantId: string, request: 
     if (!parsed.success) {
       return NextResponse.json({ error: 'Données invalides', details: parsed.error.flatten() }, { status: 400 })
     }
-    const { id, isActive, role, facultyId, departmentId, resetPassword } = parsed.data
+    const { id, isActive, role, facultyId, departmentId, juryLevelIds, resetPassword } = parsed.data
 
     const existing = await db.user.findFirst({ where: { id, tenantId } })
     if (!existing) {
@@ -170,13 +192,29 @@ async function updateStaffHandler(user: SessionUser, tenantId: string, request: 
       departmentId !== undefined ? departmentId : role && role !== existing.role ? null : existing.departmentId,
     )
     if ('error' in scope) return NextResponse.json({ error: scope.error }, { status: 400 })
+    const existingJuryLevelIds = existing.role === 'JURY' ? (await db.juryAssignment.findMany({
+      where: { tenantId, userId: existing.id, academicYear: { isCurrent: true } }, select: { levelId: true },
+    })).map((row) => row.levelId) : []
+    const nextJuryLevelIds = juryLevelIds ?? (nextRole === existing.role ? existingJuryLevelIds : [])
+    const juryScope = nextRole === 'JURY' ? await resolveJuryLevels(tenantId, scope.departmentId, nextJuryLevelIds) : null
+    if (juryScope && 'error' in juryScope) return NextResponse.json({ error: juryScope.error }, { status: 400 })
 
     let tempPassword: string | undefined
-    const data: { isActive?: boolean; role?: (typeof STAFF_ROLES)[number]; facultyId?: string | null; departmentId?: string | null; passwordHash?: string; mustChangePassword?: boolean } = {}
+    const data: { isActive?: boolean; role?: (typeof STAFF_ROLES)[number]; facultyId?: string | null; departmentId?: string | null;
+      passwordHash?: string; mustChangePassword?: boolean; juryAssignments?: { deleteMany: { academicYearId?: string }; create?: Array<{
+        tenantId: string; academicYearId: string; departmentId: string; programId: string; levelId: string
+      }> } } = {}
     if (isActive !== undefined) data.isActive = isActive
     if (role !== undefined) data.role = role
     data.facultyId = scope.facultyId
     data.departmentId = scope.departmentId
+    if (juryScope && !('error' in juryScope)) {
+      data.juryAssignments = { deleteMany: { academicYearId: juryScope.yearId }, create: juryScope.levels.map((level) => ({
+        tenantId, academicYearId: juryScope.yearId, departmentId: level.program.departmentId!, programId: level.programId, levelId: level.id,
+      })) }
+    } else if (existing.role === 'JURY') {
+      data.juryAssignments = { deleteMany: {} }
+    }
     if (resetPassword) {
       tempPassword = generateTempPassword()
       data.passwordHash = await bcrypt.hash(tempPassword, 12)
@@ -196,7 +234,8 @@ async function updateStaffHandler(user: SessionUser, tenantId: string, request: 
         action: 'UPDATE',
         entity: 'User',
         entityId: updated.id,
-        details: JSON.stringify({ isActive, role, facultyId: scope.facultyId, departmentId: scope.departmentId, resetPassword: Boolean(resetPassword) }),
+        details: JSON.stringify({ isActive, role, facultyId: scope.facultyId, departmentId: scope.departmentId,
+          juryLevelIds: nextRole === 'JURY' ? nextJuryLevelIds : [], resetPassword: Boolean(resetPassword) }),
       },
     })
 

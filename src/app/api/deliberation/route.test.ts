@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 
-const { authMock, scopeMock, readinessMock, dbMock } = vi.hoisted(() => ({
-  authMock: vi.fn(), scopeMock: vi.fn(), readinessMock: vi.fn(),
+const { authMock, scopeMock, juryScopeMock, readinessMock, dbMock } = vi.hoisted(() => ({
+  authMock: vi.fn(), scopeMock: vi.fn(), juryScopeMock: vi.fn(), readinessMock: vi.fn(),
   dbMock: {
     $transaction: vi.fn(),
     auditLog: { create: vi.fn(), findMany: vi.fn() },
@@ -17,6 +17,7 @@ const { authMock, scopeMock, readinessMock, dbMock } = vi.hoisted(() => ({
 }))
 vi.mock('@/lib/auth/config', () => ({ auth: authMock }))
 vi.mock('@/lib/auth/organization-scope', () => ({ getOrganizationScope: scopeMock }))
+vi.mock('@/lib/auth/jury-scope', () => ({ getJuryScope: juryScopeMock }))
 vi.mock('@/lib/deliberations/readiness', () => ({ computeGradeReadiness: readinessMock }))
 vi.mock('@/lib/db', () => ({ db: dbMock }))
 
@@ -42,6 +43,7 @@ beforeEach(() => {
     teachingUnit: { credits: 6 }, student: { id: 'student-A', firstName: 'Awa', lastName: 'Test', matricule: 'A-001' },
   }])
   readinessMock.mockResolvedValue({ ready: true, studentIds: ['student-A'], studentsTotal: 1 })
+  juryScopeMock.mockResolvedValue({ academicYearId: 'year-A', assignments: [], departmentIds: [], programIds: [], levelIds: [] })
   dbMock.deliberation.create.mockResolvedValue({ id: 'delib-A', departmentId: 'department-A', decisions: [{ studentId: 'student-A' }] })
 })
 
@@ -58,7 +60,7 @@ describe('department deliberation boundary', () => {
   it('creates a jury only for its own ready cohort', async () => {
     const response = await POST(request('POST', '', { departmentId: 'department-A', session: 'NORMALE' }))
     expect(response.status).toBe(201)
-    expect(readinessMock).toHaveBeenCalledWith('tenant-A', 'year-A', 'NORMALE', 'department-A')
+    expect(readinessMock).toHaveBeenCalledWith('tenant-A', 'year-A', 'NORMALE', 'department-A', undefined, undefined)
     expect(dbMock.deliberation.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ departmentId: 'department-A', decisions: { create: [expect.objectContaining({ studentId: 'student-A' })] } }),
     }))
@@ -115,6 +117,9 @@ describe('department deliberation boundary', () => {
 
   it('records a reasoned correction and its author in the same transaction', async () => {
     const updatedAt = new Date('2026-10-02T10:00:00.000Z')
+    dbMock.deliberation.findFirst.mockResolvedValue({
+      id: 'delib-A', academicYearId: 'year-A', departmentId: 'department-A', programId: null, levelId: null,
+    })
     dbMock.deliberation.updateMany.mockResolvedValue({ count: 1 })
     dbMock.deliberationDecision.findFirst.mockResolvedValue({
       id: 'decision-A', studentId: 'student-A', decision: 'AJOURNE', updatedAt,
@@ -154,6 +159,9 @@ describe('department deliberation boundary', () => {
   })
 
   it('rejects corrections after finalization or outside the department', async () => {
+    dbMock.deliberation.findFirst.mockResolvedValue({
+      id: 'delib-B', academicYearId: 'year-A', departmentId: 'department-A', programId: null, levelId: null,
+    })
     dbMock.deliberation.updateMany.mockResolvedValue({ count: 0 })
     const response = await PATCH(request('PATCH', '?id=delib-B&decisionId=decision-B', {
       decision: 'ADMI', reason: 'Décision motivée par le jury', expectedUpdatedAt: new Date().toISOString(),
@@ -164,6 +172,9 @@ describe('department deliberation boundary', () => {
   })
 
   it('rejects a stale correction and does not overwrite newer jury work', async () => {
+    dbMock.deliberation.findFirst.mockResolvedValue({
+      id: 'delib-A', academicYearId: 'year-A', departmentId: 'department-A', programId: null, levelId: null,
+    })
     dbMock.deliberation.updateMany.mockResolvedValue({ count: 1 })
     dbMock.deliberationDecision.findFirst.mockResolvedValue({
       id: 'decision-A', studentId: 'student-A', decision: 'AJOURNE', updatedAt: new Date('2026-10-02T12:00:00.000Z'),
@@ -174,5 +185,23 @@ describe('department deliberation boundary', () => {
     expect(response.status).toBe(409)
     expect(dbMock.deliberationDecision.update).not.toHaveBeenCalled()
     expect(dbMock.auditLog.create).not.toHaveBeenCalled()
+  })
+
+  it('limits a jury preview to its assigned programme and level', async () => {
+    authMock.mockResolvedValue({ user: { id: 'jury-A', role: 'JURY', tenantId: 'tenant-A' } })
+    juryScopeMock.mockResolvedValue({
+      academicYearId: 'year-A', departmentIds: ['department-A'], programIds: ['program-master-ge'], levelIds: ['level-master-1'],
+      assignments: [{ departmentId: 'department-A', programId: 'program-master-ge', levelId: 'level-master-1',
+        programName: 'Master Génie électrique', levelName: 'Master I' }],
+    })
+    const response = await GET(request('GET', '?programId=program-master-ge&levelId=level-master-1&session=NORMALE'))
+    expect(response.status).toBe(200)
+    expect(readinessMock).toHaveBeenCalledWith(
+      'tenant-A', 'year-A', 'NORMALE', 'department-A', 'program-master-ge', 'level-master-1'
+    )
+    expect(dbMock.deliberation.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ OR: [{ academicYearId: 'year-A', departmentId: 'department-A',
+        programId: 'program-master-ge', levelId: 'level-master-1' }] }),
+    }))
   })
 })

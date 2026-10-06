@@ -3,12 +3,15 @@ import { NextRequest } from 'next/server'
 
 const mocks = vi.hoisted(() => ({
   faculty: vi.fn(), department: vi.fn(), userFindUnique: vi.fn(), userFindFirst: vi.fn(), userCreate: vi.fn(), userUpdate: vi.fn(), audit: vi.fn(),
+  transaction: vi.fn(), academicYear: vi.fn(), levels: vi.fn(), juryAssignments: vi.fn(),
 }))
 vi.mock('@/lib/auth/helpers', () => ({ withTenantAuth: (handler: unknown) => handler }))
 vi.mock('@/lib/password', () => ({ generateTempPassword: () => 'temporary-test-password' }))
 vi.mock('bcryptjs', () => ({ default: { hash: vi.fn().mockResolvedValue('hashed-password') } }))
 vi.mock('@/lib/db', () => ({ db: {
+  $transaction: mocks.transaction,
   faculty: { findFirst: mocks.faculty }, department: { findFirst: mocks.department },
+  academicYear: { findFirst: mocks.academicYear }, level: { findMany: mocks.levels }, juryAssignment: { findMany: mocks.juryAssignments },
   user: { findUnique: mocks.userFindUnique, findFirst: mocks.userFindFirst, create: mocks.userCreate, update: mocks.userUpdate },
   auditLog: { create: mocks.audit },
 } }))
@@ -22,11 +25,20 @@ const base = { firstName: 'Awa', lastName: 'Tahir', email: 'awa@example.test' }
 
 beforeEach(() => {
   vi.resetAllMocks()
+  mocks.transaction.mockImplementation((callback: (tx: unknown) => unknown) => callback({
+    user: { create: mocks.userCreate }, auditLog: { create: mocks.audit },
+  }))
   mocks.faculty.mockResolvedValue({ id: 'cfaculty0000000000000001' })
   mocks.department.mockResolvedValue({ id: 'cdepartment000000000001', facultyId: 'cfaculty0000000000000001' })
   mocks.userFindUnique.mockResolvedValue(null)
   mocks.userCreate.mockResolvedValue({ id: 'cuser000000000000000001', ...base, role: 'DEPARTEMENT' })
   mocks.audit.mockResolvedValue({ id: 'audit' })
+  mocks.academicYear.mockResolvedValue({ id: 'cyear000000000000000001' })
+  mocks.levels.mockResolvedValue([{
+    id: 'clevel00000000000000001', programId: 'cprogram000000000000001',
+    program: { departmentId: 'cdepartment000000000001' },
+  }])
+  mocks.juryAssignments.mockResolvedValue([])
 })
 
 describe('staff scope assignment', () => {
@@ -67,11 +79,14 @@ describe('staff scope assignment', () => {
     expect(mocks.userCreate).not.toHaveBeenCalled()
   })
 
-  it('creates a jury account bound to its department', async () => {
-    const response = await post(admin, admin.tenantId, request('POST', { ...base, role: 'JURY', departmentId: 'cdepartment000000000001' }))
+  it('creates a jury account bound to exact programme levels', async () => {
+    const response = await post(admin, admin.tenantId, request('POST', { ...base, role: 'JURY',
+      departmentId: 'cdepartment000000000001', juryLevelIds: ['clevel00000000000000001'] }))
     expect(response.status).toBe(201)
     expect(mocks.userCreate).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({
       role: 'JURY', departmentId: 'cdepartment000000000001', facultyId: null,
+      juryAssignments: { create: [{ tenantId: admin.tenantId, academicYearId: 'cyear000000000000000001',
+        departmentId: 'cdepartment000000000001', programId: 'cprogram000000000000001', levelId: 'clevel00000000000000001' }] },
     }) }))
   })
 

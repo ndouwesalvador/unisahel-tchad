@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -48,7 +49,12 @@ interface StaffUserRow {
   mustChangePassword: boolean
   lastLoginAt: string | null
   createdAt: string
+  juryAssignments?: Array<{ levelId: string; programId: string; departmentId: string; program: { name: string }; level: { name: string } }>
 }
+
+type DepartmentOption = { id: string; name: string; facultyName: string; programs: Array<{
+  id: string; name: string; levels: Array<{ id: string; name: string }>
+}> }
 
 const STAFF_ROLE_OPTIONS = [
   'ADMIN_INSTITUTION',
@@ -75,7 +81,7 @@ const roleLabels: Record<string, string> = {
   MAITRE_STAGE: 'Maître de stage',
 }
 
-const emptyForm = { firstName: '', lastName: '', email: '', phone: '', role: '', facultyId: '', departmentId: '' }
+const emptyForm = { firstName: '', lastName: '', email: '', phone: '', role: '', facultyId: '', departmentId: '', juryLevelIds: [] as string[] }
 
 function formatDateFr(iso: string | null) {
   if (!iso) return 'Jamais'
@@ -87,8 +93,8 @@ export function StaffUsersPage() {
   const { data, isLoading } = useStaffUsers() as { data: { data: StaffUserRow[] } | undefined; isLoading: boolean }
   const users = data?.data ?? []
   const { data: structure } = useStructure()
-  const faculties: { id: string; name: string; departments: { id: string; name: string }[] }[] = structure?.faculties ?? []
-  const departments = faculties.flatMap((faculty) => faculty.departments.map((department) => ({ ...department, facultyName: faculty.name })))
+  const faculties: { id: string; name: string; departments: Array<{ id: string; name: string; programs: DepartmentOption['programs'] }> }[] = structure?.faculties ?? []
+  const departments: DepartmentOption[] = faculties.flatMap((faculty) => faculty.departments.map((department) => ({ ...department, facultyName: faculty.name })))
 
   const [showCreate, setShowCreate] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
@@ -99,6 +105,7 @@ export function StaffUsersPage() {
   const [editRole, setEditRole] = useState('')
   const [editFacultyId, setEditFacultyId] = useState('')
   const [editDepartmentId, setEditDepartmentId] = useState('')
+  const [editJuryLevelIds, setEditJuryLevelIds] = useState<string[]>([])
 
   const staffCount = users.filter((u) => u.role !== 'ENSEIGNANT').length
   const activeCount = users.filter((u) => u.isActive).length
@@ -111,6 +118,10 @@ export function StaffUsersPage() {
     }
     if ((form.role === 'FACULTE' && !form.facultyId) || (['DEPARTEMENT', 'RESPONSABLE_FILIERE', 'JURY'].includes(form.role) && !form.departmentId)) {
       toast.error('Périmètre requis', { description: 'Affectez ce responsable à sa faculté ou à son département.' })
+      return
+    }
+    if (form.role === 'JURY' && form.juryLevelIds.length === 0) {
+      toast.error('Périmètre du jury requis', { description: 'Sélectionnez au moins un programme et un niveau.' })
       return
     }
     setIsCreating(true)
@@ -144,6 +155,7 @@ export function StaffUsersPage() {
           id: editing.id, role: editRole,
           facultyId: editRole === 'FACULTE' ? editFacultyId || null : null,
           departmentId: ['DEPARTEMENT', 'RESPONSABLE_FILIERE', 'JURY'].includes(editRole) ? editDepartmentId || null : null,
+          juryLevelIds: editRole === 'JURY' ? editJuryLevelIds : [],
         }),
       })
       const json = await res.json().catch(() => ({}))
@@ -290,7 +302,12 @@ export function StaffUsersPage() {
                         )}
                       </TableCell>
                       <TableCell className="text-xs text-gray-600">
-                        {u.facultyId ? faculties.find((faculty) => faculty.id === u.facultyId)?.name || 'Faculté introuvable' :
+                        {u.role === 'JURY' ? <div>
+                          <p className="font-medium">{u.departmentId ? departments.find((department) => department.id === u.departmentId)?.name || 'Département introuvable' : 'À affecter'}</p>
+                          <p className="mt-0.5 text-[11px] text-slate-500">{u.juryAssignments?.length
+                            ? u.juryAssignments.map((assignment) => `${assignment.program.name} · ${assignment.level.name}`).join(', ')
+                            : 'Aucun niveau affecté'}</p>
+                        </div> : u.facultyId ? faculties.find((faculty) => faculty.id === u.facultyId)?.name || 'Faculté introuvable' :
                           u.departmentId ? departments.find((department) => department.id === u.departmentId)?.name || 'Département introuvable' :
                             u.role === 'FACULTE' || u.role === 'DEPARTEMENT' ? 'À affecter' : 'Institution'}
                       </TableCell>
@@ -312,7 +329,8 @@ export function StaffUsersPage() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-48">
                               <DropdownMenuItem className="text-xs" onClick={() => {
-                                setEditing(u); setEditRole(u.role); setEditFacultyId(u.facultyId || ''); setEditDepartmentId(u.departmentId || '')
+                                setEditing(u); setEditRole(u.role); setEditFacultyId(u.facultyId || ''); setEditDepartmentId(u.departmentId || '');
+                                setEditJuryLevelIds(u.juryAssignments?.map((assignment) => assignment.levelId) ?? [])
                               }}>
                                 Modifier rôle et périmètre
                               </DropdownMenuItem>
@@ -364,7 +382,7 @@ export function StaffUsersPage() {
             </div>
             <div className="space-y-2">
               <Label className="text-sm">Role</Label>
-              <Select value={form.role} onValueChange={(v) => setForm((f) => ({ ...f, role: v, facultyId: '', departmentId: '' }))}>
+              <Select value={form.role} onValueChange={(v) => setForm((f) => ({ ...f, role: v, facultyId: '', departmentId: '', juryLevelIds: [] }))}>
               <SelectTrigger><SelectValue placeholder="Sélectionner un rôle" /></SelectTrigger>
                 <SelectContent>
                   {STAFF_ROLE_OPTIONS.map((r) => (
@@ -382,10 +400,25 @@ export function StaffUsersPage() {
             </div>}
             {['DEPARTEMENT', 'RESPONSABLE_FILIERE', 'JURY'].includes(form.role) && <div className="space-y-2">
               <Label>Département du compte *</Label>
-              <Select value={form.departmentId} onValueChange={(value) => setForm((f) => ({ ...f, departmentId: value }))}>
+              <Select value={form.departmentId} onValueChange={(value) => setForm((f) => ({ ...f, departmentId: value, juryLevelIds: [] }))}>
                 <SelectTrigger><SelectValue placeholder="Choisir un département" /></SelectTrigger>
                 <SelectContent>{departments.map((department) => <SelectItem key={department.id} value={department.id}>{department.name} · {department.facultyName}</SelectItem>)}</SelectContent>
               </Select>
+            </div>}
+            {form.role === 'JURY' && form.departmentId && <div className="space-y-2 rounded-lg border border-slate-200 p-3">
+              <Label>Programmes et niveaux couverts *</Label>
+              <p className="text-xs text-slate-600">Cochez uniquement les promotions que ce jury peut noter et délibérer. Plusieurs choix sont possibles.</p>
+              <div className="max-h-48 space-y-3 overflow-y-auto pt-1">
+                {departments.find((department) => department.id === form.departmentId)?.programs.map((program) => <div key={program.id}>
+                  <p className="mb-1 text-xs font-semibold text-slate-900">{program.name}</p>
+                  <div className="space-y-1.5">{program.levels.map((level) => <label key={level.id} className="flex items-center gap-2 text-sm text-slate-700">
+                    <Checkbox checked={form.juryLevelIds.includes(level.id)} onCheckedChange={(checked) => setForm((current) => ({ ...current,
+                      juryLevelIds: checked ? [...current.juryLevelIds, level.id] : current.juryLevelIds.filter((id) => id !== level.id),
+                    }))} />
+                    {level.name}
+                  </label>)}</div>
+                </div>)}
+              </div>
             </div>}
             <p className="text-[11px] text-gray-400">Un mot de passe temporaire sera généré et affiché une seule fois après la création.</p>
             <Button className="w-full bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white" disabled={isCreating} onClick={handleCreate}>
@@ -401,14 +434,24 @@ export function StaffUsersPage() {
           <p className="text-sm text-gray-600">{editing?.firstName} {editing?.lastName}</p>
           <div className="space-y-2">
             <Label>Rôle</Label>
-            <Select value={editRole} onValueChange={(value) => { setEditRole(value); setEditFacultyId(''); setEditDepartmentId('') }}>
+            <Select value={editRole} onValueChange={(value) => { setEditRole(value); setEditFacultyId(''); setEditDepartmentId(''); setEditJuryLevelIds([]) }}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>{STAFF_ROLE_OPTIONS.map((role) => <SelectItem key={role} value={role}>{roleLabels[role]}</SelectItem>)}</SelectContent>
             </Select>
           </div>
           {editRole === 'FACULTE' && <div className="space-y-2"><Label>Faculté</Label><Select value={editFacultyId} onValueChange={setEditFacultyId}><SelectTrigger><SelectValue placeholder="Choisir" /></SelectTrigger><SelectContent>{faculties.map((faculty) => <SelectItem key={faculty.id} value={faculty.id}>{faculty.name}</SelectItem>)}</SelectContent></Select></div>}
-          {['DEPARTEMENT', 'RESPONSABLE_FILIERE', 'JURY'].includes(editRole) && <div className="space-y-2"><Label>Département</Label><Select value={editDepartmentId} onValueChange={setEditDepartmentId}><SelectTrigger><SelectValue placeholder="Choisir" /></SelectTrigger><SelectContent>{departments.map((department) => <SelectItem key={department.id} value={department.id}>{department.name} · {department.facultyName}</SelectItem>)}</SelectContent></Select></div>}
-          <Button disabled={busyId === editing?.id || (editRole === 'FACULTE' && !editFacultyId) || (['DEPARTEMENT', 'RESPONSABLE_FILIERE', 'JURY'].includes(editRole) && !editDepartmentId)} onClick={handleUpdateRole}>Enregistrer</Button>
+          {['DEPARTEMENT', 'RESPONSABLE_FILIERE', 'JURY'].includes(editRole) && <div className="space-y-2"><Label>Département</Label><Select value={editDepartmentId} onValueChange={(value) => { setEditDepartmentId(value); setEditJuryLevelIds([]) }}><SelectTrigger><SelectValue placeholder="Choisir" /></SelectTrigger><SelectContent>{departments.map((department) => <SelectItem key={department.id} value={department.id}>{department.name} · {department.facultyName}</SelectItem>)}</SelectContent></Select></div>}
+          {editRole === 'JURY' && editDepartmentId && <div className="space-y-2 rounded-lg border border-slate-200 p-3">
+            <Label>Programmes et niveaux couverts *</Label>
+            <div className="max-h-48 space-y-3 overflow-y-auto">{departments.find((department) => department.id === editDepartmentId)?.programs.map((program) => <div key={program.id}>
+              <p className="mb-1 text-xs font-semibold text-slate-900">{program.name}</p>
+              {program.levels.map((level) => <label key={level.id} className="flex items-center gap-2 py-0.5 text-sm text-slate-700">
+                <Checkbox checked={editJuryLevelIds.includes(level.id)} onCheckedChange={(checked) => setEditJuryLevelIds((current) => checked ? [...current, level.id] : current.filter((id) => id !== level.id))} />
+                {level.name}
+              </label>)}
+            </div>)}</div>
+          </div>}
+          <Button disabled={busyId === editing?.id || (editRole === 'FACULTE' && !editFacultyId) || (['DEPARTEMENT', 'RESPONSABLE_FILIERE', 'JURY'].includes(editRole) && !editDepartmentId) || (editRole === 'JURY' && editJuryLevelIds.length === 0)} onClick={handleUpdateRole}>Enregistrer</Button>
         </DialogContent>
       </Dialog>
 

@@ -4,6 +4,7 @@ import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
 import { isStudentSelfRole } from '@/lib/auth/student-scope'
 import { computeGradeReadiness } from '@/lib/deliberations/readiness'
 import { getOrganizationScope } from '@/lib/auth/organization-scope'
+import { getJuryScope, type JuryScope } from '@/lib/auth/jury-scope'
 import { parseJuryMembers } from '@/lib/deliberations/jury'
 
 type Decision = 'ADMI' | 'AJOURNE' | 'REDOUBLANT' | 'EXCLU' | 'ADMI_DETTE' | 'COMPENSE'
@@ -47,7 +48,7 @@ function suggestDecision(
   return 'REDOUBLANT'
 }
 
-async function computeStudentDecisions(tenantId: string, academicYearId: string, session: string, studentIds: string[]) {
+async function computeStudentDecisions(tenantId: string, academicYearId: string, session: string, studentIds: string[], levelId?: string | null) {
   const settings = await db.tenantSettings.findUnique({
     where: { tenantId },
     select: { passingGrade: true, eliminationGrade: true, compensationEnabled: true, creditsPerYear: true },
@@ -58,7 +59,8 @@ async function computeStudentDecisions(tenantId: string, academicYearId: string,
   const creditsTotal = settings?.creditsPerYear ?? 60
 
   const gradeRows = await db.grade.findMany({
-    where: { student: { tenantId }, studentId: { in: studentIds }, academicYearId, session, isLocked: true, finalGrade: { not: null } },
+    where: { student: { tenantId }, studentId: { in: studentIds }, academicYearId, session, isLocked: true,
+      finalGrade: { not: null }, ...(levelId ? { teachingUnit: { semester: { levelId } } } : {}) },
     select: {
       studentId: true,
       finalGrade: true,
@@ -117,18 +119,12 @@ async function computeStudentDecisions(tenantId: string, academicYearId: string,
   }).sort((a, b) => a.nom.localeCompare(b.nom))
 }
 
-async function availableDepartments(user: SessionUser, tenantId: string) {
-  // A jury is permanently attached to one department. Never default to the
-  // first institution department: doing so can expose another department's
-  // students and makes the jury appear to have lost its notes.
+async function availableDepartments(user: SessionUser, tenantId: string, juryScope?: JuryScope | null) {
   if (user.role === 'JURY') {
-    const account = await db.user.findFirst({
-      where: { id: user.id, tenantId, role: 'JURY', isActive: true },
-      select: { departmentId: true },
-    })
-    if (!account?.departmentId) return []
+    const departmentIds = juryScope?.departmentIds ?? []
+    if (departmentIds.length === 0) return []
     return db.department.findMany({
-      where: { tenantId, isActive: true, id: account.departmentId },
+      where: { tenantId, isActive: true, id: { in: departmentIds } },
       select: { id: true, name: true, shortName: true }, orderBy: { name: 'asc' },
     })
   }
@@ -138,6 +134,21 @@ async function availableDepartments(user: SessionUser, tenantId: string) {
     where: { tenantId, isActive: true, ...(scope ? { id: { in: scope.departmentIds } } : {}) },
     select: { id: true, name: true, shortName: true }, orderBy: { name: 'asc' },
   })
+}
+
+function findJuryAssignment(scope: JuryScope, programId?: string | null, levelId?: string | null) {
+  if (!programId && !levelId && scope.assignments.length === 1) return scope.assignments[0]
+  if (!programId || !levelId) return null
+  return scope.assignments.find((assignment) => assignment.programId === programId && assignment.levelId === levelId) ?? null
+}
+
+function juryDeliberationFilters(scope: JuryScope) {
+  return scope.assignments.map((assignment) => ({
+    academicYearId: scope.academicYearId,
+    departmentId: assignment.departmentId,
+    programId: assignment.programId,
+    levelId: assignment.levelId,
+  }))
 }
 
 // GET /api/deliberation - list real deliberation sessions + decisions for the selected one
@@ -151,19 +162,37 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
     const { searchParams } = new URL(request.url)
     const deliberationId = searchParams.get('id')
     const departmentId = searchParams.get('departmentId')
+    const programId = searchParams.get('programId')
+    const levelId = searchParams.get('levelId')
     const sessionType = searchParams.get('session') || 'NORMALE'
-    const departments = await availableDepartments(user, tenantId)
+    const academicYear = await resolveCurrentAcademicYear(tenantId)
+    const juryScope = user.role === 'JURY'
+      ? await getJuryScope(user, tenantId, academicYear?.id)
+      : null
+    const departments = await availableDepartments(user, tenantId, juryScope)
     const permittedIds = new Set(departments.map((department) => department.id))
     if (departmentId && !permittedIds.has(departmentId)) {
       return NextResponse.json({ error: 'Département inaccessible' }, { status: 403 })
     }
-    const selectedDepartmentId = departmentId || (departments.length === 1 ? departments[0].id : null)
-    if (!selectedDepartmentId && !deliberationId) {
-      return NextResponse.json({ departments, sessions: [], selected: null, students: [], readiness: null })
+    const selectedAssignment = juryScope ? findJuryAssignment(juryScope, programId, levelId) : null
+    if (juryScope && (programId || levelId) && !selectedAssignment) {
+      return NextResponse.json({ error: 'Programme ou niveau hors du périmètre du jury' }, { status: 403 })
     }
+    const selectedDepartmentId = selectedAssignment?.departmentId || departmentId || (departments.length === 1 ? departments[0].id : null)
+
+    const scopeFilters = juryScope ? juryDeliberationFilters(juryScope) : []
+    const deliberationWhere = juryScope
+      ? {
+          tenantId,
+          OR: selectedAssignment
+            ? [{ academicYearId: juryScope.academicYearId, departmentId: selectedAssignment.departmentId,
+                programId: selectedAssignment.programId, levelId: selectedAssignment.levelId }]
+            : scopeFilters,
+        }
+      : { tenantId, departmentId: { in: Array.from(permittedIds) }, ...(selectedDepartmentId ? { departmentId: selectedDepartmentId } : {}) }
 
     const deliberations = await db.deliberation.findMany({
-      where: { tenantId, departmentId: { in: Array.from(permittedIds) }, ...(selectedDepartmentId ? { departmentId: selectedDepartmentId } : {}) },
+      where: deliberationWhere,
       orderBy: { date: 'desc' },
       take: 50,
     })
@@ -177,6 +206,8 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
       isLocked: d.isLocked,
       type: d.type,
       departmentId: d.departmentId,
+      programId: d.programId,
+      levelId: d.levelId,
       academicYearId: d.academicYearId,
     }))
 
@@ -191,7 +222,10 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
         db.tenantSettings.findUnique({ where: { tenantId }, select: {
           creditsPerYear: true, passingGrade: true, eliminationGrade: true, compensationEnabled: true,
         } }),
-        computeGradeReadiness(tenantId, deliberation.academicYearId, readinessSession, deliberation.departmentId!),
+        computeGradeReadiness(
+          tenantId, deliberation.academicYearId, readinessSession, deliberation.departmentId!,
+          deliberation.programId ?? undefined, deliberation.levelId ?? undefined
+        ),
       ])
       const latestCorrections = decisionRows.length ? await db.auditLog.findMany({
         where: { tenantId, action: 'JURY_DECISION_CHANGED', entity: 'DeliberationDecision',
@@ -227,24 +261,42 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
           modifiedAt: correction?.createdAt.toISOString() || null,
         }
       })
-      return NextResponse.json({ departments, sessions, selected: { id: deliberation.id, departmentId: deliberation.departmentId, isLocked: deliberation.isLocked, juryMembers: deliberation.juryMembers }, students, readiness, rules: juryRuleSummary(settings) })
+      return NextResponse.json({
+        departments, juryScopes: juryScope?.assignments ?? [], sessions,
+        selected: { id: deliberation.id, departmentId: deliberation.departmentId, programId: deliberation.programId,
+          levelId: deliberation.levelId, isLocked: deliberation.isLocked, juryMembers: deliberation.juryMembers },
+        students, readiness, rules: juryRuleSummary(settings),
+      })
     }
 
     // No deliberation selected yet: show a live preview computed from real grades
-    const academicYear = await resolveCurrentAcademicYear(tenantId)
     if (!academicYear) {
-      return NextResponse.json({ departments, sessions, selected: null, students: [] })
+      return NextResponse.json({ departments, juryScopes: juryScope?.assignments ?? [], sessions, selected: null, students: [] })
+    }
+    if (!selectedDepartmentId || (juryScope && !selectedAssignment)) {
+      return NextResponse.json({
+        departments, juryScopes: juryScope?.assignments ?? [], sessions,
+        selected: null, students: [], readiness: null, academicYearName: academicYear.name,
+      })
     }
     const [readiness, settings] = await Promise.all([
-      computeGradeReadiness(tenantId, academicYear.id, sessionType, selectedDepartmentId!),
+      computeGradeReadiness(
+        tenantId, academicYear.id, sessionType, selectedDepartmentId,
+        selectedAssignment?.programId, selectedAssignment?.levelId
+      ),
       db.tenantSettings.findUnique({ where: { tenantId }, select: {
         creditsPerYear: true, passingGrade: true, eliminationGrade: true, compensationEnabled: true,
       } }),
     ])
-    const preview = await computeStudentDecisions(tenantId, academicYear.id, sessionType, readiness.studentIds)
+    const preview = await computeStudentDecisions(
+      tenantId, academicYear.id, sessionType, readiness.studentIds, selectedAssignment?.levelId
+    )
     const students = preview.map((p) => ({ ...p, id: p.studentId, observation: '' }))
 
-    return NextResponse.json({ departments, sessions, selected: null, students, readiness, rules: juryRuleSummary(settings), academicYearName: academicYear.name })
+    return NextResponse.json({
+      departments, juryScopes: juryScope?.assignments ?? [], sessions, selected: null, students, readiness,
+      rules: juryRuleSummary(settings), academicYearName: academicYear.name,
+    })
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error('Deliberation API error:', error)
@@ -269,9 +321,20 @@ async function handlePatch(user: SessionUser, tenantId: string, request: NextReq
       return NextResponse.json({ error: 'Décision, motif de 10 à 1000 caractères et version actuelle requis' }, { status: 400 })
     }
 
-    const departments = await availableDepartments(user, tenantId)
+    const deliberation = await db.deliberation.findFirst({
+      where: { id, tenantId },
+      select: { academicYearId: true, departmentId: true, programId: true, levelId: true },
+    })
+    if (!deliberation) return NextResponse.json({ error: 'Délibération introuvable' }, { status: 404 })
+    const juryScope = user.role === 'JURY' ? await getJuryScope(user, tenantId, deliberation.academicYearId) : null
+    const departments = await availableDepartments(user, tenantId, juryScope)
     const permittedIds = departments.map((department) => department.id)
     if (permittedIds.length === 0) return NextResponse.json({ error: 'Département inaccessible' }, { status: 403 })
+    if (juryScope && !juryScope.assignments.some((assignment) =>
+      assignment.departmentId === deliberation.departmentId && assignment.programId === deliberation.programId &&
+      assignment.levelId === deliberation.levelId)) {
+      return NextResponse.json({ error: 'Délibération hors du périmètre du jury' }, { status: 403 })
+    }
 
     const updated = await db.$transaction(async (tx) => {
       const parent = await tx.deliberation.updateMany({
@@ -317,17 +380,43 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
   try {
     const body = await request.json().catch(() => ({}))
     const sessionType = body.session === 'RATTRAPAGE' ? 'RATTRAPAGE' : 'NORMALE'
-    const departments = await availableDepartments(user, tenantId)
-    const department = departments.find((item) => item.id === body.departmentId) ||
-      (departments.length === 1 && !body.departmentId ? departments[0] : null)
-    if (!department) return NextResponse.json({ error: 'Département inaccessible ou non sélectionné' }, { status: 403 })
-
     const academicYear = await resolveCurrentAcademicYear(tenantId)
     if (!academicYear) {
       return NextResponse.json({ error: 'No current academic year configured' }, { status: 409 })
     }
+    const juryScope = user.role === 'JURY' ? await getJuryScope(user, tenantId, academicYear.id) : null
+    const departments = await availableDepartments(user, tenantId, juryScope)
+    const selectedAssignment = juryScope ? findJuryAssignment(juryScope, body.programId, body.levelId) : null
+    if (juryScope && !selectedAssignment) {
+      return NextResponse.json({ error: 'Sélectionnez un programme et un niveau affectés à ce jury' }, { status: 403 })
+    }
+    const department = selectedAssignment
+      ? departments.find((item) => item.id === selectedAssignment.departmentId)
+      : departments.find((item) => item.id === body.departmentId) ||
+        (departments.length === 1 && !body.departmentId ? departments[0] : null)
+    if (!department) return NextResponse.json({ error: 'Département inaccessible ou non sélectionné' }, { status: 403 })
 
-    const readiness = await computeGradeReadiness(tenantId, academicYear.id, sessionType, department.id)
+    let selectedProgramId: string | undefined = selectedAssignment?.programId
+    let selectedLevelId: string | undefined = selectedAssignment?.levelId
+    let scopeLabel = selectedAssignment ? `${selectedAssignment.programName} · ${selectedAssignment.levelName}` : department.name
+    if (!juryScope && (body.programId || body.levelId)) {
+      if (!body.programId || !body.levelId) {
+        return NextResponse.json({ error: 'Le programme et le niveau doivent être sélectionnés ensemble' }, { status: 400 })
+      }
+      const level = await db.level.findFirst({
+        where: { id: body.levelId, programId: body.programId, isActive: true,
+          program: { tenantId, departmentId: department.id, isActive: true } },
+        select: { id: true, name: true, program: { select: { id: true, name: true } } },
+      })
+      if (!level) return NextResponse.json({ error: 'Programme ou niveau inaccessible' }, { status: 403 })
+      selectedProgramId = level.program.id
+      selectedLevelId = level.id
+      scopeLabel = `${level.program.name} · ${level.name}`
+    }
+
+    const readiness = await computeGradeReadiness(
+      tenantId, academicYear.id, sessionType, department.id, selectedProgramId, selectedLevelId
+    )
     if (!readiness.ready) {
       return NextResponse.json(
         { error: 'Les notes sont incomplètes ou incohérentes pour cette session', readiness },
@@ -335,24 +424,28 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
       )
     }
 
-    const computed = await computeStudentDecisions(tenantId, academicYear.id, sessionType, readiness.studentIds)
+    const computed = await computeStudentDecisions(tenantId, academicYear.id, sessionType, readiness.studentIds, selectedLevelId)
     if (computed.length === 0) {
       return NextResponse.json({ error: 'Aucune note trouvee pour cette annee academique' }, { status: 409 })
     }
 
     const existing = await db.deliberation.findFirst({
-      where: { tenantId, academicYearId: academicYear.id, departmentId: department.id, type: sessionType === 'RATTRAPAGE' ? 'RATTRAPAGE' : 'ANNUEL' },
+      where: { tenantId, academicYearId: academicYear.id, departmentId: department.id,
+        programId: selectedProgramId ?? null, levelId: selectedLevelId ?? null,
+        type: sessionType === 'RATTRAPAGE' ? 'RATTRAPAGE' : 'ANNUEL' },
       select: { id: true },
     })
-    if (existing) return NextResponse.json({ error: 'Une délibération existe déjà pour ce département et cette session', id: existing.id }, { status: 409 })
+    if (existing) return NextResponse.json({ error: 'Une délibération existe déjà pour ce périmètre et cette session', id: existing.id }, { status: 409 })
 
     const deliberation = await db.deliberation.create({
       data: {
         tenantId,
         academicYearId: academicYear.id,
         departmentId: department.id,
+        programId: selectedProgramId,
+        levelId: selectedLevelId,
         type: sessionType === 'RATTRAPAGE' ? 'RATTRAPAGE' : 'ANNUEL',
-        name: `Délibération ${department.name} · ${sessionType === 'RATTRAPAGE' ? 'Rattrapage' : 'Normale'} ${academicYear.name}`,
+        name: `Délibération ${scopeLabel} · ${sessionType === 'RATTRAPAGE' ? 'Rattrapage' : 'Normale'} ${academicYear.name}`,
         date: new Date(),
         status: 'EN_COURS',
         presidentId: user.id,
@@ -371,7 +464,7 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
     return NextResponse.json({ deliberation }, { status: 201 })
   } catch (error) {
     if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2002') {
-      return NextResponse.json({ error: 'Une délibération existe déjà pour ce département et cette session' }, { status: 409 })
+      return NextResponse.json({ error: 'Une délibération existe déjà pour ce périmètre et cette session' }, { status: 409 })
     }
     // eslint-disable-next-line no-console
     console.error('Launch deliberation error:', error)
@@ -394,13 +487,22 @@ async function handlePut(user: SessionUser, tenantId: string, request: NextReque
     if (!existing) {
       return NextResponse.json({ error: 'Deliberation not found' }, { status: 404 })
     }
-    const departments = await availableDepartments(user, tenantId)
+    const juryScope = user.role === 'JURY' ? await getJuryScope(user, tenantId, existing.academicYearId) : null
+    const departments = await availableDepartments(user, tenantId, juryScope)
     if (!existing.departmentId || !departments.some((department) => department.id === existing.departmentId)) {
       return NextResponse.json({ error: 'Département inaccessible' }, { status: 403 })
     }
+    if (juryScope && !juryScope.assignments.some((assignment) =>
+      assignment.departmentId === existing.departmentId && assignment.programId === existing.programId &&
+      assignment.levelId === existing.levelId)) {
+      return NextResponse.json({ error: 'Délibération hors du périmètre du jury' }, { status: 403 })
+    }
     if (existing.isLocked) return NextResponse.json({ error: 'Cette délibération est déjà finalisée' }, { status: 409 })
     const sessionType = existing.type === 'RATTRAPAGE' ? 'RATTRAPAGE' : 'NORMALE'
-    const readiness = await computeGradeReadiness(tenantId, existing.academicYearId, sessionType, existing.departmentId)
+    const readiness = await computeGradeReadiness(
+      tenantId, existing.academicYearId, sessionType, existing.departmentId,
+      existing.programId ?? undefined, existing.levelId ?? undefined
+    )
     if (!readiness.ready) {
       return NextResponse.json(
         { error: 'Les notes sont incomplètes ou incohérentes pour cette session', readiness },
@@ -412,7 +514,7 @@ async function handlePut(user: SessionUser, tenantId: string, request: NextReque
     if (decisionIds.length !== readiness.studentIds.length || new Set(decisionIds).size !== decisionIds.length ||
         decisionIds.some((studentId) => !readiness.studentIds.includes(studentId)) ||
         decisions.some((decision) => !DECISIONS.has(decision.decision as Decision))) {
-      return NextResponse.json({ error: 'Les décisions ne correspondent plus aux inscrits du département' }, { status: 409 })
+      return NextResponse.json({ error: 'Les décisions ne correspondent plus aux inscrits du programme et du niveau' }, { status: 409 })
     }
 
     const locked = await db.deliberation.updateMany({

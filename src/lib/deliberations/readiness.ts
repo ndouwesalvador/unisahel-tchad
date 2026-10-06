@@ -22,24 +22,26 @@ function gradeKey(studentId: string, teachingUnitId: string, courseElementId?: s
   return `${studentId}:${teachingUnitId}:${courseElementId || 'UE'}`
 }
 
-export async function computeGradeReadiness(tenantId: string, academicYearId: string, session: string, departmentId: string) {
+export async function computeGradeReadiness(tenantId: string, academicYearId: string, session: string, departmentId: string,
+  programId?: string | null, levelId?: string | null) {
   const programs = await db.program.findMany({
-    where: { tenantId, departmentId }, select: { id: true },
+    where: { tenantId, departmentId, ...(programId ? { id: programId } : {}) }, select: { id: true },
   })
   // The annual registration is preferred, but development and migration data
   // can legitimately have a validated current student without a separate
   // registration row. Keep the jury pipeline aligned with the teacher roster
   // in that case instead of silently producing a 0/0 deliberation.
   let enrolments = await db.administrativeRegistration.findMany({
-    where: { tenantId, academicYearId, status: 'INSCRIT', programId: { in: programs.map((program) => program.id) } },
+    where: { tenantId, academicYearId, status: 'INSCRIT', programId: { in: programs.map((program) => program.id) },
+      ...(levelId ? { levelId } : {}) },
     select: { studentId: true, student: { select: { id: true, firstName: true, lastName: true, matricule: true } } },
   })
   if (programs.length > 0 && db.student && typeof db.student.findMany === 'function') {
     const currentStudents = await db.student.findMany({
-      where: { tenantId, OR: [
+      where: { tenantId, ...(levelId ? { currentLevelId: levelId } : { OR: [
         { currentProgramId: { in: programs.map((program) => program.id) } },
         { currentLevel: { programId: { in: programs.map((program) => program.id) } } },
-      ] },
+      ] }) },
       select: { id: true, firstName: true, lastName: true, matricule: true },
     })
     const knownStudentIds = new Set(enrolments.map((entry) => entry.studentId))
@@ -50,7 +52,8 @@ export async function computeGradeReadiness(tenantId: string, academicYearId: st
   const enrolled = new Map(enrolments.map((entry) => [entry.studentId, entry.student]))
   const studentIds = Array.from(enrolled.keys())
   let registrations = await db.pedagogicalRegistration.findMany({
-    where: { academicYearId, status: 'ACTIVE', studentId: { in: studentIds }, student: { tenantId } },
+    where: { academicYearId, status: 'ACTIVE', studentId: { in: studentIds }, student: { tenantId },
+      ...(levelId ? { teachingUnit: { semester: { levelId } } } : {}) },
     select: {
       studentId: true,
       teachingUnitId: true,
@@ -74,7 +77,7 @@ export async function computeGradeReadiness(tenantId: string, academicYearId: st
   if (studentsWithoutPedagogicalRegistration.length > 0 && programs.length > 0 &&
       db.teachingUnit && typeof db.teachingUnit.findMany === 'function') {
     const units = await db.teachingUnit.findMany({
-      where: { semester: { level: { programId: { in: programs.map((program) => program.id) } } } },
+      where: { semester: { ...(levelId ? { levelId } : {}), level: { programId: { in: programs.map((program) => program.id) } } } },
       select: {
         id: true, code: true, name: true,
         semester: { select: { levelId: true } },

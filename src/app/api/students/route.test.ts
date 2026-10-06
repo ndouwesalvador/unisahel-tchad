@@ -147,18 +147,18 @@ describe('GET /api/students', () => {
 
   it('scopes a transcript preview to published grades in the enrolled year', async () => {
     dbMock.student.findFirst.mockResolvedValue({ id: 'student-A', totalCreditsAcquired: 12 })
-    dbMock.administrativeRegistration.findFirst.mockResolvedValue({ id: 'registration-A' })
+    dbMock.administrativeRegistration.findFirst.mockResolvedValue({ id: 'registration-A', programId: 'program-A', levelId: 'level-A' })
     dbMock.deliberationDecision.findMany.mockResolvedValue([{ studentId: 'student-A', creditsAcquired: 60, deliberation: { academicYearId: 'year-A' } }])
     const res = await GET(req('/api/students?id=student-A&transcript=true&academicYearId=year-A'))
     expect(res.status).toBe(200)
     expect((await res.json()).data.summary.totalCreditsAcquired).toBe(60)
     expect(dbMock.grade.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: {
       studentId: 'student-A', student: { tenantId: 'tenant-A' }, academicYearId: 'year-A', session: 'NORMALE', isLocked: true,
-      teachingUnit: { pedagogicalRegistrations: { some: { studentId: 'student-A', academicYearId: 'year-A', status: 'ACTIVE' } } },
+      teachingUnit: { semester: { levelId: 'level-A', level: { programId: 'program-A', program: { tenantId: 'tenant-A' } } } },
     } }))
     expect(dbMock.administrativeRegistration.findFirst).toHaveBeenCalledWith({
       where: { tenantId: 'tenant-A', studentId: 'student-A', academicYearId: 'year-A', status: 'INSCRIT' },
-      select: { id: true },
+      select: { id: true, programId: true, levelId: true },
     })
   })
 })

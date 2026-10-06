@@ -68,6 +68,17 @@ interface DeliberationSession {
   statut: 'planifiee' | 'en_cours' | 'terminee'
   type?: string
   academicYearId?: string
+  departmentId?: string
+  programId?: string | null
+  levelId?: string | null
+}
+
+interface JuryScopeOption {
+  departmentId: string
+  programId: string
+  levelId: string
+  programName: string
+  levelName: string
 }
 
 type Decision = 'ADMI' | 'AJOURNE' | 'REDOUBLANT' | 'EXCLU' | 'ADMI_DETTE' | 'COMPENSE'
@@ -157,6 +168,8 @@ export function DeliberationPage() {
   const currentYearId = (academicYearsQuery?.data || []).find((y) => y.isCurrent)?.id || ''
   const [selectedSession, setSelectedSession] = useState<string | null>(null)
   const [selectedDepartmentId, setSelectedDepartmentId] = useState<string | null>(null)
+  const [selectedProgramId, setSelectedProgramId] = useState<string | null>(null)
+  const [selectedLevelId, setSelectedLevelId] = useState<string | null>(null)
   const [selectedSessionType, setSelectedSessionType] = useState('normale')
   const [isExportingPV, setIsExportingPV] = useState(false)
   const [pvPageFormat, setPvPageFormat] = useState<'A3' | 'A4'>('A3')
@@ -174,8 +187,10 @@ export function DeliberationPage() {
 
   const apiSessionType = selectedSessionType === 'normale' ? 'NORMALE' : 'RATTRAPAGE'
   const { data: deliberationData, isLoading: isDeliberationLoading } = useDeliberation(
-    selectedSession ? { id: selectedSession, departmentId: selectedDepartmentId || undefined } :
-      { session: apiSessionType, departmentId: selectedDepartmentId || undefined }
+    selectedSession ? { id: selectedSession, departmentId: selectedDepartmentId || undefined,
+      programId: selectedProgramId || undefined, levelId: selectedLevelId || undefined } :
+      { session: apiSessionType, departmentId: selectedDepartmentId || undefined,
+        programId: selectedProgramId || undefined, levelId: selectedLevelId || undefined }
   )
   const departments: { id: string; name: string; shortName: string | null }[] = useMemo(
     () => deliberationData?.departments ?? [], [deliberationData?.departments]
@@ -183,21 +198,33 @@ export function DeliberationPage() {
   useEffect(() => {
     if (!selectedDepartmentId && departments.length > 0) setSelectedDepartmentId(departments[0].id)
   }, [departments, selectedDepartmentId])
+  const juryScopes: JuryScopeOption[] = useMemo(() => deliberationData?.juryScopes ?? [], [deliberationData?.juryScopes])
+  useEffect(() => {
+    if (userRole !== 'JURY' || selectedProgramId || selectedLevelId || juryScopes.length === 0) return
+    const first = juryScopes[0]
+    setSelectedDepartmentId(first.departmentId)
+    setSelectedProgramId(first.programId)
+    setSelectedLevelId(first.levelId)
+  }, [juryScopes, selectedLevelId, selectedProgramId, userRole])
+  const selectedJuryScope = juryScopes.find((scope) =>
+    scope.programId === selectedProgramId && scope.levelId === selectedLevelId)
   const selectedDepartment = departments.find((department) => department.id === selectedDepartmentId)
   const deliberations: DeliberationSession[] = useMemo(
-    () => (deliberationData?.sessions ?? []).map((s: { id: string; titre: string; date: string; statut: string; type?: string; academicYearId?: string }) => ({
-      id: s.id, titre: s.titre, date: s.date, statut: s.statut as DeliberationSession['statut'], type: s.type, academicYearId: s.academicYearId,
+    () => (deliberationData?.sessions ?? []).map((s: { id: string; titre: string; date: string; statut: string; type?: string; academicYearId?: string; departmentId?: string; programId?: string | null; levelId?: string | null }) => ({
+      id: s.id, titre: s.titre, date: s.date, statut: s.statut as DeliberationSession['statut'], type: s.type,
+      academicYearId: s.academicYearId, departmentId: s.departmentId, programId: s.programId, levelId: s.levelId,
     })),
     [deliberationData]
   )
 
   useEffect(() => {
     const expectedType = apiSessionType === 'RATTRAPAGE' ? 'RATTRAPAGE' : 'ANNUEL'
-    const latestSession = deliberations.find((session) => session.type === expectedType && session.academicYearId === currentYearId)
+    const latestSession = deliberations.find((session) => session.type === expectedType && session.academicYearId === currentYearId &&
+      (!selectedProgramId || session.programId === selectedProgramId) && (!selectedLevelId || session.levelId === selectedLevelId))
     if (!selectedSession && latestSession) {
       setSelectedSession(latestSession.id)
     }
-  }, [apiSessionType, deliberations, selectedSession, currentYearId])
+  }, [apiSessionType, deliberations, selectedSession, currentYearId, selectedProgramId, selectedLevelId])
 
   const deliberationStudents: DeliberationStudent[] = useMemo(() => deliberationData?.students ?? [], [deliberationData])
   const readiness: DeliberationReadiness | null = deliberationData?.readiness ?? null
@@ -292,7 +319,8 @@ export function DeliberationPage() {
       const res = await fetch('/api/deliberation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ session: apiSessionType, departmentId: selectedDepartmentId }),
+        body: JSON.stringify({ session: apiSessionType, departmentId: selectedDepartmentId,
+          programId: selectedProgramId, levelId: selectedLevelId }),
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(json.error || 'Echec du lancement')
@@ -692,21 +720,53 @@ export function DeliberationPage() {
             </CardHeader>
             <CardContent className="space-y-5">
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-gray-600">Département responsable du PV</Label>
+                <Label className="text-xs font-medium text-gray-600">
+                  {userRole === 'JURY' ? 'Périmètre académique du jury' : 'Département responsable du PV'}
+                </Label>
                 {departments.length === 0 && !isDeliberationLoading && (
                   <p className="text-xs text-[#b45f14]">Aucun département actif accessible. Vérifiez votre affectation dans Utilisateurs et la Structure.</p>
                 )}
-                <Select value={selectedDepartmentId || ''} onValueChange={(value) => {
-                  setSelectedDepartmentId(value)
-                  setSelectedSession(null)
-                  setJuryMembers([])
-                }}>
-                  <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Choisir un département" /></SelectTrigger>
-                  <SelectContent>
-                    {departments.map((department) => <SelectItem key={department.id} value={department.id}>{department.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <p className="text-[11px] text-gray-500">Seuls les inscrits de ce département sont délibérés. Les autres départements n&apos;affectent pas son PV.</p>
+                {userRole === 'JURY' ? (
+                  <Select
+                    value={selectedProgramId && selectedLevelId ? `${selectedProgramId}:${selectedLevelId}` : ''}
+                    onValueChange={(value) => {
+                      const scope = juryScopes.find((item) => `${item.programId}:${item.levelId}` === value)
+                      if (!scope) return
+                      setSelectedDepartmentId(scope.departmentId)
+                      setSelectedProgramId(scope.programId)
+                      setSelectedLevelId(scope.levelId)
+                      setSelectedSession(null)
+                      setJuryMembers([])
+                    }}
+                  >
+                    <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Choisir le programme et le niveau" /></SelectTrigger>
+                    <SelectContent>
+                      {juryScopes.map((scope) => (
+                        <SelectItem key={`${scope.programId}:${scope.levelId}`} value={`${scope.programId}:${scope.levelId}`}>
+                          {scope.programName} · {scope.levelName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Select value={selectedDepartmentId || ''} onValueChange={(value) => {
+                    setSelectedDepartmentId(value)
+                    setSelectedProgramId(null)
+                    setSelectedLevelId(null)
+                    setSelectedSession(null)
+                    setJuryMembers([])
+                  }}>
+                    <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Choisir un département" /></SelectTrigger>
+                    <SelectContent>
+                      {departments.map((department) => <SelectItem key={department.id} value={department.id}>{department.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                )}
+                <p className="text-[11px] text-gray-500">
+                  {userRole === 'JURY'
+                    ? 'Seuls les étudiants inscrits dans ce programme et ce niveau sont visibles, délibérés et publiés sur le PV.'
+                    : 'Le périmètre du PV respecte le département sélectionné.'}
+                </p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
@@ -730,7 +790,9 @@ export function DeliberationPage() {
                 </div>
                 <div className="flex items-end pb-2">
                   <p className="text-[11px] text-gray-400">
-                    Portée : inscrits du département {selectedDepartment?.name || 'à sélectionner'} · {currentYearName || 'année en cours'}
+                    Portée : {selectedJuryScope
+                      ? `${selectedJuryScope.programName} · ${selectedJuryScope.levelName}`
+                      : `département ${selectedDepartment?.name || 'à sélectionner'}`} · {currentYearName || 'année en cours'}
                   </p>
                 </div>
               </div>

@@ -151,16 +151,16 @@ describe('GET /api/dashboard — role isolation', () => {
       currentProgram: { name: 'Informatique' }, currentLevel: { name: 'Licence 1' },
     })
     mocks.academicYearFindFirst.mockResolvedValue({ id: 'year-A', name: '2026-2027', startDate: new Date(), endDate: new Date(), sessions: [] })
-    mocks.annualRegistrationFindFirst.mockResolvedValue({ id: 'registration-A' })
+    mocks.annualRegistrationFindFirst.mockResolvedValue({ id: 'registration-A', programId: 'program-A', levelId: 'level-A' })
     mocks.gradeFindMany.mockResolvedValue([{ finalGrade: 15, courseElement: { coefficient: 2 } }])
     const response = await handler({ id: 'admin-A', role: 'ADMIN_INSTITUTION', tenantId: 'tenant-A' }, 'tenant-A', request('?studentId=student-A'))
     expect(await response.json()).toMatchObject({ isEnrolledForYear: true, stats: { moyenneGenerale: 15 } })
     expect(mocks.annualRegistrationFindFirst).toHaveBeenCalledWith({
       where: { tenantId: 'tenant-A', studentId: 'student-A', academicYearId: 'year-A', status: 'INSCRIT' },
-      select: { id: true },
+      select: { id: true, programId: true, levelId: true },
     })
     expect(mocks.gradeFindMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({
-      teachingUnit: { pedagogicalRegistrations: { some: { studentId: 'student-A', academicYearId: 'year-A', status: 'ACTIVE' } } },
+      teachingUnit: { semester: { levelId: 'level-A', level: { programId: 'program-A', program: { tenantId: 'tenant-A' } } } },
     }) }))
   })
 
