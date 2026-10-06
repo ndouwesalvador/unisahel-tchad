@@ -118,6 +118,20 @@ async function computeStudentDecisions(tenantId: string, academicYearId: string,
 }
 
 async function availableDepartments(user: SessionUser, tenantId: string) {
+  // A jury is permanently attached to one department. Never default to the
+  // first institution department: doing so can expose another department's
+  // students and makes the jury appear to have lost its notes.
+  if (user.role === 'JURY') {
+    const account = await db.user.findFirst({
+      where: { id: user.id, tenantId, role: 'JURY', isActive: true },
+      select: { departmentId: true },
+    })
+    if (!account?.departmentId) return []
+    return db.department.findMany({
+      where: { tenantId, isActive: true, id: account.departmentId },
+      select: { id: true, name: true, shortName: true }, orderBy: { name: 'asc' },
+    })
+  }
   const scope = await getOrganizationScope(user, tenantId)
   if (scope && scope.departmentIds.length === 0) return []
   return db.department.findMany({
