@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@/lib/auth/config', () => ({ auth: mocks.auth }))
 vi.mock('@/lib/db', () => ({ db: {
   teacher: { findFirst: mocks.teacher }, teachingService: { findMany: mocks.services },
-  academicYear: { findFirst: mocks.year }, student: { findFirst: mocks.student },
+  academicYear: { findFirst: mocks.year }, student: { findFirst: mocks.student, findMany: mocks.student },
   user: { findFirst: mocks.user }, grade: { findMany: mocks.grades, count: mocks.count },
   courseElement: { findFirst: mocks.course }, pedagogicalRegistration: { findMany: mocks.registrations },
   tenantSettings: { findUnique: mocks.settings },

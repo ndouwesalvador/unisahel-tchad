@@ -7,7 +7,7 @@ vi.mock('@/lib/auth/teacher-scope', () => ({ getTeacherScope: mocks.scope }))
 vi.mock('@/lib/db', () => ({ db: {
   attendance: { findMany: mocks.findMany, count: mocks.count, findFirst: mocks.findFirst, create: mocks.create },
   courseElement: { findFirst: mocks.element }, student: { findFirst: mocks.student },
-  academicYear: { findFirst: mocks.year }, pedagogicalRegistration: { findFirst: mocks.registration },
+  academicYear: { findFirst: mocks.year }, administrativeRegistration: { findFirst: mocks.registration },
 } }))
 
 const { GET, POST, PUT } = await import('./route')
@@ -20,7 +20,7 @@ describe('teacher attendance isolation', () => {
     mocks.scope.mockResolvedValue({ linked: true, teacherId: 'teacher-A', academicYearId: 'year-A', courseElementIds: ['element-A'] })
     mocks.findMany.mockResolvedValue([])
     mocks.count.mockResolvedValue(0)
-    mocks.element.mockResolvedValue({ name: 'Algorithmique', teachingUnitId: 'unit-A', teachingUnit: { semester: { level: { name: 'L1', program: { name: 'Informatique' } } } } })
+    mocks.element.mockResolvedValue({ name: 'Algorithmique', teachingUnitId: 'unit-A', teachingUnit: { semester: { level: { id: 'level-A', name: 'L1', program: { name: 'Informatique' } } } } })
     mocks.student.mockResolvedValue({ id: 'student-A', firstName: 'A', lastName: 'B', matricule: 'M-1' })
     mocks.year.mockResolvedValue({ id: 'year-A' })
     mocks.registration.mockResolvedValue({ id: 'registration-A' })
@@ -62,7 +62,7 @@ describe('teacher attendance isolation', () => {
     mocks.create.mockResolvedValue({ id: 'record-A' })
     const response = await call(POST, 'http://localhost/api/attendance', { method: 'POST', body: JSON.stringify({ courseElementId: 'element-A', studentId: 'student-A', academicYearId: 'year-A', date: '2026-10-02', timeSlot: '08:00', status: 'PRESENT' }) })
     expect(response.status).toBe(201)
-    expect(mocks.registration).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ teachingUnitId: 'unit-A', academicYearId: 'year-A' }) }))
+    expect(mocks.registration).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ levelId: 'level-A', academicYearId: 'year-A' }) }))
     expect(mocks.scope).toHaveBeenCalledWith(user, 'tenant-A', 'year-A')
     expect(mocks.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ teacherId: 'teacher-A', courseElementId: 'element-A', date: new Date('2026-10-02T00:00:00.000Z') }) }))
   })

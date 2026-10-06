@@ -84,18 +84,19 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
     const course = courses.find((item) => item.id === courseElementId)
     if (!course) throw new EntryError('Matière hors de votre périmètre.', 403)
     const session = params.get('session') === 'RATTRAPAGE' ? 'RATTRAPAGE' : 'NORMALE'
-    const registrations = await db.pedagogicalRegistration.findMany({
-      where: {
-        teachingUnitId: course.teachingUnit.id, academicYearId: selectedYear.id, status: 'ACTIVE',
-        student: { tenantId, registrations: { some: {
-          tenantId, academicYearId: selectedYear.id, status: 'INSCRIT',
-          levelId: course.teachingUnit.semester.level.id,
-        } } },
-      },
-      select: { student: { select: { id: true, matricule: true, firstName: true, lastName: true } } },
-      orderBy: { student: { lastName: 'asc' } },
+    // The annual registration is the authoritative class roster. Pedagogical
+    // UE registrations remain useful for optional choices and history, but a
+    // student validated in this level must be immediately visible to the
+    // teacher of every course in that level.
+    const registrations = await db.student.findMany({
+      where: { tenantId, registrations: { some: {
+        tenantId, academicYearId: selectedYear.id, status: 'INSCRIT',
+        levelId: course.teachingUnit.semester.level.id,
+      } } },
+      select: { id: true, matricule: true, firstName: true, lastName: true },
+      orderBy: { lastName: 'asc' },
     })
-    const studentIds = registrations.map((item) => item.student.id)
+    const studentIds = registrations.map((student) => student.id)
     const grades = await db.grade.findMany({
       where: { studentId: { in: studentIds }, courseElementId, academicYearId: selectedYear.id, session },
       select: { id: true, studentId: true, ccGrade: true, tpGrade: true, examGrade: true,
@@ -103,7 +104,7 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
     })
     return NextResponse.json({ data: {
       academicYear: selectedYear, courses,
-      students: registrations.map(({ student }) => ({ ...student,
+      students: registrations.map((student) => ({ ...student,
         grade: grades.find((grade) => grade.studentId === student.id) ?? null,
       })),
     } })
@@ -149,18 +150,17 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
         ...(allowed.departmentId ? { departmentId: allowed.departmentId } : {}),
       } } } },
     }, select: { teachingUnitId: true, hoursTP: true, hoursStage: true, teachingUnit: { select: {
-      semester: { select: { levelId: true, level: { select: { program: { select: { departmentId: true } } } } } },
+      semester: { select: { levelId: true, level: { select: { programId: true, program: { select: { departmentId: true } } } } } },
     } } } })
     if (!course) throw new EntryError('Matière hors de votre périmètre.', 403)
     if (!course.teachingUnit.semester.level.program.departmentId) {
       throw new EntryError('Rattachez le programme à un département avant la saisie.', 409)
     }
     if (input.component === 'tpGrade' && course.hoursTP <= 0) throw new EntryError('Cette matière ne comporte pas de TP.', 409)
-    const registration = await db.pedagogicalRegistration.findFirst({ where: {
-      studentId: input.studentId, teachingUnitId: course.teachingUnitId,
-      academicYearId: input.academicYearId, status: 'ACTIVE',
-      student: { tenantId, registrations: { some: { tenantId, academicYearId: input.academicYearId,
-        status: 'INSCRIT', levelId: course.teachingUnit.semester.levelId } } },
+    const registration = await db.administrativeRegistration.findFirst({ where: {
+      tenantId, studentId: input.studentId, academicYearId: input.academicYearId,
+      status: 'INSCRIT', programId: course.teachingUnit.semester.level.programId,
+      levelId: course.teachingUnit.semester.levelId,
     }, select: { id: true } })
     if (!registration) throw new EntryError('Étudiant non inscrit à cette matière pour cette année.', 403)
     const settings = await db.tenantSettings.findUnique({ where: { tenantId } })

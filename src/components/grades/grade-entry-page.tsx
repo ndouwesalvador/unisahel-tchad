@@ -151,7 +151,7 @@ export function GradeEntryPage() {
         {selected && <Card className="border-slate-200 bg-white"><CardContent className="p-0">
           <div className="border-b border-slate-200 p-5"><h2 className="text-lg font-bold text-slate-950">{selected.name}</h2>
             <p className="text-sm text-slate-700">{selected.teachingUnit.name} · {selected.teachingUnit.semester.name} · {data.students.length} étudiant(s) inscrit(s)</p></div>
-          {data.students.length === 0 ? <p className="p-5 text-sm text-slate-700">Aucun étudiant ne possède à la fois une inscription annuelle validée et une inscription pédagogique active à cette UE.</p>
+          {data.students.length === 0 ? <p className="p-5 text-sm text-slate-700">Aucun étudiant ne possède une inscription annuelle validée dans le niveau de cette UE pour l’année sélectionnée.</p>
             : <div className="overflow-x-auto"><table className="w-full min-w-[760px] text-sm">
               <thead className="bg-slate-50 text-left text-slate-800"><tr>
                 <th className="p-3">Étudiant</th><th className="p-3 text-right">Contrôle</th>

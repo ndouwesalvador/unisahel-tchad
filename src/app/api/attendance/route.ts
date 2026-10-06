@@ -61,6 +61,7 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
             name: true,
             teachingUnitId: true,
             teachingUnit: { select: { semester: { select: { level: { select: {
+              id: true,
               name: true,
               program: { select: { name: true } },
             } } } } } },
@@ -70,7 +71,10 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
         db.academicYear.findFirst({ where: { id: academicYearId, tenantId }, select: { id: true } }),
       ])
       if (!element || !student || !year) return NextResponse.json({ error: 'Données académiques introuvables' }, { status: 404 })
-      const registration = await db.pedagogicalRegistration.findFirst({ where: { studentId, teachingUnitId: element.teachingUnitId, academicYearId, status: 'ACTIVE' }, select: { id: true } })
+      const registration = await db.administrativeRegistration.findFirst({ where: {
+        tenantId, studentId, academicYearId, status: 'INSCRIT',
+        levelId: element.teachingUnit.semester.level.id,
+      }, select: { id: true } })
       if (!registration) return NextResponse.json({ error: 'Étudiant non inscrit à cette UE pour cette année' }, { status: 403 })
 
       const sessionKey = { tenantId, studentId, courseElementId, academicYearId, date: sessionDate, timeSlot: timeSlot.trim() }

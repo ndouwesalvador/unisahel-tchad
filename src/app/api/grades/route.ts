@@ -77,18 +77,18 @@ async function getGradeRosterHandler(user: SessionUser, tenantId: string, reques
   })
   if (!element) return NextResponse.json({ error: 'Enseignement inaccessible' }, { status: 403 })
 
-  const registrations = await db.pedagogicalRegistration.findMany({
-    where: {
-      teachingUnitId: element.teachingUnitId,
-      academicYearId,
-      status: 'ACTIVE',
-      student: { tenantId, registrations: { some: { tenantId, academicYearId, status: 'INSCRIT',
-        levelId: element.teachingUnit.semester.levelId } } },
-    },
-    select: { student: { select: { id: true, matricule: true, firstName: true, lastName: true } } },
-    orderBy: { student: { lastName: 'asc' } },
+  // The validated annual registration defines the class roster. This keeps
+  // notes and attendance usable immediately after a student is enrolled in a
+  // level, without requiring a second manual UE-by-UE action.
+  const students = await db.student.findMany({
+    where: { tenantId, registrations: { some: {
+      tenantId, academicYearId, status: 'INSCRIT',
+      levelId: element.teachingUnit.semester.levelId,
+    } } },
+    select: { id: true, matricule: true, firstName: true, lastName: true },
+    orderBy: { lastName: 'asc' },
   })
-  return NextResponse.json({ data: registrations.map((registration) => registration.student) })
+  return NextResponse.json({ data: students })
 }
 
 async function academicYearBelongsToTenant(academicYearId: string, tenantId: string): Promise<boolean> {

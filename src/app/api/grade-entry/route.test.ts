@@ -4,7 +4,7 @@ import { NextRequest } from 'next/server'
 const mocks = vi.hoisted(() => ({
   auth: vi.fn(), year: vi.fn(), teacher: vi.fn(), user: vi.fn(), services: vi.fn(),
   courses: vi.fn(), course: vi.fn(), registrations: vi.fn(), registration: vi.fn(),
-  grades: vi.fn(), gradeCreate: vi.fn(), gradeUpdate: vi.fn(), gradeFind: vi.fn(), gradeUpdateMany: vi.fn(),
+  grades: vi.fn(), studentFindMany: vi.fn(), administrativeRegistration: vi.fn(), gradeCreate: vi.fn(), gradeUpdate: vi.fn(), gradeFind: vi.fn(), gradeUpdateMany: vi.fn(),
   settings: vi.fn(), deliberation: vi.fn(), changeLog: vi.fn(), audit: vi.fn(),
   transaction: vi.fn(), advisory: vi.fn(),
 }))
@@ -13,6 +13,8 @@ vi.mock('@/lib/db', () => ({ db: {
   academicYear: { findFirst: mocks.year }, teacher: { findFirst: mocks.teacher }, user: { findFirst: mocks.user },
   teachingService: { findMany: mocks.services }, courseElement: { findMany: mocks.courses, findFirst: mocks.course },
   pedagogicalRegistration: { findMany: mocks.registrations, findFirst: mocks.registration },
+  administrativeRegistration: { findFirst: mocks.administrativeRegistration },
+  student: { findMany: mocks.studentFindMany },
   grade: { findMany: mocks.grades, create: mocks.gradeCreate, update: mocks.gradeUpdate,
     findFirst: mocks.gradeFind, updateMany: mocks.gradeUpdateMany },
   tenantSettings: { findUnique: mocks.settings }, deliberation: { findFirst: mocks.deliberation },
@@ -38,7 +40,7 @@ const post = (payload: unknown) => POST(new NextRequest('http://localhost/api/gr
 }))
 const get = (suffix = '') => GET(new NextRequest(`http://localhost/api/grade-entry${suffix}`))
 const course = { teachingUnitId: 'cteachingunit0000000000001', hoursTP: 12, hoursStage: 0,
-  teachingUnit: { semester: { levelId: 'clevel000000000000000001', level: { program: { departmentId } } } } }
+  teachingUnit: { semester: { levelId: 'clevel000000000000000001', level: { programId: 'cprogram000000000000000001', program: { departmentId } } } } }
 const storedGrade = { id: gradeId, studentId, courseElementId, academicYearId, session: 'NORMALE',
   ccGrade: 12, tpGrade: null, examGrade: null, stageGrade: null,
   isAbsent: false, isDefaillant: false, isLocked: false, finalGrade: null }
@@ -55,6 +57,8 @@ beforeEach(() => {
     teachingUnit: { id: course.teachingUnitId, name: 'Informatique', code: 'UE1',
       semester: { name: 'S1', level: { id: 'clevel000000000000000001', name: 'L1', program: { name: 'Informatique' } } } } }])
   mocks.registration.mockResolvedValue({ id: 'cregistration0000000000001' })
+  mocks.administrativeRegistration.mockResolvedValue({ id: 'cregistration0000000000001' })
+  mocks.studentFindMany.mockResolvedValue([{ id: studentId, firstName: 'Awa', lastName: 'Tahir', matricule: 'UPM-001' }])
   mocks.registrations.mockResolvedValue([{ student: { id: studentId, firstName: 'Awa', lastName: 'Tahir', matricule: 'UPM-001' } }])
   mocks.grades.mockResolvedValue([])
   mocks.gradeCreate.mockImplementation(async ({ data }) => ({ id: gradeId, ...data }))
@@ -83,8 +87,8 @@ describe('scoped grade entry', () => {
     expect((await response.json()).data.students).toHaveLength(1)
     expect(mocks.services).toHaveBeenCalledWith({ where: { tenantId, academicYearId, teacherId, status: 'APPROVED' },
       select: { courseElementId: true } })
-    expect(mocks.registrations).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({
-      status: 'ACTIVE', student: expect.objectContaining({ registrations: { some: expect.objectContaining({ status: 'INSCRIT' }) } }),
+    expect(mocks.studentFindMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({
+      registrations: { some: expect.objectContaining({ status: 'INSCRIT', levelId: 'clevel000000000000000001' }) },
     }) }))
   })
 
@@ -127,8 +131,8 @@ describe('scoped grade entry', () => {
     expect(mocks.changeLog).not.toHaveBeenCalled()
   })
 
-  it('refuses any note for a student without active annual and pedagogical enrollment', async () => {
-    mocks.registration.mockResolvedValue(null)
+  it('refuses any note for a student without active annual enrollment', async () => {
+    mocks.administrativeRegistration.mockResolvedValue(null)
     const response = await post(body('ccGrade'))
     expect(response.status).toBe(403)
     expect(mocks.gradeCreate).not.toHaveBeenCalled()
