@@ -34,7 +34,7 @@ export async function computeGradeReadiness(tenantId: string, academicYearId: st
     where: { tenantId, academicYearId, status: 'INSCRIT', programId: { in: programs.map((program) => program.id) } },
     select: { studentId: true, student: { select: { id: true, firstName: true, lastName: true, matricule: true } } },
   })
-  if (enrolments.length === 0 && programs.length > 0) {
+  if (programs.length > 0 && db.student && typeof db.student.findMany === 'function') {
     const currentStudents = await db.student.findMany({
       where: { tenantId, OR: [
         { currentProgramId: { in: programs.map((program) => program.id) } },
@@ -42,7 +42,10 @@ export async function computeGradeReadiness(tenantId: string, academicYearId: st
       ] },
       select: { id: true, firstName: true, lastName: true, matricule: true },
     })
-    enrolments = currentStudents.map((student) => ({ studentId: student.id, student }))
+    const knownStudentIds = new Set(enrolments.map((entry) => entry.studentId))
+    enrolments = [...enrolments, ...currentStudents
+      .filter((student) => !knownStudentIds.has(student.id))
+      .map((student) => ({ studentId: student.id, student }))]
   }
   const enrolled = new Map(enrolments.map((entry) => [entry.studentId, entry.student]))
   const studentIds = Array.from(enrolled.keys())
@@ -68,7 +71,8 @@ export async function computeGradeReadiness(tenantId: string, academicYearId: st
   // skipped.
   const studentsWithoutPedagogicalRegistration = Array.from(enrolled.values())
     .filter((student) => !registrations.some((registration) => registration.studentId === student.id))
-  if (registrations.length === 0 && studentsWithoutPedagogicalRegistration.length > 0 && programs.length > 0) {
+  if (studentsWithoutPedagogicalRegistration.length > 0 && programs.length > 0 &&
+      db.teachingUnit && typeof db.teachingUnit.findMany === 'function') {
     const units = await db.teachingUnit.findMany({
       where: { semester: { level: { programId: { in: programs.map((program) => program.id) } } } },
       select: {
