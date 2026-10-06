@@ -283,6 +283,7 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
   ],
   JURY: [
     { icon: LayoutDashboard, label: 'Tableau de bord', view: 'dashboard' },
+    { icon: FileCheck, label: 'Notes et examens', view: 'grades' },
     { icon: CheckSquare, label: 'Délibérations', view: 'deliberation' },
     { icon: Users, label: 'Étudiants', view: 'students' },
   ],
