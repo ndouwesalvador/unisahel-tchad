@@ -109,6 +109,7 @@ interface IncompleteStudent {
 interface DeliberationReadiness {
   ready: boolean
   expectedGradeCount: number
+  enteredGradeCount?: number
   lockedGradeCount: number
   missingGradeCount: number
   unexpectedGradeCount?: number
@@ -635,6 +636,11 @@ export function DeliberationPage() {
                   {!isReadyForJury && readiness && readiness.incompleteStudents.length > 0 && (
                     <div className="rounded-lg border border-[var(--institution-accent-30)] bg-[var(--institution-accent-08)] p-3 space-y-2">
                       <p className="text-xs font-medium text-[var(--institution-primary)]">Éléments à compléter en priorité</p>
+                      {Boolean(readiness.enteredGradeCount) && (
+                        <p className="text-xs text-gray-600">
+                          {readiness.enteredGradeCount} note(s) déjà saisie(s) sont conservée(s), mais restent en attente de la note d&apos;examen et du verrouillage par le jury.
+                        </p>
+                      )}
                       <div className="space-y-2">
                         {readiness.incompleteStudents.slice(0, 3).map((student) => (
                           <div key={student.studentId} className="text-xs text-gray-600">

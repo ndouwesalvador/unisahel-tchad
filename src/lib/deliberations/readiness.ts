@@ -111,6 +111,7 @@ export async function computeGradeReadiness(tenantId: string, academicYearId: st
     where: { student: { tenantId }, studentId: { in: studentIds }, academicYearId, session },
     select: {
       studentId: true, teachingUnitId: true, courseElementId: true,
+      ccGrade: true, tpGrade: true, examGrade: true, stageGrade: true,
       finalGrade: true, isLocked: true, isAbsent: true, isDefaillant: true,
     },
   })
@@ -138,6 +139,7 @@ export async function computeGradeReadiness(tenantId: string, academicYearId: st
     matricule: string
     expected: number
     locked: number
+    entered: number
     missing: number
     missingItems: MissingGradeItem[]
   }>()
@@ -147,7 +149,7 @@ export async function computeGradeReadiness(tenantId: string, academicYearId: st
       studentId: student.id,
       name: `${student.firstName} ${student.lastName}`.trim(),
       matricule: student.matricule || '—',
-      expected: 0, locked: 0, missing: 0, missingItems: [],
+      expected: 0, locked: 0, entered: 0, missing: 0, missingItems: [],
     })
   }
 
@@ -156,11 +158,13 @@ export async function computeGradeReadiness(tenantId: string, academicYearId: st
       studentId: item.studentId,
       name: `${item.student.firstName} ${item.student.lastName}`.trim(),
       matricule: item.student.matricule || '—',
-      expected: 0, locked: 0, missing: 0, missingItems: [],
+      expected: 0, locked: 0, entered: 0, missing: 0, missingItems: [],
     }
     existing.expected += 1
     const rows = gradesByKey.get(gradeKey(item.studentId, item.teachingUnitId, item.courseElementId)) ?? []
     const grade = rows[0]
+    if (grade && [grade.ccGrade, grade.tpGrade, grade.examGrade, grade.stageGrade, grade.finalGrade]
+      .some((value) => value !== null && value !== undefined)) existing.entered += 1
     if (rows.length === 1 && grade.isLocked && !grade.isAbsent && !grade.isDefaillant &&
         grade.finalGrade !== null && Number.isFinite(grade.finalGrade) && grade.finalGrade >= 0 && grade.finalGrade <= 20) {
       existing.locked += 1
@@ -174,11 +178,12 @@ export async function computeGradeReadiness(tenantId: string, academicYearId: st
   const students = Array.from(byStudent.values()).sort((a, b) => a.name.localeCompare(b.name))
   const expectedGradeCount = students.reduce((sum, student) => sum + student.expected, 0)
   const lockedGradeCount = students.reduce((sum, student) => sum + student.locked, 0)
+  const enteredGradeCount = students.reduce((sum, student) => sum + student.entered, 0)
   const studentsWithoutRegistration = students.filter((student) => student.expected === 0).length
   const missingGradeCount = Math.max(expectedGradeCount - lockedGradeCount, 0)
   return {
     ready: students.length > 0 && expectedGradeCount > 0 && studentsWithoutRegistration === 0 && missingGradeCount === 0 && unexpectedGradeCount === 0,
-    expectedGradeCount, lockedGradeCount, missingGradeCount, unexpectedGradeCount, studentsWithoutRegistration,
+    expectedGradeCount, enteredGradeCount, lockedGradeCount, missingGradeCount, unexpectedGradeCount, studentsWithoutRegistration,
     studentsTotal: students.length,
     studentIds: students.map((student) => student.studentId),
     studentsReady: students.filter((student) => student.expected > 0 && student.missing === 0).length,
