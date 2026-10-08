@@ -1,12 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
 
-function useSimpleGet(key: string, path: string) {
+function useSimpleGet(key: string | readonly unknown[], path: string) {
+  const queryKey = typeof key === 'string' ? [key] : key;
+  const label = typeof key === 'string' ? key : String(key[0] ?? 'data');
   return useQuery({
-    queryKey: [key],
+    queryKey,
     queryFn: async () => {
       const res = await fetch(path);
       if (!res.ok) {
-        throw new Error(`Failed to fetch ${key}`);
+        throw new Error(`Failed to fetch ${label}`);
       }
       return res.json();
     },
@@ -241,8 +243,12 @@ export function useTimetable(params?: { programId?: string; levelId?: string; ac
   });
 }
 
-export function useInstitution() {
-  return useSimpleGet('institution', '/api/institution');
+export function useInstitution(options: { includeAssets?: boolean } = {}) {
+  const includeAssets = options.includeAssets === true;
+  return useSimpleGet(
+    ['institution', includeAssets ? 'with-assets' : 'compact'],
+    `/api/institution${includeAssets ? '?includeAssets=1' : ''}`,
+  );
 }
 
 export function useImportExport() {

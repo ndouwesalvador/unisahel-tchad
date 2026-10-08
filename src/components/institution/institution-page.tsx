@@ -286,7 +286,7 @@ function InstitutionHeader() {
 
 // ─── Informations Tab ────────────────────────────────────────────────────────
 function InformationsTab() {
-  const { data: institutionQuery, isLoading, refetch } = useInstitution() as {
+  const { data: institutionQuery, isLoading, refetch } = useInstitution({ includeAssets: true }) as {
     data: InstitutionResponse | undefined
     isLoading: boolean
     refetch: () => void
@@ -1444,7 +1444,7 @@ function AcademiqueTab() {
 
 // ─── Documents Tab ───────────────────────────────────────────────────────────
 function DocumentsTab() {
-  const { data: institutionQuery, isLoading } = useInstitution() as {
+  const { data: institutionQuery, isLoading } = useInstitution({ includeAssets: true }) as {
     data: InstitutionResponse | undefined
     isLoading: boolean
   }

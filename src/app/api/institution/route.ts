@@ -22,10 +22,54 @@ const SETTINGS_FIELDS = [
 // GET /api/institution - fetch the current tenant's profile + settings, plus
 // real usage stats and email-delivery status for the Settings/Maintenance
 // pages (replaces what used to be hardcoded placeholder numbers there).
-async function handleGet(_user: SessionUser, tenantId: string, _request: NextRequest) {
+async function handleGet(_user: SessionUser, tenantId: string, request: NextRequest) {
   try {
+    const includeAssets = request.nextUrl.searchParams.get('includeAssets') === '1'
     const [tenant, students, teachers, staffUsers, payments, documentsGenerated, auditLogCount, oldestAuditLog] = await Promise.all([
-      db.tenant.findUnique({ where: { id: tenantId }, include: { settings: true } }),
+      db.tenant.findUnique({
+        where: { id: tenantId },
+        select: {
+          id: true,
+          name: true,
+          shortName: true,
+          motto: true,
+          ministry: true,
+          country: true,
+          city: true,
+          address: true,
+          phone: true,
+          email: true,
+          website: true,
+          rectorName: true,
+          rectorTitle: true,
+          secondarySignerName: true,
+          secondarySignerTitle: true,
+          thirdSignerName: true,
+          thirdSignerTitle: true,
+          arabicMotto: true,
+          contactPlacement: true,
+          sealSizeMm: true,
+          academicSystem: true,
+          headerLanguageMode: true,
+          arabicCountry: true,
+          arabicName: true,
+          arabicMinistry: true,
+          headerLinesFr: true,
+          headerLinesAr: true,
+          subscriptionPlan: true,
+          subscriptionEnd: true,
+          settings: true,
+          logo: includeAssets,
+          secondaryLogo: includeAssets,
+          thirdLogo: includeAssets,
+          stamp: includeAssets,
+          signature: includeAssets,
+          secondarySignature: includeAssets,
+          thirdSignature: includeAssets,
+          secondaryStamp: includeAssets,
+          thirdStamp: includeAssets,
+        },
+      }),
       db.student.count({ where: { tenantId } }),
       db.teacher.count({ where: { tenantId } }),
       db.user.count({ where: { tenantId, role: { notIn: ['ETUDIANT', 'ETUDIANT_SANTE', 'PARENT'] } } }),
