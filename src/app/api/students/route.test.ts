@@ -90,11 +90,9 @@ describe('GET /api/students', () => {
     expect(dbMock.student.findMany).not.toHaveBeenCalled()
   })
 
-  // Regression test: lib/validations/api.ts's paginationSchema used to cap
-  // `limit` at 100, which silently 500'd every page that requests a full
-  // tenant roster with limit=1000 (students-list.tsx, teachers-page.tsx,
-  // payments-page.tsx, grades-page.tsx, import-export-page.tsx all do this).
-  it('accepts limit=1000 (students-list.tsx requests the full roster this way)', async () => {
+  // A single export page may contain up to 1,000 rows. Interactive screens
+  // use smaller server-paginated queries and never preload the full roster.
+  it('accepts a 1,000-row page for the explicit export flow', async () => {
     const res = await GET(req('/api/students?limit=1000'))
     expect(res.status).toBe(200)
     expect(dbMock.student.findMany).toHaveBeenCalledWith(

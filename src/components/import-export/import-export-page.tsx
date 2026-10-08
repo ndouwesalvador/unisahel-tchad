@@ -261,7 +261,7 @@ export function ImportExportPage() {
 
   const queryClient = useQueryClient()
   const { data: importExportData, isLoading: isImportExportLoading } = useImportExport()
-  const { data: resultsQuery } = useResults()
+  const { data: resultsQuery } = useResults(undefined, { enabled: exportType === 'RelevesNotes' })
   const { data: dashboardStats } = useDashboardStats()
   const { data: structureQuery } = useStructure()
 
@@ -346,10 +346,10 @@ export function ImportExportPage() {
     } else if (exportType === 'EtatsFinanciers') {
       dataToExport = (await fetchPaged('/api/payments')).map((p: any) => ({
         Matricule: p.student?.matricule || 'N/A',
-        Etudiant: `${p.student?.lastName || ''} ${p.student?.firstName || ''}`.trim(),
-        Filiere: p.student?.currentProgram?.name || '',
+        Étudiant: `${p.student?.lastName || ''} ${p.student?.firstName || ''}`.trim(),
+        Filière: p.student?.currentProgram?.name || '',
         Montant: p.amount,
-        Methode: p.paymentMethod,
+        Méthode: p.paymentMethod,
         Statut: p.status,
         Date: p.createdAt ? new Date(p.createdAt).toLocaleDateString('fr-FR') : '',
       }))
@@ -359,8 +359,8 @@ export function ImportExportPage() {
       dataToExport = faculties.flatMap((f: any) =>
         (f.departments || []).flatMap((d: any) =>
           (d.programs || []).map((p: any) => ({
-            Faculte: f.name,
-            Departement: d.name,
+            Faculté: f.name,
+            Département: d.name,
             Programme: p.name,
             Code: p.code || '',
             Niveaux: (p.levels || []).length,
@@ -370,7 +370,7 @@ export function ImportExportPage() {
       fileName = `structure_academique_${new Date().getTime()}`
     } else {
       dataToExport = [{
-        Indicateur: 'Etudiants inscrits', Valeur: dashboardStats?.totalStudents ?? 0,
+        Indicateur: 'Étudiants inscrits', Valeur: dashboardStats?.totalStudents ?? 0,
       }, {
         Indicateur: 'Enseignants actifs', Valeur: dashboardStats?.totalTeachers ?? 0,
       }, {
@@ -607,7 +607,7 @@ export function ImportExportPage() {
                 animate={{ scale: [1, 1.4, 1], opacity: [1, 0.6, 1] }}
                 transition={{ duration: 2, repeat: Infinity }}
               />
-              <span className="text-xs font-semibold text-[var(--institution-primary)]">Activite recente</span>
+              <span className="text-xs font-semibold text-[var(--institution-primary)]">Activité récente</span>
             </div>
             <div className="space-y-2">
               {recentActivity.length === 0 && (
@@ -696,7 +696,7 @@ export function ImportExportPage() {
                     <Upload className="size-4 text-[var(--institution-secondary)]" />
                   </div>
                   <div>
-                    <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Importer des donnees</CardTitle>
+                    <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Importer des données</CardTitle>
                     <p className="text-xs text-gray-400 mt-0.5">Chargez vos fichiers pour importer en masse</p>
                   </div>
                 </div>

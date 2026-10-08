@@ -138,7 +138,7 @@ export function ProfilePage() {
         const err = await res.json().catch(() => ({}))
         throw new Error(err.error || 'Échec de la mise à jour')
       }
-      toast.success('Profil mis a jour')
+      toast.success('Profil mis à jour')
       queryClient.invalidateQueries({ queryKey: ['profileActivity'] })
       setIsEditing(false)
     } catch (error) {
@@ -178,7 +178,7 @@ export function ProfilePage() {
         const err = await res.json().catch(() => ({}))
         throw new Error(err.error || 'Échec du changement de mot de passe')
       }
-      toast.success('Mot de passe mis a jour')
+      toast.success('Mot de passe mis à jour')
       setPasswordData({ current: '', new: '', confirm: '' })
     } catch (error) {
       toast.error('Erreur', { description: error instanceof Error ? error.message : 'Échec du changement de mot de passe' })
@@ -261,7 +261,7 @@ export function ProfilePage() {
               </TabsTrigger>
               <TabsTrigger value="activite" className="gap-1.5">
                 <Activity className="size-4" />
-                <span className="hidden sm:inline">Activite</span>
+                <span className="hidden sm:inline">Activité</span>
               </TabsTrigger>
             </TabsList>
 
@@ -542,7 +542,7 @@ export function ProfilePage() {
                               Actif
                             </Badge>
                           </div>
-                          <p className="text-xs text-gray-500">Connecte depuis le {formatDateTimeFr(profileQuery.currentSession.date)}</p>
+                          <p className="text-xs text-gray-500">Connecté depuis le {formatDateTimeFr(profileQuery.currentSession.date)}</p>
                         </div>
                       </div>
                     </div>
@@ -598,7 +598,7 @@ export function ProfilePage() {
                       <SelectContent>
                         <SelectItem value="clair">Clair</SelectItem>
                         <SelectItem value="sombre">Sombre</SelectItem>
-                        <SelectItem value="systeme">Systeme</SelectItem>
+                        <SelectItem value="systeme">Système</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -686,7 +686,7 @@ export function ProfilePage() {
                 <CardHeader className="pb-4">
                   <CardTitle className="text-base font-semibold text-[var(--institution-primary)] flex items-center gap-2">
                     <Activity className="size-4 text-[var(--institution-secondary)]" />
-                    Activite recente
+                    Activité récente
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -696,7 +696,7 @@ export function ProfilePage() {
 
                     <div className="space-y-1">
                       {(profileQuery?.activity ?? []).length === 0 && (
-                        <p className="text-sm text-gray-400 text-center py-6">Aucune activite recente.</p>
+                        <p className="text-sm text-gray-400 text-center py-6">Aucune activité récente.</p>
                       )}
                       {(profileQuery?.activity ?? []).map((entry) => {
                         const config = activityConfig[entry.type]

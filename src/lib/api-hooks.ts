@@ -73,9 +73,10 @@ export function useStudentTranscript(id?: string, academicYearId?: string | null
   });
 }
 
-export function useTeachers(params?: { search?: string; departmentId?: string; grade?: string; isActive?: boolean; page?: number; limit?: number }) {
+export function useTeachers(params?: { search?: string; departmentId?: string; grade?: string; isActive?: boolean; page?: number; limit?: number }, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ['teachers', params],
+    enabled: options?.enabled ?? true,
     queryFn: async () => {
       const url = new URL('/api/teachers', window.location.origin);
       if (params) {
@@ -312,9 +313,10 @@ export function useInscriptionPedagogique(studentId?: string) {
   });
 }
 
-export function useResults(params?: { academicYearId?: string; studentId?: string; session?: string }) {
+export function useResults(params?: { academicYearId?: string; studentId?: string; session?: string }, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ['results', params],
+    enabled: options?.enabled ?? true,
     queryFn: async () => {
       const url = new URL('/api/results', window.location.origin);
       if (params) {

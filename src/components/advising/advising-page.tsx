@@ -245,17 +245,17 @@ const APPOINTMENT_TYPE_OPTIONS = [
 
 const typeConfig: Record<string, { label: string; className: string }> = {
   'Orientation': { label: 'Orientation', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0' },
-  'Suivi pedagogique': { label: 'Suivi ped.', className: 'bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0' },
-  'Reorientation': { label: 'Reorientation', className: 'bg-[#ea580c15] text-[#ea580c] border-0' },
+  'Suivi pedagogique': { label: 'Suivi péd.', className: 'bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0' },
+  'Reorientation': { label: 'Réorientation', className: 'bg-[#ea580c15] text-[#ea580c] border-0' },
   'Probleme personnel': { label: 'Problème personnel', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0' },
   'Projet professionnel': { label: 'Projet pro.', className: 'bg-[#8b5cf615] text-[#8b5cf6] border-0' },
 }
 
 const statusConfig: Record<string, { label: string; className: string; icon: React.ElementType }> = {
-  'Planifie': { label: 'Planifie', className: 'bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0', icon: Clock },
+  'Planifie': { label: 'Planifié', className: 'bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0', icon: Clock },
   'En cours': { label: 'En cours', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0', icon: CalendarCheck },
-  'Termine': { label: 'Termine', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0', icon: CheckCircle2 },
-  'Annule': { label: 'Annule', className: 'bg-[#c6282815] text-[#c62828] border-0', icon: XCircle },
+  'Termine': { label: 'Terminé', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0', icon: CheckCircle2 },
+  'Annule': { label: 'Annulé', className: 'bg-[#c6282815] text-[#c62828] border-0', icon: XCircle },
 }
 
 const alertConfig: Record<string, { label: string; className: string; bgClass: string; icon: React.ElementType }> = {
@@ -267,13 +267,13 @@ const alertConfig: Record<string, { label: string; className: string; bgClass: s
 
 const disponibiliteConfig: Record<string, { label: string; className: string; dotColor: string }> = {
   'Libre': { label: 'Libre', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0', dotColor: 'var(--institution-secondary)' },
-  'Occupe': { label: 'Occupe', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0', dotColor: 'var(--institution-accent)' },
+  'Occupe': { label: 'Occupé', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0', dotColor: 'var(--institution-accent)' },
   'En RDV': { label: 'En RDV', className: 'bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0', dotColor: 'var(--institution-primary)' },
 }
 
 const specialtyConfig: Record<string, { label: string; className: string }> = {
   'Orientation': { label: 'Orientation', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0' },
-  'Pedagogie': { label: 'Pedagogie', className: 'bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0' },
+  'Pedagogie': { label: 'Pédagogie', className: 'bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0' },
   'Professionnel': { label: 'Professionnel', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0' },
   'Psychologique': { label: 'Psychologique', className: 'bg-[#8b5cf615] text-[#8b5cf6] border-0' },
 }
@@ -283,7 +283,6 @@ const specialtyConfig: Record<string, { label: string; className: string }> = {
 export function AdvisingPage() {
   const queryClient = useQueryClient()
   const { data: advisingData, isLoading } = useAdvising()
-  const { data: studentsData } = useStudents({ limit: 1000 })
 
   const appointments: ApiAppointment[] = advisingData?.appointments || []
   const advisors: ApiAdvisor[] = advisingData?.advisors || []
@@ -291,7 +290,6 @@ export function AdvisingPage() {
   const monitoredStudents: ApiMonitoredStudent[] = advisingData?.monitoredStudents || []
   const motifData: ApiMotif[] = advisingData?.motifData || []
   const passingGrade: number = advisingData?.passingGrade ?? 10
-  const studentOptions: StudentOption[] = studentsData?.data || []
 
   const [showSchedule, setShowSchedule] = useState(false)
   const [searchMonitored, setSearchMonitored] = useState('')
@@ -302,7 +300,14 @@ export function AdvisingPage() {
 
   const [showNewAppointment, setShowNewAppointment] = useState(false)
   const [isSubmittingAppt, setIsSubmittingAppt] = useState(false)
+  const [appointmentStudentSearch, setAppointmentStudentSearch] = useState('')
   const [newAppt, setNewAppt] = useState({ studentId: '', advisorId: '', type: 'Suivi pedagogique', date: '', time: '', notes: '' })
+  const normalizedStudentSearch = appointmentStudentSearch.trim()
+  const { data: studentsData, isFetching: isSearchingStudents } = useStudents(
+    { search: normalizedStudentSearch, limit: 30 },
+    { enabled: showNewAppointment && normalizedStudentSearch.length >= 2 }
+  )
+  const studentOptions: StudentOption[] = studentsData?.data || []
   const [showNewAdvisor, setShowNewAdvisor] = useState(false)
   const [isSubmittingAdvisor, setIsSubmittingAdvisor] = useState(false)
   const [newAdvisor, setNewAdvisor] = useState<{ name: string; title: string; department: string; specialties: string[] }>({ name: '', title: '', department: '', specialties: [] })
@@ -440,7 +445,7 @@ export function AdvisingPage() {
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Échec de la planification')
-      toast.success('Rendez-vous planifie')
+      toast.success('Rendez-vous planifié')
       queryClient.invalidateQueries({ queryKey: ['advising'] })
       setShowNewAppointment(false)
       setNewAppt({ studentId: '', advisorId: '', type: 'Suivi pedagogique', date: '', time: '', notes: '' })
@@ -490,7 +495,7 @@ export function AdvisingPage() {
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Échec de la mise à jour')
-      toast.success('Statut mis a jour')
+      toast.success('Statut mis à jour')
       queryClient.invalidateQueries({ queryKey: ['advising'] })
     } catch (e) {
       toast.error('Erreur', { description: e instanceof Error ? e.message : 'Échec de la mise à jour' })
@@ -513,7 +518,10 @@ export function AdvisingPage() {
   const noAdvisors = !isLoading && advisors.length === 0
 
   const newAppointmentDialog = (
-    <Dialog open={showNewAppointment} onOpenChange={setShowNewAppointment}>
+    <Dialog open={showNewAppointment} onOpenChange={(open) => {
+      setShowNewAppointment(open)
+      if (!open) setAppointmentStudentSearch('')
+    }}>
       <DialogTrigger asChild>
         <Button
           size="sm"
@@ -532,16 +540,21 @@ export function AdvisingPage() {
         {noAdvisors ? (
           <div className="py-6 text-center">
             <p className="text-sm text-gray-500">
-              Aucun conseiller enregistre — contactez un administrateur pour en ajouter avant de pouvoir planifier un rendez-vous.
+              Aucun conseiller enregistré. Contactez un administrateur pour en ajouter avant de planifier un rendez-vous.
             </p>
           </div>
         ) : (
           <div className="space-y-4 py-2">
             <div className="space-y-2">
               <Label className="text-sm">Étudiant</Label>
+              <Input
+                placeholder="Rechercher par nom ou matricule (2 caractères minimum)…"
+                value={appointmentStudentSearch}
+                onChange={(event) => setAppointmentStudentSearch(event.target.value)}
+              />
               <Select value={newAppt.studentId} onValueChange={(v) => setNewAppt((f) => ({ ...f, studentId: v }))}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Selectionner un étudiant" />
+                  <SelectValue placeholder="Sélectionner un étudiant" />
                 </SelectTrigger>
                 <SelectContent>
                   {studentOptions.map((s) => (
@@ -549,7 +562,10 @@ export function AdvisingPage() {
                       {s.lastName.toUpperCase()} {s.firstName} {s.matricule ? `(${s.matricule})` : ''}
                     </SelectItem>
                   ))}
-                  {studentOptions.length === 0 && (
+                  {isSearchingStudents && (
+                    <div className="px-2 py-1.5 text-xs text-gray-400">Recherche…</div>
+                  )}
+                  {!isSearchingStudents && normalizedStudentSearch.length >= 2 && studentOptions.length === 0 && (
                     <div className="px-2 py-1.5 text-xs text-gray-400">Aucun étudiant trouvé</div>
                   )}
                 </SelectContent>
@@ -559,7 +575,7 @@ export function AdvisingPage() {
               <Label className="text-sm">Conseiller</Label>
               <Select value={newAppt.advisorId} onValueChange={(v) => setNewAppt((f) => ({ ...f, advisorId: v }))}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Selectionner un conseiller" />
+                  <SelectValue placeholder="Sélectionner un conseiller" />
                 </SelectTrigger>
                 <SelectContent>
                   {advisors.map((a) => (
@@ -667,7 +683,7 @@ export function AdvisingPage() {
 
       {/* ── Stats Cards ──────────────────────────────────────────────────────── */}
       <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Etudiants suivis */}
+        {/* Étudiants suivis */}
         <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
         <Card className="overflow-hidden relative border-l-4 border-l-[var(--institution-secondary)]">
           <div className="h-1 bg-gradient-to-r from-[var(--institution-secondary)] to-[var(--institution-secondary-bright)]" />
@@ -675,7 +691,7 @@ export function AdvisingPage() {
           <CardContent className="p-4 relative">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Etudiants suivis</p>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Étudiants suivis</p>
                 <p className="text-xl font-bold text-[var(--institution-secondary)] mt-1">{useCountUp(monitoredStudents.length, 1400)}</p>
                 <p className="text-xs text-gray-400 mt-1">{advisedMonitoredCount} avec conseiller assigne</p>
               </div>
@@ -791,7 +807,7 @@ export function AdvisingPage() {
             </div>
             {noAdvisors && (
               <p className="text-xs text-gray-400 mt-1">
-                Aucun conseiller enregistre — contactez un administrateur pour en ajouter avant de planifier un rendez-vous.
+                Aucun conseiller enregistré. Contactez un administrateur pour en ajouter avant de planifier un rendez-vous.
               </p>
             )}
           </CardHeader>
@@ -896,7 +912,7 @@ export function AdvisingPage() {
                   {!isLoading && appointments.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center py-8 text-sm text-gray-400">
-                        Aucun rendez-vous planifie pour le moment
+                        Aucun rendez-vous planifié pour le moment
                       </TableCell>
                     </TableRow>
                   )}
@@ -1239,7 +1255,7 @@ export function AdvisingPage() {
                 <div>
                   <p className="text-xs font-semibold text-[var(--institution-primary)] mb-3">Historique des entretiens</p>
                   {priorityStudentAppointments.length === 0 ? (
-                    <p className="text-xs text-gray-400">Aucun entretien enregistre pour cet etudiant.</p>
+                    <p className="text-xs text-gray-400">Aucun entretien enregistré pour cet étudiant.</p>
                   ) : (
                     <div className="space-y-3">
                       {priorityStudentAppointments.map((entretien, idx) => (
@@ -1332,7 +1348,7 @@ export function AdvisingPage() {
             )}
             {noAdvisors ? (
               <p className="text-sm text-gray-400 text-center py-6">
-                Aucun conseiller enregistre pour le moment.
+                Aucun conseiller enregistré pour le moment.
               </p>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1411,7 +1427,7 @@ export function AdvisingPage() {
           </CardHeader>
           <CardContent className="p-4 pt-0">
             {!isLoading && workshops.length === 0 ? (
-              <p className="text-sm text-gray-400 text-center py-6">Aucun atelier planifie pour le moment.</p>
+              <p className="text-sm text-gray-400 text-center py-6">Aucun atelier planifié pour le moment.</p>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {workshops.map((workshop) => {
@@ -1591,7 +1607,7 @@ export function AdvisingPage() {
                   <div className="p-3 rounded-lg bg-[var(--institution-accent-08)] border border-[var(--institution-accent-15)]">
                     <p className="text-[10px] text-gray-500">Taux de retour</p>
                     <p className="text-sm font-bold text-[var(--institution-primary)]">{returnRate}%</p>
-                    <p className="text-[10px] text-[var(--institution-accent)] font-medium">Etudiants revenus</p>
+                    <p className="text-[10px] text-[var(--institution-accent)] font-medium">Étudiants revenus</p>
                   </div>
                 </div>
               </div>

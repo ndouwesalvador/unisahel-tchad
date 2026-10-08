@@ -292,8 +292,8 @@ const categoryConfig: Record<string, { label: string; className: string; color: 
 
 const statusConfig: Record<string, { label: string; className: string; icon: React.ElementType }> = {
   disponible: { label: 'Disponible', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0', icon: CheckCircle2 },
-  emprunte: { label: 'Emprunte', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0', icon: Clock },
-  en_reservation: { label: 'En reservation', className: 'bg-[#3b82f615] text-[#3b82f6] border-0', icon: Bookmark },
+  emprunte: { label: 'Emprunté', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0', icon: Clock },
+  en_reservation: { label: 'En réservation', className: 'bg-[#3b82f615] text-[#3b82f6] border-0', icon: Bookmark },
   perdu: { label: 'Perdu', className: 'bg-[#c6282815] text-[#c62828] border-0', icon: XCircle },
 }
 
@@ -307,13 +307,11 @@ const borrowStatusConfig: Record<string, { label: string; className: string }> =
 export function LibraryPage() {
   const queryClient = useQueryClient()
   const { data: libraryQuery, isLoading } = useLibrary()
-  const { data: studentsQuery } = useStudents({ limit: 1000 })
 
   const catalog: CatalogItem[] = (libraryQuery?.catalog || []).map(mapCatalogItem)
   const borrows: BorrowRecord[] = (libraryQuery?.borrows || []).map(mapBorrow)
   const rooms: RoomSpace[] = (libraryQuery?.rooms || []).map(mapRoom)
   const stats: LibraryStats | undefined = libraryQuery?.stats
-  const students: StudentOption[] = (studentsQuery?.data || []).map(mapStudentOption)
 
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState('tous')
@@ -333,6 +331,12 @@ export function LibraryPage() {
   const [selectedStudentId, setSelectedStudentId] = useState('')
   const [dueDate, setDueDate] = useState(defaultDueDate())
   const [borrowing, setBorrowing] = useState(false)
+  const normalizedStudentSearch = studentSearch.trim()
+  const { data: studentsQuery, isFetching: isSearchingStudents } = useStudents(
+    { search: normalizedStudentSearch, limit: 30 },
+    { enabled: Boolean(borrowFor) && normalizedStudentSearch.length >= 2 }
+  )
+  const students: StudentOption[] = (studentsQuery?.data || []).map(mapStudentOption)
 
   // Return a loan
   const [returningId, setReturningId] = useState<string | null>(null)
@@ -361,9 +365,7 @@ export function LibraryPage() {
     return matchSearch
   })
 
-  const filteredStudents = students
-    .filter(s => studentSearch === '' || s.searchKey.includes(studentSearch.toLowerCase()))
-    .slice(0, 30)
+  const filteredStudents = students.slice(0, 30)
 
   const monthlyBorrows = stats?.monthlyBorrows || []
   const maxBorrow = Math.max(...monthlyBorrows.map(m => m.count), 0)
@@ -415,12 +417,12 @@ export function LibraryPage() {
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || "Échec de l'ajout du document")
-      toast.success('Document ajoute au catalogue', { description: newBook.title })
+      toast.success('Document ajouté au catalogue', { description: newBook.title })
       queryClient.invalidateQueries({ queryKey: ['library'] })
       setShowAddBook(false)
       setNewBook({ title: '', type: 'livre', category: 'sciences', location: '', totalCopies: '1' })
     } catch (e) {
-      toast.error('Erreur', { description: e instanceof Error ? e.message : "Echec de l'ajout du document" })
+      toast.error('Erreur', { description: e instanceof Error ? e.message : "Échec de l'ajout du document" })
     } finally {
       setAddingBook(false)
     }
@@ -441,11 +443,11 @@ export function LibraryPage() {
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || "Échec de l'enregistrement de l'emprunt")
-      toast.success('Emprunt enregistre', { description: borrowFor.title })
+      toast.success('Emprunt enregistré', { description: borrowFor.title })
       queryClient.invalidateQueries({ queryKey: ['library'] })
       setBorrowFor(null)
     } catch (e) {
-      toast.error('Erreur', { description: e instanceof Error ? e.message : "Echec de l'enregistrement de l'emprunt" })
+      toast.error('Erreur', { description: e instanceof Error ? e.message : "Échec de l'enregistrement de l'emprunt" })
     } finally {
       setBorrowing(false)
     }
@@ -460,7 +462,7 @@ export function LibraryPage() {
       toast.success('Ouvrage rendu')
       queryClient.invalidateQueries({ queryKey: ['library'] })
     } catch (e) {
-      toast.error('Erreur', { description: e instanceof Error ? e.message : 'Echec du retour' })
+      toast.error('Erreur', { description: e instanceof Error ? e.message : 'Échec du retour' })
     } finally {
       setReturningId(null)
     }
@@ -481,10 +483,10 @@ export function LibraryPage() {
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || "Échec de la mise à jour")
-      toast.success('Effectif mis a jour')
+      toast.success('Effectif mis à jour')
       queryClient.invalidateQueries({ queryKey: ['library'] })
     } catch (e) {
-      toast.error('Erreur', { description: e instanceof Error ? e.message : 'Echec de la mise a jour' })
+      toast.error('Erreur', { description: e instanceof Error ? e.message : 'Échec de la mise à jour' })
     } finally {
       setSavingRoomId(null)
     }
@@ -542,7 +544,7 @@ export function LibraryPage() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-sm">Categorie</Label>
+                    <Label className="text-sm">Catégorie</Label>
                     <Select value={newBook.category} onValueChange={(v) => setNewBook(f => ({ ...f, category: v }))}>
                       <SelectTrigger>
                         <SelectValue />
@@ -714,7 +716,7 @@ export function LibraryPage() {
                 </Select>
                 <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                   <SelectTrigger className="w-[140px] h-9 text-xs">
-                    <SelectValue placeholder="Categorie" />
+                    <SelectValue placeholder="Catégorie" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="tous">Toutes categories</SelectItem>
@@ -733,7 +735,7 @@ export function LibraryPage() {
                     <SelectItem value="tous">Tous les statuts</SelectItem>
                     <SelectItem value="disponible">Disponible</SelectItem>
                     <SelectItem value="emprunte">Emprunte</SelectItem>
-                    <SelectItem value="en_reservation">En reservation</SelectItem>
+                    <SelectItem value="en_reservation">En réservation</SelectItem>
                     <SelectItem value="perdu">Perdu</SelectItem>
                   </SelectContent>
                 </Select>
@@ -785,7 +787,7 @@ export function LibraryPage() {
                   <TableRow className="bg-gray-50">
                     <TableHead className="text-xs font-semibold">Titre</TableHead>
                     <TableHead className="text-xs font-semibold">Type</TableHead>
-                    <TableHead className="text-xs font-semibold">Categorie</TableHead>
+                    <TableHead className="text-xs font-semibold">Catégorie</TableHead>
                     <TableHead className="text-xs font-semibold">Statut</TableHead>
                     <TableHead className="text-xs font-semibold text-center">Emprunts</TableHead>
                     <TableHead className="text-xs font-semibold">Localisation</TableHead>
@@ -808,7 +810,7 @@ export function LibraryPage() {
                           <div>
                             <p className="text-sm font-medium text-[var(--institution-primary)]">{item.title}</p>
                             {item.returnDate && (
-                              <p className="text-[10px] text-[var(--institution-accent)] mt-0.5">Retour prevu: {item.returnDate}</p>
+                              <p className="text-[10px] text-[var(--institution-accent)] mt-0.5">Retour prévu : {item.returnDate}</p>
                             )}
                           </div>
                         </TableCell>
@@ -907,25 +909,29 @@ export function LibraryPage() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label className="text-sm">Etudiant</Label>
+              <Label className="text-sm">Étudiant</Label>
               <Input
-                placeholder="Rechercher par nom ou matricule..."
+                placeholder="Saisir au moins 2 caractères…"
                 value={studentSearch}
                 onChange={(e) => setStudentSearch(e.target.value)}
               />
               <Select value={selectedStudentId} onValueChange={setSelectedStudentId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Selectionner un étudiant" />
+                  <SelectValue placeholder="Sélectionner un étudiant" />
                 </SelectTrigger>
                 <SelectContent>
                   {filteredStudents.map(s => (
                     <SelectItem key={s.id} value={s.id}>{s.label}</SelectItem>
                   ))}
+                  {isSearchingStudents && <div className="px-2 py-1.5 text-xs text-gray-400">Recherche…</div>}
+                  {!isSearchingStudents && normalizedStudentSearch.length >= 2 && filteredStudents.length === 0 && (
+                    <div className="px-2 py-1.5 text-xs text-gray-400">Aucun étudiant trouvé</div>
+                  )}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label className="text-sm">Date de retour prevue</Label>
+              <Label className="text-sm">Date de retour prévue</Label>
               <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
             </div>
             <div className="flex gap-2 pt-2">
@@ -971,10 +977,10 @@ export function LibraryPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-gray-50">
-                    <TableHead className="text-xs font-semibold">Etudiant</TableHead>
+                    <TableHead className="text-xs font-semibold">Étudiant</TableHead>
                     <TableHead className="text-xs font-semibold">Ouvrage</TableHead>
                     <TableHead className="text-xs font-semibold">Date emprunt</TableHead>
-                    <TableHead className="text-xs font-semibold">Retour prevu</TableHead>
+                    <TableHead className="text-xs font-semibold">Retour prévu</TableHead>
                     <TableHead className="text-xs font-semibold">Statut</TableHead>
                     <TableHead className="text-xs font-semibold text-right">Action</TableHead>
                   </TableRow>
@@ -1168,7 +1174,7 @@ export function LibraryPage() {
                             transition={{ duration: 0.6, ease: 'easeOut' }}
                           />
                         </div>
-                        <p className="text-[10px] text-gray-500 mt-1">{room.occupancy}/{room.capacity} occupe ({occPercent}%)</p>
+                        <p className="text-[10px] text-gray-500 mt-1">{room.occupancy}/{room.capacity} occupé ({occPercent} %)</p>
                         <div className="flex items-center gap-1.5 mt-2">
                           <Input
                             type="number"
@@ -1202,11 +1208,11 @@ export function LibraryPage() {
               </div>
               <div className="flex items-center gap-1.5">
                 <div className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-                <span className="text-[10px] text-gray-500">Modere</span>
+                <span className="text-[10px] text-gray-500">Modéré</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <div className="w-2.5 h-2.5 rounded-full bg-red-500" />
-                <span className="text-[10px] text-gray-500">Sature</span>
+                <span className="text-[10px] text-gray-500">Saturé</span>
               </div>
             </div>
           </CardContent>
@@ -1251,9 +1257,9 @@ export function LibraryPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Top Categories */}
               <div>
-                <p className="text-xs font-semibold text-[var(--institution-primary)] mb-3 uppercase tracking-wide">Categories les plus empruntees</p>
+                <p className="text-xs font-semibold text-[var(--institution-primary)] mb-3 uppercase tracking-wide">Catégories les plus empruntées</p>
                 {topCategories.length === 0 ? (
-                  <p className="text-xs text-gray-400 py-6 text-center">Aucun emprunt enregistre pour le moment</p>
+                  <p className="text-xs text-gray-400 py-6 text-center">Aucun emprunt enregistré pour le moment</p>
                 ) : (
                   <div className="space-y-3">
                     {topCategories.map((cat, index) => {

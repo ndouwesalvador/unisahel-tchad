@@ -191,7 +191,7 @@ function StudentDashboardHome({ data }: { data: StudentDashboardResponse }) {
   const paymentStatusLabel: Record<string, { label: string; color: string }> = {
     VALIDATED: { label: 'Validé', color: '#166534' },
     PENDING: { label: 'En attente de validation', color: '#92400e' },
-    CANCELLED: { label: 'Annule', color: '#c62828' },
+    CANCELLED: { label: 'Annulé', color: '#c62828' },
     REFUNDED: { label: 'Rembourse', color: '#c62828' },
   }
   const paymentStatus = data.stats.lastPaymentStatus
@@ -317,7 +317,7 @@ function StudentDashboardHome({ data }: { data: StudentDashboardResponse }) {
           </CardHeader>
           <CardContent className="p-0">
             {data.upcomingEvents.length === 0 ? (
-              <EmptyState label="Aucun examen planifie." />
+              <EmptyState label="Aucun examen planifié." />
             ) : (
               <div className="max-h-80 overflow-y-auto">
                 {data.upcomingEvents.map((event, i) => (
@@ -539,7 +539,7 @@ export function DashboardHome() {
     { title: 'Dossiers étudiants', value: data.statsCards.totalStudents.toLocaleString('fr-FR'), icon: Users, color: 'var(--institution-secondary)', bgColor: 'var(--institution-secondary-15)' },
     { title: 'Enseignants', value: data.statsCards.totalTeachers.toLocaleString('fr-FR'), icon: GraduationCap, color: 'var(--institution-primary)', bgColor: 'var(--institution-primary-15)' },
     { title: 'Programmes', value: data.statsCards.totalPrograms.toLocaleString('fr-FR'), icon: BookOpen, color: 'var(--institution-accent)', bgColor: 'var(--institution-accent-15)' },
-    { title: 'Paiements recus', value: `${data.statsCards.totalPaymentsAmount.toLocaleString('fr-FR')} FCFA`, icon: CreditCard, color: 'var(--institution-secondary)', bgColor: 'var(--institution-secondary-15)' },
+    { title: 'Paiements reçus', value: `${data.statsCards.totalPaymentsAmount.toLocaleString('fr-FR')} FCFA`, icon: CreditCard, color: 'var(--institution-secondary)', bgColor: 'var(--institution-secondary-15)' },
   ]
 
   const filiereData = data.chartData.studentsByProgram.map((p, i) => ({
@@ -1070,7 +1070,7 @@ export function DashboardHome() {
             <CardHeader className="pb-3">
               <CardTitle className="text-base font-semibold text-[var(--institution-primary)] flex items-center gap-2">
                 <Server className="size-4 text-[var(--institution-secondary)]" />
-                Etat du systeme
+                État du système
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -1090,11 +1090,11 @@ export function DashboardHome() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Database className="size-4 text-gray-400" />
-                  <span className="text-sm text-gray-600">Base de donnees</span>
+                  <span className="text-sm text-gray-600">Base de données</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <PulsingDot color="var(--institution-secondary)" />
-                  <span className="text-xs font-medium text-[var(--institution-secondary)]">Connecte</span>
+                  <span className="text-xs font-medium text-[var(--institution-secondary)]">Connectée</span>
                 </div>
               </div>
 
@@ -1108,11 +1108,11 @@ export function DashboardHome() {
         {/* Enhanced Recent Activity */}
         <Card className="lg:col-span-2">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold text-[var(--institution-primary)]">Activite recente</CardTitle>
+            <CardTitle className="text-base font-semibold text-[var(--institution-primary)]">Activité récente</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             {data.recentActivity.length === 0 ? (
-              <EmptyState label="Aucune activite recente." />
+              <EmptyState label="Aucune activité récente." />
             ) : (
               <div className="max-h-96 overflow-y-auto relative">
                 {/* Timeline connecting line */}
@@ -1151,12 +1151,12 @@ export function DashboardHome() {
           <CardHeader className="pb-3">
             <CardTitle className="text-base font-semibold text-[var(--institution-primary)] flex items-center gap-2">
               <Timer className="size-4 text-[var(--institution-accent)]" />
-              Evenements a venir
+              Événements à venir
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             {data.upcomingEvents.length === 0 ? (
-              <EmptyState label="Aucun evenement planifie." />
+              <EmptyState label="Aucun événement planifié." />
             ) : (
               <div className="max-h-96 overflow-y-auto">
                 {data.upcomingEvents.map((event, i) => (

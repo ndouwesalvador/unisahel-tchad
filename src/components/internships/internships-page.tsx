@@ -218,7 +218,7 @@ interface TimelineStep {
   status: 'completed' | 'current' | 'upcoming'
 }
 
-const TIMELINE_LABELS = ['Convention signee', 'Stage en cours', 'Stage termine'] as const
+const TIMELINE_LABELS = ['Convention signée', 'Stage en cours', 'Stage terminé'] as const
 
 // The Internship model only exposes a coarse `status` field, not a dated multi-step
 // approval/monitoring workflow (no site-visit, report, or defense dates are captured).
@@ -278,15 +278,15 @@ const typeConfig: Record<string, { label: string; className: string }> = {
   professionnel: { label: 'Stage professionnel', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0' },
   hospitalier: { label: 'Stage hospitalier', className: 'bg-[#c6282815] text-[#c62828] border-0' },
   recherche: { label: 'Stage de recherche', className: 'bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0' },
-  'fin-etudes': { label: "Stage de fin d'etudes", className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0' },
+  'fin-etudes': { label: "Stage de fin d’études", className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0' },
 }
 
 const statusConfig: Record<string, { label: string; className: string; icon: React.ElementType }> = {
   'en-cours': { label: 'En cours', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0', icon: Clock },
-  'convention-signee': { label: 'Convention signee', className: 'bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0', icon: FileCheck },
+  'convention-signee': { label: 'Convention signée', className: 'bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0', icon: FileCheck },
   'en-attente': { label: 'En attente', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0', icon: AlertTriangle },
-  termine: { label: 'Termine', className: 'bg-gray-100 text-gray-600 border-0', icon: CheckCircle2 },
-  annule: { label: 'Annule', className: 'bg-[#c6282815] text-[#c62828] border-0', icon: XCircle },
+  termine: { label: 'Terminé', className: 'bg-gray-100 text-gray-600 border-0', icon: CheckCircle2 },
+  annule: { label: 'Annulé', className: 'bg-[#c6282815] text-[#c62828] border-0', icon: XCircle },
 }
 
 const gradeConfig: Record<string, { className: string; bgClass: string }> = {
@@ -306,15 +306,13 @@ const sectorConfig: Record<string, { className: string; icon: React.ElementType 
   Public: { className: 'bg-gray-100 text-gray-600 border-0', icon: Building2 },
 }
 
-const workflowSteps = ['Soumission', 'Validation etablissement', 'Signature entreprise']
+const workflowSteps = ['Soumission', 'Validation établissement', 'Signature entreprise']
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function InternshipsPage() {
   const queryClient = useQueryClient()
   const { data: internshipsQuery, isLoading } = useInternships()
-  const { data: studentsData } = useStudents({ limit: 1000 })
-  const realStudents = (studentsData?.data || []) as Array<{ id: string; firstName: string; lastName: string; matricule: string | null }>
   const rawInternships: InternshipRecord[] = internshipsQuery?.internships || []
   const internships: InternshipEntry[] = rawInternships.map(mapInternship)
   const partners: PartnerDisplay[] = (internshipsQuery?.partners || []).map(mapPartner)
@@ -356,7 +354,14 @@ export function InternshipsPage() {
   // New internship dialog
   const [showNewStage, setShowNewStage] = useState(false)
   const [isCreatingStage, setIsCreatingStage] = useState(false)
+  const [studentSearch, setStudentSearch] = useState('')
   const [stageForm, setStageForm] = useState({ studentId: '', entreprise: '', type: '', period: '', tuteur: '', startDate: '', endDate: '' })
+  const normalizedStudentSearch = studentSearch.trim()
+  const { data: studentsData, isFetching: isSearchingStudents } = useStudents(
+    { search: normalizedStudentSearch, limit: 30 },
+    { enabled: showNewStage && normalizedStudentSearch.length >= 2 }
+  )
+  const realStudents = (studentsData?.data || []) as Array<{ id: string; firstName: string; lastName: string; matricule: string | null }>
 
   // Default the evaluation target to the first in-progress internship
   const evalTarget = rawInternships.find((r) => r.id === evalInternshipId)
@@ -405,7 +410,7 @@ export function InternshipsPage() {
       toast.success(action === 'approved' ? 'Convention validee' : 'Convention rejetee')
       queryClient.invalidateQueries({ queryKey: ['internships'] })
     } catch {
-      toast.error('Echec de la mise a jour de la convention')
+      toast.error('Échec de la mise à jour de la convention')
     } finally {
       setValidatingId(null)
     }
@@ -440,7 +445,7 @@ export function InternshipsPage() {
       queryClient.invalidateQueries({ queryKey: ['internships'] })
       setTimeout(() => setEvaluationSubmitted(false), 3000)
     } catch {
-      toast.error("Echec de l'enregistrement de l'evaluation")
+      toast.error("Échec de l’enregistrement de l’évaluation")
     } finally {
       setIsSubmittingEval(false)
     }
@@ -450,7 +455,7 @@ export function InternshipsPage() {
     const f = stageForm
     const student = realStudents.find((s) => s.id === f.studentId)
     if (!student || !f.entreprise || !f.type) {
-      toast.error('Champs requis', { description: 'Etudiant, entreprise et type sont obligatoires' })
+      toast.error('Champs requis', { description: 'Étudiant, entreprise et type sont obligatoires' })
       return
     }
     setIsCreatingStage(true)
@@ -471,13 +476,13 @@ export function InternshipsPage() {
         }),
       })
       const body = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(body.error || 'Echec de la creation')
-      toast.success('Stage enregistre', { description: `${student.lastName} ${student.firstName} — ${f.entreprise}` })
+      if (!res.ok) throw new Error(body.error || 'Échec de la création')
+      toast.success('Stage enregistré', { description: `${student.lastName} ${student.firstName} — ${f.entreprise}` })
       queryClient.invalidateQueries({ queryKey: ['internships'] })
       setShowNewStage(false)
       setStageForm({ studentId: '', entreprise: '', type: '', period: '', tuteur: '', startDate: '', endDate: '' })
     } catch (e) {
-      toast.error('Erreur', { description: e instanceof Error ? e.message : 'Echec de la creation' })
+      toast.error('Erreur', { description: e instanceof Error ? e.message : 'Échec de la création' })
     } finally {
       setIsCreatingStage(false)
     }
@@ -586,7 +591,7 @@ export function InternshipsPage() {
                     <p className="text-2xl font-bold text-[var(--institution-secondary)] mt-1">{stagesActifs}</p>
                     <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
                       <Briefcase className="size-3" />
-                      En cours ou convention signee
+                      En cours ou convention signée
                     </p>
                   </div>
                   <div className="w-10 h-10 rounded-xl bg-[var(--institution-secondary-15)] flex items-center justify-center">
@@ -721,15 +726,15 @@ export function InternshipsPage() {
                   <SelectContent>
                     <SelectItem value="tous">Tous les statuts</SelectItem>
                     <SelectItem value="en-cours">En cours</SelectItem>
-                    <SelectItem value="convention-signee">Convention signee</SelectItem>
+                    <SelectItem value="convention-signee">Convention signée</SelectItem>
                     <SelectItem value="en-attente">En attente</SelectItem>
-                    <SelectItem value="termine">Termine</SelectItem>
-                    <SelectItem value="annule">Annule</SelectItem>
+                    <SelectItem value="termine">Terminé</SelectItem>
+                    <SelectItem value="annule">Annulé</SelectItem>
                   </SelectContent>
                 </Select>
                 <Select value={periodFilter} onValueChange={setPeriodFilter}>
                   <SelectTrigger className="w-full sm:w-[160px] h-8 text-xs">
-                    <SelectValue placeholder="Periode" />
+                    <SelectValue placeholder="Période" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="tous">Toutes periodes</SelectItem>
@@ -759,7 +764,7 @@ export function InternshipsPage() {
                         <TableHead className="text-xs font-semibold">Étudiant</TableHead>
                         <TableHead className="text-xs font-semibold">Entreprise</TableHead>
                         <TableHead className="text-xs font-semibold">Type</TableHead>
-                        <TableHead className="text-xs font-semibold">Periode</TableHead>
+                        <TableHead className="text-xs font-semibold">Période</TableHead>
                         <TableHead className="text-xs font-semibold">Statut</TableHead>
                         <TableHead className="text-xs font-semibold">Tuteur</TableHead>
                         <TableHead className="text-xs font-semibold text-right">Actions</TableHead>
@@ -1067,11 +1072,11 @@ export function InternshipsPage() {
                   <label className="text-xs font-medium text-[var(--institution-primary)]">Appreciation globale</label>
                   <Select value={appreciation} onValueChange={setAppreciation}>
                     <SelectTrigger className="h-9 text-xs">
-                      <SelectValue placeholder="Selectionner l'appreciation" />
+                      <SelectValue placeholder="Sélectionner l’appréciation" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="excellent">Excellent</SelectItem>
-                      <SelectItem value="tres-bien">Tres bien</SelectItem>
+                      <SelectItem value="tres-bien">Très bien</SelectItem>
                       <SelectItem value="bien">Bien</SelectItem>
                       <SelectItem value="assez-bien">Assez bien</SelectItem>
                       <SelectItem value="insuffisant">Insuffisant</SelectItem>
@@ -1155,10 +1160,6 @@ export function InternshipsPage() {
                   <Building2 className="size-4" />
                   Sites de stage &amp; Partenaires
                 </CardTitle>
-                <Button size="sm" className="bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white text-xs h-7">
-                  <Plus className="size-3 mr-1" />
-                  Ajouter un partenaire
-                </Button>
               </div>
             </CardHeader>
             <CardContent className="p-4 pt-0">
@@ -1166,7 +1167,7 @@ export function InternshipsPage() {
                 <p className="text-center py-8 text-sm text-gray-400">Chargement des partenaires...</p>
               )}
               {!isLoading && partners.length === 0 && (
-                <p className="text-center py-8 text-sm text-gray-400">Aucun partenaire enregistre pour le moment</p>
+                  <p className="text-center py-8 text-sm text-gray-400">Aucun partenaire enregistré pour le moment</p>
               )}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {partners.map((partner) => {
@@ -1348,22 +1349,22 @@ export function InternshipsPage() {
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm font-semibold text-[var(--institution-primary)] flex items-center gap-2">
                   <Globe className="size-4" />
-                  Contexte africain - Adaptations locales
+                  Contexte africain · adaptations locales
                 </CardTitle>
               </div>
             </CardHeader>
             <CardContent className="p-4 pt-0">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Convention numerique */}
+                {/* Convention numérique */}
                 <div className="p-4 rounded-lg bg-[var(--institution-primary-08)] border border-[var(--institution-primary-15)]">
                   <div className="flex items-center gap-2 mb-2">
                     <div className="w-8 h-8 rounded-lg bg-[var(--institution-primary-15)] flex items-center justify-center">
                       <FileCheck className="size-4 text-[var(--institution-primary)]" />
                     </div>
-                    <span className="text-sm font-semibold text-[var(--institution-primary)]">Convention numerique</span>
+                    <span className="text-sm font-semibold text-[var(--institution-primary)]">Convention numérique</span>
                   </div>
                   <p className="text-xs text-gray-600 leading-relaxed">
-                    Signature electronique des conventions pour les etudiants en zones eloignees. Plus besoin de deplacement physique pour valider les documents de stage.
+                    Signature électronique des conventions pour les étudiants en zones éloignées. Les documents peuvent être validés sans déplacement physique.
                   </p>
                 </div>
 
@@ -1376,104 +1377,66 @@ export function InternshipsPage() {
                     <span className="text-sm font-semibold text-[var(--institution-primary)]">Stage en milieu rural</span>
                   </div>
                   <p className="text-xs text-gray-600 leading-relaxed">
-                    Accompgnement specifique pour les stages en hopitaux et centres de sante ruraux. Suivi adapte aux contraintes de connectivite et de ressources.
+                    Accompagnement spécifique pour les stages en hôpitaux et centres de santé ruraux. Suivi adapté aux contraintes de connectivité et de ressources.
                   </p>
                 </div>
 
-                {/* Verification entreprises */}
+                {/* Vérification des entreprises */}
                 <div className="p-4 rounded-lg bg-[var(--institution-accent-08)] border border-[var(--institution-accent-15)]">
                   <div className="flex items-center gap-2 mb-2">
                     <div className="w-8 h-8 rounded-lg bg-[var(--institution-accent-15)] flex items-center justify-center">
                       <UserCheck className="size-4 text-[var(--institution-accent)]" />
                     </div>
-                    <span className="text-sm font-semibold text-[var(--institution-primary)]">Verification entreprises</span>
+                    <span className="text-sm font-semibold text-[var(--institution-primary)]">Vérification des entreprises</span>
                   </div>
                   <p className="text-xs text-gray-600 leading-relaxed">
-                    Systeme de verification des entreprises partenaires pour garantir la qualite des stages et la securite des etudiants. Audit regulier des conditions d&apos;accueil.
+                    Vérification des entreprises partenaires afin de garantir la qualité des stages et la sécurité des étudiants.
                   </p>
                 </div>
 
-                {/* Rapport simplifie */}
+                {/* Rapport simplifié */}
                 <div className="p-4 rounded-lg bg-gray-50 border border-gray-100">
                   <div className="flex items-center gap-2 mb-2">
                     <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center">
                       <AlertTriangle className="size-4 text-gray-500" />
                     </div>
-                    <span className="text-sm font-semibold text-[var(--institution-primary)]">Rapport simplifie</span>
+                    <span className="text-sm font-semibold text-[var(--institution-primary)]">Rapport simplifié</span>
                   </div>
                   <p className="text-xs text-gray-600 leading-relaxed">
-                    Modeles de rapports de stage simplifies pour les contextes a faibles ressources. Formats adaptes pour impression et partage hors ligne.
+                    Modèles de rapports de stage simplifiés, adaptés à l’impression et au partage hors ligne.
                   </p>
                 </div>
               </div>
 
-              {/* Budget conventions */}
-              <div className="mt-4 p-4 rounded-lg border border-gray-100">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <TrendingUp className="size-4 text-[var(--institution-secondary)]" />
-                    <span className="text-sm font-semibold text-[var(--institution-primary)]">Budget conventions</span>
-                  </div>
-                  <Badge className="bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0 text-[10px]">
-                    Exercice 2024-2025
-                  </Badge>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-                  <div className="text-center p-3 bg-gray-50 rounded-lg">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wide">Budget total</p>
-                    <p className="text-lg font-bold text-[var(--institution-primary)]">5,200,000</p>
-                    <p className="text-[10px] text-gray-400">FCFA</p>
-                  </div>
-                  <div className="text-center p-3 bg-[#c6282808] rounded-lg">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wide">Depense</p>
-                    <p className="text-lg font-bold text-[#c62828]">3,640,000</p>
-                    <p className="text-[10px] text-gray-400">FCFA</p>
-                  </div>
-                  <div className="text-center p-3 bg-[var(--institution-secondary-08)] rounded-lg">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wide">Disponible</p>
-                    <p className="text-lg font-bold text-[var(--institution-secondary)]">1,560,000</p>
-                    <p className="text-[10px] text-gray-400">FCFA</p>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-gray-500">Taux d&apos;execution</span>
-                    <span className="font-semibold text-[var(--institution-primary)]">70%</span>
-                  </div>
-                  <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
-                    <motion.div
-                      className="h-full rounded-full bg-gradient-to-r from-[var(--institution-secondary)] to-[var(--institution-secondary-bright)]"
-                      initial={{ width: 0 }}
-                      animate={{ width: '70%' }}
-                      transition={{ duration: 1.2, ease: 'easeOut' }}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between text-[10px] text-gray-400 mt-1">
-                    <span>0 FCFA</span>
-                    <span>5,200,000 FCFA</span>
-                  </div>
-                </div>
-              </div>
             </CardContent>
           </Card>
         </motion.div>
       </motion.div>
 
       {/* New internship dialog */}
-      <Dialog open={showNewStage} onOpenChange={(o) => { setShowNewStage(o); if (!o) setStageForm({ studentId: '', entreprise: '', type: '', period: '', tuteur: '', startDate: '', endDate: '' }) }}>
+      <Dialog open={showNewStage} onOpenChange={(o) => { setShowNewStage(o); if (!o) { setStageForm({ studentId: '', entreprise: '', type: '', period: '', tuteur: '', startDate: '', endDate: '' }); setStudentSearch('') } }}>
         <DialogContent className="sm:max-w-[520px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-[var(--institution-primary)]">Nouveau stage</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
-              <Label className="text-sm">Etudiant</Label>
+              <Label className="text-sm">Étudiant</Label>
+              <Input
+                placeholder="Rechercher par nom ou matricule (2 caractères minimum)…"
+                value={studentSearch}
+                onChange={(event) => setStudentSearch(event.target.value)}
+              />
               <Select value={stageForm.studentId} onValueChange={(v) => setStageForm((f) => ({ ...f, studentId: v }))}>
-                <SelectTrigger><SelectValue placeholder="Selectionner un etudiant" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Sélectionner un étudiant" /></SelectTrigger>
                 <SelectContent>
                   {realStudents.map((s) => (
                     <SelectItem key={s.id} value={s.id}>{s.lastName} {s.firstName} ({s.matricule || '—'})</SelectItem>
                   ))}
+                  {isSearchingStudents && <div className="px-2 py-1.5 text-xs text-gray-400">Recherche…</div>}
+                  {!isSearchingStudents && normalizedStudentSearch.length >= 2 && realStudents.length === 0 && (
+                    <div className="px-2 py-1.5 text-xs text-gray-400">Aucun étudiant trouvé</div>
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -1490,14 +1453,14 @@ export function InternshipsPage() {
                     <SelectItem value="PROFESSIONNEL">Professionnel</SelectItem>
                     <SelectItem value="HOSPITALIER">Hospitalier</SelectItem>
                     <SelectItem value="RECHERCHE">Recherche</SelectItem>
-                    <SelectItem value="FIN_ETUDES">Fin d&apos;etudes</SelectItem>
+                    <SelectItem value="FIN_ETUDES">Fin d&apos;études</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-sm">Periode (optionnel)</Label>
+                <Label className="text-sm">Période (optionnel)</Label>
                 <Input placeholder="Ex: Semestre 2 2024-2025" value={stageForm.period} onChange={(e) => setStageForm((f) => ({ ...f, period: e.target.value }))} />
               </div>
               <div className="space-y-1.5">
@@ -1507,7 +1470,7 @@ export function InternshipsPage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-sm">Date de debut (optionnel)</Label>
+                <Label className="text-sm">Date de début (optionnel)</Label>
                 <Input type="date" value={stageForm.startDate} onChange={(e) => setStageForm((f) => ({ ...f, startDate: e.target.value }))} />
               </div>
               <div className="space-y-1.5">

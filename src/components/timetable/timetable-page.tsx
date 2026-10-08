@@ -24,7 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { useAcademicYears, useStructure, useTeachers, useTimetable, useRooms } from '@/lib/api-hooks'
+import { useAcademicYears, useStructure, useTimetable, useRooms } from '@/lib/api-hooks'
 import { useAppStore } from '@/lib/store'
 import { TimetablePublicationPanel } from './timetable-publication-panel'
 import {
@@ -400,7 +400,6 @@ export function TimetablePage() {
   }, { enabled: Boolean(activeYearId) })
   const { data: roomsQuery, isLoading: isRoomsLoading } = useRooms()
   const { data: structureData } = useStructure()
-  const { data: teachersData } = useTeachers({ limit: 1000 })
   const { data: serviceData } = useQuery<{ services: { status: string; academicYearId: string; courseElementId: string; teacherId: string }[]; teachers: { id: string; user: { firstName: string; lastName: string } | null }[] }>({
     queryKey: ['teaching-services', activeYearId], enabled: Boolean(activeYearId) && canManageSlots,
     queryFn: async () => {
@@ -420,11 +419,11 @@ export function TimetablePage() {
     [structureData]
   )
   const teacherOptions: AcademicOption[] = useMemo(
-    () => [...new Map([...(teachersData?.data ?? []), ...(serviceData?.teachers ?? [])].map((teacher: { id: string; employeeId?: string | null; user?: { firstName?: string | null; lastName?: string | null }; firstName?: string | null; lastName?: string | null }) => [teacher.id, teacher])).values()].map((teacher) => ({
+    () => [...new Map((serviceData?.teachers ?? []).map((teacher) => [teacher.id, teacher])).values()].map((teacher) => ({
       id: teacher.id,
-      label: `${teacher.user?.lastName || teacher.lastName || ''} ${teacher.user?.firstName || teacher.firstName || ''}`.trim() || teacher.employeeId || teacher.id,
+      label: `${teacher.user?.lastName || ''} ${teacher.user?.firstName || ''}`.trim() || teacher.id,
     })),
-    [teachersData, serviceData]
+    [serviceData]
   )
   const selectedElement = courseElements.find((element) => element.id === slotForm.courseElementId)
   const approvedTeacherIds = new Set((serviceData?.services ?? []).filter(service => service.status === 'APPROVED'
