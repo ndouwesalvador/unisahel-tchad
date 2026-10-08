@@ -116,7 +116,7 @@ const priorityConfig: Record<Priority, { label: string; borderClass: string; dot
 }
 
 const categoryConfig: Record<Category, { label: string; icon: React.ElementType; className: string }> = {
-  academique: { label: 'Academique', icon: GraduationCap, className: 'bg-blue-100 text-blue-700 border-0' },
+  academique: { label: 'Académique', icon: GraduationCap, className: 'bg-blue-100 text-blue-700 border-0' },
   administratif: { label: 'Administratif', icon: Building2, className: 'bg-gray-100 text-gray-700 border-0' },
   urgence: { label: 'Urgence', icon: Siren, className: 'bg-red-100 text-red-700 border-0' },
   evenement: { label: 'Evenement', icon: PartyPopper, className: 'bg-purple-100 text-purple-700 border-0' },
@@ -131,7 +131,7 @@ const targetConfig: Record<TargetAudience, { label: string; className: string }>
 
 const categoryTabs: { value: string; label: string; icon: React.ElementType; filter: Category | null }[] = [
   { value: 'toutes', label: 'Toutes', icon: Megaphone, filter: null },
-  { value: 'academique', label: 'Academique', icon: GraduationCap, filter: 'academique' },
+  { value: 'academique', label: 'Académique', icon: GraduationCap, filter: 'academique' },
   { value: 'administratif', label: 'Administratif', icon: Building2, filter: 'administratif' },
   { value: 'urgence', label: 'Urgences', icon: Siren, filter: 'urgence' },
   { value: 'evenement', label: 'Evenements', icon: PartyPopper, filter: 'evenement' },
@@ -602,7 +602,7 @@ export function AnnouncementsPage() {
                        <SelectValue placeholder="Sélectionner une catégorie" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="academique">Academique</SelectItem>
+                      <SelectItem value="academique">Académique</SelectItem>
                       <SelectItem value="administratif">Administratif</SelectItem>
                       <SelectItem value="urgence">Urgence</SelectItem>
                       <SelectItem value="evenement">Evenement</SelectItem>

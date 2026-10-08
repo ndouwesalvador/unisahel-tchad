@@ -1,11 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
+import { resolveOwnStudentId } from '@/lib/auth/student-scope'
+
+const INTERNSHIP_READ_ROLES = ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE', 'MAITRE_STAGE', 'ETUDIANT_SANTE']
+const INTERNSHIP_MANAGE_ROLES = ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE']
+const INTERNSHIP_EVALUATE_ROLES = [...INTERNSHIP_MANAGE_ROLES, 'MAITRE_STAGE']
 
 // GET /api/internships - List internships with stats
-async function handleGet(_user: SessionUser, tenantId: string, _request: NextRequest) {
+async function handleGet(user: SessionUser, tenantId: string, _request: NextRequest) {
   try {
-    const where = { tenantId }
+    const ownStudentId = user.role === 'ETUDIANT_SANTE' ? await resolveOwnStudentId(user) : null
+    const ownStudent = ownStudentId
+      ? await db.student.findFirst({ where: { id: ownStudentId, tenantId }, select: { matricule: true } })
+      : null
+    const where = user.role === 'ETUDIANT_SANTE'
+      ? { tenantId, matricule: ownStudent?.matricule ?? '__AUCUN_STAGE__' }
+      : { tenantId }
 
     const [internships, total, enCours, conventionSignee, enAttente, termine, annule, partners] = await Promise.all([
       db.internship.findMany({
@@ -19,10 +30,9 @@ async function handleGet(_user: SessionUser, tenantId: string, _request: NextReq
       db.internship.count({ where: { ...where, status: 'EN_ATTENTE' } }),
       db.internship.count({ where: { ...where, status: 'TERMINE' } }),
       db.internship.count({ where: { ...where, status: 'ANNULE' } }),
-      db.internshipPartner.findMany({
-        where: { tenantId },
-        orderBy: { name: 'asc' },
-      }),
+      user.role === 'ETUDIANT_SANTE'
+        ? Promise.resolve([])
+        : db.internshipPartner.findMany({ where: { tenantId }, orderBy: { name: 'asc' } }),
     ])
 
     const stats = {
@@ -148,6 +158,6 @@ async function handlePut(_user: SessionUser, tenantId: string, request: NextRequ
   }
 }
 
-export const GET = withTenantAuth(handleGet)
-export const POST = withTenantAuth(handlePost)
-export const PUT = withTenantAuth(handlePut, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE', 'FACULTE', 'DEPARTEMENT', 'MAITRE_STAGE'])
+export const GET = withTenantAuth(handleGet, INTERNSHIP_READ_ROLES)
+export const POST = withTenantAuth(handlePost, INTERNSHIP_MANAGE_ROLES)
+export const PUT = withTenantAuth(handlePut, INTERNSHIP_EVALUATE_ROLES)

@@ -3,6 +3,8 @@ import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
 import { isStudentSelfRole } from '@/lib/auth/student-scope'
 
+const HR_ROLES = ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'RECTORAT']
+
 // GET /api/hr - List staff with stats. No student-facing UI calls this, so
 // student-tier accounts (who could otherwise dump the full staff roster and
 // leave requests) are blocked.
@@ -213,7 +215,7 @@ async function handlePatchStaff(_user: SessionUser, tenantId: string, request: N
   }
 }
 
-export const GET = withTenantAuth(handleGet)
-export const POST = withTenantAuth(handlePost)
-export const PUT = withTenantAuth(handlePutLeaveRequest, ['SUPER_ADMIN', 'ADMIN_INSTITUTION'])
-export const PATCH = withTenantAuth(handlePatchStaff, ['ADMIN_INSTITUTION', 'RECTORAT'])
+export const GET = withTenantAuth(handleGet, HR_ROLES)
+export const POST = withTenantAuth(handlePost, HR_ROLES)
+export const PUT = withTenantAuth(handlePutLeaveRequest, HR_ROLES)
+export const PATCH = withTenantAuth(handlePatchStaff, HR_ROLES)

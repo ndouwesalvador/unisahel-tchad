@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
 import { useInternships, useStudents } from '@/lib/api-hooks'
+import { useAppStore } from '@/lib/store'
 import { motion } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -88,7 +89,7 @@ function useCountUp(target: number, duration: number = 1400) {
   return value
 }
 
-// ─── Demo Data ────────────────────────────────────────────────────────────────
+// ─── Données persistées ──────────────────────────────────────────────────────
 
 interface InternshipEntry {
   id: string
@@ -130,9 +131,9 @@ interface PartnerRecord {
 
 // Formats an ISO date string as a French dd/mm/yyyy string, or a fallback when absent.
 function formatDateFr(value: string | null | undefined): string {
-  if (!value) return 'Non renseignee'
+  if (!value) return 'Non renseignée'
   const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return 'Non renseignee'
+  if (Number.isNaN(date.getTime())) return 'Non renseignée'
   return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
@@ -312,6 +313,10 @@ const workflowSteps = ['Soumission', 'Validation établissement', 'Signature ent
 
 export function InternshipsPage() {
   const queryClient = useQueryClient()
+  const role = useAppStore((state) => state.user?.role)
+  const canCreateStage = ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE'].includes(role ?? '')
+  const canEvaluateStage = ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE', 'MAITRE_STAGE'].includes(role ?? '')
+  const isStudentView = role === 'ETUDIANT_SANTE'
   const { data: internshipsQuery, isLoading } = useInternships()
   const rawInternships: InternshipRecord[] = internshipsQuery?.internships || []
   const internships: InternshipEntry[] = rawInternships.map(mapInternship)
@@ -407,7 +412,7 @@ export function InternshipsPage() {
       })
       if (!res.ok) throw new Error('failed')
       setConventionStatuses(prev => ({ ...prev, [id]: action }))
-      toast.success(action === 'approved' ? 'Convention validee' : 'Convention rejetee')
+      toast.success(action === 'approved' ? 'Convention validée' : 'Convention rejetée')
       queryClient.invalidateQueries({ queryKey: ['internships'] })
     } catch {
       toast.error('Échec de la mise à jour de la convention')
@@ -422,11 +427,11 @@ export function InternshipsPage() {
 
   const handleSubmitEvaluation = async () => {
     if (!evalTarget) {
-      toast.error('Aucun stage a evaluer')
+      toast.error('Aucun stage à évaluer')
       return
     }
     if (!appreciation) {
-      toast.error('Selectionnez une appreciation globale')
+      toast.error('Sélectionnez une appréciation globale')
       return
     }
     setIsSubmittingEval(true)
@@ -441,7 +446,7 @@ export function InternshipsPage() {
       })
       if (!res.ok) throw new Error('failed')
       setEvaluationSubmitted(true)
-      toast.success('Evaluation enregistree')
+      toast.success('Évaluation enregistrée')
       queryClient.invalidateQueries({ queryKey: ['internships'] })
       setTimeout(() => setEvaluationSubmitted(false), 3000)
     } catch {
@@ -531,17 +536,19 @@ export function InternshipsPage() {
               <div>
                 <h1 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-3">
                   <Briefcase className="size-8" />
-                  Gestion des Stages
+                  {isStudentView ? 'Mes stages' : 'Gestion des stages'}
                 </h1>
                 <p className="text-white/70 text-sm mt-2">
                   Suivi des stages professionnels, hospitaliers et de recherche
                 </p>
               </div>
               <div className="flex gap-2 flex-wrap">
-                <Button size="sm" className="bg-white/10 backdrop-blur border border-white/15 text-white hover:bg-white/20 text-xs" onClick={() => setShowNewStage(true)}>
-                  <Plus className="size-3.5 mr-1.5" />
-                  Nouveau stage
-                </Button>
+                {canCreateStage && (
+                  <Button size="sm" className="bg-white/10 backdrop-blur border border-white/15 text-white hover:bg-white/20 text-xs" onClick={() => setShowNewStage(true)}>
+                    <Plus className="size-3.5 mr-1.5" />
+                    Nouveau stage
+                  </Button>
+                )}
                 <Button size="sm" className="bg-white/10 backdrop-blur border border-white/15 text-white hover:bg-white/20 text-xs" onClick={() => exportToExcel(filteredInternships, 'export_internships')}>
                   <Download className="size-3.5 mr-1.5" />
                   Exporter
@@ -952,7 +959,7 @@ export function InternshipsPage() {
                           </div>
                         </div>
                         <div className="flex gap-2 shrink-0">
-                          {convStatus === undefined && (
+                          {canEvaluateStage && convStatus === undefined && (
                             <>
                               <Button
                                 size="sm"
@@ -998,13 +1005,14 @@ export function InternshipsPage() {
         </motion.div>
 
         {/* ── 5. Stage Evaluation Card ───────────────────────────────────────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className={`grid grid-cols-1 gap-4 ${canEvaluateStage ? 'lg:grid-cols-2' : ''}`}>
+          {canEvaluateStage && (
           <motion.div variants={itemVariants}>
             <Card className="border-l-4 border-l-[var(--institution-secondary)] h-full">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-semibold text-[var(--institution-primary)] flex items-center gap-2">
                   <Star className="size-4" />
-                  Evaluation de stage
+                  Évaluation de stage
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-4 pt-0">
@@ -1027,18 +1035,18 @@ export function InternshipsPage() {
                       )}
                     </div>
                   ) : (
-                    <p className="text-xs text-gray-400">Aucun stage a evaluer pour le moment</p>
+                    <p className="text-xs text-gray-400">Aucun stage à évaluer pour le moment</p>
                   )}
                 </div>
 
                 {/* Evaluation criteria with star ratings */}
                 <div className="space-y-4">
                   {[
-                    { key: 'competence', label: 'Competence professionnelle' },
-                    { key: 'integration', label: 'Integration dans l\'equipe' },
+                    { key: 'competence', label: 'Compétence professionnelle' },
+                    { key: 'integration', label: 'Intégration dans l\'équipe' },
                     { key: 'initiative', label: 'Initiative et autonomie' },
-                    { key: 'respect', label: 'Respect des regles' },
-                    { key: 'qualite', label: 'Qualite du travail' },
+                    { key: 'respect', label: 'Respect des règles' },
+                    { key: 'qualite', label: 'Qualité du travail' },
                   ].map((criterion) => (
                     <div key={criterion.key}>
                       <div className="flex items-center justify-between mb-1.5">
@@ -1069,7 +1077,7 @@ export function InternshipsPage() {
 
                 {/* Overall appreciation */}
                 <div className="space-y-2">
-                  <label className="text-xs font-medium text-[var(--institution-primary)]">Appreciation globale</label>
+                  <label className="text-xs font-medium text-[var(--institution-primary)]">Appréciation globale</label>
                   <Select value={appreciation} onValueChange={setAppreciation}>
                     <SelectTrigger className="h-9 text-xs">
                       <SelectValue placeholder="Sélectionner l’appréciation" />
@@ -1088,7 +1096,7 @@ export function InternshipsPage() {
                 <div className="space-y-2 mt-3">
                   <label className="text-xs font-medium text-[var(--institution-primary)]">Commentaire</label>
                   <Textarea
-                    placeholder="Commentaire sur le stage de l'etudiant..."
+                    placeholder="Commentaire sur le stage de l’étudiant…"
                     className="min-h-[80px] text-xs"
                     value={commentaire}
                     onChange={(e) => setCommentaire(e.target.value)}
@@ -1101,11 +1109,12 @@ export function InternshipsPage() {
                   disabled={!evalTarget || isSubmittingEval}
                 >
                   <Send className="size-3.5 mr-1.5" />
-                  {evaluationSubmitted ? 'Evaluation soumise !' : isSubmittingEval ? 'Enregistrement...' : "Soumettre l'evaluation"}
+                  {evaluationSubmitted ? 'Évaluation soumise !' : isSubmittingEval ? 'Enregistrement…' : "Soumettre l’évaluation"}
                 </Button>
               </CardContent>
             </Card>
           </motion.div>
+          )}
 
           {/* Recent evaluation results */}
           <motion.div variants={itemVariants}>
@@ -1113,7 +1122,7 @@ export function InternshipsPage() {
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-semibold text-[var(--institution-primary)] flex items-center gap-2">
                   <Award className="size-4" />
-                  Evaluations recentes
+                  Évaluations récentes
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-4 pt-0">
@@ -1121,7 +1130,7 @@ export function InternshipsPage() {
                   <p className="text-center py-8 text-sm text-gray-400">Chargement...</p>
                 )}
                 {!isLoading && evaluations.length === 0 && (
-                  <p className="text-center py-8 text-sm text-gray-400">Aucune evaluation disponible pour le moment</p>
+                  <p className="text-center py-8 text-sm text-gray-400">Aucune évaluation disponible pour le moment</p>
                 )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {evaluations.map((evalItem) => {

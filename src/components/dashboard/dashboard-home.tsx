@@ -850,7 +850,7 @@ export function DashboardHome() {
                         boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
                         fontSize: '12px',
                       }}
-                      formatter={(value: number) => [`${value} etudiants`, 'Effectif']}
+                      formatter={(value: number) => [`${value} étudiants`, 'Effectif']}
                     />
                     <Legend />
                     <Bar dataKey="etudiants" name="Étudiants" radius={[4, 4, 0, 0]}>

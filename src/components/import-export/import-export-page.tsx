@@ -591,7 +591,7 @@ export function ImportExportPage() {
             <div className="flex flex-wrap gap-3">
               <AnimatedStat value={importsThisMonth} label="Imports du mois" icon={ArrowRightLeft} />
               <AnimatedStat value={exportsThisMonth} label="Exports du mois" icon={Download} />
-              <AnimatedStat value={conformityRate} label="Taux de conformite %" icon={CheckCircle2} />
+              <AnimatedStat value={conformityRate} label="Taux de conformité %" icon={CheckCircle2} />
             </div>
           </div>
         </div>
@@ -611,7 +611,7 @@ export function ImportExportPage() {
             </div>
             <div className="space-y-2">
               {recentActivity.length === 0 && (
-                <p className="text-xs text-gray-400 text-center py-3">Aucune activite d&apos;import/export pour le moment</p>
+                <p className="text-xs text-gray-400 text-center py-3">Aucune activité d&apos;import/export pour le moment</p>
               )}
               {recentActivity.map((activity, idx) => (
                 <motion.div
@@ -1070,7 +1070,7 @@ export function ImportExportPage() {
                         </TableRow>
                       ) : !importExportData?.importHistory?.length ? (
                         <TableRow>
-                          <TableCell colSpan={6} className="py-6 text-center text-xs text-gray-400">Aucun import effectue pour le moment</TableCell>
+                          <TableCell colSpan={6} className="py-6 text-center text-xs text-gray-400">Aucun import effectué pour le moment</TableCell>
                         </TableRow>
                       ) : importExportData.importHistory.map((record: any) => {
                         const statusConf = importStatusConfig[record.status as ImportStatus] ?? importStatusConfig.EnAttente

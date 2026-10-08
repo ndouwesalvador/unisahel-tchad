@@ -3,6 +3,8 @@ import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
 import { isStudentSelfRole } from '@/lib/auth/student-scope'
 
+const EXAM_SCHEDULING_ROLES = ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE', 'RESPONSABLE_FILIERE']
+
 const KNOWN_STATUSES = ['PLANIFIE', 'CONFIRME', 'EN_COURS', 'TERMINE', 'ANNULE']
 const statusToUi: Record<string, string> = {
   PLANIFIE: 'planifie', CONFIRME: 'confirme', EN_COURS: 'en_cours', TERMINE: 'termine', ANNULE: 'annule',
@@ -187,6 +189,6 @@ async function handlePut(_user: SessionUser, tenantId: string, request: NextRequ
   }
 }
 
-export const GET = withTenantAuth(handleGet)
-export const POST = withTenantAuth(handlePost)
-export const PUT = withTenantAuth(handlePut)
+export const GET = withTenantAuth(handleGet, EXAM_SCHEDULING_ROLES)
+export const POST = withTenantAuth(handlePost, EXAM_SCHEDULING_ROLES)
+export const PUT = withTenantAuth(handlePut, EXAM_SCHEDULING_ROLES)

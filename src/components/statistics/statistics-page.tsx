@@ -7,13 +7,6 @@ import { motion } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
   BarChart,
   Bar,
   XAxis,
@@ -34,7 +27,6 @@ import {
   GraduationCap,
   CreditCard,
   Download,
-  Calendar,
 } from 'lucide-react'
 
 function formatFCFA(amount: number) {
@@ -98,7 +90,27 @@ export function StatisticsPage() {
   const totalStudents = data?.totals?.totalStudents ?? 0
   const totalFemmes = data?.totals?.totalFemmes ?? 0
   const globalSuccessRate = data?.totals?.globalSuccessRate ?? 0
-  const [periode, setPeriode] = useState('s2-2024')
+  const femaleRate = totalStudents > 0 ? Math.round((totalFemmes / totalStudents) * 100) : 0
+  const collectedAmount = paymentCollection.find((item) => item.name === 'Encaisse')?.value ?? 0
+
+  const exportStatistics = () => {
+    const rows = studentsByFaculty.map((row) => ({
+      Programme: row.name,
+      Étudiants: row.etudiants,
+      Femmes: row.femmes,
+      Hommes: row.hommes,
+      'Taux de réussite global (%)': globalSuccessRate,
+      'Montant encaissé (FCFA)': collectedAmount,
+    }))
+    exportToExcel(rows.length > 0 ? rows : [{
+      Programme: 'Aucune donnée disponible',
+      Étudiants: totalStudents,
+      Femmes: totalFemmes,
+      Hommes: Math.max(0, totalStudents - totalFemmes),
+      'Taux de réussite global (%)': globalSuccessRate,
+      'Montant encaissé (FCFA)': collectedAmount,
+    }], 'statistiques_institutionnelles')
+  }
 
   return (
     <div className="space-y-4">
@@ -123,27 +135,13 @@ export function StatisticsPage() {
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.4, delay: 0.1 }}
                 >
-                  Indicateurs cles de performance institutionnelle
+                  Indicateurs clés de performance institutionnelle
                 </motion.p>
               </div>
               <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <Calendar className="size-4 text-white/60" />
-                  <Select value={periode} onValueChange={setPeriode}>
-                    <SelectTrigger className="w-[150px] h-8 text-xs bg-white/10 border-white/20 text-white hover:bg-white/20">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="s2-2024">S2 2024-2025</SelectItem>
-                      <SelectItem value="s1-2024">S1 2024-2025</SelectItem>
-                      <SelectItem value="s2-2023">S2 2023-2024</SelectItem>
-                      <SelectItem value="s1-2023">S1 2023-2024</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Button variant="outline" size="sm" className="text-xs bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white" onClick={() => exportToExcel([{ 'Message': 'Données en cours de synchronisation' }], 'export_statistics')}>
+                <Button variant="outline" size="sm" className="text-xs bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white" onClick={exportStatistics}>
                   <Download className="size-3.5 mr-1.5" />
-                  Exporter PDF
+                  Exporter Excel
                 </Button>
               </div>
             </div>
@@ -155,9 +153,9 @@ export function StatisticsPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
-              <HeaderStat value={2847} label="Total etudiants" />
-              <HeaderStat value={68} label="Taux de reussite global" suffix="%" />
-              <HeaderStat value={11} label="Moyenne generale" suffix=",4/20" />
+              <HeaderStat value={totalStudents} label="Total étudiants" />
+              <HeaderStat value={globalSuccessRate} label="Taux de réussite global" suffix="%" />
+              <HeaderStat value={femaleRate} label="Part des étudiantes" suffix="%" />
             </motion.div>
           </div>
         </div>
@@ -168,8 +166,8 @@ export function StatisticsPage() {
         {[
           { title: 'Étudiants totaux', value: totalStudents.toLocaleString('fr-FR'), icon: Users, color: 'var(--institution-secondary)', bgColor: 'var(--institution-secondary-15)' },
           { title: 'Taux de réussite', value: `${globalSuccessRate}%`, icon: TrendingUp, color: 'var(--institution-primary)', bgColor: 'var(--institution-primary-15)' },
-          { title: 'Taux féminin', value: `${Math.round((totalFemmes / totalStudents) * 100)}%`, icon: GraduationCap, color: 'var(--institution-accent)', bgColor: 'var(--institution-accent-15)' },
-          { title: 'Encaissement', value: '45.2M FCFA', icon: CreditCard, color: 'var(--institution-secondary)', bgColor: 'var(--institution-secondary-15)' },
+          { title: 'Taux féminin', value: `${femaleRate}%`, icon: GraduationCap, color: 'var(--institution-accent)', bgColor: 'var(--institution-accent-15)' },
+          { title: 'Encaissement', value: formatFCFA(collectedAmount), icon: CreditCard, color: 'var(--institution-secondary)', bgColor: 'var(--institution-secondary-15)' },
         ].map((metric, i) => (
           <motion.div
             key={metric.title}
@@ -383,7 +381,7 @@ export function StatisticsPage() {
                 <tbody>
                   {successByProgram.length === 0 && (
                     <tr><td colSpan={4} className="text-center py-6 text-xs text-gray-400">
-                      {isLoading ? 'Chargement...' : 'Aucune note trouvee pour le moment'}
+                      {isLoading ? 'Chargement…' : 'Aucune note trouvée pour le moment'}
                     </td></tr>
                   )}
                   {successByProgram.map((row) => {

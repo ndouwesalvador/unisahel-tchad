@@ -9,10 +9,22 @@ function formatFr(date: Date | null | undefined): string {
 }
 
 const KNOWN_SHIFTS = ['JOUR', 'NUIT']
+const HEALTH_READ_ROLES = ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE', 'ETUDIANT_SANTE', 'MAITRE_STAGE']
+const HEALTH_MANAGE_ROLES = ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE', 'MAITRE_STAGE']
+
+async function isHealthModuleEnabled(user: SessionUser, tenantId: string): Promise<boolean> {
+  const academicSystem = user.role === 'SUPER_ADMIN'
+    ? (await db.tenant.findUnique({ where: { id: tenantId }, select: { academicSystem: true } }))?.academicSystem
+    : user.tenantAcademicSystem
+  return (academicSystem || '').trim().toLowerCase() === 'sante'
+}
 
 // GET /api/health - clinical internships, hospitals, guard duties, and one student's carnet
 async function handleGet(user: SessionUser, tenantId: string, request: NextRequest) {
   try {
+    if (!await isHealthModuleEnabled(user, tenantId)) {
+      return NextResponse.json({ error: 'MODULE_DISABLED', message: 'Le module santé n’est pas activé pour cette institution.' }, { status: 404 })
+    }
     const { searchParams } = new URL(request.url)
     const requestedStudentId = searchParams.get('studentId')
     const ownStudentId = await resolveOwnStudentId(user)
@@ -35,8 +47,8 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
           include: { hospital: { select: { name: true } }, clinicalDepartment: { select: { name: true } } },
         }),
         db.clinicalAttendance.findMany({ where: { studentId, tenantId }, orderBy: { date: 'asc' }, take: 60 }),
-        db.clinicalSkill.findMany({ where: { isActive: true } }),
-        db.studentClinicalSkill.findMany({ where: { studentId } }),
+        db.clinicalSkill.findMany({ where: { tenantId, isActive: true } }),
+        db.studentClinicalSkill.findMany({ where: { studentId, skill: { tenantId } } }),
       ])
 
       const studentSkillByskillId = new Map(studentSkills.map((s) => [s.skillId, s]))
@@ -104,7 +116,7 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
         },
       }),
       db.guardDuty.findMany({ where: { tenantId }, orderBy: { date: 'desc' }, take: 100 }),
-      db.studentClinicalSkill.count({ where: { status: 'PENDING' } }),
+      db.studentClinicalSkill.count({ where: { status: 'PENDING', student: { tenantId }, skill: { tenantId } } }),
       db.clinicalInternship.findMany({ where: { tenantId }, select: { studentId: true }, distinct: ['studentId'] }),
     ])
 
@@ -171,8 +183,8 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
     const stagesEnCours = stages.filter((s) => s.statut === 'en_cours').length
     const etudiantsEnStage = studentsWithInternship.length
 
-    const allSkillsCount = await db.studentClinicalSkill.count()
-    const validatedSkillsCount = await db.studentClinicalSkill.count({ where: { status: 'VALIDATED' } })
+    const allSkillsCount = await db.studentClinicalSkill.count({ where: { student: { tenantId }, skill: { tenantId } } })
+    const validatedSkillsCount = await db.studentClinicalSkill.count({ where: { status: 'VALIDATED', student: { tenantId }, skill: { tenantId } } })
     const competencePercent = allSkillsCount > 0 ? Math.round((validatedSkillsCount / allSkillsCount) * 100) : 0
 
     return NextResponse.json({
@@ -192,6 +204,9 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
 // POST /api/health?entity=garde - schedule a new guard duty
 async function createGardeHandler(_user: SessionUser, tenantId: string, request: NextRequest) {
   try {
+    if (!await isHealthModuleEnabled(_user, tenantId)) {
+      return NextResponse.json({ error: 'MODULE_DISABLED', message: 'Le module santé n’est pas activé pour cette institution.' }, { status: 404 })
+    }
     const body = await request.json()
     const { studentId, date, shift, service, hospitalId } = body
 
@@ -225,7 +240,7 @@ async function createGardeHandler(_user: SessionUser, tenantId: string, request:
   }
 }
 
-export const GET = withTenantAuth(handleGet)
+export const GET = withTenantAuth(handleGet, HEALTH_READ_ROLES)
 
 export const POST = withTenantAuth(async (user: SessionUser, tenantId: string, request: NextRequest) => {
   const { searchParams } = new URL(request.url)
@@ -233,4 +248,4 @@ export const POST = withTenantAuth(async (user: SessionUser, tenantId: string, r
     return createGardeHandler(user, tenantId, request)
   }
   return NextResponse.json({ error: 'Unsupported entity' }, { status: 400 })
-})
+}, HEALTH_MANAGE_ROLES)

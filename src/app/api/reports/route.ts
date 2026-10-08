@@ -3,6 +3,8 @@ import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
 import { isStudentSelfRole } from '@/lib/auth/student-scope'
 
+const REPORT_ROLES = ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'RECTORAT', 'SCOLARITE', 'CAISSE']
+
 // GET /api/reports - List reports with stats
 async function handleGet(user: SessionUser, tenantId: string, _request: NextRequest) {
   try {
@@ -44,7 +46,7 @@ async function handleGet(user: SessionUser, tenantId: string, _request: NextRequ
   }
 }
 
-export const GET = withTenantAuth(handleGet)
+export const GET = withTenantAuth(handleGet, REPORT_ROLES)
 
 // A report row has no generated file or worker attached to it. Refuse legacy
 // creation calls instead of saving a permanently PENDING, misleading record.
@@ -55,4 +57,4 @@ async function handlePost() {
   )
 }
 
-export const POST = withTenantAuth(handlePost)
+export const POST = withTenantAuth(handlePost, REPORT_ROLES)

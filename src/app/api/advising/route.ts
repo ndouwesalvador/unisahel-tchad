@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
 
+const ADVISING_ROLES = ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE', 'RESPONSABLE_FILIERE']
+
 type AlertLevel = 'Vert' | 'Jaune' | 'Orange' | 'Rouge'
 
 const APPOINTMENT_TYPES = [
@@ -438,7 +440,7 @@ async function handlePut(_user: SessionUser, tenantId: string, request: NextRequ
   }
 }
 
-export const GET = withTenantAuth(handleGet)
+export const GET = withTenantAuth(handleGet, ADVISING_ROLES)
 
 export const POST = withTenantAuth(async (user: SessionUser, tenantId: string, request: NextRequest) => {
   const { searchParams } = new URL(request.url)
@@ -446,6 +448,6 @@ export const POST = withTenantAuth(async (user: SessionUser, tenantId: string, r
     return createAdvisorHandler(user, tenantId, request)
   }
   return handlePost(user, tenantId, request)
-})
+}, ADVISING_ROLES)
 
-export const PUT = withTenantAuth(handlePut)
+export const PUT = withTenantAuth(handlePut, ADVISING_ROLES)

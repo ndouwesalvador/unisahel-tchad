@@ -28,7 +28,7 @@ async function handleGet(user: SessionUser, tenantId: string, _request: NextRequ
     const byProgram = new Map<string, { name: string; etudiants: number; femmes: number; hommes: number }>()
     for (const s of students) {
       const key = s.currentProgramId || 'none'
-      const name = s.currentProgram?.name || 'Non affecte'
+      const name = s.currentProgram?.name || 'Non affecté'
       const entry = byProgram.get(key) ?? { name, etudiants: 0, femmes: 0, hommes: 0 }
       entry.etudiants += 1
       if (s.gender === 'F') entry.femmes += 1
@@ -89,7 +89,7 @@ async function handleGet(user: SessionUser, tenantId: string, _request: NextRequ
     const byProgLevel = new Map<string, { program: string; levels: Map<string, { pass: number; total: number }> }>()
     for (const g of gradeRows) {
       if (g.finalGrade === null) continue
-      const program = g.student.currentProgram?.name || 'Non affecte'
+      const program = g.student.currentProgram?.name || 'Non affecté'
       const level = g.student.currentLevel?.name || '—'
       if (!byProgLevel.has(program)) byProgLevel.set(program, { program, levels: new Map() })
       const entry = byProgLevel.get(program)!
@@ -126,4 +126,4 @@ async function handleGet(user: SessionUser, tenantId: string, _request: NextRequ
   }
 }
 
-export const GET = withTenantAuth(handleGet)
+export const GET = withTenantAuth(handleGet, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'RECTORAT', 'CAISSE'])

@@ -4,6 +4,7 @@ import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
 import { z } from 'zod'
 
 const ROOM_ADMIN_ROLES = ['SUPER_ADMIN', 'ADMIN_INSTITUTION']
+const ROOM_RESERVATION_ROLES = ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE']
 const roomInput = z.object({
   name: z.string().trim().min(2).max(100),
   type: z.enum(['SALLE', 'AMPHITHEATRE', 'LABORATOIRE', 'ATELIER', 'BUREAU', 'AUTRE']),
@@ -246,7 +247,7 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
   }
 }
 
-export const POST = withTenantAuth(handlePost)
+export const POST = withTenantAuth(handlePost, ROOM_RESERVATION_ROLES)
 
 export const PUT = withTenantAuth(async (user: SessionUser, tenantId: string, request: NextRequest) => {
   if (request.nextUrl.searchParams.get('entity') !== 'room') return NextResponse.json({ error: 'Opération inconnue' }, { status: 400 })

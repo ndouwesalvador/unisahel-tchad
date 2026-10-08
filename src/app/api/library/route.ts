@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
 
+const LIBRARY_ROLES = ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE']
+
 const KNOWN_TYPES = ['livre', 'revue', 'these', 'memoire', 'rapport', 'ebook']
 const KNOWN_CATEGORIES = ['sciences', 'droit', 'lettres', 'medecine', 'economie']
 const FR_MONTHS_SHORT = ['Jan', 'Fev', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aou', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -338,7 +340,7 @@ async function updateOccupancyHandler(_user: SessionUser, tenantId: string, requ
   }
 }
 
-export const GET = withTenantAuth(handleGet)
+export const GET = withTenantAuth(handleGet, LIBRARY_ROLES)
 
 export const POST = withTenantAuth(async (user: SessionUser, tenantId: string, request: NextRequest) => {
   const { searchParams } = new URL(request.url)
@@ -348,7 +350,7 @@ export const POST = withTenantAuth(async (user: SessionUser, tenantId: string, r
     return borrowHandler(user, tenantId, request)
   }
   return createResourceHandler(user, tenantId, request)
-})
+}, LIBRARY_ROLES)
 
 export const PUT = withTenantAuth(async (user: SessionUser, tenantId: string, request: NextRequest) => {
   const { searchParams } = new URL(request.url)
@@ -368,4 +370,4 @@ export const PUT = withTenantAuth(async (user: SessionUser, tenantId: string, re
     { error: 'action query parameter must be one of: return, occupancy' },
     { status: 400 }
   )
-})
+}, LIBRARY_ROLES)

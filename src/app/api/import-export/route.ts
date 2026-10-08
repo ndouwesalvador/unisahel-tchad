@@ -277,5 +277,7 @@ async function handlePost(_user: SessionUser, tenantId: string, request: NextReq
   }
 }
 
-export const GET = withTenantAuth(handleGet)
-export const POST = withTenantAuth(handlePost, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE'])
+const IMPORT_EXPORT_ROLES = ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE']
+
+export const GET = withTenantAuth(handleGet, IMPORT_EXPORT_ROLES)
+export const POST = withTenantAuth(handlePost, IMPORT_EXPORT_ROLES)

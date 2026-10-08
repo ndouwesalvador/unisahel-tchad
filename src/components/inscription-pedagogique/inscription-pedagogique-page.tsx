@@ -269,10 +269,10 @@ export function InscriptionPedagogiquePage() {
         body: JSON.stringify({ open }),
       })
       if (!res.ok) throw new Error('failed')
-      toast.success(open ? 'Inscriptions ouvertes' : 'Inscriptions cloturees')
+      toast.success(open ? 'Inscriptions ouvertes' : 'Inscriptions clôturées')
       queryClient.invalidateQueries({ queryKey: ['inscriptionPedagogique'] })
     } catch {
-      toast.error('Echec de la mise a jour de la periode')
+      toast.error('Échec de la mise à jour de la période')
     } finally {
       setIsTogglingPeriod(false)
     }
@@ -281,7 +281,7 @@ export function InscriptionPedagogiquePage() {
   // Stats data
   const statsData = [
     {
-      title: 'Inscriptions completes',
+      title: 'Inscriptions complètes',
       value: String(stats?.completes ?? 0),
       icon: CheckSquare,
       gradient: 'from-[var(--institution-secondary)] to-[#1a5a38]',
@@ -325,7 +325,7 @@ export function InscriptionPedagogiquePage() {
           <div>
             <h1 className="text-2xl font-bold text-[var(--institution-primary)] flex items-center gap-2">
               <BookOpenCheck className="size-6 text-[var(--institution-secondary)]" />
-              Inscription pedagogique
+              Inscription pédagogique
             </h1>
             <p className="text-sm text-gray-500 mt-1">
               Gestion des inscriptions pedagogiques selon la structure et les regles de l&apos;institution

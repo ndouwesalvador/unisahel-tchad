@@ -426,7 +426,7 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
 
     const computed = await computeStudentDecisions(tenantId, academicYear.id, sessionType, readiness.studentIds, selectedLevelId)
     if (computed.length === 0) {
-      return NextResponse.json({ error: 'Aucune note trouvee pour cette annee academique' }, { status: 409 })
+      return NextResponse.json({ error: 'Aucune note trouvée pour cette année académique' }, { status: 409 })
     }
 
     const existing = await db.deliberation.findFirst({

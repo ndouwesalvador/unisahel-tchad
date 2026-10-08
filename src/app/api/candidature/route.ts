@@ -172,6 +172,8 @@ async function handlePut(user: SessionUser, tenantId: string, request: NextReque
   }
 }
 
-export const GET = withTenantAuth(handleGet)
-export const POST = withTenantAuth(handlePost)
-export const PUT = withTenantAuth(handlePut)
+const CANDIDATURE_ROLES = ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE']
+
+export const GET = withTenantAuth(handleGet, CANDIDATURE_ROLES)
+export const POST = withTenantAuth(handlePost, CANDIDATURE_ROLES)
+export const PUT = withTenantAuth(handlePut, CANDIDATURE_ROLES)

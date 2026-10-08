@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
 
+const ALUMNI_ROLES = ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'RECTORAT', 'SCOLARITE']
+
 async function handleGet(_user: SessionUser, tenantId: string, _request: NextRequest) {
   try {
     const where = { tenantId }
@@ -178,7 +180,7 @@ async function handleDelete(_user: SessionUser, tenantId: string, request: NextR
   }
 }
 
-export const GET = withTenantAuth(handleGet)
-export const POST = withTenantAuth(handlePost)
-export const PATCH = withTenantAuth(handlePatch)
-export const DELETE = withTenantAuth(handleDelete)
+export const GET = withTenantAuth(handleGet, ALUMNI_ROLES)
+export const POST = withTenantAuth(handlePost, ALUMNI_ROLES)
+export const PATCH = withTenantAuth(handlePatch, ALUMNI_ROLES)
+export const DELETE = withTenantAuth(handleDelete, ALUMNI_ROLES)

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
 
+const TRANSPORT_ROLES = ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE']
+
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 // TransportDeparture only stores a start time ("06:00"). The end time shown
@@ -435,6 +437,6 @@ async function handlePut(_user: SessionUser, tenantId: string, request: NextRequ
   }
 }
 
-export const GET = withTenantAuth(handleGet)
-export const POST = withTenantAuth(handlePost)
-export const PUT = withTenantAuth(handlePut)
+export const GET = withTenantAuth(handleGet, TRANSPORT_ROLES)
+export const POST = withTenantAuth(handlePost, TRANSPORT_ROLES)
+export const PUT = withTenantAuth(handlePut, TRANSPORT_ROLES)

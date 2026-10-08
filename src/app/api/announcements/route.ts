@@ -6,12 +6,22 @@ const VALID_TYPES = ['INFO', 'URGENT', 'PAYMENT', 'RESULT', 'EXAM', 'STAGE']
 const VALID_PRIORITIES = ['urgent', 'important', 'normal']
 const VALID_CATEGORIES = ['academique', 'administratif', 'urgence', 'evenement']
 const VALID_TARGETS = ['ALL', 'STUDENTS', 'TEACHERS', 'STAFF']
+const ANNOUNCEMENT_PUBLISH_ROLES = ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'RECTORAT', 'SCOLARITE']
 
 // GET /api/announcements - list announcements
-async function handleGet(_user: SessionUser, tenantId: string, _request: NextRequest) {
+async function handleGet(user: SessionUser, tenantId: string, _request: NextRequest) {
   try {
+    const visibleTargets = user.role === 'ETUDIANT' || user.role === 'ETUDIANT_SANTE' || user.role === 'PARENT'
+      ? ['ALL', 'STUDENTS']
+      : user.role === 'ENSEIGNANT'
+        ? ['ALL', 'TEACHERS']
+        : null
     const announcements = await db.announcement.findMany({
-      where: { tenantId },
+      where: {
+        tenantId,
+        isPublished: true,
+        ...(visibleTargets ? { target: { in: visibleTargets } } : {}),
+      },
       orderBy: [{ isPinned: 'desc' }, { createdAt: 'desc' }],
       take: 100,
     })
@@ -111,5 +121,5 @@ async function handleDelete(user: SessionUser, tenantId: string, request: NextRe
 }
 
 export const GET = withTenantAuth(handleGet)
-export const POST = withTenantAuth(handlePost)
-export const DELETE = withTenantAuth(handleDelete, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'RECTORAT', 'SCOLARITE'])
+export const POST = withTenantAuth(handlePost, ANNOUNCEMENT_PUBLISH_ROLES)
+export const DELETE = withTenantAuth(handleDelete, ANNOUNCEMENT_PUBLISH_ROLES)

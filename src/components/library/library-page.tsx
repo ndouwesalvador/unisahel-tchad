@@ -132,27 +132,11 @@ interface LibraryStats {
 
 const digitalResources: DigitalResource[] = [
   { id: '1', name: 'Cairn.info', description: 'Revues scientifiques francophones', href: 'https://www.cairn.info', icon: Database, color: 'var(--institution-primary)' },
-  { id: '2', name: 'JSTOR Africa', description: "Archives academiques, acces initiative Afrique", href: 'https://about.jstor.org/africa/', icon: Library, color: 'var(--institution-secondary)' },
-  { id: '3', name: 'Google Scholar', description: 'Moteur de recherche academique', href: 'https://scholar.google.com', icon: Search, color: 'var(--institution-accent)' },
+  { id: '2', name: 'JSTOR Africa', description: "Archives académiques, accès à l’initiative Afrique", href: 'https://about.jstor.org/africa/', icon: Library, color: 'var(--institution-secondary)' },
+  { id: '3', name: 'Google Scholar', description: 'Moteur de recherche académique', href: 'https://scholar.google.com', icon: Search, color: 'var(--institution-accent)' },
   { id: '4', name: 'UNESCO Digital Library', description: 'Publications internationales', href: 'https://unesdoc.unesco.org', icon: Globe, color: 'var(--institution-primary)' },
-  { id: '5', name: 'African Journals Online', description: 'Revues academiques africaines', href: 'https://www.ajol.info', icon: BookOpen, color: 'var(--institution-secondary)' },
-  { id: '6', name: 'OpenEdition', description: 'Livres et revues en acces ouvert', href: 'https://www.openedition.org', icon: ExternalLink, color: 'var(--institution-accent)' },
-]
-
-// ─── Weekly opening hours ────────────────────────────────────────────────────
-// Static institutional schedule (real, but not tenant-specific data - there is
-// no Prisma model for it). The former "Affluence" column shown next to these
-// hours was a fabricated per-day occupancy percentage with no backing
-// check-in/attendance tracking system, so it has been removed rather than
-// kept as invented data.
-
-const weeklySchedule = [
-  { day: 'Lundi', open: '08h00', close: '22h00' },
-  { day: 'Mardi', open: '08h00', close: '22h00' },
-  { day: 'Mercredi', open: '08h00', close: '22h00' },
-  { day: 'Jeudi', open: '08h00', close: '22h00' },
-  { day: 'Vendredi', open: '08h00', close: '22h00' },
-  { day: 'Samedi', open: '09h00', close: '18h00' },
+  { id: '5', name: 'African Journals Online', description: 'Revues académiques africaines', href: 'https://www.ajol.info', icon: BookOpen, color: 'var(--institution-secondary)' },
+  { id: '6', name: 'OpenEdition', description: 'Livres et revues en accès ouvert', href: 'https://www.openedition.org', icon: ExternalLink, color: 'var(--institution-accent)' },
 ]
 
 // ─── API Mapping ────────────────────────────────────────────────────────────
@@ -503,7 +487,7 @@ export function LibraryPage() {
       <motion.div variants={itemVariants} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-[var(--institution-primary)]">Bibliotheque &amp; Ressources</h1>
-          <p className="text-sm text-gray-500">Gestion du patrimoine documentaire et des ressources academiques</p>
+          <p className="text-sm text-gray-500">Gestion du patrimoine documentaire et des ressources académiques</p>
         </div>
         <div className="flex gap-2 flex-wrap">
           <Dialog open={showAddBook} onOpenChange={setShowAddBook}>
@@ -842,7 +826,7 @@ export function LibraryPage() {
                         <TableCell className="py-2.5">
                           <div className="flex items-center gap-1.5">
                             <MapPin className="size-3 text-gray-400" />
-                            <span className="text-xs text-gray-600">{item.location || 'Non renseignee'}</span>
+                            <span className="text-xs text-gray-600">{item.location || 'Non renseignée'}</span>
                           </div>
                         </TableCell>
                         <TableCell className="text-right py-2.5">
@@ -1105,41 +1089,16 @@ export function LibraryPage() {
         </Card>
       </motion.div>
 
-      {/* ── Horaires & Espaces Card ─────────────────────────────────────────── */}
+      {/* ── Espaces de bibliothèque ─────────────────────────────────────────── */}
       <motion.div variants={itemVariants}>
         <Card className="border-l-4 border-l-[var(--institution-primary)]">
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
               <Calendar className="size-4 text-[var(--institution-primary)]" />
-              <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Horaires &amp; Espaces</CardTitle>
+              <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Espaces de bibliothèque</CardTitle>
             </div>
           </CardHeader>
           <CardContent className="space-y-5">
-            {/* Weekly Schedule */}
-            <div>
-              <p className="text-xs font-semibold text-[var(--institution-primary)] mb-3 uppercase tracking-wide">Horaires d&apos;ouverture</p>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-gray-50">
-                      <TableHead className="text-xs font-semibold">Jour</TableHead>
-                      <TableHead className="text-xs font-semibold text-center">Ouverture</TableHead>
-                      <TableHead className="text-xs font-semibold text-center">Fermeture</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {weeklySchedule.map((row) => (
-                      <TableRow key={row.day} className="hover:bg-[var(--institution-secondary-05)] transition-colors">
-                        <TableCell className="text-sm font-medium text-[var(--institution-primary)] py-2">{row.day}</TableCell>
-                        <TableCell className="text-xs text-gray-600 py-2 text-center">{row.open}</TableCell>
-                        <TableCell className="text-xs text-gray-600 py-2 text-center">{row.close}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
-
             {/* Room Allocation */}
             <div>
               <p className="text-xs font-semibold text-[var(--institution-primary)] mb-3 uppercase tracking-wide">Allocation des espaces</p>
