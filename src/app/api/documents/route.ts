@@ -2,8 +2,18 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
 import { resolveOwnStudentId, isStudentSelfRole } from '@/lib/auth/student-scope'
+import { getOrganizationScope, isOrganizationManager } from '@/lib/auth/organization-scope'
 
-const DOCUMENT_READ_ROLES = new Set(['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'RECTORAT', 'SCOLARITE', 'ETUDIANT', 'ETUDIANT_SANTE'])
+const DOCUMENT_READ_ROLES = new Set(['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'RECTORAT', 'SCOLARITE', 'FACULTE', 'DEPARTEMENT', 'ETUDIANT', 'ETUDIANT_SANTE'])
+
+function documentDepartmentId(content: string) {
+  try {
+    const snapshot = JSON.parse(content) as { departmentId?: unknown }
+    return typeof snapshot.departmentId === 'string' ? snapshot.departmentId : null
+  } catch {
+    return null
+  }
+}
 
 // GET /api/documents - real generated-document history + stats. Without
 // ?studentId, this is the documents-page.tsx dashboard (previously a
@@ -25,6 +35,40 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
 
     const now = new Date()
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+
+    if (isOrganizationManager(user.role)) {
+      const scope = await getOrganizationScope(user, tenantId)
+      const departmentIds = new Set(scope?.departmentIds ?? [])
+      const candidates = departmentIds.size > 0 ? await db.officialDocument.findMany({
+        where: { tenantId, type: 'PV_DELIBERATION' },
+        orderBy: { createdAt: 'desc' },
+        take: 500,
+        include: { student: { select: { firstName: true, lastName: true, matricule: true } } },
+      }) : []
+      const recent = candidates.filter((document) => {
+        const departmentId = documentDepartmentId(document.content)
+        return Boolean(departmentId && departmentIds.has(departmentId))
+      }).slice(0, 100)
+      const documents = recent.map((document) => ({
+        id: document.id,
+        type: document.type,
+        studentId: document.studentId,
+        academicYearId: document.academicYearId,
+        etudiant: document.student ? `${document.student.firstName} ${document.student.lastName}` : '—',
+        matricule: document.student?.matricule || '—',
+        date: document.createdAt,
+        statut: document.validatedAt ? 'signe' : document.status === 'DRAFT' ? 'en_attente' : 'genere',
+        codeVerification: document.verificationCode || '',
+      }))
+      return NextResponse.json({
+        documents,
+        stats: {
+          thisMonth: recent.filter((document) => document.createdAt >= monthStart).length,
+          pending: recent.filter((document) => document.status === 'DRAFT').length,
+        },
+        countByType: { PV_DELIBERATION: recent.length },
+      })
+    }
 
     const [recent, thisMonthCount, pendingCount, byType] = await Promise.all([
       db.officialDocument.findMany({

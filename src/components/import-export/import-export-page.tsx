@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
-import { useStudents, useTeachers, useImportExport, useResults, usePayments, useDashboardStats, useStructure } from '@/lib/api-hooks'
+import { useImportExport, useResults, useDashboardStats, useStructure } from '@/lib/api-hooks'
 import { exportToExcel, exportToCSV, parseExcelFile } from '@/lib/export'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -250,6 +250,7 @@ export function ImportExportPage() {
   const [helpDialog, setHelpDialog] = useState<'guide' | 'formats' | null>(null)
   const [importProgress, setImportProgress] = useState(0)
   const [isImporting, setIsImporting] = useState(false)
+  const [isExporting, setIsExporting] = useState(false)
   const [isDragOver, setIsDragOver] = useState(false)
   
   const [dynamicPreviewCols, setDynamicPreviewCols] = useState<string[]>(STUDENT_PREVIEW_COLUMNS)
@@ -259,11 +260,8 @@ export function ImportExportPage() {
   const [validationSummary, setValidationSummary] = useState({ validLines: 0, errorLines: 0, duplicates: 0 })
 
   const queryClient = useQueryClient()
-  const { data: studentsQuery } = useStudents({ limit: 1000 })
-  const { data: teachersQuery } = useTeachers({ limit: 1000 })
   const { data: importExportData, isLoading: isImportExportLoading } = useImportExport()
   const { data: resultsQuery } = useResults()
-  const { data: paymentsQuery } = usePayments({ limit: 1000 })
   const { data: dashboardStats } = useDashboardStats()
   const { data: structureQuery } = useStructure()
 
@@ -288,12 +286,32 @@ export function ImportExportPage() {
     }
   }
 
-  const handleExport = () => {
+  const fetchPaged = async (path: string) => {
+    const rows: Record<string, any>[] = []
+    let page = 1
+    let totalPages = 1
+    do {
+      const separator = path.includes('?') ? '&' : '?'
+      const response = await fetch(`${path}${separator}page=${page}&limit=1000`)
+      const body = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(body.error || 'Chargement des données impossible')
+      rows.push(...(body.data ?? []))
+      totalPages = body.pagination?.totalPages ?? 1
+      page += 1
+      if (rows.length > 10_000) throw new Error('Affinez la sélection : 10 000 lignes maximum par export.')
+    } while (page <= totalPages)
+    return rows
+  }
+
+  const handleExport = async () => {
+    if (isExporting) return
+    setIsExporting(true)
+    try {
     let dataToExport: any[] = []
     let fileName = ''
 
     if (exportType === 'ListeEtudiants') {
-      dataToExport = (studentsQuery?.data || []).map((s: any) => ({
+      dataToExport = (await fetchPaged('/api/students')).map((s: any) => ({
         Matricule: s.matricule || 'N/A',
         Nom: s.lastName,
         Prénom: s.firstName,
@@ -305,7 +323,7 @@ export function ImportExportPage() {
       }))
       fileName = `etudiants_export_${new Date().getTime()}`
     } else if (exportType === 'AnnuaireEnseignants') {
-      dataToExport = (teachersQuery?.data || []).map((t: any) => ({
+      dataToExport = (await fetchPaged('/api/teachers')).map((t: any) => ({
         Matricule: t.employeeId || 'N/A',
         Nom: t.user?.lastName || '',
         Prénom: t.user?.firstName || '',
@@ -326,7 +344,7 @@ export function ImportExportPage() {
       }))
       fileName = `releves_notes_${new Date().getTime()}`
     } else if (exportType === 'EtatsFinanciers') {
-      dataToExport = (paymentsQuery?.data || []).map((p: any) => ({
+      dataToExport = (await fetchPaged('/api/payments')).map((p: any) => ({
         Matricule: p.student?.matricule || 'N/A',
         Etudiant: `${p.student?.lastName || ''} ${p.student?.firstName || ''}`.trim(),
         Filiere: p.student?.currentProgram?.name || '',
@@ -377,6 +395,11 @@ export function ImportExportPage() {
     }
 
     void logExport(exportTypeMap[exportType], exportFormat, dataToExport.length)
+    } catch (error) {
+      toast.error('Export impossible', { description: error instanceof Error ? error.message : 'Veuillez réessayer.' })
+    } finally {
+      setIsExporting(false)
+    }
   }
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement> | React.DragEvent<HTMLDivElement>) => {
@@ -1171,7 +1194,7 @@ export function ImportExportPage() {
                     <Download className="size-4 text-[var(--institution-primary)]" />
                   </div>
                   <div>
-                    <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Exporter des donnees</CardTitle>
+                    <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Exporter des données</CardTitle>
                     <p className="text-xs text-gray-400 mt-0.5">Générez des rapports et extractions de données</p>
                   </div>
                 </div>
@@ -1228,9 +1251,10 @@ export function ImportExportPage() {
                     <Button 
                       className="w-full bg-[var(--institution-primary)] hover:bg-[var(--institution-primary)]/90 text-white text-xs h-10"
                       onClick={handleExport}
+                      disabled={isExporting}
                     >
                       <Download className="size-3.5 mr-1.5" />
-                      Générer l&apos;export
+                      {isExporting ? 'Préparation…' : 'Générer l’export'}
                     </Button>
                   </div>
 

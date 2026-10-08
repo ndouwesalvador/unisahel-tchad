@@ -1,4 +1,4 @@
-import NextAuth, { getServerSession } from 'next-auth'
+import { getServerSession } from 'next-auth'
 import type { Adapter } from 'next-auth/adapters'
 import type { JWT } from 'next-auth/jwt'
 import type { Session, User } from 'next-auth'
@@ -40,16 +40,31 @@ export const authConfig = {
 
         const { email, password, login, pin } = parsed.data
 
+        const userSelection = {
+          id: true,
+          email: true,
+          passwordHash: true,
+          login: true,
+          pinHash: true,
+          firstName: true,
+          lastName: true,
+          role: true,
+          tenantId: true,
+          photo: true,
+          mustChangePassword: true,
+          tenant: { select: { name: true, slug: true, academicSystem: true } },
+        } as const
+
         let user
         if (email) {
           user = await db.user.findFirst({
             where: { email, isActive: true },
-            include: { tenant: true },
+            select: userSelection,
           })
         } else if (login) {
           user = await db.user.findFirst({
             where: { login, isActive: true },
-            include: { tenant: true },
+            select: userSelection,
           })
         } else {
           return null

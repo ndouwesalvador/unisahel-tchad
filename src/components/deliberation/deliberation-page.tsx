@@ -517,7 +517,7 @@ export function DeliberationPage() {
               <div className="relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
                   <div>
-                    <h1 className="text-2xl font-bold">Session de deliberation</h1>
+                    <h1 className="text-2xl font-bold">Session de délibération</h1>
                     <p className="text-white/70 text-sm mt-1">Délibérations et décisions du jury</p>
                   </div>
                 </div>
@@ -784,7 +784,7 @@ export function DeliberationPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="normale">Session Normale</SelectItem>
-                      <SelectItem value="rattrapage">Session de Rattrapage</SelectItem>
+                      <SelectItem value="rattrapage">Session de rattrapage</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -913,7 +913,7 @@ export function DeliberationPage() {
                 >
                   <Shield className="size-3.5 mr-1.5" />
                   {selectedSession
-                    ? 'Session deja lancee'
+                    ? 'Session déjà lancée'
                     : isLaunching
                       ? 'Lancement...'
                       : !isReadyForJury

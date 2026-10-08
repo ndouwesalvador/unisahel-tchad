@@ -59,8 +59,8 @@ import {
 // Other document templates may exist server-side, but they require a dedicated
 // context that this screen does not provide yet.
 const documentTypeList = [
-  { key: 'releve_notes', apiType: 'RELEVE_NOTES', label: 'Releve de notes', icon: FileText, implemented: true, requiresStudent: true, tooltip: 'Releve officiel des notes par semestre, genere pour un etudiant selectionne' },
-  { key: 'attestation_inscription', apiType: 'ATTESTATION_INSCRIPTION', label: 'Attestation d\'inscription', icon: BookOpen, implemented: true, requiresStudent: true, tooltip: 'Attestation confirmant l\'inscription administrative de l\'etudiant selectionne' },
+  { key: 'releve_notes', apiType: 'RELEVE_NOTES', label: 'Relevé de notes', icon: FileText, implemented: true, requiresStudent: true, tooltip: 'Relevé officiel des notes par semestre, généré pour l\'étudiant sélectionné' },
+  { key: 'attestation_inscription', apiType: 'ATTESTATION_INSCRIPTION', label: 'Attestation d\'inscription', icon: BookOpen, implemented: true, requiresStudent: true, tooltip: 'Attestation confirmant l\'inscription administrative de l\'étudiant sélectionné' },
   { key: 'attestation_niveau', apiType: 'ATTESTATION_NIVEAU', label: 'Attestation de niveau', icon: Award, implemented: true, requiresStudent: true, tooltip: 'Exige une année, une délibération finale validée et tous les crédits sans dette' },
   { key: 'diplome', apiType: 'DIPLOME', label: 'Diplôme', icon: GraduationCap, implemented: true, requiresStudent: true, tooltip: 'Exige la validation de tous les niveaux du programme sans dette' },
   { key: 'certificat_scolarite', apiType: 'CERTIFICAT_SCOLARITE', label: 'Certificat de scolarité', icon: ScrollText, implemented: true, requiresStudent: true, tooltip: 'Certificat prouvant la fréquentation régulière de l\'étudiant sélectionné' },
@@ -82,8 +82,8 @@ interface GeneratedDoc {
 
 // ASCII keys for status config - NO accented characters
 const statusConfig: Record<string, { label: string; className: string; icon: React.ElementType }> = {
-  signe: { label: 'Valide', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0', icon: CheckCircle2 },
-  genere: { label: 'Genere', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0', icon: Clock },
+  signe: { label: 'Validé', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0', icon: CheckCircle2 },
+  genere: { label: 'Généré', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0', icon: Clock },
   en_attente: { label: 'En attente', className: 'bg-gray-100 text-gray-500 border-0', icon: Clock },
 }
 
@@ -335,7 +335,7 @@ export function DocumentsPage() {
                 <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/15">
                   <div className="flex items-center gap-2 mb-1">
                     <FileText className="size-4 text-white/60" />
-                    <p className="text-[11px] text-white/70">Documents generes ce mois</p>
+                    <p className="text-[11px] text-white/70">Documents générés ce mois</p>
                   </div>
                   <p className="text-2xl font-bold text-white">{animatedDocsMonth}</p>
                 </div>
@@ -349,7 +349,7 @@ export function DocumentsPage() {
                 <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/15">
                   <div className="flex items-center gap-2 mb-1">
                     <TrendingUp className="size-4 text-white/60" />
-                    <p className="text-[11px] text-white/70">Documents valides</p>
+                    <p className="text-[11px] text-white/70">Documents validés</p>
                   </div>
                   <p className="text-2xl font-bold text-white">{signedPercent}%</p>
                 </div>
@@ -370,7 +370,7 @@ export function DocumentsPage() {
                 <p className="text-sm font-medium text-[var(--institution-primary)]">Circuit de génération</p>
                 <Badge className="text-[10px] bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0">
                   <Zap className="size-3 mr-1" />
-                  En temps reel
+                  En temps réel
                 </Badge>
               </div>
               <div className="flex h-3 rounded-full overflow-hidden bg-gray-100">
@@ -458,7 +458,7 @@ export function DocumentsPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-[var(--institution-primary)]">{totalGenerated}</p>
-                <p className="text-[11px] text-gray-500">Documents generes</p>
+                <p className="text-[11px] text-gray-500">Documents générés</p>
               </div>
             </CardContent>
           </Card>
@@ -645,7 +645,7 @@ export function DocumentsPage() {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">
-                Documents generes ({filteredDocs.length})
+                Documents générés ({filteredDocs.length})
               </CardTitle>
               <Badge className="text-[10px] bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0">
                 <Shield className="size-3 mr-1" />

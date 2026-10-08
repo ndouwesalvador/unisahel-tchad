@@ -10,6 +10,10 @@ const { dbMock } = vi.hoisted(() => ({
 
 vi.mock('@/lib/db', () => ({ db: dbMock }))
 vi.mock('@/lib/auth/helpers', () => ({ withTenantAuth: (handler: unknown) => handler }))
+vi.mock('@/lib/auth/organization-scope', () => ({
+  isOrganizationManager: (role: string) => role === 'FACULTE' || role === 'DEPARTEMENT',
+  getOrganizationScope: vi.fn().mockResolvedValue({ facultyId: 'faculty-A', departmentIds: ['department-A'] }),
+}))
 
 const { GET, PUT } = await import('./route')
 
@@ -39,6 +43,23 @@ describe('GET /api/documents', () => {
 
     expect(response.status).toBe(403)
     expect(dbMock.officialDocument.findMany).not.toHaveBeenCalled()
+  })
+
+  it('shows a department manager only PVs belonging to their department', async () => {
+    dbMock.officialDocument.findMany.mockResolvedValue([
+      { id: 'pv-A', type: 'PV_DELIBERATION', content: JSON.stringify({ departmentId: 'department-A' }), studentId: null,
+        academicYearId: 'year-A', student: null, createdAt: new Date(), validatedAt: new Date(), status: 'VALIDATED', verificationCode: 'A' },
+      { id: 'pv-B', type: 'PV_DELIBERATION', content: JSON.stringify({ departmentId: 'department-B' }), studentId: null,
+        academicYearId: 'year-A', student: null, createdAt: new Date(), validatedAt: new Date(), status: 'VALIDATED', verificationCode: 'B' },
+    ])
+    const user = { id: 'head-A', role: 'DEPARTEMENT', tenantId: 'tenant-A' }
+    const request = new NextRequest('http://localhost:3000/api/documents')
+    const handler = GET as unknown as (sessionUser: typeof user, tenantId: string, request: NextRequest) => Promise<Response>
+
+    const response = await handler(user, 'tenant-A', request)
+    expect(response.status).toBe(200)
+    expect((await response.json()).documents).toEqual([expect.objectContaining({ id: 'pv-A' })])
+    expect(dbMock.officialDocument.count).not.toHaveBeenCalled()
   })
 })
 

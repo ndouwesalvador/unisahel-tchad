@@ -812,7 +812,7 @@ export function DashboardShell() {
             </div>
 
             {/* Center: Search Bar (hidden on mobile) */}
-            <div className="hidden md:flex items-center gap-2 flex-1 max-w-md mx-4">
+            <div className="hidden lg:flex items-center gap-2 flex-1 max-w-md mx-4">
               <div className="relative flex-1">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
                 <Input
@@ -893,7 +893,7 @@ export function DashboardShell() {
               {user.role !== 'ENSEIGNANT' && <Button
                 variant="ghost"
                 size="sm"
-                className="hidden sm:flex text-xs text-[var(--institution-secondary)] hover:text-[var(--institution-secondary-dark)]"
+                className="hidden xl:flex text-xs text-[var(--institution-secondary)] hover:text-[var(--institution-secondary-dark)]"
                 onClick={() => setView('verify')}
               >
                 Vérifier document
@@ -908,7 +908,7 @@ export function DashboardShell() {
                         {initials}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="hidden md:block text-left">
+                    <div className="hidden xl:block text-left">
                       <div className="text-xs font-medium text-[var(--institution-primary)] leading-tight">{user.firstName} {user.lastName}</div>
                       <div className="text-[10px] text-gray-400">{roleLabels[user.role]}</div>
                     </div>
