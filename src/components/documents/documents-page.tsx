@@ -396,11 +396,11 @@ export function DocumentsPage() {
               <div className="flex items-center gap-4 mt-2">
                 <div className="flex items-center gap-1.5">
                   <div className="w-2.5 h-2.5 rounded-full bg-[var(--institution-secondary)]" />
-                  <span className="text-[10px] text-gray-500">Signes ({pipelineSigned})</span>
+                  <span className="text-[10px] text-gray-500">Signés ({pipelineSigned})</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <div className="w-2.5 h-2.5 rounded-full bg-[var(--institution-accent)]" />
-                  <span className="text-[10px] text-gray-500">Generes ({pipelineGenerated})</span>
+                  <span className="text-[10px] text-gray-500">Générés ({pipelineGenerated})</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <div className="w-2.5 h-2.5 rounded-full bg-gray-300" />
@@ -411,7 +411,7 @@ export function DocumentsPage() {
           </Card>
         </motion.div>
 
-        {/* Documents recents ticker */}
+        {/* Documents récents ticker */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -421,7 +421,7 @@ export function DocumentsPage() {
             <CardContent className="p-3">
               <div className="flex items-center gap-2 mb-2">
                 <div className="w-2 h-2 rounded-full bg-[var(--institution-secondary)] animate-pulse" />
-                <span className="text-[11px] font-medium text-[var(--institution-primary)]">Documents recents</span>
+                <span className="text-[11px] font-medium text-[var(--institution-primary)]">Documents récents</span>
               </div>
               <div className="flex flex-col sm:flex-row gap-2">
                 {recentDocs.map((doc, i) => {
@@ -438,7 +438,7 @@ export function DocumentsPage() {
                       <FileText className="size-3.5 text-[var(--institution-primary)] shrink-0" />
                       <div className="min-w-0 flex-1">
                         <p className="text-[11px] font-medium text-[var(--institution-primary)] truncate">{doc.type}</p>
-                        <p className="text-[9px] text-gray-400">{doc.etudiant} - {doc.date}</p>
+                        <p className="text-[9px] text-gray-400">{doc.etudiant} · {doc.date}</p>
                       </div>
                       <StatusIcon className="size-3 shrink-0" style={{ color: doc.statut === 'signe' ? 'var(--institution-secondary)' : 'var(--institution-accent)' }} />
                     </motion.div>
@@ -502,7 +502,7 @@ export function DocumentsPage() {
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-semibold text-[var(--institution-primary)] flex items-center gap-2">
               <Stamp className="size-4 text-[var(--institution-secondary)]" />
-              Generer un document
+              Générer un document
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -631,8 +631,8 @@ export function DocumentsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tous les statuts</SelectItem>
-                  <SelectItem value="signe">Valide / Signe</SelectItem>
-                  <SelectItem value="genere">Genere</SelectItem>
+                  <SelectItem value="signe">Validé / signé</SelectItem>
+                  <SelectItem value="genere">Généré</SelectItem>
                   <SelectItem value="en_attente">En attente</SelectItem>
                 </SelectContent>
               </Select>
@@ -659,7 +659,7 @@ export function DocumentsPage() {
                 <TableHeader>
                   <TableRow className="bg-gray-50">
                     <TableHead className="text-xs font-semibold">Type</TableHead>
-                    <TableHead className="text-xs font-semibold">Etudiant</TableHead>
+                    <TableHead className="text-xs font-semibold">Étudiant</TableHead>
                     <TableHead className="text-xs font-semibold">Date</TableHead>
                     <TableHead className="text-xs font-semibold">Statut</TableHead>
                     <TableHead className="text-xs font-semibold">Code de vérification</TableHead>
@@ -734,7 +734,7 @@ export function DocumentsPage() {
                       <TableCell colSpan={6} className="text-center py-8">
                         <div className="flex flex-col items-center gap-2 text-gray-400">
                           <FileText className="size-8" />
-                          <p className="text-sm">Aucun document trouve</p>
+                          <p className="text-sm">Aucun document trouvé</p>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -800,14 +800,14 @@ export function DocumentsPage() {
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-semibold text-[var(--institution-primary)] flex items-center gap-2">
                 <Shield className="size-4 text-[var(--institution-secondary)]" />
-                Verification QR Code
+                Vérification par code QR
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-start gap-3 p-3 rounded-lg bg-[var(--institution-secondary-08)] border border-[var(--institution-secondary-15)]">
                 <Info className="size-5 text-[var(--institution-secondary)] shrink-0 mt-0.5" />
                 <div className="space-y-1.5">
-                  <p className="text-xs text-[var(--institution-primary)] font-medium">Verification par code unique</p>
+                  <p className="text-xs text-[var(--institution-primary)] font-medium">Vérification par code unique</p>
                   <p className="text-[11px] text-gray-500 leading-relaxed">
                     Chaque document officiel porte un code QR unique pour une vérification immédiate.
                     Scannez-le ou saisissez le code de vérification pour confirmer l’authenticité.
@@ -825,7 +825,7 @@ export function DocumentsPage() {
                 </div>
                 <div className="flex items-center gap-2 text-xs text-gray-600">
                   <CheckCircle2 className="size-3.5 text-[var(--institution-secondary)]" />
-                  <span>Verification en temps reel</span>
+                  <span>Vérification en temps réel</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-gray-600">
                   <Shield className="size-3.5 text-[var(--institution-secondary)]" />

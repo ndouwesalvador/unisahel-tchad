@@ -15,6 +15,10 @@ const methods: Record<string, readonly string[]> = {
   '/api/documents/generate': ['POST'],
   '/api/documents/download': ['GET'],
   '/api/documents': ['GET'],
+  // L'identité visuelle ne contient que les couleurs publiques du tenant.
+  // Elle est nécessaire pour que les espaces faculté et département utilisent
+  // la même charte que l'administration sans exposer cachets ou signatures.
+  '/api/institution/branding': ['GET'],
   // Every organization role may update its own profile and password. This
   // endpoint only targets the authenticated user's record; it is not an
   // institution-wide administration operation.

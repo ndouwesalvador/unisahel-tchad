@@ -21,6 +21,10 @@ describe('organization API policy', () => {
     expect(isOrganizationApiAllowed('/api/profile', 'GET')).toBe(true)
     expect(isOrganizationApiAllowed('/api/profile', 'PUT')).toBe(true)
   })
+  it('allows organization users to read the tenant color palette only', () => {
+    expect(isOrganizationApiAllowed('/api/institution/branding', 'GET')).toBe(true)
+    expect(isOrganizationApiAllowed('/api/institution/branding', 'PUT')).toBe(false)
+  })
   it('denies institution-wide operations while allowing scoped curriculum management', () => {
     expect(isOrganizationApiAllowed('/api/grades', 'GET')).toBe(false)
     expect(isOrganizationApiAllowed('/api/structure', 'POST')).toBe(true)

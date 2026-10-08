@@ -13,6 +13,8 @@ const teacherMethods: Record<string, readonly string[]> = {
   '/api/attendance': ['GET', 'POST', 'PUT'],
   '/api/online-exams': ['GET', 'POST'],
   '/api/communications': ['GET', 'POST'],
+  '/api/profile': ['GET', 'PUT'],
+  '/api/institution/branding': ['GET'],
 }
 
 export function isTeacherApiAllowed(pathname: string, method: string): boolean {
