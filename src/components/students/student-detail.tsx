@@ -67,6 +67,15 @@ const paymentMethodLabels: Record<string, string> = {
   CARD: 'Carte',
 }
 
+const juryDecisionLabels: Record<string, string> = {
+  ADMI: 'Admis',
+  ADMI_DETTE: 'Admis avec dette',
+  COMPENSE: 'Admis par compensation',
+  AJOURNE: 'Ajourné',
+  REDOUBLANT: 'Redoublant',
+  EXCLU: 'Exclu',
+}
+
 const documentTypeLabels: Record<string, { label: string; icon: React.ElementType; color: string }> = {
   RELEVE_NOTES: { label: 'Relevé de notes', icon: FileText, color: 'var(--institution-secondary)' },
   ATTESTATION_INSCRIPTION: { label: "Attestation d'inscription", icon: Award, color: 'var(--institution-primary)' },
@@ -314,6 +323,7 @@ export function StudentDetail() {
   const summary = transcriptData?.data?.summary
   const totalCredits = summary?.totalCreditsAcquired ?? 0
   const moyenneGenerale = summary?.averageFinalGrade ?? 0
+  const juryDecision = summary?.juryDecision?.decision as string | undefined
   const transcriptAvailable = Boolean(transcriptData?.data?.isEnrolledForYear)
 
   const gradeRows: Array<{ ue: string; ecue: string; credits: number; coeff: number; cc: number | null; exam: number | null; moyenne: number; mention: string }> = []
@@ -619,7 +629,6 @@ export function StudentDetail() {
                           <TableHead className="text-xs text-white font-semibold">UE</TableHead>
                           <TableHead className="text-xs text-white font-semibold">ECUE</TableHead>
                           <TableHead className="text-xs text-white font-semibold text-center">Credits</TableHead>
-                          <TableHead className="text-xs text-white font-semibold text-center">Coeff</TableHead>
                           <TableHead className="text-xs text-white font-semibold text-center">CC</TableHead>
                           <TableHead className="text-xs text-white font-semibold text-center">Examen</TableHead>
                           <TableHead className="text-xs text-white font-semibold text-center">Moyenne</TableHead>
@@ -632,7 +641,6 @@ export function StudentDetail() {
                             <TableCell className="text-xs font-semibold text-[var(--institution-primary)]">{note.ue}</TableCell>
                             <TableCell className="text-xs text-gray-600">{note.ecue}</TableCell>
                             <TableCell className="text-xs text-center">{note.credits}</TableCell>
-                            <TableCell className="text-xs text-center">{note.coeff}</TableCell>
                             <TableCell className="text-xs text-center">{note.cc ?? '—'}</TableCell>
                             <TableCell className="text-xs text-center">{note.exam ?? '—'}</TableCell>
                             <TableCell className={`text-xs text-center font-bold ${note.moyenne >= PASSING_GRADE ? 'text-[var(--institution-secondary)]' : 'text-red-600'}`}>
@@ -664,7 +672,7 @@ export function StudentDetail() {
                     <div>
                       <span className="text-slate-600 text-xs block">Décision du jury</span>
                       <p className="text-lg font-bold text-[var(--institution-primary)]">
-                        Non renseignée dans cet aperçu
+                        {juryDecision ? juryDecisionLabels[juryDecision] ?? juryDecision : 'En attente de délibération finale'}
                       </p>
                     </div>
                   </div>

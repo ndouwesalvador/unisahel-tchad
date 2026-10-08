@@ -639,14 +639,44 @@ async function getStudentTranscriptHandler(user: SessionUser, tenantId: string, 
           Math.max(grades.filter((g) => g.finalGrade !== null).length, 1)
         : 0
 
-    const creditsByStudent = annualRegistration && academicYear
-      ? await validatedCreditsByStudent(tenantId, [id], academicYear.id) : new Map<string, number>()
+    // The transcript and the official PV must expose the same final jury
+    // outcome. Restrict the lookup to the exact annual cohort so a decision
+    // from another programme or level can never leak into this transcript.
+    const finalizedJuryDecision = annualRegistration && academicYear
+      ? (await db.deliberationDecision.findMany({
+          where: {
+            studentId: id,
+            deliberation: {
+              tenantId,
+              academicYearId: academicYear.id,
+              programId: annualRegistration.programId,
+              levelId: annualRegistration.levelId,
+              status: 'TERMINEE',
+              isLocked: true,
+            },
+          },
+          select: {
+            average: true,
+            creditsAcquired: true,
+            decision: true,
+            deliberation: { select: { date: true } },
+          },
+          orderBy: { deliberation: { date: 'desc' } },
+          take: 1,
+        }))[0] ?? null
+      : null
     const summary = {
       totalGrades,
       validatedGrades,
       failedGrades: totalGrades - validatedGrades,
-      averageFinalGrade: Math.round(averageFinalGrade * 100) / 100,
-      totalCreditsAcquired: creditsByStudent.get(id) ?? 0,
+      averageFinalGrade: Math.round((finalizedJuryDecision?.average ?? averageFinalGrade) * 100) / 100,
+      totalCreditsAcquired: finalizedJuryDecision?.creditsAcquired ?? 0,
+      juryDecision: finalizedJuryDecision ? {
+        decision: finalizedJuryDecision.decision,
+        average: finalizedJuryDecision.average,
+        creditsAcquired: finalizedJuryDecision.creditsAcquired,
+        date: finalizedJuryDecision.deliberation.date,
+      } : null,
     }
 
     return NextResponse.json({
