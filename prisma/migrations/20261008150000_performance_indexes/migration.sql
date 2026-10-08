@@ -1,0 +1,36 @@
+-- Additive indexes for the multi-tenant academic hot paths. The production
+-- database is still small, so creating them now avoids disruptive work later.
+CREATE INDEX IF NOT EXISTS "Faculty_tenantId_isActive_idx" ON "Faculty"("tenantId", "isActive");
+CREATE INDEX IF NOT EXISTS "Department_tenantId_facultyId_isActive_idx" ON "Department"("tenantId", "facultyId", "isActive");
+CREATE INDEX IF NOT EXISTS "Program_tenantId_departmentId_isActive_idx" ON "Program"("tenantId", "departmentId", "isActive");
+CREATE INDEX IF NOT EXISTS "Program_tenantId_facultyId_isActive_idx" ON "Program"("tenantId", "facultyId", "isActive");
+CREATE INDEX IF NOT EXISTS "Level_programId_isActive_orderIndex_idx" ON "Level"("programId", "isActive", "orderIndex");
+CREATE INDEX IF NOT EXISTS "Semester_levelId_orderIndex_idx" ON "Semester"("levelId", "orderIndex");
+CREATE INDEX IF NOT EXISTS "TeachingUnit_semesterId_orderIndex_idx" ON "TeachingUnit"("semesterId", "orderIndex");
+CREATE INDEX IF NOT EXISTS "TeachingUnit_responsibleId_idx" ON "TeachingUnit"("responsibleId");
+CREATE INDEX IF NOT EXISTS "CourseElement_teachingUnitId_orderIndex_idx" ON "CourseElement"("teachingUnitId", "orderIndex");
+CREATE INDEX IF NOT EXISTS "CourseElement_teacherId_idx" ON "CourseElement"("teacherId");
+CREATE INDEX IF NOT EXISTS "AcademicYear_tenantId_isCurrent_idx" ON "AcademicYear"("tenantId", "isCurrent");
+CREATE INDEX IF NOT EXISTS "AcademicYear_tenantId_isActive_idx" ON "AcademicYear"("tenantId", "isActive");
+CREATE INDEX IF NOT EXISTS "Teacher_tenantId_isActive_idx" ON "Teacher"("tenantId", "isActive");
+CREATE INDEX IF NOT EXISTS "Teacher_tenantId_departmentId_isActive_idx" ON "Teacher"("tenantId", "departmentId", "isActive");
+CREATE INDEX IF NOT EXISTS "Student_tenantId_status_idx" ON "Student"("tenantId", "status");
+CREATE INDEX IF NOT EXISTS "Student_tenantId_currentProgramId_currentLevelId_idx" ON "Student"("tenantId", "currentProgramId", "currentLevelId");
+CREATE INDEX IF NOT EXISTS "Student_tenantId_createdAt_idx" ON "Student"("tenantId", "createdAt");
+CREATE INDEX IF NOT EXISTS "AdministrativeRegistration_tenantId_academicYearId_status_idx" ON "AdministrativeRegistration"("tenantId", "academicYearId", "status");
+CREATE INDEX IF NOT EXISTS "AdministrativeRegistration_tenantId_programId_levelId_academicYearId_idx" ON "AdministrativeRegistration"("tenantId", "programId", "levelId", "academicYearId");
+CREATE INDEX IF NOT EXISTS "PedagogicalRegistration_studentId_academicYearId_status_idx" ON "PedagogicalRegistration"("studentId", "academicYearId", "status");
+CREATE INDEX IF NOT EXISTS "PedagogicalRegistration_teachingUnitId_academicYearId_status_idx" ON "PedagogicalRegistration"("teachingUnitId", "academicYearId", "status");
+CREATE INDEX IF NOT EXISTS "Grade_studentId_academicYearId_session_idx" ON "Grade"("studentId", "academicYearId", "session");
+CREATE INDEX IF NOT EXISTS "Grade_courseElementId_academicYearId_session_idx" ON "Grade"("courseElementId", "academicYearId", "session");
+CREATE INDEX IF NOT EXISTS "Grade_teachingUnitId_academicYearId_session_idx" ON "Grade"("teachingUnitId", "academicYearId", "session");
+CREATE INDEX IF NOT EXISTS "Grade_enteredBy_isLocked_idx" ON "Grade"("enteredBy", "isLocked");
+CREATE INDEX IF NOT EXISTS "DeliberationDecision_deliberationId_studentId_idx" ON "DeliberationDecision"("deliberationId", "studentId");
+CREATE INDEX IF NOT EXISTS "DeliberationDecision_studentId_idx" ON "DeliberationDecision"("studentId");
+CREATE INDEX IF NOT EXISTS "Payment_tenantId_academicYearId_status_createdAt_idx" ON "Payment"("tenantId", "academicYearId", "status", "createdAt");
+CREATE INDEX IF NOT EXISTS "Payment_tenantId_studentId_academicYearId_idx" ON "Payment"("tenantId", "studentId", "academicYearId");
+CREATE INDEX IF NOT EXISTS "OfficialDocument_tenantId_createdAt_idx" ON "OfficialDocument"("tenantId", "createdAt");
+CREATE INDEX IF NOT EXISTS "OfficialDocument_tenantId_type_status_idx" ON "OfficialDocument"("tenantId", "type", "status");
+CREATE INDEX IF NOT EXISTS "OfficialDocument_studentId_academicYearId_type_idx" ON "OfficialDocument"("studentId", "academicYearId", "type");
+CREATE INDEX IF NOT EXISTS "AuditLog_tenantId_createdAt_idx" ON "AuditLog"("tenantId", "createdAt");
+CREATE INDEX IF NOT EXISTS "AuditLog_userId_createdAt_idx" ON "AuditLog"("userId", "createdAt");
