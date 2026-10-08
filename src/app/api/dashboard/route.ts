@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { Prisma } from '@prisma/client'
 import { db } from '@/lib/db'
 import { withTenantAuth } from '@/lib/auth/helpers'
 import { isStudentSelfRole, resolveOwnStudentId } from '@/lib/auth/student-scope'
@@ -9,9 +8,6 @@ import type { SessionUser } from '@/lib/auth/helpers'
 function round2(value: number): number {
   return Math.round(value * 100) / 100
 }
-
-type ProgramCountRow = { programName: string; cycle: string; count: bigint }
-type ProgramSuccessRow = { programName: string; total: bigint; passed: bigint }
 
 // A student's own dashboard: personal academic/payment status, never the
 // institution-wide admin aggregates (total revenue, every student's status, etc.)
@@ -229,13 +225,15 @@ async function getDashboardHandler(user: SessionUser, tenantId: string, request:
       totalDepartments,
       totalTeachingUnits,
       studentsByStatus,
-      studentCountsByProgram,
+      studentsByProgram,
       paymentsByStatus,
       recentPayments,
       recentStudents,
       recentAnnouncements,
       currentAcademicYear,
-      successByProgramRows,
+      studentsForCycle,
+      gradesForSuccessRate,
+      tenantSettings,
       unvalidatedGradesCount,
       pendingPaymentsCount,
       studentsWithoutPaymentCount,
@@ -282,17 +280,15 @@ async function getDashboardHandler(user: SessionUser, tenantId: string, request:
         _count: { status: true },
       }),
 
-      // Student counts by programme/cycle are aggregated in PostgreSQL. This
-      // keeps the dashboard payload stable even with tens of thousands of rows.
-      db.$queryRaw<ProgramCountRow[]>(Prisma.sql`
-        SELECT COALESCE(p."name", 'Non assigné') AS "programName",
-               COALESCE(p."cycle", 'AUTRE') AS "cycle",
-               COUNT(*)::bigint AS "count"
-        FROM "Student" s
-        LEFT JOIN "Program" p ON p."id" = s."currentProgramId" AND p."tenantId" = s."tenantId"
-        WHERE s."tenantId" = ${tenantId}
-        GROUP BY p."id", p."name", p."cycle"
-      `),
+      // Students by program
+      db.student.findMany({
+        where: { tenantId, currentProgramId: { not: null } },
+        select: {
+          currentProgram: {
+            select: { name: true },
+          },
+        },
+      }),
 
       // Payments by status
       db.payment.groupBy({
@@ -338,23 +334,20 @@ async function getDashboardHandler(user: SessionUser, tenantId: string, request:
         include: { sessions: true },
       }),
 
-      // Pass-rate counts are also reduced in PostgreSQL rather than loading
-      // every grade into the serverless function.
-      db.$queryRaw<ProgramSuccessRow[]>(Prisma.sql`
-        SELECT COALESCE(p."name", 'Non assigné') AS "programName",
-               COUNT(*)::bigint AS "total",
-               COUNT(*) FILTER (
-                 WHERE g."finalGrade" >= COALESCE(
-                   (SELECT ts."passingGrade" FROM "TenantSettings" ts WHERE ts."tenantId" = ${tenantId}),
-                   10
-                 )
-               )::bigint AS "passed"
-        FROM "Grade" g
-        JOIN "Student" s ON s."id" = g."studentId"
-        LEFT JOIN "Program" p ON p."id" = s."currentProgramId" AND p."tenantId" = s."tenantId"
-        WHERE s."tenantId" = ${tenantId} AND g."finalGrade" IS NOT NULL
-        GROUP BY p."id", p."name"
-      `),
+      // Students with their program's cycle (Licence/Master/Doctorat)
+      db.student.findMany({
+        where: { tenantId, currentProgramId: { not: null } },
+        select: { currentProgram: { select: { cycle: true } } },
+      }),
+
+      // Entered grades with the student's program, to compute a real pass rate
+      db.grade.findMany({
+        where: { student: { tenantId }, finalGrade: { not: null } },
+        select: { finalGrade: true, student: { select: { currentProgram: { select: { name: true } } } } },
+      }),
+
+      // Passing grade threshold
+      db.tenantSettings.findUnique({ where: { tenantId }, select: { passingGrade: true } }),
 
       // Grades entered but not yet locked/validated
       db.grade.count({ where: { student: { tenantId }, isLocked: false, finalGrade: { not: null } } }),
@@ -384,20 +377,26 @@ async function getDashboardHandler(user: SessionUser, tenantId: string, request:
 
     // Process students by program for chart
     const programCounts: Record<string, number> = {}
-    for (const row of studentCountsByProgram) {
-      programCounts[row.programName] = Number(row.count)
+    for (const s of studentsByProgram) {
+      const progName = s.currentProgram?.name || 'Non assigné'
+      programCounts[progName] = (programCounts[progName] || 0) + 1
     }
 
     // Students by cycle (Licence/Master/Doctorat)
     const cycleCounts: Record<string, number> = {}
-    for (const row of studentCountsByProgram) {
-      cycleCounts[row.cycle] = (cycleCounts[row.cycle] || 0) + Number(row.count)
+    for (const s of studentsForCycle) {
+      const cycle = s.currentProgram?.cycle || 'AUTRE'
+      cycleCounts[cycle] = (cycleCounts[cycle] || 0) + 1
     }
 
     // Success rate per program, from real entered grades vs the tenant's passing threshold
+    const passingGrade = tenantSettings?.passingGrade ?? 10
     const successByProgram: Record<string, { total: number; passed: number }> = {}
-    for (const row of successByProgramRows) {
-      successByProgram[row.programName] = { total: Number(row.total), passed: Number(row.passed) }
+    for (const g of gradesForSuccessRate) {
+      const progName = g.student.currentProgram?.name || 'Non assigné'
+      if (!successByProgram[progName]) successByProgram[progName] = { total: 0, passed: 0 }
+      successByProgram[progName].total += 1
+      if ((g.finalGrade ?? 0) >= passingGrade) successByProgram[progName].passed += 1
     }
 
     const chartData = {
