@@ -152,7 +152,7 @@ const roleWorkspaces: Record<string, { title: string; description: string; focus
   FACULTE: { title: 'Direction de faculté', description: 'Coordonnez les départements et suivez les activités de votre faculté.', focus: 'Coordination facultaire' },
   DEPARTEMENT: { title: 'Gestion du département', description: 'Organisez les enseignants, les UE, les emplois du temps et les délibérations de votre département.', focus: 'Périmètre départemental' },
   RESPONSABLE_FILIERE: { title: 'Responsable de filière', description: 'Suivez la maquette, les étudiants et les résultats de votre filière.', focus: 'Suivi de filière' },
-  JURY: { title: 'Espace du jury', description: 'Préparez, contrôlez et validez les décisions de délibération de votre département.', focus: 'Délibérations et PV' },
+  JURY: { title: 'Espace du jury', description: 'Préparez, contrôlez et validez les décisions des programmes et niveaux qui vous sont affectés.', focus: 'Délibérations et PV' },
   CAISSE: { title: 'Caisse et recouvrement', description: 'Enregistrez les paiements, contrôlez les validations et éditez les reçus.', focus: 'Paiements et reçus' },
   MAITRE_STAGE: { title: 'Suivi des stages', description: 'Suivez les étudiants qui vous sont confiés et leurs évaluations de stage.', focus: 'Stages et évaluations' },
 }

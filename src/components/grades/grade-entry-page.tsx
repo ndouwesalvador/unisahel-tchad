@@ -125,17 +125,17 @@ export function GradeEntryPage() {
 
   return <div className="space-y-5 text-slate-900">
     <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-      <p className="text-sm font-semibold uppercase tracking-wide text-emerald-800">{jury ? 'Jury départemental' : 'Espace enseignant'}</p>
+      <p className="text-sm font-semibold uppercase tracking-wide text-emerald-800">{jury ? 'Jury académique' : 'Espace enseignant'}</p>
       <h1 className="mt-1 text-2xl font-bold text-slate-950">Saisie des notes</h1>
       <p className="mt-2 text-sm text-slate-700">{jury
-        ? 'Examens de votre département. Toute correction d’une note déjà enregistrée exige un motif et reste tracée.'
+        ? 'Examens des programmes et niveaux qui vous sont affectés. Toute correction d’une note déjà enregistrée exige un motif et reste tracée.'
         : 'Contrôle continu et TP de vos services annuels approuvés uniquement. La première note est enregistrée au départ du champ et ne peut plus être modifiée par vous.'}</p>
       {data?.academicYear && <p className="mt-2 text-sm font-medium text-slate-800">Année académique : {data.academicYear.name}</p>}
     </div>
     {isError ? <Card><CardContent className="p-5 text-sm text-red-800">{error instanceof Error ? error.message : 'Chargement impossible.'} <Button type="button" variant="outline" onClick={() => refetch()}>Réessayer</Button></CardContent></Card>
       : isLoading ? <Card><CardContent className="p-5 text-sm">Chargement…</CardContent></Card>
       : !data?.courses.length ? <Card><CardContent className="p-5 text-sm text-slate-700">{jury
-        ? 'Aucune matière n’est rattachée à votre département. Vérifiez votre affectation dans Utilisateurs et la structure des programmes.'
+        ? 'Aucune matière n’est rattachée aux programmes et niveaux de ce jury. Vérifiez son périmètre dans Utilisateurs.'
         : 'Aucun service d’enseignement approuvé pour cette année. L’administration doit vous affecter une matière avant la saisie.'}</CardContent></Card>
       : <>
         <Card className="border-slate-200 bg-white"><CardContent className="grid gap-4 p-5 md:grid-cols-[1fr_180px]">

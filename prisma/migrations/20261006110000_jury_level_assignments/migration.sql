@@ -73,3 +73,35 @@ CREATE UNIQUE INDEX IF NOT EXISTS "Deliberation_legacy_department_session_unique
   ON "Deliberation"("tenantId", "academicYearId", "departmentId", "type")
   WHERE "departmentId" IS NOT NULL AND "programId" IS NULL AND "levelId" IS NULL;
 
+-- Repair legacy students already marked as enrolled but created before the
+-- annual-registration workflow existed. The current programme/level pair is
+-- accepted only when it is structurally consistent in the same tenant.
+INSERT INTO "AdministrativeRegistration" (
+  "id", "tenantId", "studentId", "academicYearId", "programId", "levelId",
+  "registrationDate", "status", "paymentStatus", "createdAt", "updatedAt"
+)
+SELECT
+  'areg_' || md5(st."id" || ay."id"), st."tenantId", st."id", ay."id",
+  st."currentProgramId", st."currentLevelId", CURRENT_TIMESTAMP, 'INSCRIT',
+  'UNPAID', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+FROM "Student" st
+JOIN "AcademicYear" ay ON ay."tenantId" = st."tenantId" AND ay."isCurrent" = TRUE
+JOIN "Program" p ON p."id" = st."currentProgramId" AND p."tenantId" = st."tenantId" AND p."isActive" = TRUE
+JOIN "Level" l ON l."id" = st."currentLevelId" AND l."programId" = p."id" AND l."isActive" = TRUE
+WHERE st."status" = 'INSCRIT'
+  AND st."currentProgramId" IS NOT NULL
+  AND st."currentLevelId" IS NOT NULL
+ON CONFLICT ("tenantId", "studentId", "academicYearId") DO NOTHING;
+
+-- Rename only old automatically generated department-wide titles. The data
+-- itself is already narrowed above; this makes the visible session title
+-- accurately describe the programme and level.
+UPDATE "Deliberation" d
+SET "name" = 'Délibération ' || p."name" || ' · ' || l."name" || ' · ' ||
+  CASE WHEN d."type" = 'RATTRAPAGE' THEN 'Rattrapage ' ELSE 'Normale ' END || ay."name"
+FROM "Program" p, "Level" l, "AcademicYear" ay
+WHERE d."programId" = p."id"
+  AND d."levelId" = l."id"
+  AND d."academicYearId" = ay."id"
+  AND d."name" LIKE 'Délibération Département%';
+
