@@ -3,8 +3,6 @@ import type { NextRequest } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 import { getAuthSecret } from '@/lib/auth/secret'
 
-export const runtime = 'nodejs'
-
 function isPublicPath(pathname: string) {
   return (
     pathname === '/' ||
@@ -15,7 +13,7 @@ function isPublicPath(pathname: string) {
   )
 }
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { nextUrl } = req
 
   if (isPublicPath(nextUrl.pathname)) {
