@@ -264,7 +264,7 @@ export function ExamSchedulingPage() {
                 </div>
               </div>
               <p className="text-2xl font-bold text-[var(--institution-primary)]">{stats.total}</p>
-              <p className="text-xs text-gray-500 mt-1">Examens planifies</p>
+              <p className="text-xs text-gray-500 mt-1">Examens planifiés</p>
             </CardContent>
           </Card>
 
@@ -288,7 +288,7 @@ export function ExamSchedulingPage() {
                 </div>
               </div>
               <p className="text-2xl font-bold text-[var(--institution-secondary)]">{stats.termines}</p>
-              <p className="text-xs text-gray-500 mt-1">Termines</p>
+              <p className="text-xs text-gray-500 mt-1">Terminés</p>
             </CardContent>
           </Card>
 

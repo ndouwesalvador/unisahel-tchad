@@ -123,15 +123,9 @@ describe('GET /api/students', () => {
     })
   })
 
-  it('rejects a limit above the raised cap (1000) without querying the DB', async () => {
-    // Note: getStudentsHandler's catch block doesn't special-case ZodError
-    // the way the POST/PUT handlers in this file do, so an out-of-range
-    // limit currently surfaces as a generic 500 rather than 400. That's a
-    // minor pre-existing inconsistency (client input misclassified as a
-    // server error) - out of scope to fix here; this test just documents
-    // the current, safe behavior (rejected, DB never queried).
+  it('rejects a limit above the cap as invalid client input without querying the DB', async () => {
     const res = await GET(req('/api/students?limit=100000'))
-    expect(res.status).toBe(500)
+    expect(res.status).toBe(400)
     expect(dbMock.student.findMany).not.toHaveBeenCalled()
   })
 

@@ -102,6 +102,7 @@ export function usePayments(params?: { search?: string; status?: string; payment
           if (value !== undefined && value !== '') url.searchParams.append(key, value.toString());
         });
       }
+
       const res = await fetch(url.toString());
       if (!res.ok) {
         throw new Error('Failed to fetch payments');
@@ -109,6 +110,24 @@ export function usePayments(params?: { search?: string; status?: string; payment
       return res.json();
     },
   });
+}
+
+export function usePaymentStats(params?: { academicYearId?: string; startDate?: string; endDate?: string }) {
+  return useQuery({
+    queryKey: ['paymentStats', params],
+    queryFn: async () => {
+      const url = new URL('/api/payments', window.location.origin)
+      url.searchParams.set('stats', 'true')
+      if (params) {
+        Object.entries(params).forEach(([key, value]) => {
+          if (value) url.searchParams.set(key, value)
+        })
+      }
+      const response = await fetch(url.toString())
+      if (!response.ok) throw new Error('Impossible de charger les statistiques de paiement')
+      return response.json()
+    },
+  })
 }
 
 export function useHrStaff() {

@@ -229,7 +229,7 @@ function InstitutionHeader() {
                 Configuration de l&apos;institution
               </h1>
               <p className="text-sm text-white/70 mt-1">
-                Parametres et reglages de l&apos;etablissement
+                Paramètres et réglages de l&apos;établissement
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
@@ -237,7 +237,7 @@ function InstitutionHeader() {
                 <div className="p-2 rounded-lg bg-white/10"><GraduationCap className="size-5 text-white" /></div>
                 <div>
                   <p className="text-xl font-bold text-white">{facultiesCount}</p>
-                  <p className="text-[10px] text-white/70">Facultes</p>
+                  <p className="text-[10px] text-white/70">Facultés</p>
                 </div>
               </div>
               <div className="bg-white/10 backdrop-blur-sm border border-white/15 rounded-xl px-4 py-3 flex items-center gap-3">
@@ -263,7 +263,7 @@ function InstitutionHeader() {
       <div className="flex items-center gap-4">
         <div className="flex-1">
           <div className="flex items-center justify-between mb-1.5">
-            <span className="text-xs font-medium text-[var(--institution-primary)]">Configuration de l&apos;universite</span>
+            <span className="text-xs font-medium text-[var(--institution-primary)]">Configuration de l&apos;université</span>
             <span className="text-xs font-semibold text-[var(--institution-secondary)]">72%</span>
           </div>
           <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
@@ -460,7 +460,7 @@ function InformationsTab() {
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || "Echec de l'enregistrement")
-      toast.success('Informations enregistrees')
+      toast.success('Informations enregistrées')
       refetch()
     } catch (error) {
       toast.error('Erreur', { description: error instanceof Error ? error.message : "Echec de l'enregistrement" })
@@ -486,7 +486,7 @@ function InformationsTab() {
           <motion.div whileHover={{ scale: 1.01 }} transition={{ duration: 0.2 }}>
           <Card className="border-l-4 border-l-[var(--institution-secondary)]">
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Logo de l&apos;etablissement</CardTitle>
+              <CardTitle className="text-base">Logo de l&apos;établissement</CardTitle>
               <CardDescription>Logo officiel utilise sur les documents</CardDescription>
             </CardHeader>
             <CardContent>
@@ -601,7 +601,7 @@ function InformationsTab() {
           <Card className="border-l-4 border-l-[var(--institution-primary)]">
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Informations generales</CardTitle>
-              <CardDescription>Renseignez les informations officielles de l&apos;etablissement</CardDescription>
+              <CardDescription>Renseignez les informations officielles de l&apos;établissement</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -895,7 +895,7 @@ function StructureTab() {
         <Card>
           <CardContent className="p-4 text-center">
             <div className="text-2xl font-bold text-[var(--institution-secondary)]">{faculties.length}</div>
-            <div className="text-xs text-gray-500 mt-1">Facultes</div>
+            <div className="text-xs text-gray-500 mt-1">Facultés</div>
           </CardContent>
         </Card>
         <Card>
@@ -1039,7 +1039,7 @@ function StructureTab() {
             <div className="space-y-2">
               <Label className="text-sm">Faculte</Label>
               <Select value={departmentForm.facultyId} onValueChange={(v) => setDepartmentForm((f) => ({ ...f, facultyId: v }))}>
-                <SelectTrigger><SelectValue placeholder="Selectionner une faculte" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Sélectionner une faculté" /></SelectTrigger>
                 <SelectContent>
                   {rawFaculties.map((f) => (
                     <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
@@ -1115,7 +1115,7 @@ function AcademiqueTab() {
         const err = await res.json().catch(() => ({}))
         throw new Error(err.error || "Echec de la creation")
       }
-      toast.success('Annee academique creee')
+      toast.success('Année académique créée')
       queryClient.invalidateQueries({ queryKey: ['academicYears'] })
       setShowAddYear(false)
       setNewYearName('')
@@ -1137,7 +1137,7 @@ function AcademiqueTab() {
         body: JSON.stringify({ id }),
       })
       if (!res.ok) throw new Error("Echec de la mise a jour")
-      toast.success('Annee academique en cours mise a jour')
+      toast.success('Année académique en cours mise à jour')
       queryClient.invalidateQueries({ queryKey: ['academicYears'] })
       queryClient.invalidateQueries({ queryKey: ['dashboardStats'] })
     } catch (error) {
@@ -1176,7 +1176,7 @@ function AcademiqueTab() {
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || "Echec de l'enregistrement")
-      toast.success('Configuration academique enregistree')
+      toast.success('Configuration académique enregistrée')
       updateUser({ tenantAcademicSystem: system })
       refetch()
     } catch (error) {
@@ -1200,7 +1200,7 @@ function AcademiqueTab() {
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Systeme d&apos;enseignement</CardTitle>
-          <CardDescription>Choisissez le systeme academique de votre etablissement</CardDescription>
+          <CardDescription>Choisissez le système académique de votre établissement</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -1247,8 +1247,8 @@ function AcademiqueTab() {
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-base">Annees academiques</CardTitle>
-              <CardDescription>Gerez les annees academiques et definissez l&apos;annee en cours</CardDescription>
+              <CardTitle className="text-base">Années académiques</CardTitle>
+              <CardDescription>Gérez les années académiques et définissez l&apos;année en cours</CardDescription>
             </div>
             <Button variant="outline" size="sm" onClick={() => setShowAddYear(true)}>
               <Plus className="size-3 mr-1" />
@@ -1258,7 +1258,7 @@ function AcademiqueTab() {
         </CardHeader>
         <CardContent>
           {academicYears.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-4">Aucune annee academique configuree.</p>
+            <p className="text-sm text-gray-400 text-center py-4">Aucune année académique configurée.</p>
           ) : (
             <div className="space-y-2">
               {academicYears.map((year) => (
@@ -1304,7 +1304,7 @@ function AcademiqueTab() {
       <Dialog open={showAddYear} onOpenChange={setShowAddYear}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Ajouter une annee academique</DialogTitle>
+            <DialogTitle>Ajouter une année académique</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
@@ -1322,7 +1322,7 @@ function AcademiqueTab() {
               </div>
             </div>
             <Button className="w-full bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white" disabled={isSavingYear} onClick={handleAddYear}>
-              {isSavingYear ? 'Creation...' : "Creer l'annee academique"}
+              {isSavingYear ? 'Création…' : "Créer l’année académique"}
             </Button>
           </div>
         </DialogContent>
@@ -1351,7 +1351,7 @@ function AcademiqueTab() {
               </Select>
             </div>
             <div>
-              <Label>Credits par annee</Label>
+              <Label>Crédits par année</Label>
               <Select value={creditsYear} onValueChange={setCreditsYear}>
                 <SelectTrigger className="mt-1.5">
                   <SelectValue />
@@ -1464,7 +1464,7 @@ function DocumentsTab() {
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Types de documents generes</CardTitle>
-          <CardDescription>Chaque document est un vrai PDF, avec code de verification et QR code</CardDescription>
+          <CardDescription>Chaque document est un PDF vérifiable, muni d&apos;un code de contrôle et d&apos;un QR code.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -1472,7 +1472,7 @@ function DocumentsTab() {
               'Releve de notes',
               'Attestation',
               'Diplome',
-              'Recu de paiement',
+              'Reçu de paiement',
               'Proces-verbal',
             ].map((doc) => (
               <div
@@ -1587,7 +1587,7 @@ function ApparenceTab() {
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || "Echec de l'enregistrement")
-      toast.success('Couleurs enregistrees')
+      toast.success('Couleurs enregistrées')
       refetch()
       void queryClient.invalidateQueries({ queryKey: ['institution-theme'] })
     } catch (error) {
@@ -1804,20 +1804,20 @@ function AbonnementTab() {
     {
       id: 'STARTER',
       icon: Rocket,
-      description: 'Pour les petits etablissements',
+      description: 'Pour les petits établissements',
       features: ['Gestion LMD de base', 'Documents PDF avec QR code', 'Enregistrement des paiements'],
     },
     {
       id: 'PRO',
       icon: Star,
-      description: 'Pour les universites moyennes',
-      features: ['LMD + Classique + Sante', 'Facultes et departements illimites', 'Import/export en masse'],
+      description: 'Pour les universités moyennes',
+      features: ['LMD, classique et santé', 'Facultés et départements illimités', 'Import et export en masse'],
     },
     {
       id: 'ENTERPRISE',
       icon: Crown,
-      description: 'Pour les grandes universites',
-      features: ['Tous les systemes academiques', 'Personnalisation complete', 'Support dedie'],
+      description: 'Pour les grandes universités',
+      features: ['Tous les systèmes académiques', 'Personnalisation complète', 'Support dédié'],
     },
   ]
 
@@ -1862,7 +1862,7 @@ function AbonnementTab() {
       {/* Real usage stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: 'Etudiants', value: stats?.students ?? 0 },
+          { label: 'Étudiants', value: stats?.students ?? 0 },
           { label: 'Enseignants', value: stats?.teachers ?? 0 },
           { label: 'Personnel', value: stats?.staffUsers ?? 0 },
           { label: 'Documents generes', value: stats?.documentsGenerated ?? 0 },
@@ -1931,7 +1931,7 @@ export function InstitutionPage() {
             </TabsTrigger>
             <TabsTrigger value="academique" className="text-xs sm:text-sm data-[state=active]:bg-[var(--institution-primary)] data-[state=active]:text-white">
               <BookOpen className="size-3.5 mr-1.5" />
-              Academique
+              Académique
             </TabsTrigger>
             <TabsTrigger value="documents" className="text-xs sm:text-sm data-[state=active]:bg-[var(--institution-primary)] data-[state=active]:text-white">
               <FileText className="size-3.5 mr-1.5" />

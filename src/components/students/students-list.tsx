@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, useDeferredValue } from 'react'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
@@ -89,7 +89,7 @@ const statusConfig: Record<StudentStatus, { label: string; className: string }> 
   TRANSFERE: { label: 'Transféré', className: 'bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0 hover:bg-[var(--institution-primary-15)]' },
 }
 
-const ITEMS_PER_PAGE = 10
+const ITEMS_PER_PAGE = 20
 
 // ─── Animated Count-Up Hook ──────────────────────────────────────────────────
 
@@ -168,6 +168,7 @@ export function StudentsList() {
   const [niveauFilter, setNiveauFilter] = useState('all')
   const [statutFilter, setStatutFilter] = useState('all')
   const [currentPage, setCurrentPage] = useState(1)
+  const deferredSearch = useDeferredValue(search.trim())
 
   const [showCreate, setShowCreate] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
@@ -178,7 +179,15 @@ export function StudentsList() {
   const [form, setForm] = useState(emptyStudentForm)
   const [createdCredentials, setCreatedCredentials] = useState<{ matricule: string; login: string; pin: string; name: string } | null>(null)
 
-  const { data: studentsData, isLoading } = useStudents({ limit: 1000 })
+  const studentQuery = {
+    search: deferredSearch || undefined,
+    programId: filiereFilter === 'all' ? undefined : filiereFilter,
+    levelId: niveauFilter === 'all' ? undefined : niveauFilter,
+    status: statutFilter === 'all' ? undefined : statutFilter,
+    page: currentPage,
+    limit: ITEMS_PER_PAGE,
+  }
+  const { data: studentsData, isLoading } = useStudents(studentQuery)
   const { data: structureData } = useStructure() as { data: { faculties?: ApiFaculty[] } | undefined }
 
   const realPrograms: ApiProgram[] = useMemo(
@@ -359,13 +368,50 @@ export function StudentsList() {
     }
   }
 
+  const fetchStudentsForExport = async () => {
+    const total = studentsData?.pagination?.total ?? 0
+    if (total === 0) return []
+    if (total > 1000) {
+      throw new Error('Affinez les filtres avant l’export : 1 000 étudiants maximum par fichier.')
+    }
+    const params = new URLSearchParams({ limit: String(total), page: '1' })
+    if (deferredSearch) params.set('search', deferredSearch)
+    if (filiereFilter !== 'all') params.set('programId', filiereFilter)
+    if (niveauFilter !== 'all') params.set('levelId', niveauFilter)
+    if (statutFilter !== 'all') params.set('status', statutFilter)
+    const response = await fetch(`/api/students?${params.toString()}`)
+    const body = await response.json().catch(() => ({}))
+    if (!response.ok) throw new Error(body.error || 'Chargement de l’export impossible')
+    return (body.data ?? []) as Array<{ id: string } & Record<string, unknown>>
+  }
+
+  const handleExportExcel = async () => {
+    try {
+      const students = await fetchStudentsForExport()
+      if (students.length === 0) return
+      await exportToExcel(students.map((student) => ({
+        Matricule: student.matricule || '',
+        Nom: student.lastName || '',
+        Prénom: student.firstName || '',
+        Filière: (student.currentProgram as { name?: string } | null)?.name || '',
+        Niveau: (student.currentLevel as { name?: string } | null)?.name || '',
+        Statut: statusConfig[(student.status || 'PRE_INSCRIT') as StudentStatus]?.label || student.status || '',
+        Email: student.email || '',
+        Téléphone: student.phone || '',
+      })), 'liste_etudiants')
+    } catch (error) {
+      toast.error('Export Excel impossible', { description: error instanceof Error ? error.message : 'Veuillez réessayer.' })
+    }
+  }
+
   const handleExportPDF = async () => {
-    if (filteredStudents.length === 0) return
+    if ((studentsData?.pagination?.total ?? 0) === 0) return
     setIsExportingPDF(true)
     try {
+      const students = await fetchStudentsForExport()
       const response = await fetch('/api/students/export-pdf', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ studentIds: filteredStudents.map((student: StudentRow) => student.id) }),
+        body: JSON.stringify({ studentIds: students.map((student) => student.id) }),
       })
       if (!response.ok) {
         const problem = await response.json().catch(() => ({}))
@@ -431,27 +477,15 @@ export function StudentsList() {
     })
   }, [studentsData])
 
-  const filieres = Array.from(new Set<string>(realStudents.map((s: StudentRow) => s.filiere))).sort()
-  const niveaux = Array.from(new Set<string>(realStudents.map((s: StudentRow) => s.niveau))).sort()
+  const filterLevels = realPrograms
+    .filter((program) => filiereFilter === 'all' || program.id === filiereFilter)
+    .flatMap((program) => program.levels)
+    .filter((level, index, levels) => levels.findIndex((candidate) => candidate.id === level.id) === index)
 
-  const filteredStudents = realStudents.filter((s: StudentRow) => {
-    const matchSearch =
-      search === '' ||
-      s.nom.toLowerCase().includes(search.toLowerCase()) ||
-      s.prenom.toLowerCase().includes(search.toLowerCase()) ||
-      s.matricule.toLowerCase().includes(search.toLowerCase())
-    const matchFiliere = filiereFilter === 'all' || s.filiere === filiereFilter
-    const matchNiveau = niveauFilter === 'all' || s.niveau === niveauFilter
-    const matchStatut = statutFilter === 'all' || s.statut === statutFilter
-    return matchSearch && matchFiliere && matchNiveau && matchStatut
-  })
-
-  const totalPages = Math.ceil(filteredStudents.length / ITEMS_PER_PAGE)
+  const filteredStudents = realStudents
+  const totalPages = studentsData?.pagination?.totalPages ?? 0
   const safeTotalPages = Math.max(1, totalPages)
-  const paginatedStudents = filteredStudents.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
-  )
+  const paginatedStudents = filteredStudents
 
   const handleRowClick = (studentId: string) => {
     selectStudent(studentId)
@@ -459,12 +493,10 @@ export function StudentsList() {
   }
 
   // ─── Computed Stats ─────────────────────────────────────────────────────
-  const totalStudents = filteredStudents.length
-  const maleCount = filteredStudents.filter((s: StudentRow) => s.sexe === 'M').length
-  const femaleCount = filteredStudents.filter((s: StudentRow) => s.sexe === 'F').length
-  const averageAge = filteredStudents.length > 0
-    ? Math.round(filteredStudents.reduce((acc: number, s: StudentRow) => acc + s.age, 0) / filteredStudents.length)
-    : 0
+  const totalStudents = studentsData?.stats?.total ?? studentsData?.pagination?.total ?? 0
+  const maleCount = studentsData?.stats?.maleCount ?? 0
+  const femaleCount = studentsData?.stats?.femaleCount ?? 0
+  const preRegisteredCount = studentsData?.stats?.preRegisteredCount ?? 0
 
   // Stagger animation variants for table rows
   const rowVariants = {
@@ -498,7 +530,7 @@ export function StudentsList() {
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.4, delay: 0.1 }}
               >
-                {filteredStudents.length} étudiants trouvés
+                {totalStudents} étudiant{totalStudents > 1 ? 's' : ''} trouvé{totalStudents > 1 ? 's' : ''}
               </motion.p>
             </div>
             <div className="flex items-center gap-2">
@@ -515,12 +547,12 @@ export function StudentsList() {
                 variant="outline"
                 size="sm"
                 className="text-xs bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"
-                onClick={() => exportToExcel(filteredStudents, 'liste_etudiants')}
+                onClick={() => void handleExportExcel()}
               >
                 <FileSpreadsheet className="size-3.5 mr-1.5" />
                 Excel
               </Button>
-              <Button variant="outline" size="sm" className="text-xs bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white" onClick={() => void handleExportPDF()} disabled={isExportingPDF || filteredStudents.length === 0}>
+              <Button variant="outline" size="sm" className="text-xs bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white" onClick={() => void handleExportPDF()} disabled={isExportingPDF || totalStudents === 0}>
                 <FileText className="size-3.5 mr-1.5" />
                 {isExportingPDF ? 'Préparation…' : 'PDF'}
               </Button>
@@ -545,7 +577,7 @@ export function StudentsList() {
               <StatIndicator value={totalStudents} label="Total étudiants" icon={Users} color="var(--institution-primary)" />
               <StatIndicator value={maleCount} label="Hommes" icon={UserCheck} color="var(--institution-secondary)" />
               <StatIndicator value={femaleCount} label="Femmes" icon={UserCheck} color="var(--institution-accent)" />
-              <StatIndicator value={averageAge} label="Age moyen" icon={Calendar} color="var(--institution-primary)" />
+              <StatIndicator value={preRegisteredCount} label="Pré-inscrits" icon={Calendar} color="var(--institution-primary)" />
             </div>
           </CardContent>
         </Card>
@@ -564,14 +596,14 @@ export function StudentsList() {
                 onChange={(e) => { setSearch(e.target.value); setCurrentPage(1) }}
               />
             </div>
-            <Select value={filiereFilter} onValueChange={(v) => { setFiliereFilter(v); setCurrentPage(1) }}>
+            <Select value={filiereFilter} onValueChange={(v) => { setFiliereFilter(v); setNiveauFilter('all'); setCurrentPage(1) }}>
               <SelectTrigger className="h-9 text-sm">
                 <SelectValue placeholder="Filière" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Toutes les filieres</SelectItem>
-                {filieres.map((f) => (
-                  <SelectItem key={f} value={f}>{f}</SelectItem>
+                <SelectItem value="all">Toutes les filières</SelectItem>
+                {realPrograms.map((program) => (
+                  <SelectItem key={program.id} value={program.id}>{program.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -581,8 +613,8 @@ export function StudentsList() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tous les niveaux</SelectItem>
-                {niveaux.map((n) => (
-                  <SelectItem key={n} value={n}>{n}</SelectItem>
+                {filterLevels.map((level) => (
+                  <SelectItem key={level.id} value={level.id}>{level.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -706,7 +738,7 @@ export function StudentsList() {
           {/* Pagination */}
           <div className="flex items-center justify-between px-6 py-3 border-t border-gray-100">
             <p className="text-xs text-gray-500">
-              Affichage {(currentPage - 1) * ITEMS_PER_PAGE + 1}-{Math.min(currentPage * ITEMS_PER_PAGE, filteredStudents.length)} sur {filteredStudents.length}
+              Affichage {totalStudents === 0 ? 0 : (currentPage - 1) * ITEMS_PER_PAGE + 1}-{Math.min(currentPage * ITEMS_PER_PAGE, totalStudents)} sur {totalStudents}
             </p>
             <div className="flex items-center gap-1">
               <Button
@@ -718,9 +750,12 @@ export function StudentsList() {
               >
                 <ChevronLeft className="size-3.5" />
               </Button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter((page) => page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1)
+                .map((page, index, visiblePages) => (
+                <span key={page} className="contents">
+                  {index > 0 && page - visiblePages[index - 1] > 1 ? <span className="px-1 text-xs text-gray-400">…</span> : null}
                 <Button
-                  key={page}
                   variant={page === currentPage ? 'default' : 'outline'}
                   size="sm"
                   className={`h-8 w-8 p-0 text-xs ${page === currentPage ? 'bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)]' : ''}`}
@@ -728,6 +763,7 @@ export function StudentsList() {
                 >
                   {page}
                 </Button>
+                </span>
               ))}
               <Button
                 variant="outline"

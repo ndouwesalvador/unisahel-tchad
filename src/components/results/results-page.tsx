@@ -365,11 +365,11 @@ export function ResultsPage() {
           <div className="relative z-10 px-6 py-8">
             <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
               <div>
-                <h1 className="text-2xl font-bold text-white">Gestion des Resultats Academiques</h1>
+                <h1 className="text-2xl font-bold text-white">Gestion des résultats académiques</h1>
                 <p className="text-sm text-white/70 mt-1">Publication, relevés et suivi de la progression des étudiants</p>
               </div>
               <div className="flex flex-wrap gap-3">
-                <AnimatedStat value={results.length} label="Resultats publies" icon={FileText} />
+                <AnimatedStat value={results.length} label="Résultats publiés" icon={FileText} />
                 <AnimatedStat value={results.length > 0 ? Math.round((sessionStats.admis / results.length) * 100) : 0} label="Taux reussite %" icon={TrendingUp} />
               </div>
             </div>
@@ -412,7 +412,7 @@ export function ResultsPage() {
             <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 bg-gray-100 h-auto p-1">
               <TabsTrigger value="session-results" className="text-xs data-[state=active]:bg-[var(--institution-primary)] data-[state=active]:text-white">
                 <BookOpen className="size-3.5 mr-1.5" />
-                Resultats par Session
+                Résultats par session
               </TabsTrigger>
               <TabsTrigger value="transcripts" className="text-xs data-[state=active]:bg-[var(--institution-primary)] data-[state=active]:text-white">
                 <FileText className="size-3.5 mr-1.5" />
@@ -420,7 +420,7 @@ export function ResultsPage() {
               </TabsTrigger>
               <TabsTrigger value="progression" className="text-xs data-[state=active]:bg-[var(--institution-primary)] data-[state=active]:text-white">
                 <TrendingUp className="size-3.5 mr-1.5" />
-                Progression Academique
+                Progression académique
               </TabsTrigger>
               <TabsTrigger value="statistics" className="text-xs data-[state=active]:bg-[var(--institution-primary)] data-[state=active]:text-white">
                 <BarChart3 className="size-3.5 mr-1.5" />
@@ -947,7 +947,7 @@ export function ResultsPage() {
                   <CardHeader className="pb-3">
                     <div className="flex items-center gap-2">
                       <Award className="size-4 text-[var(--institution-accent)]" />
-                      <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Repartition par mention</CardTitle>
+                      <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Répartition par mention</CardTitle>
                     </div>
                   </CardHeader>
                   <CardContent className="p-4 pt-0">

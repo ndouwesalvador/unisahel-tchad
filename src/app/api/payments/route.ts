@@ -16,7 +16,7 @@ async function getPaymentsHandler(user: SessionUser, tenantId: string, request: 
     if (ownStudentId && validatedQuery.studentId && validatedQuery.studentId !== ownStudentId) {
       return NextResponse.json({ error: 'FORBIDDEN', message: 'Accès refusé' }, { status: 403 })
     }
-    const { academicYearId, status, paymentMethod, startDate, endDate, page, limit } = validatedQuery
+    const { search, academicYearId, status, paymentMethod, startDate, endDate, page, limit } = validatedQuery
     const studentId = ownStudentId ?? validatedQuery.studentId
     const skip = (page - 1) * limit
 
@@ -26,6 +26,16 @@ async function getPaymentsHandler(user: SessionUser, tenantId: string, request: 
 
     if (studentId) {
       where.studentId = studentId
+    }
+
+    if (search) {
+      where.OR = [
+        { receiptNumber: { contains: search, mode: 'insensitive' } },
+        { transactionRef: { contains: search, mode: 'insensitive' } },
+        { student: { firstName: { contains: search, mode: 'insensitive' } } },
+        { student: { lastName: { contains: search, mode: 'insensitive' } } },
+        { student: { matricule: { contains: search, mode: 'insensitive' } } },
+      ]
     }
 
     if (academicYearId) {
@@ -84,6 +94,12 @@ async function getPaymentsHandler(user: SessionUser, tenantId: string, request: 
     })
   } catch (error) {
     console.error('Payments API error:', error)
+    if (error instanceof Error && error.name === 'ZodError') {
+      return NextResponse.json(
+        { error: 'Paramètres de recherche invalides', details: formatZodError(error as Parameters<typeof formatZodError>[0]) },
+        { status: 400 },
+      )
+    }
     return NextResponse.json(
       {
         error: 'Failed to fetch payments',
@@ -136,7 +152,10 @@ async function createPaymentHandler(user: SessionUser, tenantId: string, request
       const year = new Date().getFullYear()
       const count = await db.payment.count({ where: { tenantId } })
       const seq = String(count + 1).padStart(6, '0')
-      receiptNumber = `${prefix}-${year}-${seq}`
+      // The short random suffix prevents duplicate receipt numbers when two
+      // cashiers validate payments at the same time on separate Vercel instances.
+      const nonce = crypto.randomUUID().slice(0, 6).toUpperCase()
+      receiptNumber = `${prefix}-${year}-${seq}-${nonce}`
     }
 
     // Check receipt number uniqueness
@@ -457,13 +476,27 @@ async function getPaymentStatsHandler(user: SessionUser, tenantId: string, reque
       if (endDate) where.createdAt.lte = new Date(endDate)
     }
 
-    const [totalAmount, validatedAmount, pendingAmount, cancelledAmount, countByStatus, countByMethod] = await Promise.all([
+    const now = new Date()
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    const yesterday = new Date(today)
+    yesterday.setDate(yesterday.getDate() - 1)
+    const monthStarts = Array.from({ length: 7 }, (_, index) => new Date(now.getFullYear(), now.getMonth() - (5 - index), 1))
+
+    const [totalAmount, validatedAmount, pendingAmount, cancelledAmount, countByStatus, countByMethod, todayAmount, yesterdayAmount, ...monthlyAmounts] = await Promise.all([
       db.payment.aggregate({ where, _sum: { amount: true } }),
       db.payment.aggregate({ where: { ...where, status: 'VALIDATED' }, _sum: { amount: true } }),
       db.payment.aggregate({ where: { ...where, status: 'PENDING' }, _sum: { amount: true } }),
       db.payment.aggregate({ where: { ...where, status: 'CANCELLED' }, _sum: { amount: true } }),
       db.payment.groupBy({ by: ['status'], where, _count: { id: true }, _sum: { amount: true } }),
-      db.payment.groupBy({ by: ['paymentMethod'], where, _count: { id: true }, _sum: { amount: true } }),
+      db.payment.groupBy({ by: ['paymentMethod'], where: { ...where, status: 'VALIDATED' }, _count: { id: true }, _sum: { amount: true } }),
+      db.payment.aggregate({ where: { ...where, status: 'VALIDATED', createdAt: { gte: today, lt: tomorrow } }, _sum: { amount: true } }),
+      db.payment.aggregate({ where: { ...where, status: 'VALIDATED', createdAt: { gte: yesterday, lt: today } }, _sum: { amount: true } }),
+      ...monthStarts.slice(0, 6).map((start, index) => db.payment.aggregate({
+        where: { ...where, status: 'VALIDATED', createdAt: { gte: start, lt: monthStarts[index + 1] } },
+        _sum: { amount: true },
+      })),
     ])
 
     const recentPayments = await db.payment.findMany({
@@ -492,6 +525,12 @@ async function getPaymentStatsHandler(user: SessionUser, tenantId: string, reque
           method: m.paymentMethod,
           count: m._count.id,
           amount: m._sum.amount || 0,
+        })),
+        todayAmount: todayAmount._sum.amount || 0,
+        yesterdayAmount: yesterdayAmount._sum.amount || 0,
+        monthlyRevenue: monthlyAmounts.map((amount, index) => ({
+          month: monthStarts[index].toLocaleDateString('fr-FR', { month: 'short' }).replace('.', ''),
+          value: amount._sum.amount || 0,
         })),
         recentPayments,
       },

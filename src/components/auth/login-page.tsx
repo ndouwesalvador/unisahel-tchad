@@ -12,60 +12,12 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import {
-  Shield,
   ArrowLeft,
   Mail,
   Lock,
-  User,
   GraduationCap,
-  Settings,
-  BookOpen,
   ShieldCheck,
 } from 'lucide-react'
-
-type DemoRole = {
-  label: string
-  role: 'SUPER_ADMIN' | 'ADMIN_INSTITUTION' | 'ENSEIGNANT' | 'SCOLARITE'
-  email: string
-  firstName: string
-  lastName: string
-  icon: React.ElementType
-}
-
-const demoRoles: DemoRole[] = [
-  {
-    label: 'Super Admin',
-    role: 'SUPER_ADMIN',
-    email: 'admin@unisahel.africa',
-    firstName: 'Super',
-    lastName: 'Admin',
-    icon: Settings,
-  },
-  {
-    label: 'Admin Institution',
-    role: 'ADMIN_INSTITUTION',
-    email: 'admin@unive-ndjamena.td',
-    firstName: 'Admin',
-    lastName: 'Principal',
-    icon: Shield,
-  },
-  {
-    label: 'Enseignant',
-    role: 'ENSEIGNANT',
-    email: 'prof@unive-ndjamena.td',
-    firstName: 'Moussa',
-    lastName: 'Hissein',
-    icon: BookOpen,
-  },
-  {
-    label: 'Scolarite',
-    role: 'SCOLARITE',
-    email: 'scolarite@unive-ndjamena.td',
-    firstName: 'Fatime',
-    lastName: 'Abakar',
-    icon: User,
-  },
-]
 
 function FloatingShape({
   className,
@@ -109,32 +61,6 @@ export function LoginPage() {
   // second /api/auth/session request before redirecting.
   const syncSessionAndRedirect = () => {
     window.location.href = callbackUrl
-  }
-
-  const handleDemoLogin = async (demo: DemoRole) => {
-    setEmail(demo.email)
-    setPassword('password123')
-    setIsLoading(true)
-
-    try {
-      const result = await signIn('credentials', {
-        email: demo.email,
-        password: 'password123',
-        redirect: false,
-        callbackUrl,
-      })
-
-      if (result?.error) {
-        toast.error('Échec de la connexion', { description: result.error })
-      } else {
-        toast.success('Connexion réussie')
-        await syncSessionAndRedirect()
-      }
-    } catch {
-      toast.error('Erreur de connexion', { description: 'Veuillez réessayer' })
-    } finally {
-      setIsLoading(false)
-    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -250,7 +176,7 @@ export function LoginPage() {
               </div>
               <CardTitle className="text-xl font-bold text-[var(--institution-primary)]">Connexion</CardTitle>
               <CardDescription className="text-gray-500">
-                Accedez a votre espace de gestion universitaire
+                Accédez à votre espace de gestion universitaire
               </CardDescription>
             </CardHeader>
 
@@ -281,10 +207,10 @@ export function LoginPage() {
                     </Label>
                     <button
                       type="button"
-                      onClick={() => toast.info('Fonctionnalite de reinitialisation disponible en version complete')}
+                      onClick={() => toast.info('Réinitialisation indisponible', { description: 'Contactez l’administrateur de votre institution.' })}
                       className="text-xs text-[var(--institution-secondary)] hover:text-[var(--institution-secondary-dark)] font-medium"
                     >
-                      Mot de passe oublie ?
+                      Mot de passe oublié ?
                     </button>
                   </div>
                   <div className="relative">
@@ -335,37 +261,10 @@ export function LoginPage() {
                   onClick={() => setView('signup')}
                   className="text-[var(--institution-secondary)] font-medium hover:underline"
                 >
-                  Creer un compte
+                  Créer un compte
                 </button>
               </p>
 
-              {process.env.NODE_ENV !== 'production' && (
-                <div className="mt-6 p-4 rounded-xl bg-gray-50 border border-gray-100">
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
-                    Mode demonstration (dev uniquement)
-                  </p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {demoRoles.map((demo) => (
-                      <motion.div
-                        key={demo.role}
-                        whileHover={{ scale: 1.03 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="justify-start text-xs h-9 border-gray-200 hover:border-l-2 hover:border-l-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-08)] transition-all duration-200 w-full"
-                          onClick={() => handleDemoLogin(demo)}
-                          disabled={isLoading}
-                        >
-                          <demo.icon className="size-3.5 mr-1.5 text-[var(--institution-secondary)]" />
-                          {demo.label}
-                        </Button>
-                      </motion.div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </CardContent>
           </Card>
         </div>

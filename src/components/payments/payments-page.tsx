@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, useDeferredValue } from 'react'
 import { toast } from 'sonner'
 import { motion } from 'framer-motion'
 import { useQueryClient } from '@tanstack/react-query'
-import { usePayments, useStudents, useDashboardStats } from '@/lib/api-hooks'
+import { usePayments, usePaymentStats, useStudents, useDashboardStats } from '@/lib/api-hooks'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -42,16 +42,14 @@ import {
   Smartphone,
   Banknote,
   Building,
-  ArrowUpRight,
-  ArrowDownRight,
   Printer,
   RefreshCw,
   Wallet,
   Zap,
   CalendarDays,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react'
-
-// ─── Demo Data ────────────────────────────────────────────────────────────────
 
 interface Payment {
   id: string
@@ -66,13 +64,13 @@ interface Payment {
 }
 
 const statutConfig: Record<string, { label: string; className: string }> = {
-  paye: { label: 'Paye', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0' },
+  paye: { label: 'Payé', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0' },
   en_attente: { label: 'En attente', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0' },
-  annule: { label: 'Annule', className: 'bg-[#c6282815] text-[#c62828] border-0' },
+  annule: { label: 'Annulé', className: 'bg-[#c6282815] text-[#c62828] border-0' },
 }
 
 const methodeLabels: Record<string, { label: string; icon: React.ElementType }> = {
-  cash: { label: 'Especes', icon: Banknote },
+  cash: { label: 'Espèces', icon: Banknote },
   mobile_money: { label: 'Mobile Money', icon: Smartphone },
   bank: { label: 'Virement', icon: Building },
 }
@@ -85,7 +83,8 @@ const mobileMoneyOperators = [
   { name: 'MTN Mobile Money', color: '#FFCC00' },
 ]
 
-const MONTH_LABELS_FR = ['Jan', 'Fev', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aou', 'Sep', 'Oct', 'Nov', 'Dec']
+const MONTH_LABELS_FR = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc']
+const ITEMS_PER_PAGE = 20
 
 function formatFCFA(amount: number) {
   return amount.toLocaleString('fr-FR') + ' FCFA'
@@ -132,6 +131,8 @@ function useCountUp(target: number, duration: number = 1400) {
 
 export function PaymentsPage() {
   const [search, setSearch] = useState('')
+  const deferredSearch = useDeferredValue(search.trim())
+  const [currentPage, setCurrentPage] = useState(1)
   const [showNewPayment, setShowNewPayment] = useState(false)
   const [statusFilter, setStatusFilter] = useState('tous')
   const [methodeFilter, setMethodeFilter] = useState('tous')
@@ -141,7 +142,16 @@ export function PaymentsPage() {
   const [remindingId, setRemindingId] = useState<string | null>(null)
 
   const queryClient = useQueryClient()
-  const { data: paymentsData } = usePayments({ limit: 1000 })
+  const statusApiMap: Record<string, string> = { paye: 'VALIDATED', en_attente: 'PENDING', annule: 'CANCELLED' }
+  const methodApiMap: Record<string, string> = { cash: 'CASH', mobile_money: 'MOBILE_MONEY', bank: 'BANK_TRANSFER' }
+  const { data: paymentsData, isLoading: paymentsLoading } = usePayments({
+    search: deferredSearch || undefined,
+    status: statusFilter === 'tous' ? undefined : statusApiMap[statusFilter],
+    paymentMethod: methodeFilter === 'tous' ? undefined : methodApiMap[methodeFilter],
+    page: currentPage,
+    limit: ITEMS_PER_PAGE,
+  })
+  const { data: paymentStatsData } = usePaymentStats()
   const { data: studentMatches } = useStudents({ search: studentSearch, limit: 6 })
   const showStudentDropdown = showNewPayment && studentSearch.length >= 2 && !newPayment.studentId
   const { data: dashboardData } = useDashboardStats() as { data: { currentAcademicYear?: { id: string } } | undefined }
@@ -174,52 +184,32 @@ export function PaymentsPage() {
     })
   }, [paymentsData])
 
-  const totalEncaisse = realPayments.filter((p: Payment) => p.statut === 'paye').reduce((acc: number, p: Payment) => acc + p.montant, 0)
-  const totalEnAttente = realPayments.filter((p: Payment) => p.statut === 'en_attente').reduce((acc: number, p: Payment) => acc + p.montant, 0)
-  const totalAnnule = realPayments.filter((p: Payment) => p.statut === 'annule').reduce((acc: number, p: Payment) => acc + p.montant, 0)
-  const totalMobileMoney = realPayments.filter((p: Payment) => p.statut === 'paye' && p.methode === 'mobile_money').reduce((acc: number, p: Payment) => acc + p.montant, 0)
-  const totalCash = realPayments.filter((p: Payment) => p.statut === 'paye' && p.methode === 'cash').reduce((acc: number, p: Payment) => acc + p.montant, 0)
+  const paymentStats = paymentStatsData?.data
+  const statusStats = Object.fromEntries((paymentStats?.byStatus ?? []).map((item: { status: string; count: number; amount: number }) => [item.status, item]))
+  const methodStats = Object.fromEntries((paymentStats?.byMethod ?? []).map((item: { method: string; count: number; amount: number }) => [item.method, item]))
+  const totalEncaisse = paymentStats?.summary?.validatedAmount ?? 0
+  const totalEnAttente = paymentStats?.summary?.pendingAmount ?? 0
+  const totalAnnule = paymentStats?.summary?.cancelledAmount ?? 0
+  const totalMobileMoney = methodStats.MOBILE_MONEY?.amount ?? 0
+  const totalCash = methodStats.CASH?.amount ?? 0
+  const totalBank = methodStats.BANK_TRANSFER?.amount ?? 0
 
   const mobileMoneyPercent = totalEncaisse > 0 ? Math.round((totalMobileMoney / totalEncaisse) * 100) : 0
   const cashPercent = totalEncaisse > 0 ? Math.round((totalCash / totalEncaisse) * 100) : 0
-  const bankPercent = totalEncaisse > 0 ? 100 - mobileMoneyPercent - cashPercent : 0
-  const totalAttendu = totalEncaisse + totalEnAttente + totalAnnule
+  const bankPercent = totalEncaisse > 0 ? Math.round((totalBank / totalEncaisse) * 100) : 0
+  const totalAttendu = totalEncaisse + totalEnAttente
   const tauxRecouvrement = totalAttendu > 0 ? ((totalEncaisse / totalAttendu) * 100).toFixed(1) : '0.0'
 
-  const revenueDuJour = realPayments.filter((p: Payment) => p.statut === 'paye').slice(0, 3).reduce((acc: number, p: Payment) => acc + p.montant, 0)
+  const revenueDuJour = paymentStats?.todayAmount ?? 0
 
   // Real 6-month revenue trend from actual validated payments, not a fixed demo array
-  const revenueData = useMemo(() => {
-    const now = new Date()
-    const buckets: { key: string; month: string; value: number }[] = []
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
-      buckets.push({ key: `${d.getFullYear()}-${d.getMonth()}`, month: MONTH_LABELS_FR[d.getMonth()], value: 0 })
-    }
-    const byKey = new Map(buckets.map((b) => [b.key, b]))
-    for (const p of paymentsData?.data ?? []) {
-      if (p.status !== 'VALIDATED') continue
-      const d = new Date(p.createdAt)
-      const key = `${d.getFullYear()}-${d.getMonth()}`
-      const bucket = byKey.get(key)
-      if (bucket) bucket.value += p.amount
-    }
-    return buckets.map((b) => ({ month: b.month, value: b.value }))
-  }, [paymentsData])
+  const revenueData: Array<{ month: string; value: number }> = paymentStats?.monthlyRevenue ?? MONTH_LABELS_FR.slice(0, 6).map((month) => ({ month, value: 0 }))
   const revenueDuMois = revenueData[revenueData.length - 1]?.value ?? 0
 
   const animatedJour = useCountUp(revenueDuJour, 1600)
   const animatedMois = useCountUp(revenueDuMois, 1800)
 
-  const filteredPayments = realPayments.filter((p: Payment) => {
-    const matchSearch = search === '' ||
-      p.etudiant.toLowerCase().includes(search.toLowerCase()) ||
-      p.matricule.toLowerCase().includes(search.toLowerCase()) ||
-      p.reference.toLowerCase().includes(search.toLowerCase())
-    const matchStatus = statusFilter === 'tous' || p.statut === statusFilter
-    const matchMethode = methodeFilter === 'tous' || p.methode === methodeFilter
-    return matchSearch && matchStatus && matchMethode
-  })
+  const filteredPayments = realPayments
 
   // Recent 3 payments for ticker
   const recentPayments = realPayments
@@ -228,7 +218,13 @@ export function PaymentsPage() {
 
   const maxRevenue = Math.max(...revenueData.map(r => r.value), 1)
 
-  const methodApiMap: Record<string, string> = { cash: 'CASH', mobile_money: 'MOBILE_MONEY', bank: 'BANK_TRANSFER' }
+  const totalResults = paymentsData?.pagination?.total ?? 0
+  const totalPages = paymentsData?.pagination?.totalPages ?? 0
+  const safeTotalPages = Math.max(1, totalPages)
+  const yesterdayRevenue = paymentStats?.yesterdayAmount ?? 0
+  const previousMonthRevenue = revenueData.at(-2)?.value ?? 0
+  const dayTrend = yesterdayRevenue > 0 ? ((revenueDuJour - yesterdayRevenue) / yesterdayRevenue) * 100 : null
+  const monthTrend = previousMonthRevenue > 0 ? ((revenueDuMois - previousMonthRevenue) / previousMonthRevenue) * 100 : null
 
   const openMobileMoneyPaymentForm = () => {
     setNewPayment((payment) => ({ ...payment, methode: 'mobile_money' }))
@@ -237,11 +233,11 @@ export function PaymentsPage() {
 
   const handleCreatePayment = async () => {
     if (!newPayment.studentId || !newPayment.montant || !newPayment.methode) {
-      toast.error('Champs requis', { description: 'Etudiant, montant et methode sont obligatoires' })
+      toast.error('Champs requis', { description: 'L’étudiant, le montant et la méthode sont obligatoires.' })
       return
     }
     if (!currentAcademicYearId) {
-      toast.error('Aucune annee academique active', { description: "Configurez une annee academique active dans Structure avant d'enregistrer un paiement." })
+      toast.error('Aucune année académique active', { description: 'Configurez une année académique active dans Structure avant d’enregistrer un paiement.' })
       return
     }
     setIsSubmittingPayment(true)
@@ -260,16 +256,16 @@ export function PaymentsPage() {
         }),
       })
       const json = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(json.error || "Echec de l'enregistrement")
-      toast.success('Paiement enregistre', {
-        description: `Recu ${json.data?.receiptNumber ?? ''} - ${formatFCFA(Number(newPayment.montant))}`,
+      if (!res.ok) throw new Error(json.error || "Échec de l’enregistrement")
+      toast.success('Paiement enregistré', {
+        description: `Reçu ${json.data?.receiptNumber ?? ''} : ${formatFCFA(Number(newPayment.montant))}`,
       })
       queryClient.invalidateQueries({ queryKey: ['payments'] })
       setShowNewPayment(false)
       setNewPayment({ studentId: '', studentLabel: '', montant: '', description: '', methode: '', reference: '' })
       setStudentSearch('')
     } catch (e) {
-      toast.error('Erreur', { description: e instanceof Error ? e.message : "Echec de l'enregistrement" })
+      toast.error('Erreur', { description: e instanceof Error ? e.message : "Échec de l’enregistrement" })
     } finally {
       setIsSubmittingPayment(false)
     }
@@ -279,7 +275,7 @@ export function PaymentsPage() {
     try {
       const res = await fetch(`/api/payments?receipt=true&id=${paymentId}`)
       const json = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(json.error || 'Recu introuvable')
+      if (!res.ok) throw new Error(json.error || 'Reçu introuvable')
       const { payment, tenant } = json.data
       const win = window.open('', '_blank', 'width=700,height=900')
       if (!win) {
@@ -289,7 +285,7 @@ export function PaymentsPage() {
       const student = payment.student
       const receiptColor = getComputedStyle(document.documentElement).getPropertyValue('--institution-primary').trim()
       win.document.write(`
-        <html><head><title>Recu ${payment.receiptNumber || payment.id}</title>
+        <html><head><title>Reçu ${payment.receiptNumber || payment.id}</title>
         <style>
           :root { --institution-primary: ${/^#[0-9a-fA-F]{6}$/.test(receiptColor) ? receiptColor : '#1a2744'}; }
           body { font-family: Arial, sans-serif; padding: 40px; color: var(--institution-primary); }
@@ -301,12 +297,12 @@ export function PaymentsPage() {
           .total { font-size: 20px; font-weight: bold; margin-top: 24px; }
         </style></head><body>
         <h1>${tenant?.name || 'Institution'}</h1>
-        <p class="muted">Recu de paiement ${payment.receiptNumber || ''}</p>
+        <p class="muted">Reçu de paiement ${payment.receiptNumber || ''}</p>
         <table>
           <tr><td>Etudiant</td><td>${student.firstName} ${student.lastName} (${student.matricule || '-'})</td></tr>
           <tr><td>Programme</td><td>${student.currentProgram?.name || '-'}</td></tr>
-          <tr><td>Methode</td><td>${payment.paymentMethod}</td></tr>
-          <tr><td>Reference</td><td>${payment.transactionRef || '-'}</td></tr>
+          <tr><td>Méthode</td><td>${payment.paymentMethod}</td></tr>
+          <tr><td>Référence</td><td>${payment.transactionRef || '-'}</td></tr>
           <tr><td>Statut</td><td>${payment.status}</td></tr>
           <tr><td>Date</td><td>${new Date(payment.createdAt).toLocaleDateString('fr-FR')}</td></tr>
         </table>
@@ -316,7 +312,7 @@ export function PaymentsPage() {
       `)
       win.document.close()
     } catch (e) {
-      toast.error('Erreur', { description: e instanceof Error ? e.message : 'Recu introuvable' })
+      toast.error('Erreur', { description: e instanceof Error ? e.message : 'Reçu introuvable' })
     }
   }
 
@@ -330,10 +326,10 @@ export function PaymentsPage() {
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(json.error || 'Echec de la relance')
-      toast.success('Relance envoyee', {
+      toast.success('Relance envoyée', {
         description: json.emailSent
-          ? `Email envoye a ${studentName}`
-          : `Notification creee pour ${studentName} (email non configure)`,
+          ? `E-mail envoyé à ${studentName}`
+          : `Notification créée pour ${studentName} (e-mail non configuré)`,
       })
     } catch (e) {
       toast.error('Erreur', { description: e instanceof Error ? e.message : 'Echec de la relance' })
@@ -438,23 +434,23 @@ export function PaymentsPage() {
                       </div>
                       <div className="space-y-2">
                         <Label className="text-sm">Description</Label>
-                        <Input placeholder="Frais de scolarite S1" value={newPayment.description} onChange={(e) => setNewPayment(p => ({ ...p, description: e.target.value }))} />
+                        <Input placeholder="Frais de scolarité S1" value={newPayment.description} onChange={(e) => setNewPayment(p => ({ ...p, description: e.target.value }))} />
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-sm">Methode de paiement</Label>
+                        <Label className="text-sm">Méthode de paiement</Label>
                         <Select value={newPayment.methode} onValueChange={(v) => setNewPayment(p => ({ ...p, methode: v }))}>
                           <SelectTrigger>
-                            <SelectValue placeholder="Selectionner" />
+                            <SelectValue placeholder="Sélectionner" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="cash">Especes</SelectItem>
+                            <SelectItem value="cash">Espèces</SelectItem>
                             <SelectItem value="mobile_money">Mobile Money</SelectItem>
                             <SelectItem value="bank">Virement bancaire</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-sm">Reference</Label>
+                        <Label className="text-sm">Référence</Label>
                         <Input placeholder="MM-2024-XXX" value={newPayment.reference} onChange={(e) => setNewPayment(p => ({ ...p, reference: e.target.value }))} />
                       </div>
                       <Button className="w-full bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white" disabled={isSubmittingPayment} onClick={handleCreatePayment}>
@@ -478,9 +474,7 @@ export function PaymentsPage() {
                     {animatedJour.toLocaleString('fr-FR')} <span className="text-base font-normal text-white/60">FCFA</span>
                   </p>
                   <div className="flex items-center gap-1 mt-2">
-                    <ArrowUpRight className="size-3 text-[var(--institution-secondary)]" />
-                    <span className="text-[10px] font-medium text-[#4ade80]">+8.3%</span>
-                    <span className="text-[10px] text-white/50">vs hier</span>
+                    {dayTrend !== null ? <span className="text-[10px] font-medium text-white/80">{dayTrend >= 0 ? '+' : ''}{dayTrend.toFixed(1)} % par rapport à hier</span> : <span className="text-[10px] text-white/60">Comparaison indisponible</span>}
                   </div>
                 </div>
                 <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10">
@@ -494,9 +488,7 @@ export function PaymentsPage() {
                     {animatedMois.toLocaleString('fr-FR')} <span className="text-base font-normal text-white/60">FCFA</span>
                   </p>
                   <div className="flex items-center gap-1 mt-2">
-                    <ArrowUpRight className="size-3 text-[var(--institution-secondary)]" />
-                    <span className="text-[10px] font-medium text-[#4ade80]">+12.5%</span>
-                    <span className="text-[10px] text-white/50">vs mois dernier</span>
+                    {monthTrend !== null ? <span className="text-[10px] font-medium text-white/80">{monthTrend >= 0 ? '+' : ''}{monthTrend.toFixed(1)} % par rapport au mois dernier</span> : <span className="text-[10px] text-white/60">Comparaison indisponible</span>}
                   </div>
                 </div>
               </div>
@@ -549,19 +541,15 @@ export function PaymentsPage() {
             <CardContent className="p-4 relative">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Total encaisse</p>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Total encaissé</p>
                   <p className="text-xl font-bold text-[var(--institution-secondary)] mt-1">{formatFCFA(totalEncaisse)}</p>
-                  <p className="text-xs text-gray-400 mt-1">{realPayments.filter((p: Payment) => p.statut === 'paye').length} paiements</p>
+                  <p className="text-xs text-gray-400 mt-1">{statusStats.VALIDATED?.count ?? 0} paiements</p>
                 </div>
                 <div className="w-10 h-10 rounded-xl bg-[var(--institution-secondary-15)] flex items-center justify-center">
                   <TrendingUp className="size-5 text-[var(--institution-secondary)]" />
                 </div>
               </div>
-              <div className="flex items-center gap-1 mt-2">
-                <ArrowUpRight className="size-3 text-[var(--institution-secondary)]" />
-                <span className="text-[10px] font-medium text-[var(--institution-secondary)]">+12.5%</span>
-                <span className="text-[10px] text-gray-400">vs mois dernier</span>
-              </div>
+              <p className="mt-2 text-[10px] text-gray-400">Montant réellement validé</p>
             </CardContent>
           </Card>
         </motion.div>
@@ -575,17 +563,13 @@ export function PaymentsPage() {
                 <div>
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">En attente</p>
                   <p className="text-xl font-bold text-[var(--institution-accent)] mt-1">{formatFCFA(totalEnAttente)}</p>
-                  <p className="text-xs text-gray-400 mt-1">{realPayments.filter((p: Payment) => p.statut === 'en_attente').length} paiements</p>
+                  <p className="text-xs text-gray-400 mt-1">{statusStats.PENDING?.count ?? 0} paiements</p>
                 </div>
                 <div className="w-10 h-10 rounded-xl bg-[var(--institution-accent-15)] flex items-center justify-center">
                   <Clock className="size-5 text-[var(--institution-accent)]" />
                 </div>
               </div>
-              <div className="flex items-center gap-1 mt-2">
-                <ArrowUpRight className="size-3 text-[var(--institution-accent)]" />
-                <span className="text-[10px] font-medium text-[var(--institution-accent)]">+3.2%</span>
-                <span className="text-[10px] text-gray-400">vs mois dernier</span>
-              </div>
+              <p className="mt-2 text-[10px] text-gray-400">Paiements restant à valider</p>
             </CardContent>
           </Card>
         </motion.div>
@@ -597,19 +581,15 @@ export function PaymentsPage() {
             <CardContent className="p-4 relative">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Annule</p>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Annulé</p>
                   <p className="text-xl font-bold text-[#c62828] mt-1">{formatFCFA(totalAnnule)}</p>
-                  <p className="text-xs text-gray-400 mt-1">{realPayments.filter((p: Payment) => p.statut === 'annule').length} paiements</p>
+                  <p className="text-xs text-gray-400 mt-1">{statusStats.CANCELLED?.count ?? 0} paiements</p>
                 </div>
                 <div className="w-10 h-10 rounded-xl bg-[#c6282815] flex items-center justify-center">
                   <AlertCircle className="size-5 text-[#c62828]" />
                 </div>
               </div>
-              <div className="flex items-center gap-1 mt-2">
-                <ArrowDownRight className="size-3 text-[var(--institution-secondary)]" />
-                <span className="text-[10px] font-medium text-[var(--institution-secondary)]">-8.1%</span>
-                <span className="text-[10px] text-gray-400">vs mois dernier</span>
-              </div>
+              <p className="mt-2 text-[10px] text-gray-400">Exclus du montant attendu</p>
             </CardContent>
           </Card>
         </motion.div>
@@ -623,17 +603,13 @@ export function PaymentsPage() {
                 <div>
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Mobile Money</p>
                   <p className="text-xl font-bold text-[var(--institution-accent)] mt-1">{formatFCFA(totalMobileMoney)}</p>
-                  <p className="text-xs text-gray-400 mt-1">{realPayments.filter((p: Payment) => p.statut === 'paye' && p.methode === 'mobile_money').length} transactions</p>
+                  <p className="text-xs text-gray-400 mt-1">{methodStats.MOBILE_MONEY?.count ?? 0} transactions</p>
                 </div>
                 <div className="w-10 h-10 rounded-xl bg-[var(--institution-accent-15)] flex items-center justify-center">
                   <Smartphone className="size-5 text-[var(--institution-accent)]" />
                 </div>
               </div>
-              <div className="flex items-center gap-1 mt-2">
-                <ArrowUpRight className="size-3 text-[var(--institution-secondary)]" />
-                <span className="text-[10px] font-medium text-[var(--institution-secondary)]">+22.0%</span>
-                <span className="text-[10px] text-gray-400">vs mois dernier</span>
-              </div>
+              <p className="mt-2 text-[10px] text-gray-400">Part des paiements validés</p>
             </CardContent>
           </Card>
         </motion.div>
@@ -645,7 +621,7 @@ export function PaymentsPage() {
         <motion.div variants={itemVariants}>
           <Card className="h-full">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Repartition par methode de paiement</CardTitle>
+              <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Répartition par méthode de paiement</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Mobile Money - 40% */}
@@ -680,7 +656,7 @@ export function PaymentsPage() {
                         <Banknote className="size-3.5 text-[var(--institution-secondary)]" />
                       </div>
                     </motion.div>
-                    <span className="text-sm font-medium text-[var(--institution-primary)]">Especes</span>
+                    <span className="text-sm font-medium text-[var(--institution-primary)]">Espèces</span>
                   </div>
                   <span className="text-sm font-semibold text-[var(--institution-primary)]">{cashPercent}%</span>
                 </div>
@@ -729,7 +705,7 @@ export function PaymentsPage() {
           <Card className="h-full border-l-4 border-l-[var(--institution-accent)]">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Integration Mobile Money</CardTitle>
+                <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Intégration Mobile Money</CardTitle>
                 <Button size="sm" variant="outline" className="h-7 text-xs border-[var(--institution-accent)] text-[var(--institution-accent)] hover:bg-[var(--institution-accent-10)]" onClick={openMobileMoneyPaymentForm}>
                   <Plus className="size-3 mr-1" />
                   Enregistrer
@@ -744,7 +720,7 @@ export function PaymentsPage() {
               </div>
 
               <div className="space-y-2">
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Operateurs supportes</p>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Opérateurs pris en charge</p>
                 <div className="grid grid-cols-2 gap-2">
                   {mobileMoneyOperators.map((op) => (
                     <motion.div
@@ -827,31 +803,31 @@ export function PaymentsPage() {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
                 <Input
-                  placeholder="Rechercher par nom, matricule, reference..."
+                  placeholder="Rechercher par nom, matricule, référence…"
                   className="pl-9 h-9 text-sm"
                   value={search}
-                  onChange={(e) => setSearch(e.target.value)}
+                  onChange={(e) => { setSearch(e.target.value); setCurrentPage(1) }}
                 />
               </div>
               <div className="flex gap-2">
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <Select value={statusFilter} onValueChange={(value) => { setStatusFilter(value); setCurrentPage(1) }}>
                   <SelectTrigger className="w-[130px] h-9 text-xs">
                     <SelectValue placeholder="Statut" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="tous">Tous les statuts</SelectItem>
-                    <SelectItem value="paye">Paye</SelectItem>
+                    <SelectItem value="paye">Payé</SelectItem>
                     <SelectItem value="en_attente">En attente</SelectItem>
-                    <SelectItem value="annule">Annule</SelectItem>
+                    <SelectItem value="annule">Annulé</SelectItem>
                   </SelectContent>
                 </Select>
-                <Select value={methodeFilter} onValueChange={setMethodeFilter}>
+                <Select value={methodeFilter} onValueChange={(value) => { setMethodeFilter(value); setCurrentPage(1) }}>
                   <SelectTrigger className="w-[140px] h-9 text-xs">
-                    <SelectValue placeholder="Methode" />
+                    <SelectValue placeholder="Méthode" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="tous">Toutes les methodes</SelectItem>
-                    <SelectItem value="cash">Especes</SelectItem>
+                    <SelectItem value="tous">Toutes les méthodes</SelectItem>
+                    <SelectItem value="cash">Espèces</SelectItem>
                     <SelectItem value="mobile_money">Mobile Money</SelectItem>
                     <SelectItem value="bank">Virement</SelectItem>
                   </SelectContent>
@@ -873,9 +849,9 @@ export function PaymentsPage() {
                     <TableHead className="text-xs font-semibold">Étudiant</TableHead>
                     <TableHead className="text-xs font-semibold">Description</TableHead>
                     <TableHead className="text-xs font-semibold text-right">Montant</TableHead>
-                    <TableHead className="text-xs font-semibold">Methode</TableHead>
+                    <TableHead className="text-xs font-semibold">Méthode</TableHead>
                     <TableHead className="text-xs font-semibold">Date</TableHead>
-                    <TableHead className="text-xs font-semibold">Reference</TableHead>
+                    <TableHead className="text-xs font-semibold">Référence</TableHead>
                     <TableHead className="text-xs font-semibold">Statut</TableHead>
                     <TableHead className="text-xs font-semibold text-right">Actions</TableHead>
                   </TableRow>
@@ -918,7 +894,7 @@ export function PaymentsPage() {
                             {payment.statut === 'paye' && (
                               <Button variant="ghost" size="sm" className="h-7 text-xs text-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-10)]" onClick={() => handlePrintReceipt(payment.id)}>
                                 <Printer className="size-3 mr-1" />
-                                Imprimer recu
+                                Imprimer le reçu
                               </Button>
                             )}
                             {payment.statut === 'en_attente' && (
@@ -938,15 +914,26 @@ export function PaymentsPage() {
                       </TableRow>
                     )
                   })}
-                  {filteredPayments.length === 0 && (
+                  {paymentsLoading && (
+                    <TableRow><TableCell colSpan={8} className="text-center py-8 text-sm text-gray-400">Chargement…</TableCell></TableRow>
+                  )}
+                  {!paymentsLoading && filteredPayments.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={8} className="text-center py-8 text-sm text-gray-400">
-                        Aucun paiement trouve
+                        Aucun paiement trouvé
                       </TableCell>
                     </TableRow>
                   )}
                 </TableBody>
               </Table>
+            </div>
+            <div className="flex flex-col gap-2 border-t border-gray-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-xs text-gray-500">Affichage {totalResults === 0 ? 0 : (currentPage - 1) * ITEMS_PER_PAGE + 1}-{Math.min(currentPage * ITEMS_PER_PAGE, totalResults)} sur {totalResults}</p>
+              <div className="flex items-center gap-1">
+                <Button variant="outline" size="sm" className="h-8 w-8 p-0" disabled={currentPage === 1} onClick={() => setCurrentPage((page) => page - 1)} aria-label="Page précédente"><ChevronLeft className="size-3.5" /></Button>
+                <span className="min-w-20 text-center text-xs text-gray-600">Page {currentPage} sur {safeTotalPages}</span>
+                <Button variant="outline" size="sm" className="h-8 w-8 p-0" disabled={currentPage === safeTotalPages} onClick={() => setCurrentPage((page) => page + 1)} aria-label="Page suivante"><ChevronRight className="size-3.5" /></Button>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -962,7 +949,7 @@ export function PaymentsPage() {
                 <p className="text-lg font-bold text-[var(--institution-primary)] mt-0.5">{formatFCFA(totalAttendu)}</p>
               </div>
               <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wide">Total encaisse</p>
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Total encaissé</p>
                 <p className="text-lg font-bold text-[var(--institution-secondary)] mt-0.5">{formatFCFA(totalEncaisse)}</p>
               </div>
               <div>

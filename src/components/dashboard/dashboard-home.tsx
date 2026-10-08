@@ -43,7 +43,7 @@ import {
 // ─── Quick actions (navigation shortcuts, not data — fine to stay static) ─────
 
 const quickActions = [
-  { label: 'Gerer les inscriptions', icon: UserPlus, color: 'var(--institution-secondary)', bgColor: 'var(--institution-secondary-15)', view: 'students' as const },
+  { label: 'Gérer les inscriptions', icon: UserPlus, color: 'var(--institution-secondary)', bgColor: 'var(--institution-secondary-15)', view: 'students' as const },
   { label: 'Ouvrir les notes', icon: FileCheck, color: 'var(--institution-primary)', bgColor: 'var(--institution-primary-15)', view: 'grades' as const },
   { label: 'Documents officiels', icon: FileText, color: 'var(--institution-accent)', bgColor: 'var(--institution-accent-15)', view: 'documents' as const },
   { label: 'Suivi des paiements', icon: CreditCard, color: 'var(--institution-secondary)', bgColor: 'var(--institution-secondary-15)', view: 'payments' as const },
@@ -219,11 +219,11 @@ function StudentDashboardHome({ data }: { data: StudentDashboardResponse }) {
               {data.currentAcademicYear ? (
                 <Badge className="border border-emerald-200 bg-white text-emerald-900 hover:bg-white text-xs">
                   <Calendar className="size-3 mr-1" />
-                  Annee academique {data.currentAcademicYear.name}
+                  Année académique {data.currentAcademicYear.name}
                 </Badge>
               ) : (
                 <Badge className="border border-amber-300 bg-amber-50 text-amber-950 hover:bg-amber-50 text-xs">
-                  Aucune annee academique active
+                  Aucune année académique active
                 </Badge>
               )}
               {data.student?.matricule && (
@@ -598,7 +598,7 @@ export function DashboardHome() {
 
   const getEventBadge = (type: string) => {
     switch (type) {
-      case 'deliberation': return <Badge className="bg-[var(--institution-primary-15)] text-[var(--institution-primary)] text-[10px] border-0 hover:bg-[var(--institution-primary-15)]">Deliberation</Badge>
+      case 'deliberation': return <Badge className="bg-[var(--institution-primary-15)] text-[var(--institution-primary)] text-[10px] border-0 hover:bg-[var(--institution-primary-15)]">Délibération</Badge>
       case 'exam': return <Badge className="bg-[#c6282815] text-[#c62828] text-[10px] border-0 hover:bg-[#c6282815]">Examen</Badge>
       default: return null
     }
@@ -705,7 +705,7 @@ export function DashboardHome() {
                       >
                         <Badge className="bg-white/20 text-white border-0 hover:bg-white/20 text-xs backdrop-blur-sm">
                           <Calendar className="size-3 mr-1" />
-                          Annee academique {data.currentAcademicYear.name}
+                          Année académique {data.currentAcademicYear.name}
                         </Badge>
                       </motion.div>
                       <motion.div
@@ -721,7 +721,7 @@ export function DashboardHome() {
                   ) : (
                     <Badge className="bg-white/20 text-white border-0 hover:bg-white/20 text-xs backdrop-blur-sm">
                       <Calendar className="size-3 mr-1" />
-                      Aucune annee academique active — configurez-en une dans Structure
+                      Aucune année académique active. Configurez-en une dans Structure.
                     </Badge>
                   )}
                 </div>
@@ -829,7 +829,7 @@ export function DashboardHome() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base font-semibold text-[var(--institution-primary)]">
-              Repartition par filiere
+              Répartition par filière
             </CardTitle>
             <p className="text-sm text-slate-700">Effectif étudiant par programme. Les noms complets figurent sous le graphique.</p>
           </CardHeader>
@@ -853,7 +853,7 @@ export function DashboardHome() {
                       formatter={(value: number) => [`${value} etudiants`, 'Effectif']}
                     />
                     <Legend />
-                    <Bar dataKey="etudiants" name="Etudiants" radius={[4, 4, 0, 0]}>
+                    <Bar dataKey="etudiants" name="Étudiants" radius={[4, 4, 0, 0]}>
                       {filiereData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
@@ -902,7 +902,7 @@ export function DashboardHome() {
                         boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
                         fontSize: '12px',
                       }}
-                      formatter={(value: number) => [`${value}`, 'Etudiants']}
+                      formatter={(value: number) => [`${value}`, 'Étudiants']}
                     />
                     <Legend />
                   </PieChart>
@@ -920,7 +920,7 @@ export function DashboardHome() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base font-semibold text-[var(--institution-primary)]">
-              Repartition par cycle
+              Répartition par cycle
             </CardTitle>
             <p className="text-sm text-slate-700">Licence, Master, Doctorat</p>
           </CardHeader>
@@ -952,7 +952,7 @@ export function DashboardHome() {
                         boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
                         fontSize: '12px',
                       }}
-                      formatter={(value: number) => [`${value}`, 'Etudiants']}
+                      formatter={(value: number) => [`${value}`, 'Étudiants']}
                     />
                     <Legend />
                   </PieChart>

@@ -697,11 +697,11 @@ export function AttendancePage() {
               {/* Glass-morphism stat cards */}
               <div className="flex gap-4 mt-4">
                 <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }} className="bg-white/10 backdrop-blur border border-white/15 rounded-lg px-4 py-3">
-                  <div className="text-white/60 text-xs">Presences aujourd&apos;hui</div>
+                  <div className="text-white/60 text-xs">Présences aujourd&apos;hui</div>
                   <div className="text-white text-2xl font-bold">{presencesCount.toLocaleString()}</div>
                 </motion.div>
                 <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }} className="bg-white/10 backdrop-blur border border-white/15 rounded-lg px-4 py-3">
-                  <div className="text-white/60 text-xs">Taux de presence</div>
+                  <div className="text-white/60 text-xs">Taux de présence</div>
                   <div className="text-white text-2xl font-bold">{tauxPresence}%</div>
                 </motion.div>
               </div>
@@ -719,19 +719,16 @@ export function AttendancePage() {
             <CardContent className="p-4 relative">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Presences aujourd&apos;hui</p>
-                  <p className="text-xl font-bold text-[var(--institution-secondary)] mt-1">1,247</p>
-                  <p className="text-xs text-[var(--institution-secondary)] mt-1 font-medium flex items-center gap-1">
-                    <TrendingUp className="size-3" />
-                    +2.3% vs hier
-                  </p>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Présences enregistrées</p>
+                  <p className="text-xl font-bold text-[var(--institution-secondary)] mt-1">{presentCount}</p>
+                  <p className="text-xs text-gray-400 mt-1">Données de la sélection courante</p>
                 </div>
                 <div className="w-10 h-10 rounded-xl bg-[var(--institution-secondary-15)] flex items-center justify-center">
                   <ClipboardCheck className="size-5 text-[var(--institution-secondary)]" />
                 </div>
               </div>
               <div className="mt-3">
-                <Progress value={93} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[var(--institution-secondary)]" />
+                <Progress value={presenceRate} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[var(--institution-secondary)]" />
               </div>
             </CardContent>
           </Card>
@@ -745,19 +742,16 @@ export function AttendancePage() {
             <CardContent className="p-4 relative">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Absences signalees</p>
-                  <p className="text-xl font-bold text-[var(--institution-primary)] mt-1">89</p>
-                  <p className="text-xs text-[var(--institution-secondary)] mt-1 font-medium flex items-center gap-1">
-                    <TrendingUp className="size-3 rotate-180" />
-                    -5% vs hier
-                  </p>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Absences signalées</p>
+                  <p className="text-xl font-bold text-[var(--institution-primary)] mt-1">{absentCount + justifieCount}</p>
+                  <p className="text-xs text-gray-400 mt-1">Justifiées et non justifiées</p>
                 </div>
                 <div className="w-10 h-10 rounded-xl bg-[var(--institution-primary-15)] flex items-center justify-center">
                   <UserX className="size-5 text-[var(--institution-primary)]" />
                 </div>
               </div>
               <div className="mt-3">
-                <Progress value={7} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[var(--institution-primary)]" />
+                <Progress value={attendanceData.length > 0 ? ((absentCount + justifieCount) / attendanceData.length) * 100 : 0} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[var(--institution-primary)]" />
               </div>
             </CardContent>
           </Card>
@@ -771,19 +765,16 @@ export function AttendancePage() {
             <CardContent className="p-4 relative">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Taux de presence</p>
-                  <p className="text-xl font-bold text-[var(--institution-accent)] mt-1">93%</p>
-                  <p className="text-xs text-[var(--institution-secondary)] mt-1 font-medium flex items-center gap-1">
-                    <TrendingUp className="size-3" />
-                    +1% vs precedent
-                  </p>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Taux de présence</p>
+                  <p className="text-xl font-bold text-[var(--institution-accent)] mt-1">{presenceRate}%</p>
+                  <p className="text-xs text-gray-400 mt-1">Présents et retards inclus</p>
                 </div>
                 <div className="w-10 h-10 rounded-xl bg-[var(--institution-accent-15)] flex items-center justify-center">
                   <BarChart3 className="size-5 text-[var(--institution-accent)]" />
                 </div>
               </div>
               <div className="mt-3">
-                <Progress value={93} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[var(--institution-accent)]" />
+                <Progress value={presenceRate} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[var(--institution-accent)]" />
               </div>
             </CardContent>
           </Card>
@@ -797,16 +788,16 @@ export function AttendancePage() {
             <CardContent className="p-4 relative">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Absences non justifiees</p>
-                  <p className="text-xl font-bold text-[#ef4444] mt-1">34</p>
-                  <p className="text-xs text-gray-400 mt-1">A traiter en priorite</p>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Absences non justifiées</p>
+                  <p className="text-xl font-bold text-[#ef4444] mt-1">{absentCount}</p>
+                  <p className="text-xs text-gray-400 mt-1">À traiter en priorité</p>
                 </div>
                 <div className="w-10 h-10 rounded-xl bg-[#ef444415] flex items-center justify-center">
                   <AlertTriangle className="size-5 text-[#ef4444]" />
                 </div>
               </div>
               <div className="mt-3">
-                <Progress value={38} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#ef4444]" />
+                <Progress value={attendanceData.length > 0 ? (absentCount / attendanceData.length) * 100 : 0} className="h-1.5 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#ef4444]" />
               </div>
             </CardContent>
           </Card>

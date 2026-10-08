@@ -18,29 +18,20 @@ import {
 } from 'lucide-react'
 
 export function StudentLoginPage() {
-  const { setView, login } = useAppStore()
+  const { setView } = useAppStore()
   const [loginCode, setLoginCode] = useState('')
   const [pin, setPin] = useState('')
 
-  const handleDemoLogin = async () => {
-    const result = await signIn('credentials', {
-      login: 'UNSH-2026-L1-000245',
-      pin: '123456',
-      redirect: false,
-    })
-    if (result?.error) {
-      toast.error('Échec de la connexion', { description: 'Login ou PIN incorrect' })
-    } else {
-      window.location.href = '/'
-    }
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!loginCode.trim() || !pin.trim()) {
+      toast.error('Identifiants requis', { description: 'Saisissez votre matricule et votre code PIN.' })
+      return
+    }
     try {
       const result = await signIn('credentials', {
-        login: loginCode || 'UNSH-2026-L1-000245',
-        pin: pin || '123456',
+        login: loginCode.trim(),
+        pin: pin.trim(),
         redirect: false,
       })
       if (result?.error) {
@@ -87,7 +78,7 @@ export function StudentLoginPage() {
             </div>
             <CardTitle className="text-xl font-bold text-[var(--institution-primary)]">Espace Étudiant</CardTitle>
             <CardDescription className="text-gray-500">
-              Consultez vos notes, documents et informations academiques
+              Consultez vos notes, documents et informations académiques
             </CardDescription>
           </CardHeader>
 
@@ -140,27 +131,9 @@ export function StudentLoginPage() {
             <div className="mt-4 flex items-start gap-2 p-3 rounded-lg bg-[var(--institution-primary-08)] border border-[var(--institution-primary-10)]">
               <Info className="size-4 text-[var(--institution-primary)] mt-0.5 shrink-0" />
               <p className="text-xs text-gray-600 leading-relaxed">
-                Votre login a ete imprime sur votre fiche d&apos;inscription. Si vous l&apos;avez perdu, veuillez vous adresser au service de la scolarite.
+                Votre identifiant figure sur votre fiche d&apos;inscription. Si vous l&apos;avez perdu, adressez-vous au service de la scolarité.
               </p>
             </div>
-
-            {/* Demo Section */}
-            {process.env.NODE_ENV !== 'production' && (
-              <div className="mt-5 p-4 rounded-xl bg-gray-50 border border-gray-100">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
-                  Mode demonstration (dev uniquement)
-                </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full justify-center text-xs h-9 border-gray-200 hover:border-[var(--institution-secondary-40)] hover:bg-[var(--institution-secondary-08)]"
-                  onClick={handleDemoLogin}
-                >
-                  <GraduationCap className="size-3.5 mr-1.5 text-[var(--institution-secondary)]" />
-                  Connexion en tant qu&apos;étudiant
-                </Button>
-              </div>
-            )}
 
             {/* Back to landing */}
             <button

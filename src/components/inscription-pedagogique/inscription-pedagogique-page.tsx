@@ -243,7 +243,7 @@ export function InscriptionPedagogiquePage() {
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(json.error || "Echec de l'inscription")
-      toast.success('Inscription pedagogique enregistree')
+      toast.success('Inscription pédagogique enregistrée')
       queryClient.invalidateQueries({ queryKey: ['inscriptionPedagogique'] })
     } catch (e) {
       toast.error('Erreur', { description: e instanceof Error ? e.message : "Echec de l'inscription" })
@@ -302,7 +302,7 @@ export function InscriptionPedagogiquePage() {
       iconBg: 'bg-white/20',
     },
     {
-      title: 'Taux de completion',
+      title: 'Taux de complétion',
       value: `${stats?.completionRate ?? 0}%`,
       icon: TrendingUp,
       gradient: 'from-[var(--institution-primary)] to-[#2d3e5e]',
@@ -613,7 +613,7 @@ export function InscriptionPedagogiquePage() {
                     <label className="text-xs font-medium text-gray-600">Etudiant</label>
                     <Select value={selectedStudent} onValueChange={setSelectedStudent}>
                       <SelectTrigger className="w-full h-9 text-xs">
-                        <SelectValue placeholder="Selectionner un étudiant" />
+                        <SelectValue placeholder="Sélectionner un étudiant" />
                       </SelectTrigger>
                       <SelectContent>
                         {students.map((s) => (
@@ -886,7 +886,7 @@ export function InscriptionPedagogiquePage() {
 
                 {/* Quick stats */}
                 <div className="space-y-2 pt-2 border-t border-gray-100">
-                  <span className="text-xs font-medium text-gray-600">Repartition des credits</span>
+                  <span className="text-xs font-medium text-gray-600">Répartition des crédits</span>
                   <div className="space-y-2">
                     <div>
                       <div className="flex justify-between text-[11px] mb-1">

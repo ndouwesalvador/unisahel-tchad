@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useDeferredValue } from 'react'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
@@ -47,6 +47,8 @@ import {
   Copy,
   Upload,
   FileSpreadsheet,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react'
 import { useAppStore } from '@/lib/store'
 import { useTeachers, useStructure } from '@/lib/api-hooks'
@@ -197,6 +199,7 @@ function mapTeacher(t: TeacherListApiRecord): Teacher {
 }
 
 const grades = ['Tous', 'Professeur', 'MCF', 'MA', 'Assistant', 'Vacataire', 'Non renseigné']
+const ITEMS_PER_PAGE = 20
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -209,18 +212,24 @@ export function TeachersPage() {
   const [search, setSearch] = useState('')
   const [filterDept, setFilterDept] = useState('Tous')
   const [filterGrade, setFilterGrade] = useState('Tous')
+  const [currentPage, setCurrentPage] = useState(1)
+  const deferredSearch = useDeferredValue(search.trim())
   const [showNewTeacher, setShowNewTeacher] = useState(false)
   const [newTeacherForm, setNewTeacherForm] = useState<NewTeacherForm>(emptyNewTeacherForm)
   const [isCreating, setIsCreating] = useState(false)
   const [createdCredentials, setCreatedCredentials] = useState<{ email: string; tempPassword: string; name: string } | null>(null)
 
-  const { data: teachersQuery, isLoading } = useTeachers({ limit: 1000 })
+  const { data: teachersQuery, isLoading } = useTeachers({
+    search: deferredSearch || undefined,
+    departmentId: filterDept === 'Tous' ? undefined : filterDept,
+    grade: filterGrade === 'Tous' || filterGrade === 'Non renseigné' ? undefined : gradeUiToApi[filterGrade],
+    page: currentPage,
+    limit: ITEMS_PER_PAGE,
+  })
   const teachers: Teacher[] = (teachersQuery?.data || []).map(mapTeacher)
 
   const { data: structureQuery } = useStructure() as { data: { faculties: Array<{ departments: Array<{ id: string; name: string }> }> } | undefined }
   const realDepartments = (structureQuery?.faculties || []).flatMap((f) => f.departments)
-
-  const departements = ['Tous', ...Array.from(new Set(teachers.map(t => t.departement))).sort()]
 
   const handleCreateTeacher = async () => {
     const f = newTeacherForm
@@ -267,22 +276,43 @@ export function TeachersPage() {
     )
   }
 
-  const handleExportExcel = () => {
-    exportToExcel(
-      filteredTeachers.map((t) => ({
+  const fetchTeachersForExport = async () => {
+    const total = teachersQuery?.pagination?.total ?? 0
+    if (total === 0) return []
+    if (total > 1000) throw new Error('Affinez les filtres avant l’export : 1 000 enseignants maximum par fichier.')
+    const params = new URLSearchParams({ page: '1', limit: String(total) })
+    if (deferredSearch) params.set('search', deferredSearch)
+    if (filterDept !== 'Tous') params.set('departmentId', filterDept)
+    if (filterGrade !== 'Tous' && filterGrade !== 'Non renseigné') params.set('grade', gradeUiToApi[filterGrade])
+    const response = await fetch(`/api/teachers?${params.toString()}`)
+    const body = await response.json().catch(() => ({}))
+    if (!response.ok) throw new Error(body.error || 'Chargement de l’export impossible')
+    return ((body.data ?? []) as TeacherListApiRecord[]).map(mapTeacher)
+  }
+
+  const handleExportExcel = async () => {
+    try {
+      const exportTeachers = await fetchTeachersForExport()
+      await exportToExcel(
+      exportTeachers.map((t) => ({
         Matricule: t.matricule, Nom: t.nom, Prénom: t.prenom, Grade: gradeFullNames[t.grade] || t.grade,
         Département: t.departement, Spécialisation: t.specialisation, Statut: t.statut,
         'E-mail': t.email || '', Téléphone: t.telephone || '',
       })),
       'annuaire_enseignants',
     )
+    } catch (error) {
+      toast.error('Export Excel impossible', { description: error instanceof Error ? error.message : 'Veuillez réessayer.' })
+    }
   }
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
+    try {
+      const exportTeachers = await fetchTeachersForExport()
     exportListToPDF(
       'annuaire_enseignants',
       'Annuaire des enseignants',
-      `${filteredTeachers.length} enseignant(s)`,
+      `${exportTeachers.length} enseignant(s)`,
       [
         { header: 'Matricule', width: 0.18, value: (t: Teacher) => t.matricule },
         { header: 'Nom', width: 0.15, value: (t: Teacher) => t.nom },
@@ -291,19 +321,23 @@ export function TeachersPage() {
         { header: 'Département', width: 0.2, value: (t: Teacher) => t.departement },
         { header: 'Email', width: 0.16, value: (t: Teacher) => t.email || '' },
       ],
-      filteredTeachers,
+      exportTeachers,
     )
+    } catch (error) {
+      toast.error('Export PDF impossible', { description: error instanceof Error ? error.message : 'Veuillez réessayer.' })
+    }
   }
 
-  const totalEnseignants = teachers.filter(t => t.statut === 'Actif').length
-  const totalHeures = teachers.reduce((acc, t) => acc + t.heuresSem, 0)
+  const apiStats = teachersQuery?.stats
+  const totalEnseignants = apiStats?.activeCount ?? 0
+  const totalHeures = apiStats?.totalHours ?? 0
   const gradeBreakdown = {
-    'Professeur': teachers.filter(t => t.grade === 'Professeur').length,
-    'MCF': teachers.filter(t => t.grade === 'MCF').length,
-    'MA': teachers.filter(t => t.grade === 'MA').length,
-    'Assistant': teachers.filter(t => t.grade === 'Assistant').length,
-    'Vacataire': teachers.filter(t => t.grade === 'Vacataire').length,
-    'Non renseigné': teachers.filter(t => t.grade === 'Non renseigné').length,
+    'Professeur': apiStats?.gradeBreakdown?.PROFESSEUR_TITULAIRE ?? 0,
+    'MCF': apiStats?.gradeBreakdown?.MAITRE_CONFERENCES ?? 0,
+    'MA': apiStats?.gradeBreakdown?.MAITRE_ASSISTANT ?? 0,
+    'Assistant': apiStats?.gradeBreakdown?.ASSISTANT ?? 0,
+    'Vacataire': apiStats?.gradeBreakdown?.VACATAIRE ?? 0,
+    'Non renseigné': apiStats?.gradeBreakdown?.NON_RENSEIGNE ?? 0,
   }
 
   // Count-up stats
@@ -312,15 +346,13 @@ export function TeachersPage() {
   const countHeures = useCountUp(totalHeures, 1300)
   const countVac = useCountUp(gradeBreakdown['Vacataire'], 1000)
 
-  const filteredTeachers = teachers.filter(t => {
-    const matchSearch = search === '' ||
-      `${t.nom} ${t.prenom}`.toLowerCase().includes(search.toLowerCase()) ||
-      t.matricule.toLowerCase().includes(search.toLowerCase()) ||
-      t.specialisation.toLowerCase().includes(search.toLowerCase())
-    const matchDept = filterDept === 'Tous' || t.departement === filterDept
-    const matchGrade = filterGrade === 'Tous' || t.grade === filterGrade
-    return matchSearch && matchDept && matchGrade
-  })
+  const filteredTeachers = teachers
+  const totalResults = teachersQuery?.pagination?.total ?? 0
+  const totalPages = teachersQuery?.pagination?.totalPages ?? 0
+  const safeTotalPages = Math.max(1, totalPages)
+  const occupationRate = (apiStats?.totalCapacity ?? 0) > 0
+    ? Math.round((totalHeures / apiStats.totalCapacity) * 100)
+    : 0
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -461,7 +493,7 @@ export function TeachersPage() {
         <Card className="border-l-4 border-l-[var(--institution-primary)]">
           <div className="h-1 bg-gradient-to-r from-[var(--institution-primary)] via-[var(--institution-secondary)] to-[var(--institution-accent)]" />
           <CardContent className="p-4">
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">Repartition par grade</p>
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">Répartition par grade</p>
             <div className="flex flex-wrap gap-2">
               {Object.entries(gradeBreakdown).map(([grade, count]) => {
                 const config = gradeConfig[grade as GradeType]
@@ -495,26 +527,27 @@ export function TeachersPage() {
                   placeholder="Rechercher par nom, matricule, spécialisation…"
                   className="pl-9 h-9 text-sm"
                   value={search}
-                  onChange={(e) => setSearch(e.target.value)}
+                  onChange={(e) => { setSearch(e.target.value); setCurrentPage(1) }}
                 />
               </div>
-              <Select value={filterDept} onValueChange={setFilterDept}>
+              <Select value={filterDept} onValueChange={(value) => { setFilterDept(value); setCurrentPage(1) }}>
                 <SelectTrigger className="w-full sm:w-[180px] h-9 text-sm">
                   <SelectValue placeholder="Département" />
                 </SelectTrigger>
                 <SelectContent>
-                  {departements.map(d => (
-                    <SelectItem key={d} value={d}>{d}</SelectItem>
+                  <SelectItem value="Tous">Tous les départements</SelectItem>
+                  {realDepartments.map((department) => (
+                    <SelectItem key={department.id} value={department.id}>{department.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <Select value={filterGrade} onValueChange={setFilterGrade}>
+              <Select value={filterGrade} onValueChange={(value) => { setFilterGrade(value); setCurrentPage(1) }}>
                 <SelectTrigger className="w-full sm:w-[200px] h-9 text-sm">
                   <SelectValue placeholder="Grade" />
                 </SelectTrigger>
                 <SelectContent>
                   {grades.map(g => (
-                    <SelectItem key={g} value={g}>{g === 'MCF' ? 'Maitre de Conferences' : g === 'MA' ? 'Maitre-Assistant' : g}</SelectItem>
+                    <SelectItem key={g} value={g}>{g === 'MCF' ? 'Maître de conférences' : g === 'MA' ? 'Maître-assistant' : g}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -523,11 +556,11 @@ export function TeachersPage() {
                   <Upload className="size-3.5 mr-1.5" />
                   Importer
                 </Button>}
-                <Button variant="outline" size="sm" className="text-xs h-9 border-[var(--institution-primary-30)] text-[var(--institution-primary)] hover:bg-[var(--institution-primary-08)]" onClick={handleExportExcel}>
+                <Button variant="outline" size="sm" className="text-xs h-9 border-[var(--institution-primary-30)] text-[var(--institution-primary)] hover:bg-[var(--institution-primary-08)]" onClick={() => void handleExportExcel()}>
                   <FileSpreadsheet className="size-3.5 mr-1.5" />
                   Excel
                 </Button>
-                <Button variant="outline" size="sm" className="text-xs h-9 border-[var(--institution-primary-30)] text-[var(--institution-primary)] hover:bg-[var(--institution-primary-08)]" onClick={handleExportPDF}>
+                <Button variant="outline" size="sm" className="text-xs h-9 border-[var(--institution-primary-30)] text-[var(--institution-primary)] hover:bg-[var(--institution-primary-08)]" onClick={() => void handleExportPDF()}>
                   <FileText className="size-3.5 mr-1.5" />
                   PDF
                 </Button>
@@ -546,8 +579,8 @@ export function TeachersPage() {
         <Card style={{ borderTop: '3px solid var(--institution-secondary)' }}>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Repertoire des enseignants</CardTitle>
-              <Badge className="text-[10px] bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0">{filteredTeachers.length} resultats</Badge>
+              <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Répertoire des enseignants</CardTitle>
+              <Badge className="text-[10px] bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0">{totalResults} résultat{totalResults > 1 ? 's' : ''}</Badge>
             </div>
           </CardHeader>
           <CardContent className="p-0">
@@ -671,6 +704,20 @@ export function TeachersPage() {
                 </Table>
               </div>
             </ScrollArea>
+            <div className="flex flex-col gap-2 border-t border-gray-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-xs text-gray-500">
+                Affichage {totalResults === 0 ? 0 : (currentPage - 1) * ITEMS_PER_PAGE + 1}-{Math.min(currentPage * ITEMS_PER_PAGE, totalResults)} sur {totalResults}
+              </p>
+              <div className="flex items-center gap-1">
+                <Button variant="outline" size="sm" className="h-8 w-8 p-0" disabled={currentPage === 1} onClick={() => setCurrentPage((page) => page - 1)} aria-label="Page précédente">
+                  <ChevronLeft className="size-3.5" />
+                </Button>
+                <span className="min-w-20 text-center text-xs text-gray-600">Page {currentPage} sur {safeTotalPages}</span>
+                <Button variant="outline" size="sm" className="h-8 w-8 p-0" disabled={currentPage === safeTotalPages} onClick={() => setCurrentPage((page) => page + 1)} aria-label="Page suivante">
+                  <ChevronRight className="size-3.5" />
+                </Button>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </motion.div>
@@ -698,7 +745,7 @@ export function TeachersPage() {
               </div>
               <div>
                 <p className="text-xs text-gray-500">Taux d&apos;occupation</p>
-                <p className="text-lg font-bold text-[var(--institution-primary)]">87%</p>
+                <p className="text-lg font-bold text-[var(--institution-primary)]">{occupationRate}%</p>
               </div>
             </div>
           </CardContent>
@@ -711,7 +758,7 @@ export function TeachersPage() {
               </div>
               <div>
                 <p className="text-xs text-gray-500">Départements couverts</p>
-                <p className="text-lg font-bold text-[var(--institution-primary)]">{departements.length - 1}</p>
+                <p className="text-lg font-bold text-[var(--institution-primary)]">{apiStats?.departmentCount ?? 0}</p>
               </div>
             </div>
           </CardContent>

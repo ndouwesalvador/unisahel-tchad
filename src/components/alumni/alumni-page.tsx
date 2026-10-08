@@ -207,7 +207,7 @@ export function AlumniPage() {
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
               <h1 className="text-2xl font-bold">Alumni & anciens étudiants</h1>
-              <p className="mt-1 text-sm text-white/70">Répertoire réel des diplômés de l’institution. Les événements et dons fictifs ont été retirés.</p>
+              <p className="mt-1 text-sm text-white/70">Répertoire des diplômés de l’institution et suivi de leur parcours.</p>
             </div>
             <div className="flex flex-wrap gap-2">
               <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

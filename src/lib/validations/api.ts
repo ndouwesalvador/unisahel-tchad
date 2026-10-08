@@ -36,6 +36,7 @@ export const gradeQuerySchema = paginationSchema.extend({
 })
 
 export const paymentQuerySchema = paginationSchema.extend({
+  search: z.string().max(200).optional(),
   studentId: z.string().cuid().optional(),
   academicYearId: z.string().cuid().optional(),
   status: z.enum(['VALIDATED', 'PENDING', 'CANCELLED', 'REFUNDED']).optional(),

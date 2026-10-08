@@ -861,7 +861,7 @@ export function MaquettePage() {
         <div className="relative z-10">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-xl md:text-2xl font-bold text-white">Maquettes pedagogiques</h1>
+              <h1 className="text-xl md:text-2xl font-bold text-white">Maquettes pédagogiques</h1>
               <p className="text-sm text-white/70 mt-1">UE, matières, volumes horaires et affectations pédagogiques par année</p>
             </div>
             <div className="flex gap-2 flex-wrap">
@@ -871,7 +871,7 @@ export function MaquettePage() {
                 onClick={() => setView('structure')}
               >
                 <Plus className="size-3.5 mr-1.5" />
-                Gerer la structure
+                Gérer la structure
               </Button>}
               <Button
                 size="sm"

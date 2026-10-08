@@ -324,7 +324,7 @@ export function DeliberationPage() {
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(json.error || 'Echec du lancement')
-      toast.success('Deliberation lancee', { description: `${json.deliberation?.decisions?.length ?? 0} etudiant(s) evalue(s)` })
+      toast.success('Délibération lancée', { description: `${json.deliberation?.decisions?.length ?? 0} étudiant(s) évalué(s)` })
       setSelectedSession(json.deliberation?.id ?? null)
       queryClient.invalidateQueries({ queryKey: ['deliberation'] })
     } catch (e) {
@@ -357,7 +357,7 @@ export function DeliberationPage() {
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(json.error || 'Echec de la validation')
-      toast.success('Deliberation validee', { description: 'Les resultats sont officialises' })
+      toast.success('Délibération validée', { description: 'Les résultats sont officialisés' })
       queryClient.invalidateQueries({ queryKey: ['deliberation'] })
     } catch (error) {
       toast.error('Echec de la validation', {
@@ -370,7 +370,7 @@ export function DeliberationPage() {
 
   const exportPV = useCallback(async () => {
     if (!tenantId) {
-      toast.error('Session invalide', { description: 'Impossible de determiner votre etablissement' })
+      toast.error('Session invalide', { description: 'Impossible de déterminer votre établissement' })
       return
     }
     if (!selectedSession) {
@@ -518,7 +518,7 @@ export function DeliberationPage() {
                 <div className="flex items-center gap-3">
                   <div>
                     <h1 className="text-2xl font-bold">Session de deliberation</h1>
-                    <p className="text-white/70 text-sm mt-1">Deliberations et decisions de jury</p>
+                    <p className="text-white/70 text-sm mt-1">Délibérations et décisions du jury</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
@@ -534,7 +534,7 @@ export function DeliberationPage() {
                   >
                     <Badge className="bg-white/20 text-white border border-white/30 text-xs px-3 py-1">
                       <Gavel className="size-3 mr-1.5" />
-                      {currentSession?.titre || 'Aucune session selectionnee'}
+                      {currentSession?.titre || 'Aucune session sélectionnée'}
                     </Badge>
                   </motion.div>
                   <Button variant="outline" size="sm" className="text-xs bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white disabled:opacity-50" onClick={exportPV} disabled={isExportingPV || !canExportPV}>
@@ -585,9 +585,9 @@ export function DeliberationPage() {
                       'text-gray-400'
                     }`}>
                       {!currentSession ? 'Aucune délibération sélectionnée' :
-                       juryStatus === 'active' ? 'Jury actif - Deliberation en cours' :
+                       juryStatus === 'active' ? 'Jury actif : délibération en cours' :
                        juryStatus === 'pending' ? 'Jury en attente - Planifie' :
-                       'Deliberation terminee'}
+                       'Délibération terminée'}
                     </span>
                   </div>
                   {juryStatus === 'active' && (
@@ -1112,7 +1112,7 @@ export function DeliberationPage() {
                 <div className="flex items-center gap-2">
                   <Users className="size-4 text-[var(--institution-primary)]" />
                   <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">
-                    Resultats des etudiants
+                    Résultats des étudiants
                   </CardTitle>
                   {!isReadyForJury && (
                     <Badge className="text-[10px] bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0">
@@ -1135,7 +1135,7 @@ export function DeliberationPage() {
                     disabled={!canLock || isLocking}
                   >
                     <CheckSquare className="size-3.5 mr-1.5" />
-                    {isLocked ? 'Deliberation validee' : isLocking ? 'Validation...' : 'Valider deliberation'}
+                    {isLocked ? 'Délibération validée' : isLocking ? 'Validation…' : 'Valider la délibération'}
                   </Button>
                 </div>
               </div>

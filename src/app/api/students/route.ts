@@ -64,11 +64,11 @@ async function getStudentsHandler(user: SessionUser, tenantId: string, request: 
 
     if (search) {
       where.OR = [
-        { firstName: { contains: search } },
-        { lastName: { contains: search } },
-        { middleName: { contains: search } },
-        { matricule: { contains: search } },
-        { email: { contains: search } },
+        { firstName: { contains: search, mode: 'insensitive' } },
+        { lastName: { contains: search, mode: 'insensitive' } },
+        { middleName: { contains: search, mode: 'insensitive' } },
+        { matricule: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
       ]
     }
 
@@ -84,7 +84,7 @@ async function getStudentsHandler(user: SessionUser, tenantId: string, request: 
       where.currentLevelId = levelId
     }
 
-    const [students, total] = await Promise.all([
+    const [students, total, maleCount, femaleCount, preRegisteredCount] = await Promise.all([
       db.student.findMany({
         where,
         // Portraits are stored for official documents, not transported with
@@ -103,6 +103,9 @@ async function getStudentsHandler(user: SessionUser, tenantId: string, request: 
         take: limit,
       }),
       db.student.count({ where }),
+      db.student.count({ where: { AND: [where, { gender: 'M' }] } }),
+      db.student.count({ where: { AND: [where, { gender: 'F' }] } }),
+      db.student.count({ where: { AND: [where, { status: 'PRE_INSCRIT' }] } }),
     ])
     const creditsByStudent = await validatedCreditsByStudent(tenantId, students.map((student) => student.id))
 
@@ -110,6 +113,7 @@ async function getStudentsHandler(user: SessionUser, tenantId: string, request: 
 
     return NextResponse.json({
       data: students.map((student) => ({ ...student, totalCreditsAcquired: creditsByStudent.get(student.id) ?? 0 })),
+      stats: { total, maleCount, femaleCount, preRegisteredCount },
       pagination: {
         page,
         limit,
@@ -121,6 +125,12 @@ async function getStudentsHandler(user: SessionUser, tenantId: string, request: 
     })
   } catch (error) {
     console.error('Students API error:', error)
+    if (error instanceof Error && error.name === 'ZodError') {
+      return NextResponse.json(
+        { error: 'Paramètres de recherche invalides', details: formatZodError(error as Parameters<typeof formatZodError>[0]) },
+        { status: 400 },
+      )
+    }
     return NextResponse.json(
       {
         error: 'Failed to fetch students',

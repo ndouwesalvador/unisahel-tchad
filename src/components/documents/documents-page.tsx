@@ -63,7 +63,7 @@ const documentTypeList = [
   { key: 'attestation_inscription', apiType: 'ATTESTATION_INSCRIPTION', label: 'Attestation d\'inscription', icon: BookOpen, implemented: true, requiresStudent: true, tooltip: 'Attestation confirmant l\'inscription administrative de l\'etudiant selectionne' },
   { key: 'attestation_niveau', apiType: 'ATTESTATION_NIVEAU', label: 'Attestation de niveau', icon: Award, implemented: true, requiresStudent: true, tooltip: 'Exige une année, une délibération finale validée et tous les crédits sans dette' },
   { key: 'diplome', apiType: 'DIPLOME', label: 'Diplôme', icon: GraduationCap, implemented: true, requiresStudent: true, tooltip: 'Exige la validation de tous les niveaux du programme sans dette' },
-  { key: 'certificat_scolarite', apiType: 'CERTIFICAT_SCOLARITE', label: 'Certificat de scolarite', icon: ScrollText, implemented: true, requiresStudent: true, tooltip: 'Certificat prouvant la frequentation reguliere de l\'etudiant selectionne' },
+  { key: 'certificat_scolarite', apiType: 'CERTIFICAT_SCOLARITE', label: 'Certificat de scolarité', icon: ScrollText, implemented: true, requiresStudent: true, tooltip: 'Certificat prouvant la fréquentation régulière de l\'étudiant sélectionné' },
   { key: 'pv_deliberation', apiType: 'PV_DELIBERATION', label: 'PV de délibération', icon: ClipboardList, implemented: false, requiresStudent: false, tooltip: 'À générer depuis une session de jury validée' },
 ]
 
@@ -321,8 +321,8 @@ export function DocumentsPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4 }}
               >
-                <h1 className="text-2xl font-bold">Centre de generation de documents</h1>
-                <p className="text-white/70 text-sm mt-1">Generation, signature et verification des documents academiques</p>
+                <h1 className="text-2xl font-bold">Centre de génération de documents</h1>
+                <p className="text-white/70 text-sm mt-1">Génération, signature et vérification des documents académiques</p>
               </motion.div>
 
               {/* Hero Stats */}
@@ -367,7 +367,7 @@ export function DocumentsPage() {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-3">
-                <p className="text-sm font-medium text-[var(--institution-primary)]">Pipeline de generation</p>
+                <p className="text-sm font-medium text-[var(--institution-primary)]">Circuit de génération</p>
                 <Badge className="text-[10px] bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0">
                   <Zap className="size-3 mr-1" />
                   En temps reel
@@ -491,7 +491,7 @@ export function DocumentsPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-[var(--institution-accent)]">{totalQRCodes}</p>
-                <p className="text-[11px] text-gray-500">Codes de verification</p>
+                <p className="text-[11px] text-gray-500">Codes de vérification</p>
               </div>
             </CardContent>
           </Card>
@@ -649,7 +649,7 @@ export function DocumentsPage() {
               </CardTitle>
               <Badge className="text-[10px] bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0">
                 <Shield className="size-3 mr-1" />
-                Codes de verification
+                Codes de vérification
               </Badge>
             </div>
           </CardHeader>
@@ -662,7 +662,7 @@ export function DocumentsPage() {
                     <TableHead className="text-xs font-semibold">Etudiant</TableHead>
                     <TableHead className="text-xs font-semibold">Date</TableHead>
                     <TableHead className="text-xs font-semibold">Statut</TableHead>
-                    <TableHead className="text-xs font-semibold">Code verification</TableHead>
+                    <TableHead className="text-xs font-semibold">Code de vérification</TableHead>
                     <TableHead className="text-xs font-semibold text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -809,8 +809,8 @@ export function DocumentsPage() {
                 <div className="space-y-1.5">
                   <p className="text-xs text-[var(--institution-primary)] font-medium">Verification par code unique</p>
                   <p className="text-[11px] text-gray-500 leading-relaxed">
-                    Chaque document officiel est muni d un code QR unique permettant sa verification instantanee. 
-                    Scannez le code ou saisissez le code de verification pour confirmer l authenticite.
+                    Chaque document officiel porte un code QR unique pour une vérification immédiate.
+                    Scannez-le ou saisissez le code de vérification pour confirmer l’authenticité.
                   </p>
                 </div>
               </div>
@@ -821,7 +821,7 @@ export function DocumentsPage() {
                 </div>
                 <div className="flex items-center gap-2 text-xs text-gray-600">
                   <QrCode className="size-3.5 text-[var(--institution-secondary)]" />
-                  <span>QR code pointant vers la page de verification</span>
+                  <span>Code QR ouvrant la page de vérification</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-gray-600">
                   <CheckCircle2 className="size-3.5 text-[var(--institution-secondary)]" />
@@ -834,7 +834,7 @@ export function DocumentsPage() {
               </div>
               <Button variant="outline" className="w-full text-xs h-8 text-[var(--institution-secondary)] border-[var(--institution-secondary-30)] hover:bg-[var(--institution-secondary-10)]" onClick={() => setView('verify')}>
                 <ExternalLink className="size-3.5 mr-1.5" />
-                Page de verification
+                Page de vérification
               </Button>
             </CardContent>
           </Card>

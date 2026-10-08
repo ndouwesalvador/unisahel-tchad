@@ -46,11 +46,11 @@ async function getTeachersHandler(user: SessionUser, tenantId: string, request: 
 
     if (search) {
       where.OR = [
-        { user: { firstName: { contains: search } } },
-        { user: { lastName: { contains: search } } },
-        { employeeId: { contains: search } },
-        { user: { email: { contains: search } } },
-        { specialization: { contains: search } },
+        { user: { firstName: { contains: search, mode: 'insensitive' } } },
+        { user: { lastName: { contains: search, mode: 'insensitive' } } },
+        { employeeId: { contains: search, mode: 'insensitive' } },
+        { user: { email: { contains: search, mode: 'insensitive' } } },
+        { specialization: { contains: search, mode: 'insensitive' } },
       ]
     }
 
@@ -66,7 +66,7 @@ async function getTeachersHandler(user: SessionUser, tenantId: string, request: 
       where.isActive = isActive
     }
 
-    const [teachers, total] = await Promise.all([
+    const [teachers, total, activeCount, workload, grades, departments] = await Promise.all([
       db.teacher.findMany({
         where,
         include: {
@@ -90,12 +90,24 @@ async function getTeachersHandler(user: SessionUser, tenantId: string, request: 
         take: limit,
       }),
       db.teacher.count({ where }),
+      db.teacher.count({ where: { AND: [where, { isActive: true }] } }),
+      db.teacher.aggregate({ where, _sum: { currentHours: true, maxHoursPerWeek: true } }),
+      db.teacher.groupBy({ by: ['grade'], where, _count: { _all: true } }),
+      db.teacher.groupBy({ by: ['departmentId'], where: { AND: [where, { departmentId: { not: null } }] }, _count: { _all: true } }),
     ])
 
     const totalPages = Math.ceil(total / limit)
 
     return NextResponse.json({
       data: teachers,
+      stats: {
+        total,
+        activeCount,
+        totalHours: workload._sum.currentHours ?? 0,
+        totalCapacity: workload._sum.maxHoursPerWeek ?? 0,
+        departmentCount: departments.length,
+        gradeBreakdown: Object.fromEntries(grades.map((item) => [item.grade || 'NON_RENSEIGNE', item._count._all])),
+      },
       pagination: {
         page,
         limit,
@@ -107,6 +119,12 @@ async function getTeachersHandler(user: SessionUser, tenantId: string, request: 
     })
   } catch (error) {
     console.error('Teachers API error:', error)
+    if (error instanceof Error && error.name === 'ZodError') {
+      return NextResponse.json(
+        { error: 'Paramètres de recherche invalides', details: formatZodError(error as Parameters<typeof formatZodError>[0]) },
+        { status: 400 },
+      )
+    }
     return NextResponse.json(
       {
         error: 'Failed to fetch teachers',
