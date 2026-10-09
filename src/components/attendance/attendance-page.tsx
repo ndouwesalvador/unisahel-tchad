@@ -1477,7 +1477,7 @@ export function AttendancePage() {
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-xs text-gray-600 flex items-center gap-1.5">
                           <Moon className="size-3.5 text-[var(--institution-primary)]" />
-                          Apres-midi (14h - 18h)
+                          Après-midi (14 h – 18 h)
                         </span>
                         <span className="text-sm font-bold text-[var(--institution-primary)]">{afternoonRate}%</span>
                       </div>

@@ -168,7 +168,7 @@ export function PlatformInstitutionsPage() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-[var(--institution-primary)]">Institutions de la plateforme</h1>
-          <p className="text-sm text-gray-500 mt-1">Cree et gere les etablissements abonnes a UniSahel</p>
+          <p className="text-sm text-gray-500 mt-1">Créez et gérez les établissements abonnés à UniSahel.</p>
         </div>
         <Button className="bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white" onClick={() => setShowCreate(true)}>
           <Plus className="size-4 mr-1.5" />

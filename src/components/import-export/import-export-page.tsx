@@ -495,7 +495,7 @@ export function ImportExportPage() {
           description: `${result.successRows} ${noun} importe(s), ${result.errorRows} ligne(s) en erreur.`,
         })
       } else if (result.errorRows > 0) {
-        toast.error('Import echoue', { description: `${result.errorRows} ligne(s) en erreur.` })
+        toast.error('Import échoué', { description: `${result.errorRows} ligne(s) en erreur.` })
       } else {
         const noun = importType === 'Enseignants' ? 'enseignant(s)' : 'etudiant(s)'
         toast.success('Import terminé avec succès', {

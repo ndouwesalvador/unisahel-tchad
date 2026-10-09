@@ -299,7 +299,7 @@ export function PaymentsPage() {
         <h1>${tenant?.name || 'Institution'}</h1>
         <p class="muted">Reçu de paiement ${payment.receiptNumber || ''}</p>
         <table>
-          <tr><td>Etudiant</td><td>${student.firstName} ${student.lastName} (${student.matricule || '-'})</td></tr>
+          <tr><td>Étudiant</td><td>${student.firstName} ${student.lastName} (${student.matricule || 'Non renseigné'})</td></tr>
           <tr><td>Programme</td><td>${student.currentProgram?.name || '-'}</td></tr>
           <tr><td>Méthode</td><td>${payment.paymentMethod}</td></tr>
           <tr><td>Référence</td><td>${payment.transactionRef || '-'}</td></tr>

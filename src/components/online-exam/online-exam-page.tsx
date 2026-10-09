@@ -177,7 +177,7 @@ const examStatusConfig: Record<string, { label: string; className: string; icon:
 
 const resultStatusConfig: Record<string, { label: string; className: string }> = {
   'Reussi': { label: 'Reussi', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0' },
-  'Echoue': { label: 'Echoue', className: 'bg-[#c6282815] text-[#c62828] border-0' },
+  'Echoue': { label: 'Échoué', className: 'bg-[#c6282815] text-[#c62828] border-0' },
   'En correction': { label: 'En correction', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0' },
 }
 
@@ -315,7 +315,7 @@ export function OnlineExamPage() {
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Echec de la creation')
-      toast.success('Examen cree avec succes')
+      toast.success('Examen créé avec succès')
       setShowNewExam(false)
       setNewExam({ name: '', course: '', examDate: '', duration: '1h00', type: 'QCM' })
       setNewExamQuestionIds([])
@@ -438,7 +438,7 @@ export function OnlineExamPage() {
                 <div className="flex gap-2 flex-wrap">
                   <Button size="sm" className="bg-white/10 backdrop-blur border border-white/20 hover:bg-white/20 text-white text-xs" onClick={() => setShowNewExam(true)}>
                     <Plus className="size-3.5 mr-1.5" />
-                    Creer un examen
+                    Créer un examen
                   </Button>
                   <Button size="sm" variant="outline" className="text-xs bg-white/10 backdrop-blur border-white/20 text-white hover:bg-white/20 hover:text-white" onClick={() => exportToExcel(filteredResults, 'export_resultats_examens_en_ligne')}>
                     <Download className="size-3.5 mr-1.5" />
@@ -640,11 +640,11 @@ export function OnlineExamPage() {
                           <TableCell className="py-2.5 text-right">
                             {exam.status === 'Planifie' ? (
                               <Button size="sm" variant="outline" className="h-7 text-[10px] border-[var(--institution-secondary-30)] text-[var(--institution-secondary)]" disabled>
-                                Disponible cote etudiant
+                                Disponible côté étudiant
                               </Button>
                             ) : exam.status === 'En cours' ? (
                               <Button size="sm" variant="outline" className="h-7 text-[10px] border-[var(--institution-accent-30)] text-[var(--institution-accent)]" disabled>
-                                Session etudiant active
+                                Session étudiant active
                               </Button>
                             ) : (
                               <Button size="sm" variant="ghost" className="h-7 text-[10px] text-gray-600" disabled>
@@ -684,7 +684,7 @@ export function OnlineExamPage() {
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <CardTitle className="text-sm font-semibold text-[var(--institution-primary)] flex items-center gap-2">
                   <Monitor className="size-4 text-[var(--institution-secondary)]" />
-                  Interface etudiant reelle
+                  Interface étudiant réelle
                 </CardTitle>
                 <Badge className="text-[10px] bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0">
                   Donnees connectees
@@ -720,7 +720,7 @@ export function OnlineExamPage() {
                   <div className="space-y-2">
                     <Button size="sm" className="w-full justify-start h-8 text-xs bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white" onClick={() => setShowNewExam(true)}>
                       <Plus className="size-3.5 mr-2" />
-                      Creer un examen
+                      Créer un examen
                     </Button>
                     <Button size="sm" variant="outline" className="w-full justify-start h-8 text-xs border-[var(--institution-primary-30)] text-[var(--institution-primary)]" onClick={() => setShowAddQuestionForm(true)}>
                       <BookOpen className="size-3.5 mr-2" />
@@ -1167,7 +1167,7 @@ export function OnlineExamPage() {
                   </div>
                   <p className="text-xs text-gray-600 leading-relaxed">
                     Les reponses envoyees par l&apos;interface etudiante sont persistees par l&apos;API. En cas d&apos;echec reseau,
-                    l&apos;etudiant doit voir l&apos;erreur et relancer l&apos;enregistrement.
+                    l&apos;étudiant doit voir l&apos;erreur et relancer l&apos;enregistrement.
                   </p>
                   <div className="mt-2 flex items-center gap-2">
                     <Badge className="text-[9px] bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0">API connectee</Badge>
@@ -1237,7 +1237,7 @@ export function OnlineExamPage() {
       {showNewExam && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowNewExam(false)}>
           <div className="bg-white rounded-xl p-6 max-w-lg w-full shadow-2xl max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-lg font-bold text-[var(--institution-primary)] mb-4">Creer un examen</h3>
+            <h3 className="text-lg font-bold text-[var(--institution-primary)] mb-4">Créer un examen</h3>
             <div className="space-y-3">
               <Input
                 placeholder="Nom de l'examen"
@@ -1305,7 +1305,7 @@ export function OnlineExamPage() {
             <div className="flex gap-2 mt-5">
               <Button variant="outline" className="flex-1 text-xs" onClick={() => setShowNewExam(false)}>Annuler</Button>
               <Button className="flex-1 text-xs bg-[var(--institution-primary)] hover:bg-[var(--institution-primary)]/90 text-white" onClick={handleCreateExam} disabled={isCreatingExam}>
-                {isCreatingExam ? 'Creation...' : "Creer l'examen"}
+                {isCreatingExam ? 'Création…' : "Créer l’examen"}
               </Button>
             </div>
           </div>

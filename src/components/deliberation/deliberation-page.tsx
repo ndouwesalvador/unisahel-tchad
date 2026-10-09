@@ -918,7 +918,7 @@ export function DeliberationPage() {
                       ? 'Lancement...'
                       : !isReadyForJury
                         ? 'Notes incompletes'
-                        : 'Lancer la deliberation'}
+                        : 'Lancer la délibération'}
                 </Button>
               </div>
             </CardContent>
@@ -1282,7 +1282,7 @@ export function DeliberationPage() {
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-semibold text-[var(--institution-primary)] flex items-center gap-2">
                 <FileText className="size-4" />
-                Sessions de deliberation
+                Sessions de délibération
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
@@ -1299,7 +1299,7 @@ export function DeliberationPage() {
                   {deliberations.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={4} className="text-center py-6 text-xs text-gray-400">
-                        Aucune deliberation lancee pour le moment
+                        Aucune délibération lancée pour le moment
                       </TableCell>
                     </TableRow>
                   )}

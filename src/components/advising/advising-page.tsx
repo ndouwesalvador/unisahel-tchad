@@ -959,7 +959,7 @@ export function AdvisingPage() {
         <Card className="border-l-4 border-l-[var(--institution-secondary)]">
           <div className="h-1 bg-gradient-to-r from-[var(--institution-secondary)] to-[var(--institution-secondary-bright)]" />
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Suivi pedagogique</CardTitle>
+            <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">Suivi pédagogique</CardTitle>
           </CardHeader>
           <CardContent className="p-4 pt-0">
             {/* Search + Filters */}
@@ -1308,7 +1308,7 @@ export function AdvisingPage() {
                     onChange={(e) => setNewAdvisor((f) => ({ ...f, name: e.target.value }))}
                   />
                   <Input
-                    placeholder="Titre (ex: Conseiller pedagogique)"
+                    placeholder="Titre (ex. : conseiller pédagogique)"
                     className="h-8 text-xs bg-white"
                     value={newAdvisor.title}
                     onChange={(e) => setNewAdvisor((f) => ({ ...f, title: e.target.value }))}

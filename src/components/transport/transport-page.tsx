@@ -282,7 +282,7 @@ const busStatusConfig: Record<BusStatus, { label: string; color: string; pulseCo
 const scheduleStatusConfig: Record<ScheduleEntry['status'], { label: string; className: string }> = {
   a_l_heure: { label: 'A l\'heure', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0 hover:bg-[var(--institution-secondary-15)]' },
   en_retard: { label: 'En retard', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0 hover:bg-[var(--institution-accent-15)]' },
-  annule: { label: 'Annule', className: 'bg-[#c6282815] text-[#c62828] border-0 hover:bg-[#c6282815]' },
+  annule: { label: 'Annulé', className: 'bg-[#c6282815] text-[#c62828] border-0 hover:bg-[#c6282815]' },
   complet: { label: 'Complet', className: 'bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0 hover:bg-[var(--institution-primary-15)]' },
 }
 
@@ -779,7 +779,7 @@ export function TransportPage() {
                   <SelectContent>
                     <SelectItem value="all">Toute la journee</SelectItem>
                     <SelectItem value="matin">Matin</SelectItem>
-                    <SelectItem value="apres_midi">Apres-midi</SelectItem>
+                    <SelectItem value="apres_midi">Après-midi</SelectItem>
                     <SelectItem value="soir">Soir</SelectItem>
                   </SelectContent>
                 </Select>
@@ -911,11 +911,11 @@ export function TransportPage() {
                         <span className="text-[10px] font-bold text-[var(--institution-primary)]">{morningDepartures}</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-gray-500">Apres-midi (12h-18h)</span>
+                        <span className="text-[10px] text-gray-500">Après-midi (12 h – 18 h)</span>
                         <span className="text-[10px] font-bold text-[var(--institution-primary)]">{afternoonDepartures}</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-gray-500">Soir (apres 18h)</span>
+                        <span className="text-[10px] text-gray-500">Soir (après 18 h)</span>
                         <span className="text-[10px] font-bold text-[var(--institution-primary)]">{eveningDepartures}</span>
                       </div>
                     </div>

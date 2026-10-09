@@ -222,7 +222,7 @@ export function StudentExamPage() {
                   </div>
                 ) : (
                   <p className="text-xs text-gray-400 italic">
-                    Question a reponse libre - sera corrigee manuellement par un enseignant.
+                    Question à réponse libre : elle sera corrigée manuellement par un enseignant.
                   </p>
                 )}
               </div>
