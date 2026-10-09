@@ -10,8 +10,7 @@ const { authMock, dbMock } = vi.hoisted(() => ({
     user: { count: vi.fn() },
     administrativeRegistration: { count: vi.fn(), findMany: vi.fn() },
     pedagogicalRegistration: { count: vi.fn(), findMany: vi.fn(), createMany: vi.fn(), updateMany: vi.fn() },
-    grade: { count: vi.fn(), findMany: vi.fn(), deleteMany: vi.fn() },
-    gradeImportItem: { deleteMany: vi.fn() },
+    grade: { count: vi.fn(), findMany: vi.fn() },
     teachingService: { count: vi.fn() },
     timetableSlot: { count: vi.fn() },
     scheduledExam: { count: vi.fn() },
@@ -38,8 +37,6 @@ beforeEach(() => {
   dbMock.academicYear.findFirst.mockResolvedValue({ id: 'year', name: '2026-2027' })
   dbMock.program.findMany.mockResolvedValue([])
   dbMock.grade.findMany.mockResolvedValue([])
-  dbMock.grade.deleteMany.mockResolvedValue({ count: 0 })
-  dbMock.gradeImportItem.deleteMany.mockResolvedValue({ count: 0 })
   dbMock.administrativeRegistration.findMany.mockResolvedValue([])
   dbMock.pedagogicalRegistration.findMany.mockResolvedValue([])
   dbMock.teachingUnit.findMany.mockResolvedValue([])
@@ -77,29 +74,6 @@ describe('POST /api/structure/integrity', () => {
     expect(dbMock.auditLog.create).toHaveBeenCalledWith({ data: expect.objectContaining({ action: 'REPAIR' }) })
   })
 
-  it('removes only current-year grades without a validated annual enrollment', async () => {
-    dbMock.academicYear.findFirst.mockResolvedValue({ id: 'year', name: '2026-2027' })
-    dbMock.administrativeRegistration.findMany.mockResolvedValue([{ studentId: 'student-valid' }])
-    dbMock.grade.findMany.mockResolvedValue([
-      { id: 'grade-valid', studentId: 'student-valid', isLocked: true },
-      { id: 'grade-orphan', studentId: 'student-orphan', isLocked: true },
-    ])
-    dbMock.gradeImportItem.deleteMany.mockResolvedValue({ count: 0 })
-    dbMock.grade.deleteMany.mockResolvedValue({ count: 1 })
-
-    const response = await POST(new NextRequest('http://localhost:3000/api/structure/integrity', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'remove-orphan-grades', academicYearId: 'year',
-        confirmation: 'SUPPRIMER NOTES SANS INSCRIPTION',
-      }),
-    }))
-    expect(response.status).toBe(200)
-    expect(dbMock.grade.deleteMany).toHaveBeenCalledWith({ where: { id: { in: ['grade-orphan'] } } })
-    expect(dbMock.auditLog.create).toHaveBeenCalledWith({ data: expect.objectContaining({
-      action: 'REMOVE_ORPHAN_GRADES',
-    }) })
-  })
 })
 
 describe('GET /api/structure/integrity', () => {

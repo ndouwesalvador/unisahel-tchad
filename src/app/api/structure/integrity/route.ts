@@ -318,74 +318,8 @@ const repairSchema = z.object({
   academicYearId: z.string().min(1),
 })
 
-const orphanCleanupSchema = z.object({
-  action: z.literal('remove-orphan-grades'),
-  academicYearId: z.string().min(1),
-  confirmation: z.literal('SUPPRIMER NOTES SANS INSCRIPTION'),
-})
-
-async function removeOrphanGrades(user: SessionUser, tenantId: string, academicYearId: string) {
-  const result = await db.$transaction(async (tx) => {
-    const year = await tx.academicYear.findFirst({
-      where: { id: academicYearId, tenantId, isCurrent: true },
-      select: { id: true, name: true },
-    })
-    if (!year) throw new Error('CURRENT_YEAR_NOT_FOUND')
-    const [validRegistrations, grades] = await Promise.all([
-      tx.administrativeRegistration.findMany({
-        where: { tenantId, academicYearId: year.id, status: 'INSCRIT' },
-        select: { studentId: true },
-      }),
-      tx.grade.findMany({
-        where: { academicYearId: year.id, student: { tenantId } },
-        select: { id: true, studentId: true, isLocked: true },
-      }),
-    ])
-    const enrolledStudentIds = new Set(validRegistrations.map((registration) => registration.studentId))
-    const orphanGrades = grades.filter((grade) => !enrolledStudentIds.has(grade.studentId))
-    const gradeIds = orphanGrades.map((grade) => grade.id)
-    const studentIds = [...new Set(orphanGrades.map((grade) => grade.studentId))]
-    const importItems = gradeIds.length > 0
-      ? await tx.gradeImportItem.deleteMany({ where: { gradeId: { in: gradeIds } } })
-      : { count: 0 }
-    const deleted = gradeIds.length > 0
-      ? await tx.grade.deleteMany({ where: { id: { in: gradeIds } } })
-      : { count: 0 }
-    await tx.auditLog.create({
-      data: {
-        tenantId,
-        userId: user.id,
-        action: 'REMOVE_ORPHAN_GRADES',
-        entity: 'Grade',
-        entityId: year.id,
-        details: JSON.stringify({
-          academicYear: year.name,
-          gradeIds,
-          studentIds,
-          lockedGrades: orphanGrades.filter((grade) => grade.isLocked).length,
-          importItems: importItems.count,
-          deleted: deleted.count,
-        }),
-      },
-    })
-    return {
-      academicYear: year,
-      students: studentIds.length,
-      lockedGrades: orphanGrades.filter((grade) => grade.isLocked).length,
-      deletedGrades: deleted.count,
-      deletedImportItems: importItems.count,
-    }
-  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable })
-  return NextResponse.json({ data: result })
-}
-
 async function handlePost(user: SessionUser, tenantId: string, request: NextRequest) {
-  const body = await request.json().catch(() => null)
-  const cleanup = orphanCleanupSchema.safeParse(body)
-  if (cleanup.success) {
-    return removeOrphanGrades(user, tenantId, cleanup.data.academicYearId)
-  }
-  const parsed = repairSchema.safeParse(body)
+  const parsed = repairSchema.safeParse(await request.json().catch(() => null))
   if (!parsed.success) {
     return NextResponse.json({ error: 'Action de réparation invalide.' }, { status: 400 })
   }
