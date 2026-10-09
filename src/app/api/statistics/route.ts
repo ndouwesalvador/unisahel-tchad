@@ -37,7 +37,6 @@ async function handleGet(user: SessionUser, tenantId: string, _request: NextRequ
         FROM "Student" s
         LEFT JOIN "Program" p
           ON p."id" = s."currentProgramId"
-         AND p."tenantId" = s."tenantId"
         WHERE s."tenantId" = ${tenantId}
         GROUP BY p."name", s."gender"
       `,
@@ -96,7 +95,6 @@ async function handleGet(user: SessionUser, tenantId: string, _request: NextRequ
         INNER JOIN "Student" s ON s."id" = g."studentId"
         LEFT JOIN "Program" p
           ON p."id" = s."currentProgramId"
-         AND p."tenantId" = s."tenantId"
         LEFT JOIN "Level" l ON l."id" = s."currentLevelId"
         WHERE s."tenantId" = ${tenantId}
           AND g."finalGrade" IS NOT NULL
