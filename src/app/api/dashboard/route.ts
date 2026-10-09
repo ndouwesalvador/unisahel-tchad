@@ -231,8 +231,8 @@ async function getDashboardHandler(user: SessionUser, tenantId: string, request:
       recentStudents,
       recentAnnouncements,
       currentAcademicYear,
-      studentsForCycle,
-      gradesForSuccessRate,
+      programCatalog,
+      gradeGroupsForSuccessRate,
       tenantSettings,
       unvalidatedGradesCount,
       pendingPaymentsCount,
@@ -281,13 +281,10 @@ async function getDashboardHandler(user: SessionUser, tenantId: string, request:
       }),
 
       // Students by program
-      db.student.findMany({
+      db.student.groupBy({
+        by: ['currentProgramId'],
         where: { tenantId, currentProgramId: { not: null } },
-        select: {
-          currentProgram: {
-            select: { name: true },
-          },
-        },
+        _count: { _all: true },
       }),
 
       // Payments by status
@@ -334,16 +331,18 @@ async function getDashboardHandler(user: SessionUser, tenantId: string, request:
         include: { sessions: true },
       }),
 
-      // Students with their program's cycle (Licence/Master/Doctorat)
-      db.student.findMany({
-        where: { tenantId, currentProgramId: { not: null } },
-        select: { currentProgram: { select: { cycle: true } } },
+      // Compact program catalogue used by both program and cycle charts.
+      db.program.findMany({
+        where: { tenantId },
+        select: { id: true, name: true, cycle: true },
       }),
 
-      // Entered grades with the student's program, to compute a real pass rate
-      db.grade.findMany({
+      // Group identical marks per student instead of loading every grade row
+      // and its nested relations into the Function process.
+      db.grade.groupBy({
+        by: ['studentId', 'finalGrade'],
         where: { student: { tenantId }, finalGrade: { not: null } },
-        select: { finalGrade: true, student: { select: { currentProgram: { select: { name: true } } } } },
+        _count: { _all: true },
       }),
 
       // Passing grade threshold
@@ -375,28 +374,38 @@ async function getDashboardHandler(user: SessionUser, tenantId: string, request:
       }),
     ])
 
-    // Process students by program for chart
+    const programsById = new Map(programCatalog.map((program) => [program.id, program]))
+
+    // Process the compact student groups for both charts.
     const programCounts: Record<string, number> = {}
     for (const s of studentsByProgram) {
-      const progName = s.currentProgram?.name || 'Non assigné'
-      programCounts[progName] = (programCounts[progName] || 0) + 1
+      const program = s.currentProgramId ? programsById.get(s.currentProgramId) : null
+      const progName = program?.name || 'Non assigné'
+      programCounts[progName] = (programCounts[progName] || 0) + s._count._all
     }
 
     // Students by cycle (Licence/Master/Doctorat)
     const cycleCounts: Record<string, number> = {}
-    for (const s of studentsForCycle) {
-      const cycle = s.currentProgram?.cycle || 'AUTRE'
-      cycleCounts[cycle] = (cycleCounts[cycle] || 0) + 1
+    for (const s of studentsByProgram) {
+      const cycle = s.currentProgramId ? programsById.get(s.currentProgramId)?.cycle || 'AUTRE' : 'AUTRE'
+      cycleCounts[cycle] = (cycleCounts[cycle] || 0) + s._count._all
     }
 
     // Success rate per program, from real entered grades vs the tenant's passing threshold
     const passingGrade = tenantSettings?.passingGrade ?? 10
+    const gradeStudentIds = [...new Set(gradeGroupsForSuccessRate.map((grade) => grade.studentId))]
+    const gradeStudents = gradeStudentIds.length > 0 ? await db.student.findMany({
+      where: { tenantId, id: { in: gradeStudentIds } },
+      select: { id: true, currentProgram: { select: { name: true } } },
+    }) : []
+    const studentProgramNames = new Map(gradeStudents.map((student) => [student.id, student.currentProgram?.name || 'Non assigné']))
     const successByProgram: Record<string, { total: number; passed: number }> = {}
-    for (const g of gradesForSuccessRate) {
-      const progName = g.student.currentProgram?.name || 'Non assigné'
+    for (const g of gradeGroupsForSuccessRate) {
+      if (g.finalGrade === null) continue
+      const progName = studentProgramNames.get(g.studentId) || 'Non assigné'
       if (!successByProgram[progName]) successByProgram[progName] = { total: 0, passed: 0 }
-      successByProgram[progName].total += 1
-      if ((g.finalGrade ?? 0) >= passingGrade) successByProgram[progName].passed += 1
+      successByProgram[progName].total += g._count._all
+      if (g.finalGrade >= passingGrade) successByProgram[progName].passed += g._count._all
     }
 
     const chartData = {
