@@ -3,114 +3,154 @@ import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
 import { isStudentSelfRole } from '@/lib/auth/student-scope'
 
+type StudentGroup = { name: string; gender: string | null; count: number }
+type PaymentGroup = { status: string; total: number }
+type GradeBucket = { range: string; count: number }
+type YearSuccess = { academicYearId: string; passing: number; total: number }
+type ProgramLevelSuccess = { program: string; level: string; passing: number; total: number }
+
 function round2(value: number): number {
   return Math.round(value * 100) / 100
 }
 
-// GET /api/statistics - real institution-wide statistics for the SUPER_ADMIN/CAISSE dashboard
+// GET /api/statistics - institution-wide statistics for the authorized dashboards.
+// PostgreSQL performs every aggregation: the Function never materializes the
+// complete student, payment or grade tables in memory.
 async function handleGet(user: SessionUser, tenantId: string, _request: NextRequest) {
   try {
     if (isStudentSelfRole(user.role)) {
       return NextResponse.json({ error: 'FORBIDDEN', message: 'Accès refusé' }, { status: 403 })
     }
-    const [students, payments, academicYears, settings] = await Promise.all([
-      db.student.findMany({
-        where: { tenantId },
-        select: { id: true, gender: true, currentProgramId: true, currentProgram: { select: { name: true } }, currentLevel: { select: { name: true } } },
-      }),
-      db.payment.findMany({ where: { tenantId }, select: { amount: true, status: true } }),
-      db.academicYear.findMany({ where: { tenantId }, orderBy: { startDate: 'asc' } }),
-      db.tenantSettings.findUnique({ where: { tenantId }, select: { passingGrade: true } }),
-    ])
+
+    const settings = await db.tenantSettings.findUnique({
+      where: { tenantId },
+      select: { passingGrade: true },
+    })
     const passingGrade = settings?.passingGrade ?? 10
 
-    // ─── Students by faculty/program, split by gender ──────────────────────
+    const [studentGroups, paymentGroups, academicYears, gradeBuckets, successRows, programLevelRows] = await Promise.all([
+      db.$queryRaw<StudentGroup[]>`
+        SELECT
+          COALESCE(p."name", 'Non affecté') AS "name",
+          s."gender" AS "gender",
+          COUNT(*)::int AS "count"
+        FROM "Student" s
+        LEFT JOIN "Program" p
+          ON p."id" = s."currentProgramId"
+         AND p."tenantId" = s."tenantId"
+        WHERE s."tenantId" = ${tenantId}
+        GROUP BY p."name", s."gender"
+      `,
+      db.$queryRaw<PaymentGroup[]>`
+        SELECT
+          p."status" AS "status",
+          COALESCE(SUM(p."amount"), 0)::float8 AS "total"
+        FROM "Payment" p
+        WHERE p."tenantId" = ${tenantId}
+        GROUP BY p."status"
+      `,
+      db.academicYear.findMany({
+        where: { tenantId },
+        orderBy: { startDate: 'asc' },
+        select: { id: true, name: true },
+      }),
+      db.$queryRaw<GradeBucket[]>`
+        SELECT
+          CASE
+            WHEN g."finalGrade" >= 0 AND g."finalGrade" < 5 THEN '0-5'
+            WHEN g."finalGrade" < 8 THEN '5-8'
+            WHEN g."finalGrade" < 10 THEN '8-10'
+            WHEN g."finalGrade" < 12 THEN '10-12'
+            WHEN g."finalGrade" < 14 THEN '12-14'
+            WHEN g."finalGrade" < 16 THEN '14-16'
+            WHEN g."finalGrade" < 18 THEN '16-18'
+            ELSE '18-20'
+          END AS "range",
+          COUNT(*)::int AS "count"
+        FROM "Grade" g
+        INNER JOIN "Student" s ON s."id" = g."studentId"
+        WHERE s."tenantId" = ${tenantId}
+          AND g."finalGrade" IS NOT NULL
+          AND g."finalGrade" >= 0
+          AND g."finalGrade" <= 20
+        GROUP BY 1
+      `,
+      db.$queryRaw<YearSuccess[]>`
+        SELECT
+          g."academicYearId" AS "academicYearId",
+          COUNT(*) FILTER (WHERE g."finalGrade" >= ${passingGrade})::int AS "passing",
+          COUNT(*)::int AS "total"
+        FROM "Grade" g
+        INNER JOIN "Student" s ON s."id" = g."studentId"
+        WHERE s."tenantId" = ${tenantId}
+          AND g."finalGrade" IS NOT NULL
+        GROUP BY g."academicYearId"
+      `,
+      db.$queryRaw<ProgramLevelSuccess[]>`
+        SELECT
+          COALESCE(p."name", 'Non affecté') AS "program",
+          COALESCE(l."name", '—') AS "level",
+          COUNT(*) FILTER (WHERE g."finalGrade" >= ${passingGrade})::int AS "passing",
+          COUNT(*)::int AS "total"
+        FROM "Grade" g
+        INNER JOIN "Student" s ON s."id" = g."studentId"
+        LEFT JOIN "Program" p
+          ON p."id" = s."currentProgramId"
+         AND p."tenantId" = s."tenantId"
+        LEFT JOIN "Level" l ON l."id" = s."currentLevelId"
+        WHERE s."tenantId" = ${tenantId}
+          AND g."finalGrade" IS NOT NULL
+        GROUP BY p."name", l."name"
+        ORDER BY p."name", l."name"
+      `,
+    ])
+
     const byProgram = new Map<string, { name: string; etudiants: number; femmes: number; hommes: number }>()
-    for (const s of students) {
-      const key = s.currentProgramId || 'none'
-      const name = s.currentProgram?.name || 'Non affecté'
-      const entry = byProgram.get(key) ?? { name, etudiants: 0, femmes: 0, hommes: 0 }
-      entry.etudiants += 1
-      if (s.gender === 'F') entry.femmes += 1
-      else if (s.gender === 'M') entry.hommes += 1
-      byProgram.set(key, entry)
+    for (const row of studentGroups) {
+      const entry = byProgram.get(row.name) ?? { name: row.name, etudiants: 0, femmes: 0, hommes: 0 }
+      entry.etudiants += row.count
+      if (row.gender === 'F') entry.femmes += row.count
+      if (row.gender === 'M') entry.hommes += row.count
+      byProgram.set(row.name, entry)
     }
     const studentsByFaculty = Array.from(byProgram.values()).sort((a, b) => b.etudiants - a.etudiants)
 
-    // ─── Payment collection breakdown ───────────────────────────────────────
-    const sumByStatus = (status: string) => payments.filter((p) => p.status === status).reduce((sum, p) => sum + p.amount, 0)
+    const paymentTotals = new Map(paymentGroups.map((row) => [row.status, row.total]))
     const paymentCollection = [
-      { name: 'Encaisse', value: sumByStatus('VALIDATED'), color: '#2d7a4f' },
-      { name: 'En attente', value: sumByStatus('PENDING'), color: '#d4a853' },
-      { name: 'Rembourse/Annule', value: sumByStatus('CANCELLED') + sumByStatus('REFUNDED'), color: '#c62828' },
-    ]
-
-    // ─── Grade distribution + success rate per academic year (real, however
-    //     many years actually have grade data - no fabricated multi-year trend) ──
-    const gradeBuckets = [
-      { range: '0-5', min: 0, max: 5 },
-      { range: '5-8', min: 5, max: 8 },
-      { range: '8-10', min: 8, max: 10 },
-      { range: '10-12', min: 10, max: 12 },
-      { range: '12-14', min: 12, max: 14 },
-      { range: '14-16', min: 14, max: 16 },
-      { range: '16-18', min: 16, max: 18 },
-      { range: '18-20', min: 18, max: 20.01 },
-    ]
-
-    const successRateByYear: { year: string; taux: number }[] = []
-    let allFinalGrades: number[] = []
-    for (const year of academicYears) {
-      const grades = await db.grade.findMany({
-        where: { student: { tenantId }, academicYearId: year.id, finalGrade: { not: null } },
-        select: { finalGrade: true },
-      })
-      const finals = grades.map((g) => g.finalGrade as number)
-      allFinalGrades = allFinalGrades.concat(finals)
-      if (finals.length > 0) {
-        const passing = finals.filter((g) => g >= passingGrade).length
-        successRateByYear.push({ year: year.name, taux: Math.round((passing / finals.length) * 100) })
-      }
-    }
-
-    const gradeDistribution = gradeBuckets.map((b) => ({
-      range: b.range,
-      count: allFinalGrades.filter((g) => g >= b.min && g < b.max).length,
-    }))
-
-    // ─── Success rate per program x level ───────────────────────────────────
-    const gradeRows = await db.grade.findMany({
-      where: { student: { tenantId }, finalGrade: { not: null } },
-      select: {
-        finalGrade: true,
-        student: { select: { currentProgram: { select: { name: true } }, currentLevel: { select: { name: true } } } },
+      { name: 'Encaisse', value: paymentTotals.get('VALIDATED') ?? 0, color: '#2d7a4f' },
+      { name: 'En attente', value: paymentTotals.get('PENDING') ?? 0, color: '#d4a853' },
+      {
+        name: 'Remboursé/Annulé',
+        value: (paymentTotals.get('CANCELLED') ?? 0) + (paymentTotals.get('REFUNDED') ?? 0),
+        color: '#c62828',
       },
-    })
-    const byProgLevel = new Map<string, { program: string; levels: Map<string, { pass: number; total: number }> }>()
-    for (const g of gradeRows) {
-      if (g.finalGrade === null) continue
-      const program = g.student.currentProgram?.name || 'Non affecté'
-      const level = g.student.currentLevel?.name || '—'
-      if (!byProgLevel.has(program)) byProgLevel.set(program, { program, levels: new Map() })
-      const entry = byProgLevel.get(program)!
-      const levelEntry = entry.levels.get(level) ?? { pass: 0, total: 0 }
-      levelEntry.total += 1
-      if (g.finalGrade >= passingGrade) levelEntry.pass += 1
-      entry.levels.set(level, levelEntry)
-    }
-    const successByProgram = Array.from(byProgLevel.values()).map((entry) => {
-      const row: Record<string, string | number> = { program: entry.program }
-      for (const [level, { pass, total }] of entry.levels) {
-        row[level] = total > 0 ? Math.round((pass / total) * 100) : 0
-      }
-      return row
+    ]
+
+    const bucketCounts = new Map(gradeBuckets.map((row) => [row.range, row.count]))
+    const gradeDistribution = ['0-5', '5-8', '8-10', '10-12', '12-14', '14-16', '16-18', '18-20']
+      .map((range) => ({ range, count: bucketCounts.get(range) ?? 0 }))
+
+    const successByYearId = new Map(successRows.map((row) => [row.academicYearId, row]))
+    const successRateByYear = academicYears.flatMap((year) => {
+      const row = successByYearId.get(year.id)
+      return row && row.total > 0
+        ? [{ year: year.name, taux: Math.round((row.passing / row.total) * 100) }]
+        : []
     })
 
-    const totalStudents = students.length
-    const totalFemmes = students.filter((s) => s.gender === 'F').length
-    const globalSuccessRate = allFinalGrades.length > 0
-      ? round2((allFinalGrades.filter((g) => g >= passingGrade).length / allFinalGrades.length) * 100)
-      : 0
+    const successByProgramMap = new Map<string, Record<string, string | number>>()
+    for (const row of programLevelRows) {
+      const entry = successByProgramMap.get(row.program) ?? { program: row.program }
+      entry[row.level] = row.total > 0 ? Math.round((row.passing / row.total) * 100) : 0
+      successByProgramMap.set(row.program, entry)
+    }
+    const successByProgram = Array.from(successByProgramMap.values())
+
+    const totalStudents = studentGroups.reduce((sum, row) => sum + row.count, 0)
+    const totalFemmes = studentGroups.reduce((sum, row) => sum + (row.gender === 'F' ? row.count : 0), 0)
+    const gradeTotal = successRows.reduce((sum, row) => sum + row.total, 0)
+    const passingTotal = successRows.reduce((sum, row) => sum + row.passing, 0)
+    const globalSuccessRate = gradeTotal > 0 ? round2((passingTotal / gradeTotal) * 100) : 0
 
     return NextResponse.json({
       studentsByFaculty,
@@ -122,7 +162,7 @@ async function handleGet(user: SessionUser, tenantId: string, _request: NextRequ
     })
   } catch (error) {
     console.error('Statistics API error:', error)
-    return NextResponse.json({ error: 'Failed to fetch statistics' }, { status: 500 })
+    return NextResponse.json({ error: 'Impossible de charger les statistiques.' }, { status: 500 })
   }
 }
 
