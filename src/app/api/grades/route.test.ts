@@ -72,6 +72,12 @@ describe('legacy notes endpoint is read-only', () => {
     expect(mocks.course).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({
       teachingServices: { some: { tenantId, teacherId, academicYearId: yearId, status: 'APPROVED' } },
     }) }))
+    expect(mocks.student).toHaveBeenCalledWith(expect.objectContaining({ where: {
+      tenantId,
+      registrations: { some: {
+        tenantId, academicYearId: yearId, status: 'INSCRIT', levelId: 'clevel000000000000000001',
+      } },
+    } }))
   })
 
   it('scopes teacher grade reads to annual service course IDs', async () => {

@@ -81,25 +81,50 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
   const registrations = await db.student.findMany({
     where: {
       tenantId,
-      OR: scopes.flatMap((scope) => [
-        { currentProgramId: scope.programId, currentLevelId: scope.levelId },
-        { registrations: { some: { tenantId, academicYearId: academicYear.id, status: 'INSCRIT', programId: scope.programId, levelId: scope.levelId } } },
-      ]),
+      registrations: {
+        some: {
+          tenantId,
+          academicYearId: academicYear.id,
+          status: 'INSCRIT',
+          OR: scopes.map((scope) => ({ programId: scope.programId, levelId: scope.levelId })),
+        },
+      },
     },
     select: {
       id: true, matricule: true, firstName: true, lastName: true, middleName: true,
-      email: true, phone: true, currentProgramId: true, currentLevelId: true,
-      currentProgram: { select: { name: true } }, currentLevel: { select: { name: true } },
+      email: true, phone: true,
+      registrations: {
+        where: {
+          tenantId,
+          academicYearId: academicYear.id,
+          status: 'INSCRIT',
+          OR: scopes.map((scope) => ({ programId: scope.programId, levelId: scope.levelId })),
+        },
+        select: { programId: true, levelId: true },
+        take: 1,
+      },
     },
     orderBy: { lastName: 'asc' },
   })
-  const students = registrations.map((registration) => ({
-    ...registration,
-    program: scopes.find((scope) => scope.programId === registration.currentProgramId && scope.levelId === registration.currentLevelId)?.program ?? registration.currentProgram?.name ?? 'Programme non précisé',
-    level: scopes.find((scope) => scope.programId === registration.currentProgramId && scope.levelId === registration.currentLevelId)?.level ?? registration.currentLevel?.name ?? 'Niveau non précisé',
-    programId: registration.currentProgramId,
-    levelId: registration.currentLevelId,
-  }))
+  const students = registrations.flatMap((registration) => {
+    const annual = registration.registrations[0]
+    if (!annual) return []
+    const scope = scopes.find((candidate) => candidate.programId === annual.programId && candidate.levelId === annual.levelId)
+    if (!scope) return []
+    return [{
+      id: registration.id,
+      matricule: registration.matricule,
+      firstName: registration.firstName,
+      lastName: registration.lastName,
+      middleName: registration.middleName,
+      email: registration.email,
+      phone: registration.phone,
+      program: scope.program,
+      level: scope.level,
+      programId: annual.programId,
+      levelId: annual.levelId,
+    }]
+  })
   return NextResponse.json({ data: { academicYear, scopes, students } })
 }
 
