@@ -3,9 +3,12 @@ import { NextRequest } from 'next/server'
 
 const { dbMock } = vi.hoisted(() => ({
   dbMock: {
-    $queryRaw: vi.fn(),
     tenantSettings: { findUnique: vi.fn() },
     academicYear: { findMany: vi.fn() },
+    student: { groupBy: vi.fn(), findMany: vi.fn() },
+    payment: { groupBy: vi.fn() },
+    grade: { groupBy: vi.fn() },
+    program: { findMany: vi.fn() },
   },
 }))
 
@@ -30,29 +33,32 @@ describe('GET /api/statistics', () => {
       { id: 'year-1', name: '2025-2026' },
       { id: 'year-2', name: '2026-2027' },
     ])
-    dbMock.$queryRaw
+    dbMock.student.groupBy.mockResolvedValue([
+      { currentProgramId: 'program-ge', gender: 'F', _count: { _all: 7 } },
+      { currentProgramId: 'program-ge', gender: 'M', _count: { _all: 5 } },
+      { currentProgramId: 'program-info', gender: null, _count: { _all: 3 } },
+    ])
+    dbMock.payment.groupBy.mockResolvedValue([
+      { status: 'VALIDATED', _sum: { amount: 500_000 } },
+      { status: 'PENDING', _sum: { amount: 80_000 } },
+      { status: 'REFUNDED', _sum: { amount: 20_000 } },
+    ])
+    dbMock.grade.groupBy
       .mockResolvedValueOnce([
-        { name: 'Génie électrique', gender: 'F', count: 7 },
-        { name: 'Génie électrique', gender: 'M', count: 5 },
-        { name: 'Informatique', gender: null, count: 3 },
+        { academicYearId: 'year-1', finalGrade: 9, _count: { _all: 1 } },
+        { academicYearId: 'year-1', finalGrade: 12, _count: { _all: 4 } },
+        { academicYearId: 'year-2', finalGrade: 9, _count: { _all: 4 } },
+        { academicYearId: 'year-2', finalGrade: 14, _count: { _all: 6 } },
       ])
       .mockResolvedValueOnce([
-        { status: 'VALIDATED', total: 500_000 },
-        { status: 'PENDING', total: 80_000 },
-        { status: 'REFUNDED', total: 20_000 },
+        { studentId: 'student-1', finalGrade: 9, _count: { _all: 2 } },
+        { studentId: 'student-1', finalGrade: 14, _count: { _all: 8 } },
       ])
-      .mockResolvedValueOnce([
-        { range: '8-10', count: 3 },
-        { range: '10-12', count: 5 },
-        { range: '14-16', count: 2 },
-      ])
-      .mockResolvedValueOnce([
-        { academicYearId: 'year-1', passing: 4, total: 5 },
-        { academicYearId: 'year-2', passing: 6, total: 10 },
-      ])
-      .mockResolvedValueOnce([
-        { program: 'Génie électrique', level: 'Master I', passing: 8, total: 10 },
-      ])
+    dbMock.program.findMany.mockResolvedValue([
+      { id: 'program-ge', name: 'Génie électrique' },
+      { id: 'program-info', name: 'Informatique' },
+    ])
+    dbMock.student.findMany.mockResolvedValue([{ id: 'student-1', currentProgram: { name: 'Génie électrique' }, currentLevel: { name: 'Master I' } }])
   })
 
   it('returns bounded database aggregates without loading complete tables', async () => {
@@ -78,7 +84,8 @@ describe('GET /api/statistics', () => {
     ])
     expect(body.successByProgram).toEqual([{ program: 'Génie électrique', 'Master I': 80 }])
     expect(body.totals).toEqual({ totalStudents: 15, totalFemmes: 7, globalSuccessRate: 66.67 })
-    expect(dbMock.$queryRaw).toHaveBeenCalledTimes(5)
+    expect(dbMock.grade.groupBy).toHaveBeenCalledTimes(2)
+    expect(dbMock.student.groupBy).toHaveBeenCalledWith(expect.objectContaining({ where: { tenantId: 'tenant-1' } }))
   })
 
   it.each(['ETUDIANT', 'ETUDIANT_SANTE'])('refuses institution statistics to %s', async (role) => {
@@ -88,6 +95,6 @@ describe('GET /api/statistics', () => {
       new NextRequest('http://localhost:3000/api/statistics'),
     )
     expect(response.status).toBe(403)
-    expect(dbMock.$queryRaw).not.toHaveBeenCalled()
+    expect(dbMock.grade.groupBy).not.toHaveBeenCalled()
   })
 })
