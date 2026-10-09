@@ -3,8 +3,8 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { signIn } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { useAppStore } from '@/lib/store'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -18,7 +18,7 @@ import {
 } from 'lucide-react'
 
 export function StudentLoginPage() {
-  const { setView } = useAppStore()
+  const router = useRouter()
   const [loginCode, setLoginCode] = useState('')
   const [pin, setPin] = useState('')
 
@@ -37,7 +37,8 @@ export function StudentLoginPage() {
       if (result?.error) {
         toast.error('Échec de la connexion', { description: 'Login ou PIN incorrect' })
       } else {
-        window.location.href = '/'
+        router.replace('/')
+        router.refresh()
       }
     } catch {
       toast.error('Erreur', { description: 'Impossible de se connecter' })
@@ -59,7 +60,7 @@ export function StudentLoginPage() {
       >
         {/* Back to staff login */}
         <button
-          onClick={() => setView('login')}
+          onClick={() => router.push('/login')}
           className="flex items-center gap-2 text-white/60 hover:text-white text-sm mb-6 transition-colors"
         >
           <ArrowLeft className="size-4" />
@@ -137,7 +138,7 @@ export function StudentLoginPage() {
 
             {/* Back to landing */}
             <button
-              onClick={() => setView('landing')}
+              onClick={() => router.push('/')}
               className="w-full mt-4 text-center text-xs text-gray-400 hover:text-[var(--institution-secondary)] transition-colors"
             >
               Retour à l&apos;accueil

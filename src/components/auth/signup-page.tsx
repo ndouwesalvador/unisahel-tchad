@@ -2,9 +2,9 @@
 
 import { useState } from 'react'
 import { signIn } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { motion } from 'framer-motion'
-import { useAppStore } from '@/lib/store'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -61,7 +61,7 @@ function FloatingShape({
 }
 
 export function SignupPage() {
-  const { setView } = useAppStore()
+  const router = useRouter()
   const [institutionName, setInstitutionName] = useState('')
   const [country, setCountry] = useState('')
   const [city, setCity] = useState('')
@@ -103,13 +103,14 @@ export function SignupPage() {
       const result = await signIn('credentials', { email, password, redirect: false })
       if (result?.error) {
         toast.error('Compte créé, mais la connexion automatique a échoué', { description: 'Connectez-vous manuellement.' })
-        setView('login')
+        router.push('/login')
         setIsLoading(false)
         return
       }
 
       toast.success('Bienvenue sur UniSahel !', { description: 'Votre établissement a été créé.' })
-      window.location.href = '/'
+      router.replace('/')
+      router.refresh()
     } catch {
         toast.error('Erreur', { description: 'Impossible de créer le compte. Veuillez réessayer.' })
       setIsLoading(false)
@@ -153,7 +154,7 @@ export function SignupPage() {
         className="relative z-10 w-full max-w-lg"
       >
         <button
-          onClick={() => setView('landing')}
+          onClick={() => router.push('/')}
           className="flex items-center gap-2 text-gray-500 hover:text-[var(--institution-primary)] text-sm mb-6 transition-colors"
         >
           <ArrowLeft className="size-4" />
@@ -346,7 +347,7 @@ export function SignupPage() {
               <p className="mt-5 text-center text-sm text-gray-500">
                 Déjà un compte ?{' '}
                 <button
-                  onClick={() => setView('login')}
+                  onClick={() => router.push('/login')}
                   className="text-[var(--institution-secondary)] font-medium hover:underline"
                 >
                   Se connecter

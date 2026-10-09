@@ -253,6 +253,97 @@ async function createStudentHandler(user: SessionUser, tenantId: string, request
 async function updateStudentHandler(user: SessionUser, tenantId: string, request: NextRequest) {
   try {
     const body = await request.json()
+
+    if (request.nextUrl.searchParams.get('action') === 'reset-pin') {
+      const id = typeof body?.id === 'string' ? body.id : ''
+      if (!id) {
+        return NextResponse.json({ error: 'L’identifiant de l’étudiant est requis.' }, { status: 400 })
+      }
+
+      const existing = await db.student.findFirst({
+        where: { id, tenantId },
+        select: {
+          id: true,
+          userId: true,
+          matricule: true,
+          firstName: true,
+          lastName: true,
+          user: { select: { id: true, tenantId: true, role: true } },
+        },
+      })
+      if (!existing) {
+        return NextResponse.json({ error: 'Étudiant introuvable.' }, { status: 404 })
+      }
+      if (!existing.matricule) {
+        return NextResponse.json({ error: 'Un matricule est requis avant de créer un accès étudiant.' }, { status: 409 })
+      }
+      const matricule = existing.matricule
+      if (existing.user && (existing.user.tenantId !== tenantId || existing.user.role !== 'ETUDIANT')) {
+        return NextResponse.json({ error: 'Le compte lié est incohérent. Contactez l’administrateur de la plateforme.' }, { status: 409 })
+      }
+
+      const credentials = await createStudentPortalCredentials()
+      try {
+        const account = await db.$transaction(async (tx) => {
+          if (existing.userId) {
+            return tx.user.update({
+              where: { id: existing.userId },
+              data: {
+                tenantId,
+                login: matricule,
+                pinHash: credentials.pinHash,
+                firstName: existing.firstName,
+                lastName: existing.lastName,
+                isActive: true,
+                mustChangePassword: false,
+              },
+              select: { id: true },
+            })
+          }
+
+          const loginTaken = await tx.user.findUnique({ where: { login: matricule }, select: { id: true } })
+          if (loginTaken) throw new Error('LOGIN_TAKEN')
+          const created = await tx.user.create({
+            data: {
+              tenantId,
+              login: matricule,
+              pinHash: credentials.pinHash,
+              firstName: existing.firstName,
+              lastName: existing.lastName,
+              role: 'ETUDIANT',
+              isActive: true,
+              mustChangePassword: false,
+            },
+            select: { id: true },
+          })
+          await tx.student.update({ where: { id: existing.id }, data: { userId: created.id } })
+          return created
+        }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable })
+
+        await db.auditLog.create({
+          data: {
+            tenantId,
+            userId: user.id,
+            action: 'UPDATE',
+            entity: 'Student',
+            entityId: existing.id,
+            details: JSON.stringify({ matricule, portalPinReset: true }),
+          },
+        })
+
+        return NextResponse.json({
+          data: { id: existing.id, userId: account.id },
+          portalAccount: { login: matricule, pin: credentials.pin },
+        })
+      } catch (error) {
+        if ((error instanceof Error && error.message === 'LOGIN_TAKEN') ||
+            (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002')) {
+          return NextResponse.json({ error: 'Ce matricule est déjà utilisé par un autre compte.' }, { status: 409 })
+        }
+        throw error
+      }
+    }
+
     const validatedBody = validateBody(updateStudentSchema, body)
     const { id, ...data } = validatedBody
     if (data.photo) {
@@ -265,7 +356,7 @@ async function updateStudentHandler(user: SessionUser, tenantId: string, request
     const existing = await db.student.findFirst({ where: { id, tenantId } })
     if (!existing) {
       return NextResponse.json(
-        { error: 'Student not found' },
+        { error: 'Étudiant introuvable.' },
         { status: 404 }
       )
     }
@@ -275,7 +366,7 @@ async function updateStudentHandler(user: SessionUser, tenantId: string, request
       const existingEmail = await db.student.findFirst({ where: { email: data.email, tenantId, NOT: { id } } })
       if (existingEmail) {
         return NextResponse.json(
-          { error: 'Email already exists' },
+          { error: 'Cette adresse e-mail est déjà utilisée.' },
           { status: 409 }
         )
       }
@@ -286,7 +377,7 @@ async function updateStudentHandler(user: SessionUser, tenantId: string, request
       const existingMatricule = await db.student.findFirst({ where: { matricule: data.matricule, tenantId, NOT: { id } } })
       if (existingMatricule) {
         return NextResponse.json(
-          { error: 'Matricule already exists' },
+          { error: 'Ce matricule est déjà utilisé.' },
           { status: 409 }
         )
       }
@@ -302,7 +393,7 @@ async function updateStudentHandler(user: SessionUser, tenantId: string, request
       ])
       if (!level || !program) {
         return NextResponse.json(
-          { error: 'Invalid level or program for this tenant' },
+          { error: 'La filière ou le niveau sélectionné est invalide pour cette institution.' },
           { status: 400 }
         )
       }
@@ -337,12 +428,12 @@ async function updateStudentHandler(user: SessionUser, tenantId: string, request
     console.error('Update student error:', error)
     if (error instanceof Error && error.name === 'ZodError') {
       return NextResponse.json(
-        { error: 'Validation failed', details: formatZodError(error as any) },
+        { error: 'Données invalides', details: formatZodError(error as any) },
         { status: 400 }
       )
     }
     return NextResponse.json(
-      { error: 'Failed to update student', details: error instanceof Error ? error.message : 'Unknown error' },
+      { error: 'Impossible de mettre à jour l’étudiant', details: error instanceof Error ? error.message : 'Erreur inconnue' },
       { status: 500 }
     )
   }

@@ -49,6 +49,7 @@ import {
   Pencil,
   Trash2,
   RotateCcw,
+  KeyRound,
 } from 'lucide-react'
 
 // ─── Data Types ───────────────────────────────────────────────────────────────
@@ -175,6 +176,7 @@ export function StudentsList() {
   const [editingStudent, setEditingStudent] = useState<StudentRow | null>(null)
   const [isUpdating, setIsUpdating] = useState(false)
   const [isChangingStatus, setIsChangingStatus] = useState(false)
+  const [resettingPinStudentId, setResettingPinStudentId] = useState<string | null>(null)
   const [isExportingPDF, setIsExportingPDF] = useState(false)
   const [form, setForm] = useState(emptyStudentForm)
   const [createdCredentials, setCreatedCredentials] = useState<{ matricule: string; login: string; pin: string; name: string } | null>(null)
@@ -368,6 +370,31 @@ export function StudentsList() {
     }
   }
 
+  const handleResetStudentPin = async (student: StudentRow) => {
+    if (!window.confirm(`Réinitialiser le code PIN de ${student.prenom} ${student.nom} ? L’ancien code cessera immédiatement de fonctionner.`)) return
+    setResettingPinStudentId(student.id)
+    try {
+      const res = await fetch('/api/students?action=reset-pin', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: student.id }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok || !body.portalAccount) throw new Error(body.error || 'Échec de la réinitialisation du code PIN')
+      setCreatedCredentials({
+        matricule: student.matricule,
+        login: body.portalAccount.login,
+        pin: body.portalAccount.pin,
+        name: `${student.prenom} ${student.nom}`,
+      })
+      toast.success('Code PIN réinitialisé')
+    } catch (error) {
+      toast.error('Réinitialisation impossible', { description: error instanceof Error ? error.message : 'Veuillez réessayer.' })
+    } finally {
+      setResettingPinStudentId(null)
+    }
+  }
+
   const fetchStudentsForExport = async () => {
     const total = studentsData?.pagination?.total ?? 0
     if (total === 0) return []
@@ -435,7 +462,7 @@ export function StudentsList() {
   const copyPin = () => {
     if (!createdCredentials) return
     navigator.clipboard.writeText(createdCredentials.pin).then(
-      () => toast.success('Code PIN copie'),
+      () => toast.success('Code PIN copié'),
       () => toast.error('Copie impossible'),
     )
   }
@@ -695,6 +722,18 @@ export function StudentsList() {
                       >
                         <Pencil className="size-3.5 text-gray-400" />
                       </Button>
+                      {canManageStudents && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 opacity-50 group-hover:opacity-100 transition-opacity"
+                          disabled={resettingPinStudentId === student.id}
+                          onClick={(e) => { e.stopPropagation(); void handleResetStudentPin(student) }}
+                          title="Réinitialiser le code PIN"
+                        >
+                          <KeyRound className="size-3.5 text-[var(--institution-primary)]" />
+                        </Button>
+                      )}
                       {canManageStudents && (student.statut === 'SUSPENDU' ? (
                         <Button
                           variant="ghost"
@@ -803,12 +842,12 @@ export function StudentsList() {
                   <SelectTrigger><SelectValue placeholder="Sélectionner" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="M">Masculin</SelectItem>
-                    <SelectItem value="F">Feminin</SelectItem>
+                    <SelectItem value="F">Féminin</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-sm">Nationalite</Label>
+                <Label className="text-sm">Nationalité</Label>
                 <Input value={form.nationality} onChange={(e) => setForm((f) => ({ ...f, nationality: e.target.value }))} />
               </div>
             </div>
@@ -852,7 +891,7 @@ export function StudentsList() {
                 <Input type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-sm">Telephone (optionnel)</Label>
+                <Label className="text-sm">Téléphone (optionnel)</Label>
                 <Input value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
               </div>
             </div>
@@ -904,7 +943,7 @@ export function StudentsList() {
                   <SelectTrigger><SelectValue placeholder="Sélectionner" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="M">Masculin</SelectItem>
-                    <SelectItem value="F">Feminin</SelectItem>
+                    <SelectItem value="F">Féminin</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -966,17 +1005,17 @@ export function StudentsList() {
                 <Input type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-sm">Telephone</Label>
+                <Label className="text-sm">Téléphone</Label>
                 <Input value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-sm">Nationalite</Label>
+                <Label className="text-sm">Nationalité</Label>
                 <Input value={form.nationality} onChange={(e) => setForm((f) => ({ ...f, nationality: e.target.value }))} />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-sm">Annee du bac</Label>
+                <Label className="text-sm">Année du bac</Label>
                 <Input type="number" min="1990" max="2030" value={form.bacYear} onChange={(e) => setForm((f) => ({ ...f, bacYear: e.target.value }))} />
               </div>
             </div>
@@ -997,13 +1036,13 @@ export function StudentsList() {
       <Dialog open={Boolean(createdCredentials)} onOpenChange={(o) => { if (!o) setCreatedCredentials(null) }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Étudiant enregistré</DialogTitle>
+            <DialogTitle>Accès étudiant prêt</DialogTitle>
           </DialogHeader>
           {createdCredentials && (
             <div className="space-y-4 py-2">
               <p className="text-sm text-gray-600">
                 Le compte Espace Étudiant de <span className="font-semibold text-[var(--institution-primary)]">{createdCredentials.name}</span> est prêt.
-                Transmettez ces identifiants — le code PIN ne sera plus jamais affiché.
+                Transmettez ces identifiants de façon confidentielle. Le code PIN ne sera plus affiché après la fermeture de cette fenêtre.
               </p>
               <div className="rounded-lg border bg-gray-50 p-3 space-y-2">
                 <div>

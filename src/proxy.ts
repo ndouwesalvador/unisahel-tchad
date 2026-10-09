@@ -3,10 +3,12 @@ import type { NextRequest } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 import { getAuthSecret } from '@/lib/auth/secret'
 
-function isPublicPath(pathname: string) {
+export function isPublicPath(pathname: string) {
   return (
     pathname === '/' ||
     pathname === '/login' ||
+    pathname === '/student-login' ||
+    pathname === '/signup' ||
     pathname === '/verify' ||
     pathname.startsWith('/api/auth/') ||
     pathname.startsWith('/api/documents/verify/')

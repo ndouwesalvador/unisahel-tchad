@@ -2,10 +2,9 @@
 
 import { useState } from 'react'
 import { signIn } from 'next-auth/react'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { motion } from 'framer-motion'
-import { useAppStore } from '@/lib/store'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -47,7 +46,7 @@ function FloatingShape({
 }
 
 export function LoginPage() {
-  const { setView } = useAppStore()
+  const router = useRouter()
   const searchParams = useSearchParams()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -140,7 +139,7 @@ export function LoginPage() {
         className="relative z-10 w-full max-w-md"
       >
         <button
-          onClick={() => setView('landing')}
+          onClick={() => router.push('/')}
           className="flex items-center gap-2 text-gray-500 hover:text-[var(--institution-primary)] text-sm mb-6 transition-colors"
         >
           <ArrowLeft className="size-4" />
@@ -245,7 +244,7 @@ export function LoginPage() {
 
               <div className="bg-gradient-to-r from-[var(--institution-primary)] via-[var(--institution-secondary)] to-[var(--institution-accent)] p-[1.5px] rounded-lg">
                 <motion.button
-                  onClick={() => setView('student-login')}
+                  onClick={() => router.push('/student-login')}
                   whileHover={{ scale: 1.01 }}
                   whileTap={{ scale: 0.99 }}
                   className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-[6px] bg-white text-sm font-medium text-[var(--institution-primary)] hover:bg-[var(--institution-secondary-05)] transition-colors"
@@ -258,7 +257,7 @@ export function LoginPage() {
               <p className="mt-4 text-center text-sm text-gray-500">
                 Nouvel établissement ?{' '}
                 <button
-                  onClick={() => setView('signup')}
+                  onClick={() => router.push('/signup')}
                   className="text-[var(--institution-secondary)] font-medium hover:underline"
                 >
                   Créer un compte

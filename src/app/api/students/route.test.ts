@@ -15,7 +15,7 @@ const { authMock, credentialsMock, dbMock } = vi.hoisted(() => ({
       create: vi.fn(),
       update: vi.fn(),
     },
-    user: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn() },
+    user: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
     auditLog: { create: vi.fn() },
     tenantSettings: { findUnique: vi.fn() },
     level: { findFirst: vi.fn() },
@@ -62,6 +62,7 @@ beforeEach(() => {
   dbMock.user.findMany.mockResolvedValue([])
   dbMock.user.findUnique.mockResolvedValue(null)
   dbMock.user.create.mockResolvedValue({ id: 'cstudentuser000000000001' })
+  dbMock.user.update.mockResolvedValue({ id: 'cstudentuser000000000001' })
   dbMock.student.create.mockImplementation(async ({ data }: { data: Record<string, unknown> }) => ({ id: 'cstudent00000000000000001', ...data }))
   dbMock.student.update.mockResolvedValue({ id: 'cstudent00000000000000001' })
   dbMock.auditLog.create.mockResolvedValue({ id: 'caudit000000000000000001' })
@@ -217,6 +218,43 @@ describe('POST /api/students', () => {
 })
 
 describe('PUT /api/students', () => {
+  it('resets an existing student portal PIN without exposing its hash', async () => {
+    dbMock.student.findFirst.mockResolvedValue({
+      id: 'cstudent00000000000000001', userId: 'cstudentuser000000000001', matricule: 'UNSH-2026-M1-000007',
+      firstName: 'Succès', lastName: 'Ouangbe',
+      user: { id: 'cstudentuser000000000001', tenantId: 'tenant-A', role: 'ETUDIANT' },
+    })
+    const res = await PUT(new NextRequest('http://localhost:3000/api/students?action=reset-pin', {
+      method: 'PUT', body: JSON.stringify({ id: 'cstudent00000000000000001' }),
+    }))
+    expect(res.status).toBe(200)
+    expect(await res.json()).toMatchObject({
+      data: { id: 'cstudent00000000000000001', userId: 'cstudentuser000000000001' },
+      portalAccount: { login: 'UNSH-2026-M1-000007', pin: '123456' },
+    })
+    expect(dbMock.user.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: 'cstudentuser000000000001' },
+      data: expect.objectContaining({ login: 'UNSH-2026-M1-000007', pinHash: 'hashed-pin', isActive: true }),
+    }))
+    expect(JSON.stringify(dbMock.user.update.mock.calls)).not.toContain('123456')
+    expect(dbMock.auditLog.create).toHaveBeenCalledWith({ data: expect.objectContaining({
+      tenantId: 'tenant-A', action: 'UPDATE', entity: 'Student', entityId: 'cstudent00000000000000001',
+    }) })
+  })
+
+  it('refuses to reset a portal account linked to another tenant', async () => {
+    dbMock.student.findFirst.mockResolvedValue({
+      id: 'cstudent00000000000000001', userId: 'cstudentuser000000000001', matricule: 'UNSH-2026-M1-000007',
+      firstName: 'Succès', lastName: 'Ouangbe',
+      user: { id: 'cstudentuser000000000001', tenantId: 'tenant-B', role: 'ETUDIANT' },
+    })
+    const res = await PUT(new NextRequest('http://localhost:3000/api/students?action=reset-pin', {
+      method: 'PUT', body: JSON.stringify({ id: 'cstudent00000000000000001' }),
+    }))
+    expect(res.status).toBe(409)
+    expect(dbMock.user.update).not.toHaveBeenCalled()
+  })
+
   it('rejects a level that does not belong to the selected program', async () => {
     dbMock.student.findFirst.mockResolvedValue({ id: 'cstudent00000000000000001', currentProgramId: 'cprogram00000000000000001', currentLevelId: 'clevel000000000000000001' })
     dbMock.level.findFirst.mockResolvedValue(null)
