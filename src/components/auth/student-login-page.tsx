@@ -21,13 +21,15 @@ export function StudentLoginPage() {
   const router = useRouter()
   const [loginCode, setLoginCode] = useState('')
   const [pin, setPin] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSubmit = async () => {
     if (!loginCode.trim() || !pin.trim()) {
       toast.error('Identifiants requis', { description: 'Saisissez votre matricule et votre code PIN.' })
       return
     }
+    if (isLoading) return
+    setIsLoading(true)
     try {
       const result = await signIn('credentials', {
         login: loginCode.trim(),
@@ -35,13 +37,15 @@ export function StudentLoginPage() {
         redirect: false,
       })
       if (result?.error) {
-        toast.error('Échec de la connexion', { description: 'Login ou PIN incorrect' })
+        toast.error('Échec de la connexion', { description: 'Identifiant ou code PIN incorrect.' })
+        setIsLoading(false)
       } else {
         router.replace('/')
         router.refresh()
       }
     } catch {
-      toast.error('Erreur', { description: 'Impossible de se connecter' })
+      toast.error('Erreur', { description: 'Impossible de se connecter.' })
+      setIsLoading(false)
     }
   }
 
@@ -84,7 +88,7 @@ export function StudentLoginPage() {
           </CardHeader>
 
           <CardContent className="pt-4">
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={(event) => { event.preventDefault(); void handleSubmit() }} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="login" className="text-sm font-medium text-gray-700">
                   Login
@@ -98,6 +102,7 @@ export function StudentLoginPage() {
                     className="pl-10 font-mono text-sm"
                     value={loginCode}
                     onChange={(e) => setLoginCode(e.target.value.toUpperCase())}
+                    disabled={isLoading}
                   />
                 </div>
               </div>
@@ -116,15 +121,18 @@ export function StudentLoginPage() {
                     value={pin}
                     onChange={(e) => setPin(e.target.value)}
                     maxLength={6}
+                    disabled={isLoading}
                   />
                 </div>
               </div>
 
               <Button
-                type="submit"
+                type="button"
                 className="w-full bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white h-10"
+                disabled={isLoading}
+                onClick={() => void handleSubmit()}
               >
-                Connexion
+                {isLoading ? 'Connexion…' : 'Connexion'}
               </Button>
             </form>
 

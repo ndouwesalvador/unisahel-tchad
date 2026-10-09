@@ -192,7 +192,7 @@ function StudentDashboardHome({ data }: { data: StudentDashboardResponse }) {
     VALIDATED: { label: 'Validé', color: '#166534' },
     PENDING: { label: 'En attente de validation', color: '#92400e' },
     CANCELLED: { label: 'Annulé', color: '#c62828' },
-    REFUNDED: { label: 'Rembourse', color: '#c62828' },
+    REFUNDED: { label: 'Remboursé', color: '#c62828' },
   }
   const paymentStatus = data.stats.lastPaymentStatus
     ? paymentStatusLabel[data.stats.lastPaymentStatus] ?? { label: data.stats.lastPaymentStatus, color: '#9ca3af' }
@@ -213,7 +213,7 @@ function StudentDashboardHome({ data }: { data: StudentDashboardResponse }) {
               {getGreeting()}, {user?.firstName} {user?.lastName}
             </h1>
             <p className="mt-1 text-sm text-slate-700">
-              {data.student?.program ?? 'Programme non affecte'} {data.student?.level ? `- ${data.student.level}` : ''}
+              {data.student?.program ?? 'Programme non affecté'} {data.student?.level ? `· ${data.student.level}` : ''}
             </p>
             <div className="flex flex-wrap items-center gap-2 mt-3">
               {data.currentAcademicYear ? (

@@ -123,6 +123,7 @@ function useCountUp(target: number, duration: number = 1400) {
 export function DocumentsPage() {
   const { user, setView } = useAppStore()
   const canManageDocuments = ['ADMIN_INSTITUTION', 'RECTORAT', 'SCOLARITE'].includes(user?.role ?? '')
+  const isStudentView = user?.role === 'ETUDIANT' || user?.role === 'ETUDIANT_SANTE'
   const canOpenJury = user?.role === 'ADMIN_INSTITUTION'
   const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
@@ -321,12 +322,20 @@ export function DocumentsPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4 }}
               >
-                <h1 className="text-2xl font-bold">Centre de génération de documents</h1>
-                <p className="text-white/70 text-sm mt-1">Génération, signature et vérification des documents académiques</p>
+                <h1 className="text-2xl font-bold">
+                  {canManageDocuments ? 'Centre de génération de documents' : isStudentView ? 'Mes documents officiels' : 'Documents accessibles'}
+                </h1>
+                <p className="text-white/80 text-sm mt-1">
+                  {canManageDocuments
+                    ? 'Génération, signature et vérification des documents académiques'
+                    : isStudentView
+                      ? 'Consultez et téléchargez uniquement les documents établis à votre nom.'
+                      : 'Consultez les documents disponibles dans votre périmètre.'}
+                </p>
               </motion.div>
 
               {/* Hero Stats */}
-              <motion.div
+              {canManageDocuments && <motion.div
                 className="grid grid-cols-3 gap-3 mt-5"
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -353,13 +362,13 @@ export function DocumentsPage() {
                   </div>
                   <p className="text-2xl font-bold text-white">{signedPercent}%</p>
                 </div>
-              </motion.div>
+              </motion.div>}
             </div>
           </div>
         </Card>
 
         {/* Document Generation Pipeline - Animated Progress */}
-        <motion.div
+        {canManageDocuments && <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.3 }}
@@ -409,7 +418,7 @@ export function DocumentsPage() {
               </div>
             </CardContent>
           </Card>
-        </motion.div>
+        </motion.div>}
 
         {/* Documents récents ticker */}
         <motion.div
@@ -645,7 +654,7 @@ export function DocumentsPage() {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-semibold text-[var(--institution-primary)]">
-                Documents générés ({filteredDocs.length})
+                {isStudentView ? 'Mes documents' : 'Documents générés'} ({filteredDocs.length})
               </CardTitle>
               <Badge className="text-[10px] bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0">
                 <Shield className="size-3 mr-1" />

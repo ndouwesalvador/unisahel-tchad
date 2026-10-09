@@ -11,11 +11,14 @@ import { GradeEntryPage } from './grade-entry-page'
 
 interface PublishedGrade {
   id: string
+  ccGrade: number | null
+  tpGrade: number | null
+  examGrade: number | null
   finalGrade: number | null
   session: string
   isLocked: boolean
   student?: { firstName: string; lastName: string; matricule: string | null }
-  teachingUnit: { code: string; name: string; semester?: { name: string } } | null
+  teachingUnit: { code: string; name: string; credits: number; semester?: { name: string } } | null
   courseElement: { code: string | null; name: string } | null
 }
 
@@ -68,6 +71,8 @@ function StudentGradesPage() {
     },
   })
   const grades = data?.data ?? []
+  const passingGrade = dashboard?.stats?.passingGrade ?? 10
+  const formatGrade = (value: number | null) => value === null ? '—' : value.toFixed(2)
 
   return <div className="space-y-5 text-slate-900">
     <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -91,7 +96,59 @@ function StudentGradesPage() {
       : !academicYearId ? <Card><CardContent className="p-5 text-sm text-slate-700">Aucune année académique active n’est configurée.</CardContent></Card>
       : isLoading ? <Card><CardContent className="p-5 text-sm text-slate-700">Chargement des notes…</CardContent></Card>
       : grades.length === 0 ? <Card><CardContent className="p-5 text-sm text-slate-700">Aucune note validée n’a été publiée pour cette année.</CardContent></Card>
-      : <Card className="border-slate-200 bg-white"><CardHeader><CardTitle className="text-lg text-slate-950">Résultats par matière</CardTitle></CardHeader><CardContent className="p-0"><div className="overflow-x-auto"><Table><TableHeader><TableRow className="bg-slate-50"><TableHead className="text-sm font-semibold text-slate-800">UE / matière</TableHead><TableHead className="text-sm font-semibold text-slate-800">Semestre</TableHead><TableHead className="text-sm font-semibold text-slate-800">Session</TableHead><TableHead className="text-right text-sm font-semibold text-slate-800">Note /20</TableHead></TableRow></TableHeader><TableBody>{grades.map((grade) => <TableRow key={grade.id}><TableCell className="min-w-56 py-4"><p className="font-semibold text-slate-950">{grade.courseElement?.name ?? grade.teachingUnit?.name ?? 'Matière'}</p><p className="text-sm text-slate-700">{grade.teachingUnit?.code} {grade.courseElement?.code ? `· ${grade.courseElement.code}` : ''}</p></TableCell><TableCell className="text-sm text-slate-800">{grade.teachingUnit?.semester?.name ?? '—'}</TableCell><TableCell className="text-sm text-slate-800">{grade.session === 'RATTRAPAGE' ? 'Rattrapage' : 'Normale'}</TableCell><TableCell className="text-right text-base font-bold text-slate-950">{grade.finalGrade !== null ? grade.finalGrade.toFixed(2) : '—'}</TableCell></TableRow>)}</TableBody></Table></div></CardContent></Card>}
+      : <Card className="border-slate-200 bg-white">
+          <CardHeader><CardTitle className="text-lg text-slate-950">Résultats par matière</CardTitle></CardHeader>
+          <CardContent className="p-0">
+            <div className="space-y-3 p-4 md:hidden">
+              {grades.map((grade) => {
+                const isValidated = grade.finalGrade !== null && grade.finalGrade >= passingGrade
+                return <article key={grade.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-semibold text-slate-950">{grade.courseElement?.name ?? grade.teachingUnit?.name ?? 'Matière'}</p>
+                      <p className="mt-1 text-xs text-slate-700">{grade.teachingUnit?.code}{grade.courseElement?.code ? ` · ${grade.courseElement.code}` : ''} · {grade.teachingUnit?.credits ?? 0} crédit(s)</p>
+                    </div>
+                    <span className={`shrink-0 rounded-full px-2 py-1 text-[11px] font-semibold ${isValidated ? 'bg-emerald-100 text-emerald-900' : 'bg-amber-100 text-amber-950'}`}>
+                      {isValidated ? 'Validée' : 'Non validée'}
+                    </span>
+                  </div>
+                  <div className="mt-4 grid grid-cols-2 gap-2 text-center">
+                    <div className="rounded-lg bg-slate-50 p-2"><p className="text-[10px] font-semibold uppercase text-slate-600">C.C.</p><p className="mt-1 font-bold text-slate-950">{formatGrade(grade.ccGrade)}</p></div>
+                    {grade.tpGrade !== null && <div className="rounded-lg bg-slate-50 p-2"><p className="text-[10px] font-semibold uppercase text-slate-600">T.P.</p><p className="mt-1 font-bold text-slate-950">{formatGrade(grade.tpGrade)}</p></div>}
+                    <div className="rounded-lg bg-slate-50 p-2"><p className="text-[10px] font-semibold uppercase text-slate-600">Examen</p><p className="mt-1 font-bold text-slate-950">{formatGrade(grade.examGrade)}</p></div>
+                    <div className="rounded-lg bg-emerald-50 p-2"><p className="text-[10px] font-semibold uppercase text-emerald-800">Moyenne</p><p className="mt-1 font-bold text-slate-950">{formatGrade(grade.finalGrade)} / 20</p></div>
+                  </div>
+                  <p className="mt-3 text-xs text-slate-700">{grade.teachingUnit?.semester?.name ?? 'Semestre non indiqué'} · {grade.session === 'RATTRAPAGE' ? 'Rattrapage' : 'Session normale'}</p>
+                </article>
+              })}
+            </div>
+            <div className="hidden overflow-x-auto md:block">
+              <Table>
+                <TableHeader><TableRow className="bg-slate-50">
+                  <TableHead className="text-sm font-semibold text-slate-800">UE / matière</TableHead>
+                  <TableHead className="text-center text-sm font-semibold text-slate-800">Crédits</TableHead>
+                  <TableHead className="text-right text-sm font-semibold text-slate-800">C.C.</TableHead>
+                  <TableHead className="text-right text-sm font-semibold text-slate-800">T.P.</TableHead>
+                  <TableHead className="text-right text-sm font-semibold text-slate-800">Examen</TableHead>
+                  <TableHead className="text-right text-sm font-semibold text-slate-800">Moyenne</TableHead>
+                  <TableHead className="text-sm font-semibold text-slate-800">Décision</TableHead>
+                </TableRow></TableHeader>
+                <TableBody>{grades.map((grade) => {
+                  const isValidated = grade.finalGrade !== null && grade.finalGrade >= passingGrade
+                  return <TableRow key={grade.id}>
+                    <TableCell className="min-w-64 py-4"><p className="font-semibold text-slate-950">{grade.courseElement?.name ?? grade.teachingUnit?.name ?? 'Matière'}</p><p className="text-sm text-slate-700">{grade.teachingUnit?.code}{grade.courseElement?.code ? ` · ${grade.courseElement.code}` : ''} · {grade.teachingUnit?.semester?.name ?? '—'}</p></TableCell>
+                    <TableCell className="text-center font-semibold text-slate-900">{grade.teachingUnit?.credits ?? 0}</TableCell>
+                    <TableCell className="text-right text-slate-900">{formatGrade(grade.ccGrade)}</TableCell>
+                    <TableCell className="text-right text-slate-900">{formatGrade(grade.tpGrade)}</TableCell>
+                    <TableCell className="text-right text-slate-900">{formatGrade(grade.examGrade)}</TableCell>
+                    <TableCell className="text-right text-base font-bold text-slate-950">{formatGrade(grade.finalGrade)}</TableCell>
+                    <TableCell><span className={`rounded-full px-2 py-1 text-xs font-semibold ${isValidated ? 'bg-emerald-100 text-emerald-900' : 'bg-amber-100 text-amber-950'}`}>{isValidated ? 'Validée' : 'Non validée'}</span></TableCell>
+                  </TableRow>
+                })}</TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>}
   </div>
 }
 

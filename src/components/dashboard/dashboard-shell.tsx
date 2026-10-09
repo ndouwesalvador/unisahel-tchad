@@ -341,6 +341,21 @@ const roleLabels: Record<UserRole, string> = {
   PARENT: 'Parent',
 }
 
+const institutionSettingsRoles = new Set<UserRole>(['SUPER_ADMIN', 'ADMIN_INSTITUTION'])
+const commonStudentViews = new Set<AppView>(['dashboard', 'grades', 'documents', 'timetable', 'profile', 'verify'])
+const studentRoleViews: Record<'ETUDIANT' | 'ETUDIANT_SANTE', Set<AppView>> = {
+  ETUDIANT: new Set<AppView>(['payments', 'student-exam']),
+  ETUDIANT_SANTE: new Set<AppView>(['internships', 'health']),
+}
+
+export function canManageInstitutionSettings(role: UserRole) {
+  return institutionSettingsRoles.has(role)
+}
+
+export function isStudentViewAllowed(role: 'ETUDIANT' | 'ETUDIANT_SANTE', view: AppView) {
+  return commonStudentViews.has(view) || studentRoleViews[role].has(view)
+}
+
 const viewLabels: Record<AppView, string> = {
   landing: 'Accueil',
   login: 'Connexion',
@@ -511,11 +526,11 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void } = {}) {
       {/* Bottom actions */}
       <div className="border-t border-white/10 p-3 space-y-1">
         <button
-          onClick={() => { setView(['ENSEIGNANT', 'FACULTE', 'DEPARTEMENT'].includes(user.role) ? 'profile' : 'settings'); onNavigate?.() }}
+          onClick={() => { setView(canManageInstitutionSettings(user.role) ? 'settings' : 'profile'); onNavigate?.() }}
           className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-white/85 hover:text-white hover:bg-white/5 transition-colors ${sidebarCollapsed ? 'justify-center' : ''}`}
         >
           <Settings className="size-[18px] shrink-0" />
-          {!sidebarCollapsed && <span>{['ENSEIGNANT', 'FACULTE', 'DEPARTEMENT'].includes(user.role) ? 'Mon profil' : 'Paramètres'}</span>}
+          {!sidebarCollapsed && <span>{canManageInstitutionSettings(user.role) ? 'Paramètres' : 'Mon profil'}</span>}
         </button>
         <button
           onClick={handleLogout}
@@ -533,6 +548,9 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void } = {}) {
 
 function MainContent({ view }: { view: AppView }) {
   const { user } = useAppStore()
+  if ((user?.role === 'ETUDIANT' || user?.role === 'ETUDIANT_SANTE') && !isStudentViewAllowed(user.role, view)) {
+    return <DashboardHome />
+  }
   if (user?.role === 'FACULTE' || user?.role === 'DEPARTEMENT') {
     // These screens are intentionally shared with the central administration,
     // but their APIs apply the user's faculty/department scope server-side.
@@ -723,6 +741,10 @@ export function DashboardShell() {
   useEffect(() => {
     if (user?.role !== 'FACULTE' && user?.role !== 'DEPARTEMENT') return
     if (!['dashboard', 'students', 'teachers', 'structure', 'programs', 'maquette', 'timetable', 'teaching-services', 'grades', 'deliberation', 'documents', 'reports', 'profile'].includes(currentView)) setView('dashboard')
+  }, [user?.role, currentView, setView])
+  useEffect(() => {
+    if (user?.role !== 'ETUDIANT' && user?.role !== 'ETUDIANT_SANTE') return
+    if (!isStudentViewAllowed(user.role, currentView)) setView('dashboard')
   }, [user?.role, currentView, setView])
   const searchTerm = searchQuery.trim().toLowerCase()
   const searchResults = searchTerm
@@ -919,7 +941,7 @@ export function DashboardShell() {
                     <CircleUser className="size-4 mr-2" />
                     Mon profil
                   </DropdownMenuItem>
-                  {!['ENSEIGNANT', 'FACULTE', 'DEPARTEMENT'].includes(user.role) && <DropdownMenuItem onClick={() => setView('settings')}>
+                  {canManageInstitutionSettings(user.role) && <DropdownMenuItem onClick={() => setView('settings')}>
                     <Settings className="size-4 mr-2" />
                     Paramètres
                   </DropdownMenuItem>}
