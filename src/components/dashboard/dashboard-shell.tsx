@@ -779,7 +779,7 @@ export function DashboardShell() {
   const initials = `${user.firstName[0]}${user.lastName[0]}`
 
   return (
-    <div className="min-h-screen flex bg-gray-50">
+    <div className="flex min-h-screen overflow-x-clip bg-gray-50">
       {/* Desktop Sidebar */}
       <motion.aside
         initial={false}
