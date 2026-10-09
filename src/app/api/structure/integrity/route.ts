@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { Prisma } from '@prisma/client'
+import { z } from 'zod'
 import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
 
@@ -310,3 +312,122 @@ async function handleGet(_user: SessionUser, tenantId: string, _request: NextReq
 }
 
 export const GET = withTenantAuth(handleGet, [...ADMIN_ROLES])
+
+const repairSchema = z.object({
+  action: z.literal('repair-pedagogical-registrations'),
+  academicYearId: z.string().min(1),
+})
+
+async function handlePost(user: SessionUser, tenantId: string, request: NextRequest) {
+  const parsed = repairSchema.safeParse(await request.json().catch(() => null))
+  if (!parsed.success) {
+    return NextResponse.json({ error: 'Action de réparation invalide.' }, { status: 400 })
+  }
+
+  const result = await db.$transaction(async (tx) => {
+    const year = await tx.academicYear.findFirst({
+      where: { id: parsed.data.academicYearId, tenantId, isCurrent: true },
+      select: { id: true, name: true },
+    })
+    if (!year) throw new Error('CURRENT_YEAR_NOT_FOUND')
+
+    const annualRegistrations = await tx.administrativeRegistration.findMany({
+      where: { tenantId, academicYearId: year.id, status: 'INSCRIT' },
+      select: { studentId: true, levelId: true },
+    })
+    const studentIds = [...new Set(annualRegistrations.map((registration) => registration.studentId))]
+    const levelIds = [...new Set(annualRegistrations.map((registration) => registration.levelId))]
+    const levelByStudent = new Map(annualRegistrations.map((registration) => [registration.studentId, registration.levelId]))
+
+    const [units, lockedGrades, existingRegistrations] = await Promise.all([
+      tx.teachingUnit.findMany({
+        where: { semester: { level: { id: { in: levelIds }, program: { tenantId, isActive: true } } } },
+        select: { id: true, type: true, semester: { select: { levelId: true } } },
+      }),
+      tx.grade.findMany({
+        where: { academicYearId: year.id, isLocked: true, studentId: { in: studentIds } },
+        select: {
+          studentId: true,
+          teachingUnitId: true,
+          courseElement: { select: { teachingUnitId: true } },
+        },
+      }),
+      tx.pedagogicalRegistration.findMany({
+        where: { academicYearId: year.id, studentId: { in: studentIds } },
+        select: { id: true, studentId: true, teachingUnitId: true, status: true },
+      }),
+    ])
+    const unitById = new Map(units.map((unit) => [unit.id, unit]))
+    const targetPairs = new Map<string, { studentId: string; teachingUnitId: string }>()
+    for (const registration of annualRegistrations) {
+      for (const unit of units) {
+        if (unit.type === 'FONDAMENTALE' && unit.semester.levelId === registration.levelId) {
+          targetPairs.set(pair(registration.studentId, unit.id), {
+            studentId: registration.studentId,
+            teachingUnitId: unit.id,
+          })
+        }
+      }
+    }
+    for (const grade of lockedGrades) {
+      const teachingUnitId = grade.teachingUnitId ?? grade.courseElement?.teachingUnitId
+      const unit = teachingUnitId ? unitById.get(teachingUnitId) : null
+      if (teachingUnitId && unit?.semester.levelId === levelByStudent.get(grade.studentId)) {
+        targetPairs.set(pair(grade.studentId, teachingUnitId), { studentId: grade.studentId, teachingUnitId })
+      }
+    }
+
+    const existingByPair = new Map(existingRegistrations.map((registration) => [
+      pair(registration.studentId, registration.teachingUnitId), registration,
+    ]))
+    const toCreate = [...targetPairs.entries()]
+      .filter(([key]) => !existingByPair.has(key))
+      .map(([, value]) => ({
+        ...value,
+        academicYearId: year.id,
+        type: 'OBLIGATOIRE',
+        status: 'ACTIVE',
+      }))
+    const toReactivate = [...targetPairs.keys()]
+      .flatMap((key) => {
+        const existing = existingByPair.get(key)
+        return existing && existing.status !== 'ACTIVE' ? [existing.id] : []
+      })
+
+    const [created, reactivated] = await Promise.all([
+      toCreate.length > 0
+        ? tx.pedagogicalRegistration.createMany({ data: toCreate, skipDuplicates: true })
+        : Promise.resolve({ count: 0 }),
+      toReactivate.length > 0
+        ? tx.pedagogicalRegistration.updateMany({ where: { id: { in: toReactivate } }, data: { status: 'ACTIVE' } })
+        : Promise.resolve({ count: 0 }),
+    ])
+    await tx.auditLog.create({
+      data: {
+        tenantId,
+        userId: user.id,
+        action: 'REPAIR',
+        entity: 'PedagogicalRegistration',
+        entityId: year.id,
+        details: JSON.stringify({
+          academicYear: year.name,
+          annualRegistrations: annualRegistrations.length,
+          expectedRegistrations: targetPairs.size,
+          created: created.count,
+          reactivated: reactivated.count,
+        }),
+      },
+    })
+    return {
+      academicYear: year,
+      annualRegistrations: annualRegistrations.length,
+      expectedRegistrations: targetPairs.size,
+      created: created.count,
+      reactivated: reactivated.count,
+    }
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable })
+
+  return NextResponse.json({ data: result })
+}
+
+export const POST = withTenantAuth(handlePost, [...ADMIN_ROLES])

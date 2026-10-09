@@ -38,8 +38,30 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
           tenantId, studentId, academicYearId, programId: program.id, levelId: level.id,
           status: 'INSCRIT',
         } })
+        const mandatoryUnits = await tx.teachingUnit.findMany({
+          where: {
+            type: 'FONDAMENTALE',
+            semester: { level: { id: level.id, program: { tenantId, isActive: true } } },
+          },
+          select: { id: true },
+        })
+        if (mandatoryUnits.length > 0) {
+          await tx.pedagogicalRegistration.createMany({
+            data: mandatoryUnits.map((unit) => ({
+              studentId,
+              teachingUnitId: unit.id,
+              academicYearId,
+              type: 'OBLIGATOIRE',
+              status: 'ACTIVE',
+            })),
+            skipDuplicates: true,
+          })
+        }
         await tx.auditLog.create({ data: { tenantId, userId: user.id, action: 'CREATE', entity: 'AdministrativeRegistration', entityId: created.id,
-          details: JSON.stringify({ studentId, academicYearId, programId: program.id, levelId: level.id, status: 'INSCRIT' }) } })
+          details: JSON.stringify({
+            studentId, academicYearId, programId: program.id, levelId: level.id,
+            status: 'INSCRIT', mandatoryTeachingUnits: mandatoryUnits.length,
+          }) } })
         return created
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable })
       return NextResponse.json({ registration }, { status: 201 })

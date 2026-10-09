@@ -9,7 +9,7 @@ const { authMock, dbMock } = vi.hoisted(() => ({
     student: { findMany: vi.fn() },
     user: { count: vi.fn() },
     administrativeRegistration: { count: vi.fn(), findMany: vi.fn() },
-    pedagogicalRegistration: { count: vi.fn(), findMany: vi.fn() },
+    pedagogicalRegistration: { count: vi.fn(), findMany: vi.fn(), createMany: vi.fn(), updateMany: vi.fn() },
     grade: { count: vi.fn(), findMany: vi.fn() },
     teachingService: { count: vi.fn() },
     timetableSlot: { count: vi.fn() },
@@ -20,13 +20,15 @@ const { authMock, dbMock } = vi.hoisted(() => ({
     juryAssignment: { count: vi.fn() },
     feeStructure: { count: vi.fn() },
     teachingUnit: { findMany: vi.fn() },
+    auditLog: { create: vi.fn() },
+    $transaction: vi.fn(),
   },
 }))
 
 vi.mock('@/lib/auth/config', () => ({ auth: authMock }))
 vi.mock('@/lib/db', () => ({ db: dbMock }))
 
-const { GET } = await import('./route')
+const { GET, POST } = await import('./route')
 const tenantId = 'ctenant0000000000000000a1'
 
 beforeEach(() => {
@@ -38,6 +40,39 @@ beforeEach(() => {
   dbMock.administrativeRegistration.findMany.mockResolvedValue([])
   dbMock.pedagogicalRegistration.findMany.mockResolvedValue([])
   dbMock.teachingUnit.findMany.mockResolvedValue([])
+  dbMock.pedagogicalRegistration.createMany.mockResolvedValue({ count: 0 })
+  dbMock.pedagogicalRegistration.updateMany.mockResolvedValue({ count: 0 })
+  dbMock.auditLog.create.mockResolvedValue({ id: 'audit' })
+  dbMock.$transaction.mockImplementation(async (callback: (tx: typeof dbMock) => unknown) => callback(dbMock))
+})
+
+describe('POST /api/structure/integrity', () => {
+  it('repairs only current-year registrations backed by a valid annual enrollment', async () => {
+    dbMock.academicYear.findFirst.mockResolvedValue({ id: 'year', name: '2026-2027' })
+    dbMock.administrativeRegistration.findMany.mockResolvedValue([{ studentId: 'student-1', levelId: 'level-1' }])
+    dbMock.teachingUnit.findMany.mockResolvedValue([
+      { id: 'ue-required', type: 'FONDAMENTALE', semester: { levelId: 'level-1' } },
+      { id: 'ue-option', type: 'OPTIONNELLE', semester: { levelId: 'level-1' } },
+    ])
+    dbMock.grade.findMany.mockResolvedValue([{
+      studentId: 'student-1', teachingUnitId: 'ue-option', courseElement: null,
+    }])
+    dbMock.pedagogicalRegistration.findMany.mockResolvedValue([])
+    dbMock.pedagogicalRegistration.createMany.mockResolvedValue({ count: 2 })
+
+    const response = await POST(new NextRequest('http://localhost:3000/api/structure/integrity', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'repair-pedagogical-registrations', academicYearId: 'year' }),
+    }))
+    expect(response.status).toBe(200)
+    expect(dbMock.pedagogicalRegistration.createMany).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.arrayContaining([
+        expect.objectContaining({ studentId: 'student-1', teachingUnitId: 'ue-required', status: 'ACTIVE' }),
+        expect.objectContaining({ studentId: 'student-1', teachingUnitId: 'ue-option', status: 'ACTIVE' }),
+      ]),
+    }))
+    expect(dbMock.auditLog.create).toHaveBeenCalledWith({ data: expect.objectContaining({ action: 'REPAIR' }) })
+  })
 })
 
 describe('GET /api/structure/integrity', () => {
