@@ -10,8 +10,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Switch } from '@/components/ui/switch'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
@@ -26,22 +24,16 @@ import {
 import {
   User,
   Shield,
-  Bell,
-  Settings,
   Activity,
   Lock,
-  Globe,
   Smartphone,
-  Camera,
   Save,
   X,
   Clock,
   Monitor,
-  Download,
   Edit3,
   Trash2,
   LogIn,
-  ToggleLeft,
   Pencil,
 } from 'lucide-react'
 
@@ -58,13 +50,18 @@ function formatDateTimeFr(iso: string) {
   return new Date(iso).toLocaleString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
+function formatDateFr(iso: string | null | undefined) {
+  if (!iso) return 'Non renseignée'
+  return new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
+}
+
 // ─── Role Labels ──────────────────────────────────────────────────────────────
 
 const roleLabels: Record<string, string> = {
   SUPER_ADMIN: 'Super Admin',
   ADMIN_INSTITUTION: 'Admin Institution',
   RECTORAT: 'Rectorat',
-  SCOLARITE: 'Scolarite',
+  SCOLARITE: 'Scolarité',
   FACULTE: 'Faculté',
   DEPARTEMENT: 'Département',
   ENSEIGNANT: 'Enseignant',
@@ -73,7 +70,7 @@ const roleLabels: Record<string, string> = {
   CAISSE: 'Caisse',
   ETUDIANT: 'Étudiant',
   ETUDIANT_SANTE: 'Étudiant en santé',
-  MAITRE_STAGE: 'Maitre de Stage',
+  MAITRE_STAGE: 'Maître de stage',
   PARENT: 'Parent',
 }
 
@@ -84,10 +81,6 @@ export function ProfilePage() {
   const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState('profil')
   const [isEditing, setIsEditing] = useState(false)
-  const [twoFactor, setTwoFactor] = useState(false)
-  const [emailNotif, setEmailNotif] = useState(true)
-  const [pushNotif, setPushNotif] = useState(true)
-  const [smsNotif, setSmsNotif] = useState(false)
   const [isSavingProfile, setIsSavingProfile] = useState(false)
   const [isChangingPassword, setIsChangingPassword] = useState(false)
 
@@ -96,7 +89,13 @@ export function ProfilePage() {
       loginHistory: { id: string; date: string; ip: string; device: string }[]
       currentSession: { id: string; date: string; ip: string; device: string } | null
       activity: { id: string; type: ActivityType; description: string; timestamp: string }[]
-      profile: { firstName: string; lastName: string; email: string; phone: string; hasPassword: boolean }
+      profile: {
+        firstName: string; lastName: string; email: string; phone: string; hasPassword: boolean
+        isActive: boolean; createdAt: string | null; updatedAt: string | null; lastLoginAt: string | null
+        departmentName: string | null; facultyName: string | null; programName: string | null; levelName: string | null
+        employeeId: string | null; grade: string | null; specialization: string | null
+      }
+      stats: { connectionsThisMonth: number; actionsThisMonth: number }
     } | undefined
   }
 
@@ -110,7 +109,12 @@ export function ProfilePage() {
 
   useEffect(() => {
     if (profileQuery?.profile) {
-      setFormData((prev) => ({ ...prev, phone: profileQuery.profile.phone }))
+      setFormData({
+        firstName: profileQuery.profile.firstName,
+        lastName: profileQuery.profile.lastName,
+        email: profileQuery.profile.email,
+        phone: profileQuery.profile.phone,
+      })
     }
   }, [profileQuery])
 
@@ -123,8 +127,16 @@ export function ProfilePage() {
 
   if (!user) return null
 
-  const initials = `${user.firstName[0]}${user.lastName[0]}`
-  const fullName = `${user.firstName} ${user.lastName}`
+  const profile = profileQuery?.profile
+  const displayFirstName = profile?.firstName ?? user.firstName
+  const displayLastName = profile?.lastName ?? user.lastName
+  const displayEmail = profile?.email ?? user.email ?? ''
+  const initials = `${displayFirstName[0] ?? ''}${displayLastName[0] ?? ''}`
+  const fullName = `${displayFirstName} ${displayLastName}`
+  const scopeLabel = profile?.programName ? 'Programme' : profile?.departmentName ? 'Département' : profile?.facultyName ? 'Faculté' : null
+  const scopeValue = profile?.programName
+    ? `${profile.programName}${profile.levelName ? ` · ${profile.levelName}` : ''}`
+    : profile?.departmentName ?? profile?.facultyName ?? null
 
   const handleSaveProfile = async () => {
     setIsSavingProfile(true)
@@ -150,9 +162,9 @@ export function ProfilePage() {
 
   const handleCancelEdit = () => {
     setFormData({
-      firstName: user.firstName,
-      lastName: user.lastName,
-      email: user.email || '',
+      firstName: displayFirstName,
+      lastName: displayLastName,
+      email: displayEmail,
       phone: profileQuery?.profile?.phone || '',
     })
     setIsEditing(false)
@@ -202,19 +214,11 @@ export function ProfilePage() {
         <div className="bg-white border border-gray-200 border-t-0 rounded-b-xl px-4 sm:px-6 pb-5 pt-14 sm:pt-16 relative">
           {/* Avatar overlapping banner */}
           <div className="absolute -top-12 sm:-top-14 left-4 sm:left-6">
-            <div className="relative">
-              <Avatar className="size-20 sm:size-24 border-4 border-white shadow-lg">
-                <AvatarFallback className="bg-[var(--institution-secondary)] text-white text-xl sm:text-2xl font-bold">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
-              <button
-                className="absolute bottom-0 right-0 p-1.5 bg-[var(--institution-accent)] rounded-full text-white shadow-md hover:bg-[#c49943] transition-colors"
-                aria-label="Modifier la photo"
-              >
-                <Camera className="size-3.5" />
-              </button>
-            </div>
+            <Avatar className="size-20 sm:size-24 border-4 border-white shadow-lg">
+              <AvatarFallback className="bg-[var(--institution-secondary)] text-white text-xl sm:text-2xl font-bold">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
           </div>
 
           {/* User info */}
@@ -225,18 +229,10 @@ export function ProfilePage() {
                 <Badge className="bg-[var(--institution-secondary)] text-white border-0 text-xs font-medium">
                   {roleLabels[user.role] || user.role}
                 </Badge>
-                <span className="text-sm text-gray-500">{user.email || 'Non renseigne'}</span>
+                <span className="text-sm text-gray-500">{displayEmail || 'Non renseigné'}</span>
               </div>
               <p className="text-sm text-gray-400 mt-0.5">{user.tenantName || 'Établissement non renseigné'}</p>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="border-[var(--institution-primary)] text-[var(--institution-primary)] hover:bg-[var(--institution-primary)] hover:text-white transition-colors w-fit"
-            >
-              <Camera className="size-4 mr-2" />
-              Modifier la photo
-            </Button>
           </div>
         </div>
       </div>
@@ -254,10 +250,6 @@ export function ProfilePage() {
               <TabsTrigger value="securite" className="gap-1.5">
                 <Shield className="size-4" />
                 <span className="hidden sm:inline">Sécurité</span>
-              </TabsTrigger>
-              <TabsTrigger value="preferences" className="gap-1.5">
-                <Settings className="size-4" />
-                <span className="hidden sm:inline">Preferences</span>
               </TabsTrigger>
               <TabsTrigger value="activite" className="gap-1.5">
                 <Activity className="size-4" />
@@ -300,7 +292,7 @@ export function ProfilePage() {
                             className="h-9"
                           />
                         ) : (
-                          <p className="text-sm font-medium text-[var(--institution-primary)]">{user.lastName}</p>
+                          <p className="text-sm font-medium text-[var(--institution-primary)]">{displayLastName}</p>
                         )}
                       </div>
                       <div className="space-y-1.5">
@@ -312,22 +304,14 @@ export function ProfilePage() {
                             className="h-9"
                           />
                         ) : (
-                          <p className="text-sm font-medium text-[var(--institution-primary)]">{user.firstName}</p>
+                          <p className="text-sm font-medium text-[var(--institution-primary)]">{displayFirstName}</p>
                         )}
                       </div>
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-xs text-gray-500">Email</Label>
-                      {isEditing ? (
-                        <Input
-                          type="email"
-                          value={formData.email}
-                          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                          className="h-9"
-                        />
-                      ) : (
-                        <p className="text-sm font-medium text-[var(--institution-primary)]">{user.email || 'Non renseigne'}</p>
-                      )}
+                      <p className="text-sm font-medium text-[var(--institution-primary)]">{displayEmail || 'Non renseigné'}</p>
+                      {isEditing && <p className="text-xs text-gray-500">L&apos;adresse de connexion est gérée par l&apos;administration.</p>}
                     </div>
                     <div className="space-y-1.5">
                         <Label className="text-xs text-gray-500">Téléphone</Label>
@@ -338,7 +322,7 @@ export function ProfilePage() {
                           className="h-9"
                         />
                       ) : (
-                        <p className="text-sm font-medium text-[var(--institution-primary)]">{formData.phone || 'Non renseigne'}</p>
+                        <p className="text-sm font-medium text-[var(--institution-primary)]">{formData.phone || 'Non renseigné'}</p>
                       )}
                     </div>
                     {isEditing && (
@@ -375,7 +359,7 @@ export function ProfilePage() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-1.5">
-                      <Label className="text-xs text-gray-500">Role</Label>
+                      <Label className="text-xs text-gray-500">Rôle</Label>
                       <div className="flex items-center gap-2">
                         <Badge className="bg-[var(--institution-secondary)] text-white border-0 text-xs">
                           {roleLabels[user.role] || user.role}
@@ -384,20 +368,28 @@ export function ProfilePage() {
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-xs text-gray-500">Institution</Label>
-                      <p className="text-sm font-medium text-[var(--institution-primary)]">{user.tenantName || 'Université Abdou Moumouni de Niamey'}</p>
+                      <p className="text-sm font-medium text-[var(--institution-primary)]">{user.tenantName || 'Non renseignée'}</p>
                     </div>
-                    <div className="space-y-1.5">
-                          <Label className="text-xs text-gray-500">Département</Label>
-                      <p className="text-sm font-medium text-[var(--institution-primary)]">Informatique et Mathematiques</p>
-                    </div>
+                    {scopeLabel && scopeValue && <div className="space-y-1.5">
+                      <Label className="text-xs text-gray-500">{scopeLabel}</Label>
+                      <p className="text-sm font-medium text-[var(--institution-primary)]">{scopeValue}</p>
+                    </div>}
+                    {profile?.employeeId && <div className="space-y-1.5">
+                      <Label className="text-xs text-gray-500">Matricule professionnel</Label>
+                      <p className="text-sm font-medium text-[var(--institution-primary)]">{profile.employeeId}</p>
+                    </div>}
+                    {(profile?.grade || profile?.specialization) && <div className="space-y-1.5">
+                      <Label className="text-xs text-gray-500">Grade et spécialité</Label>
+                      <p className="text-sm font-medium text-[var(--institution-primary)]">{[profile.grade, profile.specialization].filter(Boolean).join(' · ')}</p>
+                    </div>}
                     <Separator />
                     <div className="space-y-1.5">
-                          <Label className="text-xs text-gray-500">Date de création du compte</Label>
-                      <p className="text-sm text-[var(--institution-primary)]">15 Janvier 2024</p>
+                      <Label className="text-xs text-gray-500">Date de création du compte</Label>
+                      <p className="text-sm text-[var(--institution-primary)]">{formatDateFr(profile?.createdAt)}</p>
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-xs text-gray-500">Dernière mise à jour</Label>
-                      <p className="text-sm text-[var(--institution-primary)]">28 Fevrier 2026</p>
+                      <p className="text-sm text-[var(--institution-primary)]">{formatDateFr(profile?.updatedAt)}</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -456,28 +448,6 @@ export function ProfilePage() {
                     <Lock className="size-4 mr-1" />
                     {isChangingPassword ? 'Mise à jour…' : 'Mettre à jour le mot de passe'}
                   </Button>
-                </CardContent>
-              </Card>
-
-              {/* Two-Factor Auth */}
-              <Card>
-                <CardHeader className="pb-4">
-                  <CardTitle className="text-base font-semibold text-[var(--institution-primary)] flex items-center gap-2">
-                    <Shield className="size-4 text-[var(--institution-accent)]" />
-                    Authentification a deux facteurs
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-[var(--institution-primary)]">Verification en deux etapes</p>
-                      <p className="text-xs text-gray-500">Ajoutez une couche de sécurité supplémentaire à votre compte en exigeant un code lors de la connexion.</p>
-                    </div>
-                    <Switch
-                      checked={twoFactor}
-                      onCheckedChange={setTwoFactor}
-                    />
-                  </div>
                 </CardContent>
               </Card>
 
@@ -553,133 +523,6 @@ export function ProfilePage() {
               </Card>
             </TabsContent>
 
-            {/* ─── Preferences Tab ─────────────────────────────────── */}
-            <TabsContent value="preferences" className="mt-4 space-y-6">
-              {/* Language */}
-              <Card>
-                <CardHeader className="pb-4">
-                  <CardTitle className="text-base font-semibold text-[var(--institution-primary)] flex items-center gap-2">
-                    <Globe className="size-4 text-[var(--institution-secondary)]" />
-                    Langue
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-1.5 max-w-xs">
-                    <Label className="text-xs text-gray-500">Langue de l&apos;interface</Label>
-                    <Select defaultValue="francais">
-                      <SelectTrigger className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="francais">Francais</SelectItem>
-                        <SelectItem value="english">English</SelectItem>
-                        <SelectItem value="arabe">العربية</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Theme */}
-              <Card>
-                <CardHeader className="pb-4">
-                  <CardTitle className="text-base font-semibold text-[var(--institution-primary)] flex items-center gap-2">
-                    <ToggleLeft className="size-4 text-[var(--institution-accent)]" />
-                    Theme
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-1.5 max-w-xs">
-                    <Label className="text-xs text-gray-500">Apparence</Label>
-                    <Select defaultValue="systeme">
-                      <SelectTrigger className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="clair">Clair</SelectItem>
-                        <SelectItem value="sombre">Sombre</SelectItem>
-                        <SelectItem value="systeme">Système</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Notification Preferences */}
-              <Card>
-                <CardHeader className="pb-4">
-                  <CardTitle className="text-base font-semibold text-[var(--institution-primary)] flex items-center gap-2">
-                    <Bell className="size-4 text-[var(--institution-secondary)]" />
-                    Notifications
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <p className="text-sm font-medium text-[var(--institution-primary)]">Notifications par email</p>
-                      <p className="text-xs text-gray-500">Recevez des alertes importantes par email</p>
-                    </div>
-                    <Switch checked={emailNotif} onCheckedChange={setEmailNotif} />
-                  </div>
-                  <Separator />
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <p className="text-sm font-medium text-[var(--institution-primary)]">Notifications push</p>
-                      <p className="text-xs text-gray-500">Recevez des notifications dans votre navigateur</p>
-                    </div>
-                    <Switch checked={pushNotif} onCheckedChange={setPushNotif} />
-                  </div>
-                  <Separator />
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <p className="text-sm font-medium text-[var(--institution-primary)]">Alertes SMS</p>
-                      <p className="text-xs text-gray-500">Recevez des alertes urgentes par SMS</p>
-                    </div>
-                    <Switch checked={smsNotif} onCheckedChange={setSmsNotif} />
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Academic Preferences */}
-              <Card>
-                <CardHeader className="pb-4">
-                  <CardTitle className="text-base font-semibold text-[var(--institution-primary)] flex items-center gap-2">
-                    <Settings className="size-4 text-[var(--institution-primary)]" />
-                    Preferences academiques
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-1.5 max-w-xs">
-                    <Label className="text-xs text-gray-500">Année académique par défaut</Label>
-                    <Select defaultValue="2024-2025">
-                      <SelectTrigger className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="2024-2025">2024 - 2025</SelectItem>
-                        <SelectItem value="2023-2024">2023 - 2024</SelectItem>
-                        <SelectItem value="2022-2023">2022 - 2023</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5 max-w-xs">
-                    <Label className="text-xs text-gray-500">Vue par défaut à la connexion</Label>
-                    <Select defaultValue="dashboard">
-                      <SelectTrigger className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="dashboard">Tableau de bord</SelectItem>
-                        <SelectItem value="students">Liste des étudiants</SelectItem>
-                        <SelectItem value="grades">Gestion des notes</SelectItem>
-                        <SelectItem value="statistics">Statistiques</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
             {/* ─── Activite Tab ────────────────────────────────────── */}
             <TabsContent value="activite" className="mt-4">
               <Card>
@@ -745,7 +588,7 @@ export function ProfilePage() {
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">Dernière connexion</p>
-                  <p className="text-sm font-semibold text-[var(--institution-primary)]">Aujourd&apos;hui, 08:23</p>
+                  <p className="text-sm font-semibold text-[var(--institution-primary)]">{profile?.lastLoginAt ? formatDateTimeFr(profile.lastLoginAt) : 'Non enregistrée'}</p>
                 </div>
               </div>
 
@@ -755,17 +598,7 @@ export function ProfilePage() {
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">Connexions ce mois-ci</p>
-                  <p className="text-sm font-semibold text-[var(--institution-primary)]">24</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-[var(--institution-primary-08)] border border-[var(--institution-primary-15)]">
-                <div className="p-2 rounded-lg bg-[var(--institution-primary-10)]">
-                  <Download className="size-4 text-[var(--institution-primary)]" />
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">Fichiers telecharges</p>
-                  <p className="text-sm font-semibold text-[var(--institution-primary)]">18</p>
+                  <p className="text-sm font-semibold text-[var(--institution-primary)]">{profileQuery?.stats.connectionsThisMonth ?? 0}</p>
                 </div>
               </div>
 
@@ -775,7 +608,7 @@ export function ProfilePage() {
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">Actions ce mois</p>
-                  <p className="text-sm font-semibold text-[var(--institution-primary)]">156</p>
+                  <p className="text-sm font-semibold text-[var(--institution-primary)]">{profileQuery?.stats.actionsThisMonth ?? 0}</p>
                 </div>
               </div>
             </CardContent>
@@ -790,20 +623,13 @@ export function ProfilePage() {
               <div className="flex items-center justify-between">
                 <span className="text-xs text-gray-500">Statut</span>
                 <Badge className="bg-[var(--institution-secondary)] text-white border-0 text-[10px] px-1.5 py-0.5">
-                  Actif
+                  {profile?.isActive === false ? 'Inactif' : 'Actif'}
                 </Badge>
               </div>
               <Separator />
               <div className="flex items-center justify-between">
                 <span className="text-xs text-gray-500">Membre depuis</span>
-                <span className="text-xs font-medium text-[var(--institution-primary)]">Jan 2024</span>
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-500">2FA</span>
-                <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 border-gray-300 text-gray-600">
-                  Desactive
-                </Badge>
+                <span className="text-xs font-medium text-[var(--institution-primary)]">{formatDateFr(profile?.createdAt)}</span>
               </div>
             </CardContent>
           </Card>

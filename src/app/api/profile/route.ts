@@ -57,7 +57,9 @@ function parseUserAgent(ua: string | undefined): string {
 // is intentionally not fabricated - no geo-IP service is wired up.
 async function handleGet(user: SessionUser) {
   try {
-    const [logs, dbUser] = await Promise.all([
+    const now = new Date()
+    const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
+    const [logs, dbUser, connectionsThisMonth, actionsThisMonth] = await Promise.all([
       db.auditLog.findMany({
         where: { userId: user.id },
         orderBy: { createdAt: 'desc' },
@@ -65,8 +67,23 @@ async function handleGet(user: SessionUser) {
       }),
       db.user.findUnique({
         where: { id: user.id },
-        select: { firstName: true, lastName: true, email: true, phone: true, passwordHash: true },
+        select: {
+          firstName: true, lastName: true, email: true, phone: true, passwordHash: true,
+          isActive: true, createdAt: true, updatedAt: true, lastLoginAt: true,
+          faculty: { select: { name: true } },
+          department: { select: { name: true } },
+          teacher: { select: {
+            employeeId: true, grade: true, specialization: true,
+            department: { select: { name: true } },
+          } },
+          student: { select: {
+            currentProgram: { select: { name: true, department: { select: { name: true } } } },
+            currentLevel: { select: { name: true } },
+          } },
+        },
       }),
+      db.auditLog.count({ where: { userId: user.id, action: 'SIGN_IN', createdAt: { gte: monthStart } } }),
+      db.auditLog.count({ where: { userId: user.id, action: { not: 'SIGN_IN' }, createdAt: { gte: monthStart } } }),
     ])
 
     const signIns = logs.filter((l) => l.action === 'SIGN_IN')
@@ -90,6 +107,12 @@ async function handleGet(user: SessionUser) {
       timestamp: l.createdAt,
     }))
 
+    const departmentName = dbUser?.teacher?.department?.name
+      ?? dbUser?.department?.name
+      ?? dbUser?.student?.currentProgram?.department?.name
+      ?? null
+    const facultyName = dbUser?.faculty?.name ?? null
+
     return NextResponse.json({
       loginHistory,
       currentSession,
@@ -100,11 +123,23 @@ async function handleGet(user: SessionUser) {
         email: dbUser?.email ?? user.email ?? '',
         phone: dbUser?.phone ?? '',
         hasPassword: Boolean(dbUser?.passwordHash),
+        isActive: dbUser?.isActive ?? true,
+        createdAt: dbUser?.createdAt ?? null,
+        updatedAt: dbUser?.updatedAt ?? null,
+        lastLoginAt: dbUser?.lastLoginAt ?? currentSession?.date ?? null,
+        departmentName,
+        facultyName,
+        programName: dbUser?.student?.currentProgram?.name ?? null,
+        levelName: dbUser?.student?.currentLevel?.name ?? null,
+        employeeId: dbUser?.teacher?.employeeId ?? null,
+        grade: dbUser?.teacher?.grade ?? null,
+        specialization: dbUser?.teacher?.specialization ?? null,
       },
+      stats: { connectionsThisMonth, actionsThisMonth },
     })
   } catch (error) {
     console.error('Profile API error:', error)
-    return NextResponse.json({ error: 'Failed to fetch profile activity' }, { status: 500 })
+    return NextResponse.json({ error: 'Impossible de charger le profil' }, { status: 500 })
   }
 }
 
@@ -119,11 +154,11 @@ async function handlePut(user: SessionUser, request: NextRequest) {
     if (searchParams.get('action') === 'password') {
       const { currentPassword, newPassword } = body
       if (!currentPassword || !newPassword || newPassword.length < 8) {
-        return NextResponse.json({ error: 'Mot de passe actuel et nouveau mot de passe (8 caracteres min.) requis' }, { status: 400 })
+        return NextResponse.json({ error: 'Mot de passe actuel et nouveau mot de passe (8 caractères minimum) requis' }, { status: 400 })
       }
       const dbUser = await db.user.findUnique({ where: { id: user.id }, select: { passwordHash: true } })
       if (!dbUser?.passwordHash) {
-        return NextResponse.json({ error: 'Ce compte ne utilise pas de mot de passe (connexion par PIN)' }, { status: 409 })
+        return NextResponse.json({ error: "Ce compte n’utilise pas de mot de passe (connexion par code PIN)" }, { status: 409 })
       }
       const valid = await bcrypt.compare(currentPassword, dbUser.passwordHash)
       if (!valid) {
@@ -140,13 +175,13 @@ async function handlePut(user: SessionUser, request: NextRequest) {
     if (typeof lastName === 'string' && lastName.trim()) data.lastName = lastName.trim()
     if (typeof phone === 'string') data.phone = phone.trim()
     if (Object.keys(data).length === 0) {
-      return NextResponse.json({ error: 'No recognized fields to update' }, { status: 400 })
+      return NextResponse.json({ error: 'Aucun champ valide à mettre à jour' }, { status: 400 })
     }
     const updated = await db.user.update({ where: { id: user.id }, data })
     return NextResponse.json({ data: { firstName: updated.firstName, lastName: updated.lastName, phone: updated.phone } })
   } catch (error) {
     console.error('Update profile error:', error)
-    return NextResponse.json({ error: 'Failed to update profile' }, { status: 500 })
+    return NextResponse.json({ error: 'Impossible de mettre à jour le profil' }, { status: 500 })
   }
 }
 
