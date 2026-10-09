@@ -202,6 +202,7 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
     { icon: ClipboardCheck, label: 'Présences', view: 'attendance' },
     { icon: MessageSquare, label: 'Messages', view: 'communication' },
     { icon: Monitor, label: 'Examens en ligne', view: 'online-exam' },
+    { icon: BarChart3, label: 'Statistiques', view: 'statistics' },
     { icon: BarChart3, label: 'Rapports', view: 'reports' },
     { icon: Users, label: 'Personnel', view: 'hr' },
     { icon: DoorOpen, label: 'Salles', view: 'room-booking' },
