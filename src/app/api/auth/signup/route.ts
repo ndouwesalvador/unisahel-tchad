@@ -3,10 +3,8 @@ import { z } from 'zod'
 import bcrypt from 'bcryptjs'
 import { db } from '@/lib/db'
 
-// Public route — this is the only place a brand-new tenant gets created
-// outside of the SUPER_ADMIN-only /api/seed demo-data seeder. No auth
-// wrapper on purpose: a visitor with no account yet is exactly who this
-// is for.
+// Public route: this is the only place where a visitor without an account
+// can create a new tenant. It intentionally has no authentication wrapper.
 
 const signupSchema = z.object({
   institutionName: z.string().trim().min(2).max(150),
