@@ -1272,7 +1272,7 @@ export function LibraryPage() {
                 <div className="p-3 rounded-lg bg-[var(--institution-secondary-08)] border border-[var(--institution-secondary-10)]">
                   <div className="flex items-center gap-2 mb-2">
                     <Clock className="size-4 text-[var(--institution-secondary)]" />
-                    <span className="text-sm font-semibold text-[var(--institution-primary)]">Duree moyenne d&apos;emprunt</span>
+                    <span className="text-sm font-semibold text-[var(--institution-primary)]">Durée moyenne d&apos;emprunt</span>
                   </div>
                   {stats?.avgBorrowDurationDays != null ? (
                     <>

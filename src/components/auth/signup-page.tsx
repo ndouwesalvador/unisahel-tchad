@@ -171,7 +171,7 @@ export function SignupPage() {
                   Uni<span className="text-[var(--institution-secondary)]">Sahel</span>
                 </span>
               </div>
-              <CardTitle className="text-xl font-bold text-[var(--institution-primary)]">Creer votre compte</CardTitle>
+              <CardTitle className="text-xl font-bold text-[var(--institution-primary)]">Créer votre compte</CardTitle>
               <CardDescription className="text-gray-500">
                 Configurez votre établissement en quelques minutes
               </CardDescription>
@@ -180,11 +180,11 @@ export function SignupPage() {
             <CardContent className="pt-4">
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="space-y-3">
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Votre etablissement</p>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Votre établissement</p>
 
                   <div className="space-y-2">
                     <Label htmlFor="institutionName" className="text-sm font-medium text-gray-700">
-                      Nom de l'établissement
+                      Nom de l&apos;établissement
                     </Label>
                     <div className="relative">
                       <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
@@ -338,7 +338,7 @@ export function SignupPage() {
                       Création en cours…
                     </>
                   ) : (
-                    'Creer mon etablissement'
+                    'Créer mon établissement'
                   )}
                 </Button>
               </form>

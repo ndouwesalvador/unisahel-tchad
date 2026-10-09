@@ -390,7 +390,7 @@ export function AdvisingPage() {
       color: 'var(--institution-secondary)',
     },
     {
-      objectif: `Valider les ${priorityStudent.creditsTotal} credits de l'annee`,
+      objectif: `Valider les ${priorityStudent.creditsTotal} crédits de l'année`,
       progress: priorityStudent.creditsTotal > 0 ? Math.round((priorityStudent.creditsAcquis / priorityStudent.creditsTotal) * 100) : 0,
       color: 'var(--institution-primary)',
     },
@@ -475,7 +475,7 @@ export function AdvisingPage() {
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || "Échec de l'ajout du conseiller")
-      toast.success('Conseiller ajoute')
+      toast.success('Conseiller ajouté')
       queryClient.invalidateQueries({ queryKey: ['advising'] })
       setShowNewAdvisor(false)
       setNewAdvisor({ name: '', title: '', department: '', specialties: [] })
@@ -693,7 +693,7 @@ export function AdvisingPage() {
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Étudiants suivis</p>
                 <p className="text-xl font-bold text-[var(--institution-secondary)] mt-1">{useCountUp(monitoredStudents.length, 1400)}</p>
-                <p className="text-xs text-gray-400 mt-1">{advisedMonitoredCount} avec conseiller assigne</p>
+                <p className="text-xs text-gray-400 mt-1">{advisedMonitoredCount} avec conseiller assigné</p>
               </div>
               <div className="w-10 h-10 rounded-xl bg-[var(--institution-secondary-15)] flex items-center justify-center">
                 <Users className="size-5 text-[var(--institution-secondary)]" />
@@ -1133,14 +1133,14 @@ export function AdvisingPage() {
                   {!isLoading && monitoredStudents.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={10} className="text-center py-8 text-sm text-gray-400">
-                        Aucun etudiant suivi pour le moment (aucune note enregistree pour l&apos;annee en cours)
+                        Aucun étudiant suivi pour le moment (aucune note enregistrée pour l&apos;année en cours)
                       </TableCell>
                     </TableRow>
                   )}
                   {!isLoading && monitoredStudents.length > 0 && filteredStudents.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={10} className="text-center py-8 text-sm text-gray-400">
-                        Aucun etudiant trouve avec ces filtres
+                        Aucun étudiant trouvé avec ces filtres
                       </TableCell>
                     </TableRow>
                   )}
@@ -1169,7 +1169,7 @@ export function AdvisingPage() {
           <CardContent className="p-4 pt-0 space-y-5">
             {!priorityStudent ? (
               <p className="text-sm text-gray-400 text-center py-6">
-                Aucun etudiant suivi pour le moment — un plan d&apos;accompagnement apparaitra ici des qu&apos;un etudiant aura des notes enregistrees.
+                Aucun étudiant suivi pour le moment. Un plan d&apos;accompagnement apparaîtra ici dès qu&apos;un étudiant aura des notes enregistrées.
               </p>
             ) : (
               <>
@@ -1272,7 +1272,7 @@ export function AdvisingPage() {
                                 <Badge className={`text-[9px] py-0 ${statusConfig[entretien.status].className}`}>{statusConfig[entretien.status].label}</Badge>
                               )}
                             </div>
-                            <p className="text-xs text-gray-600 leading-relaxed">{entretien.notes || 'Aucune note enregistree pour cet entretien.'}</p>
+                            <p className="text-xs text-gray-600 leading-relaxed">{entretien.notes || 'Aucune note enregistrée pour cet entretien.'}</p>
                           </div>
                         </div>
                       ))}
@@ -1522,7 +1522,7 @@ export function AdvisingPage() {
                 <div>
                   <p className="text-xs font-semibold text-[var(--institution-primary)] mb-3">Distribution des motifs de consultation</p>
                   {motifData.length === 0 ? (
-                    <p className="text-xs text-gray-400">Aucune consultation enregistree pour le moment.</p>
+                    <p className="text-xs text-gray-400">Aucune consultation enregistrée pour le moment.</p>
                   ) : (
                     <div className="space-y-3">
                       {motifData.map((item, idx) => (
@@ -1571,7 +1571,7 @@ export function AdvisingPage() {
                 <p className="text-xs font-semibold text-[var(--institution-primary)] mb-3">Evolution mensuelle des consultations</p>
                 {appointments.length === 0 ? (
                   <div className="p-3 rounded-lg bg-gray-50 border border-gray-100 h-40 flex items-center justify-center">
-                    <p className="text-xs text-gray-400">Aucune consultation enregistree</p>
+                    <p className="text-xs text-gray-400">Aucune consultation enregistrée</p>
                   </div>
                 ) : (
                   <div className="p-3 rounded-lg bg-gray-50 border border-gray-100">

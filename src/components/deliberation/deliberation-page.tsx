@@ -140,7 +140,7 @@ function describeReadinessIssue(readiness: DeliberationReadiness): string {
 }
 
 const decisionConfig: Record<Decision, { label: string; className: string; icon: React.ElementType; tooltip: string }> = {
-  ADMI: { label: 'Admis', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0 hover:bg-[var(--institution-secondary-15)]', icon: CheckCircle2, tooltip: 'Etudiant admis avec succes' },
+  ADMI: { label: 'Admis', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0 hover:bg-[var(--institution-secondary-15)]', icon: CheckCircle2, tooltip: 'Étudiant admis avec succès' },
   AJOURNE: { label: 'Ajourne', className: 'bg-[#ef6c0015] text-[#ef6c00] border-0 hover:bg-[#ef6c0015]', icon: Clock, tooltip: 'Passage en session de rattrapage' },
   REDOUBLANT: { label: 'Redoublant', className: 'bg-[#c6282815] text-[#c62828] border-0 hover:bg-[#c6282815]', icon: XCircle, tooltip: 'Redoublement du semestre' },
   EXCLU: { label: 'Exclu', className: 'bg-[#8b000015] text-[#8b0000] border-0 hover:bg-[#8b000015]', icon: AlertTriangle, tooltip: 'Exclusion definitive' },
@@ -323,12 +323,12 @@ export function DeliberationPage() {
           programId: selectedProgramId, levelId: selectedLevelId }),
       })
       const json = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(json.error || 'Echec du lancement')
+      if (!res.ok) throw new Error(json.error || 'Échec du lancement')
       toast.success('Délibération lancée', { description: `${json.deliberation?.decisions?.length ?? 0} étudiant(s) évalué(s)` })
       setSelectedSession(json.deliberation?.id ?? null)
       queryClient.invalidateQueries({ queryKey: ['deliberation'] })
     } catch (e) {
-      toast.error('Erreur', { description: e instanceof Error ? e.message : 'Echec du lancement' })
+      toast.error('Erreur', { description: e instanceof Error ? e.message : 'Échec du lancement' })
     } finally {
       setIsLaunching(false)
     }
@@ -356,11 +356,11 @@ export function DeliberationPage() {
         body: JSON.stringify({ juryMembers: juryMembers.map(({ name, role }) => ({ name, role })) }),
       })
       const json = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(json.error || 'Echec de la validation')
+      if (!res.ok) throw new Error(json.error || 'Échec de la validation')
       toast.success('Délibération validée', { description: 'Les résultats sont officialisés' })
       queryClient.invalidateQueries({ queryKey: ['deliberation'] })
     } catch (error) {
-      toast.error('Echec de la validation', {
+      toast.error('Échec de la validation', {
         description: error instanceof Error ? error.message : undefined,
       })
     } finally {
@@ -1073,7 +1073,7 @@ export function DeliberationPage() {
                 <div className="flex items-center justify-between mt-2">
                   <p className="text-[10px] text-gray-400">
                     {isReadyForJury
-                      ? `${stats.admis + stats.admisDette + stats.compenses} reussites sur ${stats.total} etudiants`
+                      ? `${stats.admis + stats.admisDette + stats.compenses} réussites sur ${stats.total} étudiants`
                       : 'Calcul indicatif uniquement : des notes sont incomplètes ou incohérentes, aucun PV officiel ne peut être généré.'}
                   </p>
                   <div className="flex items-center gap-3">

@@ -4,14 +4,14 @@ import { db } from '@/lib/db'
 import { withAuth, type SessionUser } from '@/lib/auth/helpers'
 
 const ENTITY_LABELS: Record<string, string> = {
-  Student: 'un etudiant',
+  Student: 'un étudiant',
   Teacher: 'un enseignant',
   User: 'un compte utilisateur',
   Payment: 'un paiement',
   Grade: 'une note',
   Program: 'un programme',
   Announcement: 'une annonce',
-  Tenant: "l'etablissement",
+  Tenant: "l'établissement",
   Admission: 'une candidature',
   TimetableSlot: "l'emploi du temps",
 }
@@ -32,13 +32,13 @@ function describeActivity(action: string, entity: string, details: Record<string
     : typeof details?.receiptNumber === 'string' ? ` (${details.receiptNumber})`
     : ''
   switch (action) {
-    case 'SIGN_IN': return 'Connexion au systeme'
-    case 'CREATE': return `Creation de ${label}${suffix}`
-    case 'BULK_CREATE': return `Creation en masse : ${label}`
+    case 'SIGN_IN': return 'Connexion au système'
+    case 'CREATE': return `Création de ${label}${suffix}`
+    case 'BULK_CREATE': return `Création en masse : ${label}`
     case 'UPDATE': return `Modification de ${label}${suffix}`
     case 'DELETE': return `Suppression de ${label}${suffix}`
     case 'LOCK': return `Verrouillage : ${label}`
-    case 'UNLOCK': return `Deverrouillage : ${label}`
+    case 'UNLOCK': return `Déverrouillage : ${label}`
     default: return `${action} : ${label}`
   }
 }

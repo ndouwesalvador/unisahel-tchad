@@ -1194,11 +1194,11 @@ export function OnlineExamPage() {
                     <span className="text-sm font-semibold text-[var(--institution-primary)]">Notifications externes</span>
                   </div>
                   <p className="text-xs text-gray-600 leading-relaxed">
-                    Aucun operateur de messages mobiles n&apos;est annonce depuis cet onglet. Les rappels externes devront etre ajoutes via une integration dediee
-                    avant d&apos;etre presentes aux administrateurs.
+                    Aucun opérateur de messages mobiles n&apos;est annoncé depuis cet onglet. Les rappels externes devront être ajoutés via une intégration dédiée
+                    avant d&apos;être présentés aux administrateurs.
                   </p>
                   <div className="mt-2 flex items-center gap-2">
-                    <Badge className="text-[9px] bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0">Non connecte</Badge>
+                    <Badge className="text-[9px] bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0">Non connecté</Badge>
                   </div>
                 </div>
 
@@ -1208,11 +1208,11 @@ export function OnlineExamPage() {
                     <span className="text-sm font-semibold text-[var(--institution-primary)]">Support papier</span>
                   </div>
                   <p className="text-xs text-gray-600 leading-relaxed">
-                    Une copie papier peut etre geree administrativement hors systeme, mais cet onglet ne genere pas automatiquement de sujets
+                    Une copie papier peut être gérée administrativement hors système, mais cet onglet ne génère pas automatiquement de sujets
                     ou de copies papier.
                   </p>
                   <div className="mt-2">
-                    <Badge className="text-[9px] bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0">Hors systeme</Badge>
+                    <Badge className="text-[9px] bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0">Hors système</Badge>
                   </div>
                 </div>
 
@@ -1222,10 +1222,10 @@ export function OnlineExamPage() {
                     <span className="text-sm font-semibold text-[var(--institution-primary)]">Temps d&apos;examen</span>
                   </div>
                   <p className="text-xs text-gray-600 leading-relaxed">
-                    La duree appliquee est celle configuree dans l&apos;examen. Aucun bonus automatique de temps n&apos;est affiche sans regle explicite.
+                    La durée appliquée est celle configurée dans l&apos;examen. Aucun bonus automatique de temps n&apos;est affiché sans règle explicite.
                   </p>
                   <div className="mt-2">
-                    <Badge className="text-[9px] bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0">Duree configuree</Badge>
+                    <Badge className="text-[9px] bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0">Durée configurée</Badge>
                   </div>
                 </div>
               </div>

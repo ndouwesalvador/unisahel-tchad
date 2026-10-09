@@ -285,7 +285,7 @@ function StudentDashboardHome({ data }: { data: StudentDashboardResponse }) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold text-[var(--institution-primary)]">Annonces recentes</CardTitle>
+            <CardTitle className="text-base font-semibold text-[var(--institution-primary)]">Annonces récentes</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             {data.recentActivity.length === 0 ? (

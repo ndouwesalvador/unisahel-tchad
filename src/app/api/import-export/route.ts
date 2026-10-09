@@ -105,7 +105,7 @@ async function importStudents(tenantId: string, rows: Record<string, unknown>[])
         ? programs.find((p) => p.name.toLowerCase().includes(filiereText.trim().toLowerCase()))
         : undefined
       if (filiereText && !matchedProgram) {
-        errors.push(`Ligne ${lineNumber}: filiere "${filiereText}" introuvable — etudiant cree sans filiere assignee`)
+        errors.push(`Ligne ${lineNumber} : filière « ${filiereText} » introuvable ; étudiant créé sans filière assignée`)
       }
 
       const created = await db.student.create({
@@ -168,7 +168,7 @@ async function importTeachers(tenantId: string, rows: Record<string, unknown>[])
       const deptText = typeof row['Département'] === 'string' ? row['Département'] : typeof row['Departement'] === 'string' ? (row['Departement'] as string) : ''
       const matchedDept = deptText ? departments.find((d) => d.name.toLowerCase().includes(deptText.trim().toLowerCase())) : undefined
       if (deptText && !matchedDept) {
-        errors.push(`Ligne ${lineNumber}: departement "${deptText}" introuvable — enseignant cree sans departement`)
+        errors.push(`Ligne ${lineNumber} : département « ${deptText} » introuvable ; enseignant créé sans département`)
       }
 
       seq += 1

@@ -227,7 +227,7 @@ export function ProfilePage() {
                 </Badge>
                 <span className="text-sm text-gray-500">{user.email || 'Non renseigne'}</span>
               </div>
-              <p className="text-sm text-gray-400 mt-0.5">{user.tenantName || 'Etablissement non renseigne'}</p>
+              <p className="text-sm text-gray-400 mt-0.5">{user.tenantName || 'Établissement non renseigné'}</p>
             </div>
             <Button
               variant="outline"

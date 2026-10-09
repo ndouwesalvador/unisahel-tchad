@@ -459,11 +459,11 @@ function InformationsTab() {
         }),
       })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data.error || "Echec de l'enregistrement")
+      if (!res.ok) throw new Error(data.error || "Échec de l'enregistrement")
       toast.success('Informations enregistrées')
       refetch()
     } catch (error) {
-      toast.error('Erreur', { description: error instanceof Error ? error.message : "Echec de l'enregistrement" })
+      toast.error('Erreur', { description: error instanceof Error ? error.message : "Échec de l'enregistrement" })
     } finally {
       setIsSaving(false)
     }
@@ -835,13 +835,13 @@ function StructureTab() {
         body: JSON.stringify(facultyForm),
       })
       const body = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(body.error || "Echec de la creation")
+      if (!res.ok) throw new Error(body.error || "Échec de la création")
       toast.success('Faculte creee', { description: facultyForm.name })
       queryClient.invalidateQueries({ queryKey: ['structure'] })
       setShowAddFaculty(false)
       setFacultyForm({ name: '', shortName: '', deanName: '' })
     } catch (error) {
-      toast.error('Erreur', { description: error instanceof Error ? error.message : "Echec de la creation" })
+      toast.error('Erreur', { description: error instanceof Error ? error.message : "Échec de la création" })
     } finally {
       setIsSavingFaculty(false)
     }
@@ -860,13 +860,13 @@ function StructureTab() {
         body: JSON.stringify(departmentForm),
       })
       const body = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(body.error || "Echec de la creation")
+      if (!res.ok) throw new Error(body.error || "Échec de la création")
       toast.success('Departement cree', { description: departmentForm.name })
       queryClient.invalidateQueries({ queryKey: ['structure'] })
       setShowAddDepartment(false)
       setDepartmentForm({ facultyId: '', name: '', shortName: '', headName: '' })
     } catch (error) {
-      toast.error('Erreur', { description: error instanceof Error ? error.message : "Echec de la creation" })
+      toast.error('Erreur', { description: error instanceof Error ? error.message : "Échec de la création" })
     } finally {
       setIsSavingDepartment(false)
     }
@@ -935,7 +935,7 @@ function StructureTab() {
                   <div>
                     <h3 className="font-semibold text-[var(--institution-primary)]">{faculty.name}</h3>
                     <p className="text-xs text-gray-500">
-                      {faculty.departments.length} departements, {faculty.departments.reduce((a, d) => a + d.programs.length, 0)} filieres
+                      {faculty.departments.length} départements, {faculty.departments.reduce((a, d) => a + d.programs.length, 0)} filières
                     </p>
                   </div>
                 </div>
@@ -990,7 +990,7 @@ function StructureTab() {
       <div className="flex flex-col sm:flex-row gap-3">
         <Button variant="outline" className="border-[var(--institution-secondary-30)] text-[var(--institution-secondary)]" onClick={() => setShowAddFaculty(true)}>
           <Plus className="size-4 mr-2" />
-          Ajouter faculte
+          Ajouter une faculté
         </Button>
         <Button
           variant="outline"
@@ -999,7 +999,7 @@ function StructureTab() {
           onClick={() => setShowAddDepartment(true)}
         >
           <Plus className="size-4 mr-2" />
-          Ajouter departement
+          Ajouter un département
         </Button>
       </div>
 
@@ -1007,7 +1007,7 @@ function StructureTab() {
       <Dialog open={showAddFaculty} onOpenChange={setShowAddFaculty}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Ajouter une faculte</DialogTitle>
+            <DialogTitle>Ajouter une faculté</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
@@ -1023,7 +1023,7 @@ function StructureTab() {
               <Input value={facultyForm.deanName} onChange={(e) => setFacultyForm((f) => ({ ...f, deanName: e.target.value }))} />
             </div>
             <Button className="w-full bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white" disabled={isSavingFaculty} onClick={handleAddFaculty}>
-              {isSavingFaculty ? 'Creation...' : 'Creer la faculte'}
+              {isSavingFaculty ? 'Création…' : 'Créer la faculté'}
             </Button>
           </div>
         </DialogContent>
@@ -1033,7 +1033,7 @@ function StructureTab() {
       <Dialog open={showAddDepartment} onOpenChange={setShowAddDepartment}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Ajouter un departement</DialogTitle>
+            <DialogTitle>Ajouter un département</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
@@ -1056,11 +1056,11 @@ function StructureTab() {
               <Input value={departmentForm.shortName} onChange={(e) => setDepartmentForm((f) => ({ ...f, shortName: e.target.value }))} placeholder="INFO" />
             </div>
             <div className="space-y-2">
-              <Label className="text-sm">Chef de departement (optionnel)</Label>
+              <Label className="text-sm">Chef de département (facultatif)</Label>
               <Input value={departmentForm.headName} onChange={(e) => setDepartmentForm((f) => ({ ...f, headName: e.target.value }))} />
             </div>
             <Button className="w-full bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white" disabled={isSavingDepartment} onClick={handleAddDepartment}>
-              {isSavingDepartment ? 'Creation...' : 'Creer le departement'}
+              {isSavingDepartment ? 'Création…' : 'Créer le département'}
             </Button>
           </div>
         </DialogContent>
@@ -1113,7 +1113,7 @@ function AcademiqueTab() {
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
-        throw new Error(err.error || "Echec de la creation")
+        throw new Error(err.error || "Échec de la création")
       }
       toast.success('Année académique créée')
       queryClient.invalidateQueries({ queryKey: ['academicYears'] })
@@ -1122,7 +1122,7 @@ function AcademiqueTab() {
       setNewYearStart('')
       setNewYearEnd('')
     } catch (error) {
-      toast.error('Erreur', { description: error instanceof Error ? error.message : "Echec de la creation" })
+      toast.error('Erreur', { description: error instanceof Error ? error.message : "Échec de la création" })
     } finally {
       setIsSavingYear(false)
     }
@@ -1136,12 +1136,12 @@ function AcademiqueTab() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id }),
       })
-      if (!res.ok) throw new Error("Echec de la mise a jour")
+      if (!res.ok) throw new Error("Échec de la mise à jour")
       toast.success('Année académique en cours mise à jour')
       queryClient.invalidateQueries({ queryKey: ['academicYears'] })
       queryClient.invalidateQueries({ queryKey: ['dashboardStats'] })
     } catch (error) {
-      toast.error('Erreur', { description: error instanceof Error ? error.message : "Echec de la mise a jour" })
+      toast.error('Erreur', { description: error instanceof Error ? error.message : "Échec de la mise à jour" })
     } finally {
       setSettingCurrentId(null)
     }
@@ -1175,12 +1175,12 @@ function AcademiqueTab() {
         }),
       })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data.error || "Echec de l'enregistrement")
+      if (!res.ok) throw new Error(data.error || "Échec de l'enregistrement")
       toast.success('Configuration académique enregistrée')
       updateUser({ tenantAcademicSystem: system })
       refetch()
     } catch (error) {
-      toast.error('Erreur', { description: error instanceof Error ? error.message : "Echec de l'enregistrement" })
+      toast.error('Erreur', { description: error instanceof Error ? error.message : "Échec de l'enregistrement" })
     } finally {
       setIsSaving(false)
     }
@@ -1199,14 +1199,14 @@ function AcademiqueTab() {
       {/* System selector */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Systeme d&apos;enseignement</CardTitle>
+          <CardTitle className="text-base">Système d&apos;enseignement</CardTitle>
           <CardDescription>Choisissez le système académique de votre établissement</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
               { value: 'lmd', label: 'LMD', icon: GraduationCap, desc: 'Licence-Master-Doctorat' },
-              { value: 'classique', label: 'Classique', icon: BookOpen, desc: 'Systeme classique' },
+              { value: 'classique', label: 'Classique', icon: BookOpen, desc: 'Système classique' },
               { value: 'hybride', label: 'Hybride', icon: Settings, desc: 'LMD + Classique' },
               { value: 'sante', label: 'Sante', icon: Stethoscope, desc: 'Ecoles de sante' },
             ].map((sys) => (
@@ -1463,7 +1463,7 @@ function DocumentsTab() {
       {/* Document formats */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Types de documents generes</CardTitle>
+          <CardTitle className="text-base">Types de documents générés</CardTitle>
           <CardDescription>Chaque document est un PDF vérifiable, muni d&apos;un code de contrôle et d&apos;un QR code.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -1530,7 +1530,7 @@ function DocumentsTab() {
       {/* Header/Footer preview */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">En-tete des documents generes</CardTitle>
+          <CardTitle className="text-base">En-tête des documents générés</CardTitle>
           <CardDescription>Compose a partir des informations de l&apos;onglet Informations — aucun champ separe a remplir ici</CardDescription>
         </CardHeader>
         <CardContent>
@@ -1586,12 +1586,12 @@ function ApparenceTab() {
         body: JSON.stringify({ primaryColor, secondaryColor, accentColor }),
       })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data.error || "Echec de l'enregistrement")
+      if (!res.ok) throw new Error(data.error || "Échec de l'enregistrement")
       toast.success('Couleurs enregistrées')
       refetch()
       void queryClient.invalidateQueries({ queryKey: ['institution-theme'] })
     } catch (error) {
-      toast.error('Erreur', { description: error instanceof Error ? error.message : "Echec de l'enregistrement" })
+      toast.error('Erreur', { description: error instanceof Error ? error.message : "Échec de l'enregistrement" })
     } finally {
       setIsSaving(false)
     }
@@ -1749,7 +1749,7 @@ function ApparenceTab() {
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Logo et cachet</CardTitle>
-          <CardDescription>Definis dans l&apos;onglet Informations — utilises sur les documents officiels generes</CardDescription>
+          <CardDescription>Définis dans l&apos;onglet Informations, ils sont utilisés sur les documents officiels générés.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-6 items-center justify-center p-6 bg-gray-50 rounded-xl">
@@ -1865,7 +1865,7 @@ function AbonnementTab() {
           { label: 'Étudiants', value: stats?.students ?? 0 },
           { label: 'Enseignants', value: stats?.teachers ?? 0 },
           { label: 'Personnel', value: stats?.staffUsers ?? 0 },
-          { label: 'Documents generes', value: stats?.documentsGenerated ?? 0 },
+          { label: 'Documents générés', value: stats?.documentsGenerated ?? 0 },
         ].map((stat) => (
           <Card key={stat.label}>
             <CardContent className="p-4">

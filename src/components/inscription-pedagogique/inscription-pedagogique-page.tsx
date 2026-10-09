@@ -328,7 +328,7 @@ export function InscriptionPedagogiquePage() {
               Inscription pédagogique
             </h1>
             <p className="text-sm text-gray-500 mt-1">
-              Gestion des inscriptions pedagogiques selon la structure et les regles de l&apos;institution
+              Gestion des inscriptions pédagogiques selon la structure et les règles de l&apos;institution
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -610,7 +610,7 @@ export function InscriptionPedagogiquePage() {
                 {/* Selection controls */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-gray-600">Etudiant</label>
+                    <label className="text-xs font-medium text-gray-600">Étudiant</label>
                     <Select value={selectedStudent} onValueChange={setSelectedStudent}>
                       <SelectTrigger className="w-full h-9 text-xs">
                         <SelectValue placeholder="Sélectionner un étudiant" />
@@ -704,7 +704,7 @@ export function InscriptionPedagogiquePage() {
                               <div className="flex items-center gap-3 mt-1.5 text-[11px] text-gray-400">
                                 <span className="flex items-center gap-1">
                                   <CreditCard className="size-3" />
-                                  {ue.credits} credits
+                                  {ue.credits} crédits
                                 </span>
                                 <span className="flex items-center gap-1">
                                   <Users className="size-3" />
@@ -736,7 +736,7 @@ export function InscriptionPedagogiquePage() {
                     <div className="flex items-center gap-1">
                       <Award className="size-4 text-[var(--institution-secondary)]" />
                       <span className={`text-lg font-bold ${selectedCredits >= minCredits && selectedCredits <= maxCredits ? 'text-[var(--institution-secondary)]' : 'text-[var(--institution-accent)]'}`}>
-                        {selectedCredits} credits
+                        {selectedCredits} crédits
                       </span>
                     </div>
                   </div>
@@ -763,19 +763,19 @@ export function InscriptionPedagogiquePage() {
                     {creditsRemaining > 0 && (
                       <div className="flex items-center gap-2 text-xs bg-[var(--institution-accent-10)] border border-[var(--institution-accent-30)] text-[#b8922e] rounded-md px-3 py-2">
                         <AlertTriangle className="size-3.5 shrink-0" />
-                        <span>Il manque {creditsRemaining} credits pour atteindre le minimum de {minCredits} credits</span>
+                        <span>Il manque {creditsRemaining} crédits pour atteindre le minimum de {minCredits} crédits</span>
                       </div>
                     )}
                     {creditsOver > 0 && (
                       <div className="flex items-center gap-2 text-xs bg-red-50 border border-red-200 text-red-600 rounded-md px-3 py-2">
                         <XCircle className="size-3.5 shrink-0" />
-                        <span>Depassement de {creditsOver} credits (maximum: {maxCredits})</span>
+                        <span>Dépassement de {creditsOver} crédits (maximum : {maxCredits})</span>
                       </div>
                     )}
                     {selectedCredits >= minCredits && selectedCredits <= maxCredits && (
                       <div className="flex items-center gap-2 text-xs bg-[var(--institution-secondary-10)] border border-[var(--institution-secondary-30)] text-[var(--institution-secondary)] rounded-md px-3 py-2">
                         <CheckCircle2 className="size-3.5 shrink-0" />
-                  <span>Nombre de credits conforme aux regles de l&apos;institution</span>
+                  <span>Nombre de crédits conforme aux règles de l&apos;institution</span>
                       </div>
                     )}
                   </div>
@@ -819,7 +819,7 @@ export function InscriptionPedagogiquePage() {
 
                 {/* Visual credit range */}
                 <div className="space-y-2">
-                  <span className="text-xs font-medium text-gray-600">Plage de credits autorisee</span>
+                  <span className="text-xs font-medium text-gray-600">Plage de crédits autorisée</span>
                   <div className="relative h-8 bg-gray-100 rounded-lg overflow-hidden">
                     <div className="absolute inset-0 flex">
                       <div className="w-[7/14] bg-gradient-to-r from-red-100 to-red-50 border-r border-red-200" style={{ width: `${(minCredits / creditScale) * 100}%` }} />
@@ -855,7 +855,7 @@ export function InscriptionPedagogiquePage() {
                   <ul className="space-y-1.5 text-xs text-gray-500">
                     <li className="flex items-start gap-2">
                       <CheckCircle2 className="size-3.5 text-[var(--institution-secondary)] shrink-0 mt-0.5" />
-                    <span>Compensation {rules.compensationEnabled ? 'active' : 'desactivee'} dans les parametres de l&apos;institution</span>
+                    <span>Compensation {rules.compensationEnabled ? 'active' : 'désactivée'} dans les paramètres de l&apos;institution</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle2 className="size-3.5 text-[var(--institution-secondary)] shrink-0 mt-0.5" />
@@ -891,14 +891,14 @@ export function InscriptionPedagogiquePage() {
                     <div>
                       <div className="flex justify-between text-[11px] mb-1">
                         <span className="text-gray-500">UE Obligatoires</span>
-                        <span className="font-medium text-[var(--institution-secondary)]">{compulsoryCredits} credits</span>
+                        <span className="font-medium text-[var(--institution-secondary)]">{compulsoryCredits} crédits</span>
                       </div>
                       <Progress value={maxCredits > 0 ? (compulsoryCredits / maxCredits) * 100 : 0} className="h-1.5 [&>div]:bg-[var(--institution-secondary)]" />
                     </div>
                     <div>
                       <div className="flex justify-between text-[11px] mb-1">
                         <span className="text-gray-500">UE Optionnelles</span>
-                        <span className="font-medium text-[var(--institution-accent)]">{optionalCreditsSelected} credits</span>
+                        <span className="font-medium text-[var(--institution-accent)]">{optionalCreditsSelected} crédits</span>
                       </div>
                       <Progress value={Math.max(0, maxCredits - compulsoryCredits) > 0 ? (optionalCreditsSelected / (maxCredits - compulsoryCredits)) * 100 : 0} className="h-1.5 [&>div]:bg-[var(--institution-accent)]" />
                     </div>

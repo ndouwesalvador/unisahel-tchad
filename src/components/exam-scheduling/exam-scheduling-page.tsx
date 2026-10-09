@@ -380,7 +380,7 @@ export function ExamSchedulingPage() {
                 className="bg-[var(--institution-primary)] hover:bg-[#253556] text-white text-xs"
               >
                 <Sparkles className="size-3.5 mr-1.5" />
-                Generer le planning automatiquement
+                Générer le planning automatiquement
               </Button>
               <Button variant="outline" size="sm" className="text-xs" onClick={() => exportToExcel(filteredExams, 'export_exam-scheduling')}>
                 <FileText className="size-3.5 mr-1.5" />
@@ -796,13 +796,13 @@ export function ExamSchedulingPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
                     <UserCheck className="size-3.5 text-gray-400" />
-                    <span className="text-xs font-medium text-gray-600">Surveillants assignes vs. besoins</span>
+                    <span className="text-xs font-medium text-gray-600">Surveillants assignés par rapport aux besoins</span>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="p-3 bg-[var(--institution-secondary-08)] rounded-lg border border-[var(--institution-secondary-15)]">
                     <p className="text-lg font-bold text-[var(--institution-secondary)]">{supervisorStats.assigned}</p>
-                    <p className="text-[10px] text-gray-500">Assignes</p>
+                    <p className="text-[10px] text-gray-500">Assignés</p>
                   </div>
                   <div className="p-3 bg-[var(--institution-primary-08)] rounded-lg border border-[var(--institution-primary-15)]">
                     <p className="text-lg font-bold text-[var(--institution-primary)]">{supervisorStats.needed}</p>
@@ -818,7 +818,7 @@ export function ExamSchedulingPage() {
                 {supervisorStats.needed - supervisorStats.assigned > 0 && (
                   <p className="text-[10px] text-[var(--institution-accent)] flex items-center gap-1">
                     <AlertTriangle className="size-3" />
-                    {supervisorStats.needed - supervisorStats.assigned} surveillants encore necessaires
+                    {supervisorStats.needed - supervisorStats.assigned} surveillants encore nécessaires
                   </p>
                 )}
               </div>
@@ -878,7 +878,7 @@ export function ExamSchedulingPage() {
             <div className="flex gap-2 mt-5">
               <Button variant="outline" className="flex-1 text-xs" onClick={() => setShowNewExamDialog(false)}>Annuler</Button>
               <Button className="flex-1 text-xs bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white" onClick={handleCreateExam} disabled={isCreatingExam}>
-                {isCreatingExam ? 'Creation...' : 'Planifier'}
+                {isCreatingExam ? 'Création…' : 'Planifier'}
               </Button>
             </div>
           </div>

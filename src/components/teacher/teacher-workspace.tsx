@@ -98,7 +98,7 @@ export function TeacherUnitsPage() {
       groups.map(([label, entries]) => <section key={label} className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
         <h2 className="text-lg font-bold text-slate-950">{label}</h2>
         <div className="mt-4 space-y-3">{entries.map((course) => <div key={course.id} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-          <p className="text-xs font-bold uppercase tracking-wide text-emerald-800">UE {course.teachingUnitCode ? `${course.teachingUnitCode} · ` : ''}{course.teachingUnit} · {course.credits} crédits</p>
+          <p className="text-xs font-bold uppercase tracking-wide text-emerald-800">{course.teachingUnitCode ? `${course.teachingUnitCode} · ` : ''}{course.teachingUnit} · {course.credits} crédits</p>
           <h3 className="mt-1 font-semibold text-slate-950">{course.code ? `${course.code} · ` : ''}{course.name}</h3>
         </div>)}</div>
       </section>)}

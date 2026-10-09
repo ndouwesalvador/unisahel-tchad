@@ -173,7 +173,7 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
 
     const alertes: { id: string; text: string; severity: string }[] = []
     if (pendingSkillsCount > 0) {
-      alertes.push({ id: 'skills-pending', text: `Competence non validee: ${pendingSkillsCount} etudiants`, severity: 'critical' })
+      alertes.push({ id: 'skills-pending', text: `Compétence non validée : ${pendingSkillsCount} étudiants`, severity: 'critical' })
     }
     const fullHospitals = hospitals.filter((h) => h.internes >= 15)
     for (const h of fullHospitals) {

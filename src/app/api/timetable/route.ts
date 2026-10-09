@@ -141,7 +141,7 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
     return NextResponse.json({ slots: data })
   } catch (error) {
     console.error('Timetable API error:', error)
-    return NextResponse.json({ error: 'Failed to fetch timetable' }, { status: 500 })
+    return NextResponse.json({ error: "Impossible de charger l'emploi du temps" }, { status: 500 })
   }
 }
 
@@ -167,16 +167,16 @@ async function saveSlot(user: SessionUser, tenantId: string, request: NextReques
     }
 
     if (type && !VALID_TYPES.includes(type)) {
-      return NextResponse.json({ error: `type must be one of: ${VALID_TYPES.join(', ')}` }, { status: 400 })
+      return NextResponse.json({ error: `Le type doit être l'un des suivants : ${VALID_TYPES.join(', ')}` }, { status: 400 })
     }
 
     if (startTime >= endTime) {
-      return NextResponse.json({ error: 'endTime must be after startTime' }, { status: 400 })
+      return NextResponse.json({ error: "L'heure de fin doit être postérieure à l'heure de début" }, { status: 400 })
     }
 
     const year = await db.academicYear.findFirst({ where: { id: academicYearId, tenantId } })
     if (!year) {
-      return NextResponse.json({ error: 'academicYearId not found for this tenant' }, { status: 404 })
+      return NextResponse.json({ error: 'Année académique introuvable dans cette institution' }, { status: 404 })
     }
 
     const organizationScope = await getOrganizationScope(user, tenantId)
@@ -284,7 +284,7 @@ async function saveSlot(user: SessionUser, tenantId: string, request: NextReques
     return NextResponse.json({ slot }, { status: existingId ? 200 : 201 })
   } catch (error) {
     console.error('Create timetable slot error:', error)
-    return NextResponse.json({ error: 'Failed to create timetable slot' }, { status: 500 })
+    return NextResponse.json({ error: 'Impossible d’enregistrer le créneau' }, { status: 500 })
   }
 }
 

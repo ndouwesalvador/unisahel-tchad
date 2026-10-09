@@ -1108,22 +1108,22 @@ export function TransportPage() {
                 <div className="border border-gray-100 rounded-lg p-3">
                   <div className="flex items-center gap-2 mb-2">
                     <AlertTriangle className="size-3.5 text-[var(--institution-accent)]" />
-                    <p className="text-xs font-semibold text-[var(--institution-primary)]">Connectivite</p>
+                    <p className="text-xs font-semibold text-[var(--institution-primary)]">Connectivité</p>
                   </div>
                   <p className="text-[10px] text-gray-600 leading-relaxed">
-                    Les horaires sont lus depuis le serveur. Aucun mode de synchronisation hors connexion n&apos;est annonce tant
-                    qu&apos;un stockage local et une file de synchronisation ne sont pas implementes.
+                    Les horaires sont lus depuis le serveur. Aucun mode de synchronisation hors connexion n&apos;est annoncé tant
+                    qu&apos;un stockage local et une file de synchronisation ne sont pas implémentés.
                   </p>
                 </div>
 
                 <div className="border border-gray-100 rounded-lg p-3">
                   <div className="flex items-center gap-2 mb-2">
                     <Navigation className="size-3.5 text-[var(--institution-primary)]" />
-                    <p className="text-xs font-semibold text-[var(--institution-primary)]">Suivi vehicule</p>
+                    <p className="text-xs font-semibold text-[var(--institution-primary)]">Suivi véhicule</p>
                   </div>
                   <p className="text-[10px] text-gray-600 leading-relaxed">
-                    Les positions en direct ne sont pas collectees par ce module. Les informations affichees sont les affectations
-                    de trajets, horaires et statuts saisis dans le systeme.
+                    Les positions en direct ne sont pas collectées par ce module. Les informations affichées sont les affectations
+                    de trajets, horaires et statuts saisis dans le système.
                   </p>
                 </div>
 
@@ -1134,8 +1134,8 @@ export function TransportPage() {
                   </div>
                   <p className="text-[10px] text-gray-600 leading-relaxed">
                     {routes.length > 0
-                      ? `${routesWithVehicle} trajet(s) sur ${routes.length} ont actuellement un vehicule assigne.`
-                      : 'Aucun trajet configure pour le moment.'}
+                      ? `${routesWithVehicle} trajet(s) sur ${routes.length} ont actuellement un véhicule assigné.`
+                      : 'Aucun trajet configuré pour le moment.'}
                   </p>
                 </div>
 
