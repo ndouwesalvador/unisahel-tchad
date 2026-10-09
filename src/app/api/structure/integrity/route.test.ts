@@ -5,7 +5,7 @@ const { authMock, dbMock } = vi.hoisted(() => ({
   authMock: vi.fn(),
   dbMock: {
     academicYear: { findFirst: vi.fn() },
-    program: { findMany: vi.fn() },
+    program: { findMany: vi.fn(), findFirst: vi.fn(), delete: vi.fn() },
     student: { findMany: vi.fn() },
     user: { count: vi.fn() },
     administrativeRegistration: { count: vi.fn(), findMany: vi.fn() },
@@ -28,7 +28,7 @@ const { authMock, dbMock } = vi.hoisted(() => ({
 vi.mock('@/lib/auth/config', () => ({ auth: authMock }))
 vi.mock('@/lib/db', () => ({ db: dbMock }))
 
-const { GET, POST } = await import('./route')
+const { GET, POST, DELETE } = await import('./route')
 const tenantId = 'ctenant0000000000000000a1'
 
 beforeEach(() => {
@@ -72,6 +72,36 @@ describe('POST /api/structure/integrity', () => {
       ]),
     }))
     expect(dbMock.auditLog.create).toHaveBeenCalledWith({ data: expect.objectContaining({ action: 'REPAIR' }) })
+  })
+})
+
+describe('DELETE /api/structure/integrity', () => {
+  it('refuses to purge a program without both explicit development markers', async () => {
+    dbMock.program.findFirst.mockResolvedValue({
+      id: 'program-real', name: 'Master en génie électrique', code: 'MGE', levels: [],
+    })
+    const response = await DELETE(new NextRequest('http://localhost:3000/api/structure/integrity', {
+      method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'purge-validation-dev',
+        programId: 'program-real',
+        confirmation: 'SUPPRIMER VALIDATION DEV',
+      }),
+    }))
+    expect(response.status).toBe(409)
+    expect(dbMock.student.findMany).not.toHaveBeenCalled()
+    expect(dbMock.program.delete).not.toHaveBeenCalled()
+  })
+
+  it('requires the exact destructive confirmation', async () => {
+    const response = await DELETE(new NextRequest('http://localhost:3000/api/structure/integrity', {
+      method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'purge-validation-dev', programId: 'program-dev', confirmation: 'supprimer',
+      }),
+    }))
+    expect(response.status).toBe(400)
+    expect(dbMock.$transaction).not.toHaveBeenCalled()
   })
 })
 
