@@ -84,7 +84,7 @@ interface UpcomingExam {
   duration: string
   questions: number
   type: 'QCM' | 'Dissertation' | 'Mixte'
-  status: 'Planifie' | 'En cours' | 'Termine'
+  status: 'Brouillon' | 'Publié' | 'Clôturé'
   progress?: number
 }
 
@@ -107,9 +107,9 @@ const examTypeApiToUi: Record<OnlineExamRecord['type'], UpcomingExam['type']> = 
 }
 
 const examStatusApiToUi: Record<OnlineExamRecord['status'], UpcomingExam['status']> = {
-  'PLANNED': 'Planifie',
-  'IN_PROGRESS': 'En cours',
-  'COMPLETED': 'Termine',
+  'PLANNED': 'Brouillon',
+  'IN_PROGRESS': 'Publié',
+  'COMPLETED': 'Clôturé',
 }
 
 function mapExam(r: OnlineExamRecord): UpcomingExam {
@@ -125,7 +125,7 @@ function mapExam(r: OnlineExamRecord): UpcomingExam {
     duration: r.duration,
     questions: r.questions,
     type: examTypeApiToUi[r.type] || 'QCM',
-    status: examStatusApiToUi[r.status] || 'Planifie',
+    status: examStatusApiToUi[r.status] || 'Brouillon',
     progress: r.progress,
   }
 }
@@ -158,6 +158,17 @@ interface BankQuestion {
   points: number
   usageCount: number
   course: string
+  courseElementId: string | null
+}
+
+interface CourseOption {
+  id: string
+  code: string | null
+  name: string
+  teachingUnit: {
+    name: string
+    semester: { name: string; level: { name: string; program: { name: string } } }
+  }
 }
 
 // ─── Config Maps ──────────────────────────────────────────────────────────────
@@ -170,20 +181,20 @@ const examTypeConfig: Record<string, { label: string; className: string }> = {
 }
 
 const examStatusConfig: Record<string, { label: string; className: string; icon: React.ElementType }> = {
-  'Planifie': { label: 'Planifie', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0', icon: Clock },
-  'En cours': { label: 'En cours', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0', icon: Zap },
-  'Termine': { label: 'Termine', className: 'bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0', icon: CheckCircle2 },
+  'Brouillon': { label: 'Brouillon', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0', icon: Clock },
+  'Publié': { label: 'Publié', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0', icon: Zap },
+  'Clôturé': { label: 'Clôturé', className: 'bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0', icon: CheckCircle2 },
 }
 
 const resultStatusConfig: Record<string, { label: string; className: string }> = {
-  'Reussi': { label: 'Reussi', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0' },
+  'Reussi': { label: 'Réussi', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0' },
   'Echoue': { label: 'Échoué', className: 'bg-[#c6282815] text-[#c62828] border-0' },
   'En correction': { label: 'En correction', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0' },
 }
 
 const gradeConfig: Record<string, { className: string }> = {
   'Excellent': { className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0' },
-  'Tres Bien': { className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0' },
+  'Très Bien': { className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0' },
   'Bien': { className: 'bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0' },
   'Assez Bien': { className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0' },
   'Passable': { className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0' },
@@ -193,7 +204,7 @@ const gradeConfig: Record<string, { className: string }> = {
 
 const severityConfig: Record<string, { label: string; className: string }> = {
   'Critique': { label: 'Critique', className: 'bg-[#c6282815] text-[#c62828] border-0' },
-  'Elevee': { label: 'Elevee', className: 'bg-[#ea580c15] text-[#ea580c] border-0' },
+  'Elevee': { label: 'Élevée', className: 'bg-[#ea580c15] text-[#ea580c] border-0' },
   'Moyenne': { label: 'Moyenne', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0' },
 }
 
@@ -217,7 +228,9 @@ export function OnlineExamPage() {
     points: q.points,
     usageCount: q.usageCount,
     course: q.course || '—',
+    courseElementId: q.courseElementId ?? null,
   }))
+  const courseOptions: CourseOption[] = examsQuery?.courses || []
   const studentResults: StudentResult[] = (examsQuery?.results || []).map((r: any) => ({
     id: r.id,
     name: r.name,
@@ -238,7 +251,7 @@ export function OnlineExamPage() {
   }))
 
   const [newQuestionText, setNewQuestionText] = useState('')
-  const [newQuestionCourse, setNewQuestionCourse] = useState('')
+  const [newQuestionCourseElementId, setNewQuestionCourseElementId] = useState('')
   const [newQuestionType, setNewQuestionType] = useState<'QCM' | 'Dissertation' | 'Vrai-Faux'>('QCM')
   const [newQuestionDifficulty, setNewQuestionDifficulty] = useState<'Facile' | 'Moyen' | 'Difficile'>('Moyen')
   const [newQuestionOptions, setNewQuestionOptions] = useState(['', '', '', ''])
@@ -252,9 +265,13 @@ export function OnlineExamPage() {
       toast.error('Le texte de la question est requis.')
       return
     }
+    if (!newQuestionCourseElementId) {
+      toast.error('Sélectionnez la matière concernée.')
+      return
+    }
     const filledOptions = newQuestionOptions.map((o) => o.trim()).filter(Boolean)
     if (isAutoGradableType && filledOptions.length < 2) {
-      toast.error('Au moins 2 options sont requises pour une question a correction automatique.')
+      toast.error('Au moins 2 options sont requises pour une question à correction automatique.')
       return
     }
     setIsAddingQuestion(true)
@@ -266,20 +283,20 @@ export function OnlineExamPage() {
           text: newQuestionText.trim(),
           type: newQuestionType,
           difficulty: newQuestionDifficulty,
-          course: newQuestionCourse.trim() || undefined,
+          courseElementId: newQuestionCourseElementId,
           options: isAutoGradableType ? filledOptions : undefined,
           correctAnswer: isAutoGradableType ? newQuestionCorrectAnswer : undefined,
         }),
       })
       if (!res.ok) throw new Error('failed')
-      toast.success('Question ajoutee a la banque.')
+      toast.success('Question ajoutée à la banque.')
       setNewQuestionText('')
-      setNewQuestionCourse('')
+      setNewQuestionCourseElementId('')
       setNewQuestionOptions(['', '', '', ''])
       setNewQuestionCorrectAnswer(0)
       queryClient.invalidateQueries({ queryKey: ['onlineExams'] })
     } catch {
-      toast.error("Echec de l'ajout de la question.")
+      toast.error("Échec de l’ajout de la question.")
     } finally {
       setIsAddingQuestion(false)
     }
@@ -287,16 +304,17 @@ export function OnlineExamPage() {
 
   const [showNewExam, setShowNewExam] = useState(false)
   const [isCreatingExam, setIsCreatingExam] = useState(false)
-  const [newExam, setNewExam] = useState({ name: '', course: '', examDate: '', duration: '1h00', type: 'QCM' as 'QCM' | 'DISSERTATION' | 'MIXTE' })
+  const [isUpdatingExamId, setIsUpdatingExamId] = useState<string | null>(null)
+  const [newExam, setNewExam] = useState({ name: '', courseElementId: '', examDate: '', duration: '1h00', type: 'QCM' as 'QCM' | 'DISSERTATION' | 'MIXTE' })
   const [newExamQuestionIds, setNewExamQuestionIds] = useState<string[]>([])
 
   const handleCreateExam = async () => {
-    if (!newExam.name.trim() || !newExam.course.trim() || !newExam.examDate) {
-      toast.error('Nom, cours et date sont requis.')
+    if (!newExam.name.trim() || !newExam.courseElementId || !newExam.examDate) {
+      toast.error('Nom, matière et date sont requis.')
       return
     }
     if (newExamQuestionIds.length === 0) {
-      toast.error('Selectionnez au moins une question de la banque.')
+      toast.error('Sélectionnez au moins une question de la banque.')
       return
     }
     setIsCreatingExam(true)
@@ -306,7 +324,7 @@ export function OnlineExamPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: newExam.name.trim(),
-          course: newExam.course.trim(),
+          courseElementId: newExam.courseElementId,
           examDate: new Date(newExam.examDate).toISOString(),
           duration: newExam.duration,
           type: newExam.type,
@@ -314,22 +332,41 @@ export function OnlineExamPage() {
         }),
       })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data.error || 'Echec de la creation')
+      if (!res.ok) throw new Error(data.error || 'Échec de la création')
       toast.success('Examen créé avec succès')
       setShowNewExam(false)
-      setNewExam({ name: '', course: '', examDate: '', duration: '1h00', type: 'QCM' })
+      setNewExam({ name: '', courseElementId: '', examDate: '', duration: '1h00', type: 'QCM' })
       setNewExamQuestionIds([])
       queryClient.invalidateQueries({ queryKey: ['onlineExams'] })
     } catch (e) {
-      toast.error('Erreur', { description: e instanceof Error ? e.message : 'Echec de la creation' })
+      toast.error('Erreur', { description: e instanceof Error ? e.message : 'Échec de la création' })
     } finally {
       setIsCreatingExam(false)
     }
   }
 
+  const handleExamStatus = async (examId: string, status: 'PLANNED' | 'IN_PROGRESS' | 'COMPLETED') => {
+    setIsUpdatingExamId(examId)
+    try {
+      const response = await fetch(`/api/online-exams?entity=status&id=${encodeURIComponent(examId)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      })
+      const body = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(body.error || 'Impossible de modifier la publication')
+      toast.success(status === 'IN_PROGRESS' ? 'Examen publié aux étudiants inscrits' : status === 'COMPLETED' ? 'Examen clôturé' : 'Publication retirée')
+      await queryClient.invalidateQueries({ queryKey: ['onlineExams'] })
+    } catch (error) {
+      toast.error('Erreur', { description: error instanceof Error ? error.message : 'Impossible de modifier la publication' })
+    } finally {
+      setIsUpdatingExamId(null)
+    }
+  }
+
   const examensPrevus = useCountUp(upcomingExams.length, 1400)
-  const inProgressCount = examsQuery?.stats?.inProgress ?? upcomingExams.filter(e => e.status === 'En cours').length
-  const completedCount = examsQuery?.stats?.completed ?? upcomingExams.filter(e => e.status === 'Termine').length
+  const inProgressCount = examsQuery?.stats?.inProgress ?? upcomingExams.filter(e => e.status === 'Publié').length
+  const completedCount = examsQuery?.stats?.completed ?? upcomingExams.filter(e => e.status === 'Clôturé').length
   const tauxCompletion = useCountUp(
     studentResults.length > 0
       ? Math.round((studentResults.filter((r) => r.status !== 'En correction').length / studentResults.length) * 100)
@@ -382,6 +419,7 @@ export function OnlineExamPage() {
   const maxDistCount = Math.max(1, ...gradeDistribution.map(d => d.count))
 
   const bankCourseOptions = Array.from(new Set(bankQuestions.map((q) => q.course).filter((course) => course && course !== '—'))).sort()
+  const eligibleExamQuestions = bankQuestions.filter((question) => question.courseElementId === newExam.courseElementId)
 
   // Filter bank questions
   const filteredBankQuestions = bankQuestions.filter(q => {
@@ -433,7 +471,7 @@ export function OnlineExamPage() {
                     <Monitor className="size-6" />
                     Examens en Ligne
                   </h1>
-                  <p className="text-sm text-white/70 mt-1">Passation, surveillance et correction automatisee</p>
+                  <p className="text-sm text-white/70 mt-1">Passation, surveillance et correction automatisée</p>
                 </div>
                 <div className="flex gap-2 flex-wrap">
                   <Button size="sm" className="bg-white/10 backdrop-blur border border-white/20 hover:bg-white/20 text-white text-xs" onClick={() => setShowNewExam(true)}>
@@ -571,10 +609,10 @@ export function OnlineExamPage() {
                 </CardTitle>
                 <div className="flex items-center gap-2">
                   <Badge className="text-[10px] bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0">
-                    {examsQuery?.stats?.inProgress ?? upcomingExams.filter(e => e.status === 'En cours').length} en cours
+                    {examsQuery?.stats?.inProgress ?? upcomingExams.filter(e => e.status === 'Publié').length} publiés
                   </Badge>
                   <Badge className="text-[10px] bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0">
-                    {examsQuery?.stats?.planned ?? upcomingExams.filter(e => e.status === 'Planifie').length} planifies
+                    {examsQuery?.stats?.planned ?? upcomingExams.filter(e => e.status === 'Brouillon').length} brouillons
                   </Badge>
                 </div>
               </div>
@@ -630,7 +668,7 @@ export function OnlineExamPage() {
                                   {statusConf.label}
                                 </Badge>
                               ) : null}
-                              {exam.status === 'En cours' && exam.progress !== undefined && (
+                              {exam.status === 'Publié' && exam.progress !== undefined && (
                                 <div className="w-16">
                                   <Progress value={exam.progress} className="h-1 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[var(--institution-secondary)]" />
                                 </div>
@@ -638,13 +676,13 @@ export function OnlineExamPage() {
                             </div>
                           </TableCell>
                           <TableCell className="py-2.5 text-right">
-                            {exam.status === 'Planifie' ? (
-                              <Button size="sm" variant="outline" className="h-7 text-[10px] border-[var(--institution-secondary-30)] text-[var(--institution-secondary)]" disabled>
-                                Disponible côté étudiant
+                            {exam.status === 'Brouillon' ? (
+                              <Button size="sm" variant="outline" className="h-7 text-[10px] border-[var(--institution-secondary-30)] text-[var(--institution-secondary)]" onClick={() => handleExamStatus(exam.id, 'IN_PROGRESS')} disabled={isUpdatingExamId === exam.id}>
+                                {isUpdatingExamId === exam.id ? 'Publication…' : 'Publier'}
                               </Button>
-                            ) : exam.status === 'En cours' ? (
-                              <Button size="sm" variant="outline" className="h-7 text-[10px] border-[var(--institution-accent-30)] text-[var(--institution-accent)]" disabled>
-                                Session étudiant active
+                            ) : exam.status === 'Publié' ? (
+                              <Button size="sm" variant="outline" className="h-7 text-[10px] border-[var(--institution-accent-30)] text-[var(--institution-accent)]" onClick={() => handleExamStatus(exam.id, 'COMPLETED')} disabled={isUpdatingExamId === exam.id}>
+                                {isUpdatingExamId === exam.id ? 'Clôture…' : 'Clôturer'}
                               </Button>
                             ) : (
                               <Button size="sm" variant="ghost" className="h-7 text-[10px] text-gray-600" disabled>
@@ -665,7 +703,7 @@ export function OnlineExamPage() {
                     {!examsLoading && upcomingExams.length === 0 && (
                       <TableRow>
                         <TableCell colSpan={8} className="text-center py-8 text-sm text-gray-400">
-                          Aucun examen trouve
+                          Aucun examen trouvé
                         </TableCell>
                       </TableRow>
                     )}
@@ -696,13 +734,13 @@ export function OnlineExamPage() {
                 <div className="p-4 rounded-lg bg-[var(--institution-primary-08)] border border-[var(--institution-primary-15)]">
                   <h3 className="text-sm font-bold text-[var(--institution-primary)] mb-2">Passation côte étudiant, gestion côte admin</h3>
                   <p className="text-xs text-gray-600 leading-relaxed">
-                    Ce panneau admin ne simule plus une copie d&apos;examen. Il prepare les examens, gere la banque de questions,
+                    Ce panneau admin ne simule plus une copie d&apos;examen. Il prépare les examens, gère la banque de questions,
                     affiche les résultats enregistrés et liste les incidents remontés par les sessions étudiantes réelles.
                   </p>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
                     <div className="p-3 rounded-lg bg-white border border-gray-100">
                       <p className="text-[10px] text-gray-500">Examens planifies</p>
-                      <p className="text-xl font-bold text-[var(--institution-primary)]">{upcomingExams.filter((exam) => exam.status === 'Planifie').length}</p>
+                      <p className="text-xl font-bold text-[var(--institution-primary)]">{upcomingExams.filter((exam) => exam.status === 'Brouillon').length}</p>
                     </div>
                     <div className="p-3 rounded-lg bg-white border border-gray-100">
                       <p className="text-[10px] text-gray-500">Sessions en cours</p>
@@ -788,7 +826,7 @@ export function OnlineExamPage() {
                       </TableRow>
                     ) : filteredResults.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-6 text-xs text-gray-400">Aucun resultat publie pour le moment</TableCell>
+                        <TableCell colSpan={6} className="text-center py-6 text-xs text-gray-400">Aucun résultat publié pour le moment</TableCell>
                       </TableRow>
                     ) : filteredResults.map((result) => {
                       const rsc = resultStatusConfig[result.status]
@@ -900,7 +938,7 @@ export function OnlineExamPage() {
                   {[
                     { icon: Eye, text: 'Incidents visibles cote admin' },
                     { icon: AlertTriangle, text: 'Sortie de fenetre signalee' },
-                    { icon: Timer, text: 'Duree issue de l examen' },
+                    { icon: Timer, text: 'Durée issue de l’examen' },
                     { icon: FileCheck, text: 'Soumission finale enregistree' },
                   ].map((feature, idx) => (
                     <div key={idx} className="flex items-center gap-2 p-2 rounded bg-[var(--institution-secondary-08)] border border-[var(--institution-secondary-15)]">
@@ -916,7 +954,7 @@ export function OnlineExamPage() {
                   <p className="text-xs font-semibold text-[var(--institution-primary)] mb-1">Limites operationnelles</p>
                   <p className="text-[10px] text-gray-600 leading-relaxed">
                     Les incidents sont journalises et consultables ici. Ce panneau n&apos;annonce plus de sanction automatique
-                    tant qu&apos;une regle de blocage ou de soumission forcee n&apos;est pas configuree cote serveur.
+                    tant qu&apos;une règle de blocage ou de soumission forcée n&apos;est pas configurée côté serveur.
                   </p>
                 </div>
 
@@ -985,12 +1023,18 @@ export function OnlineExamPage() {
                       onChange={(e) => setNewQuestionText(e.target.value)}
                     />
                     <div className="flex gap-2 flex-wrap">
-                      <Input
-                        placeholder="Cours (optionnel)"
-                        className="h-8 text-xs bg-white flex-1 min-w-[140px]"
-                        value={newQuestionCourse}
-                        onChange={(e) => setNewQuestionCourse(e.target.value)}
-                      />
+                      <Select value={newQuestionCourseElementId} onValueChange={setNewQuestionCourseElementId}>
+                        <SelectTrigger className="h-8 min-w-[220px] flex-1 bg-white text-xs">
+                          <SelectValue placeholder="Matière concernée" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {courseOptions.map((course) => (
+                            <SelectItem key={course.id} value={course.id}>
+                              {course.code ? `${course.code} · ` : ''}{course.name} · {course.teachingUnit.semester.level.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <Select value={newQuestionType} onValueChange={(v) => setNewQuestionType(v as typeof newQuestionType)}>
                         <SelectTrigger className="w-[110px] h-8 text-xs bg-white">
                           <SelectValue />
@@ -1166,7 +1210,7 @@ export function OnlineExamPage() {
                     <span className="text-sm font-semibold text-[var(--institution-primary)]">Sauvegarde des reponses</span>
                   </div>
                   <p className="text-xs text-gray-600 leading-relaxed">
-                    Les reponses envoyees par l&apos;interface etudiante sont persistees par l&apos;API. En cas d&apos;echec reseau,
+                    Les réponses envoyées par l&apos;interface étudiante sont enregistrées par l&apos;API. En cas d&apos;échec réseau,
                     l&apos;étudiant doit voir l&apos;erreur et relancer l&apos;enregistrement.
                   </p>
                   <div className="mt-2 flex items-center gap-2">
@@ -1180,7 +1224,7 @@ export function OnlineExamPage() {
                     <span className="text-sm font-semibold text-[var(--institution-primary)]">Pas de mode deconnecte annonce</span>
                   </div>
                   <p className="text-xs text-gray-600 leading-relaxed">
-                    Les questions ne sont pas presentees comme stockees localement. Ce choix evite de promettre une synchronisation
+                    Les questions ne sont pas présentées comme stockées localement. Ce choix évite de promettre une synchronisation
                     automatique qui n&apos;est pas garantie par le panneau admin.
                   </p>
                   <div className="mt-2 flex items-center gap-2">
@@ -1245,13 +1289,22 @@ export function OnlineExamPage() {
                 value={newExam.name}
                 onChange={(e) => setNewExam((f) => ({ ...f, name: e.target.value }))}
               />
-              <div className="grid grid-cols-2 gap-2">
-                <Input
-                  placeholder="Cours"
-                  className="h-9 text-sm"
-                  value={newExam.course}
-                  onChange={(e) => setNewExam((f) => ({ ...f, course: e.target.value }))}
-                />
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <Select value={newExam.courseElementId} onValueChange={(courseElementId) => {
+                  setNewExam((form) => ({ ...form, courseElementId }))
+                  setNewExamQuestionIds([])
+                }}>
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue placeholder="Matière" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {courseOptions.map((course) => (
+                      <SelectItem key={course.id} value={course.id}>
+                        {course.code ? `${course.code} · ` : ''}{course.name} · {course.teachingUnit.semester.level.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <Input
                   type="datetime-local"
                   className="h-9 text-sm"
@@ -1281,11 +1334,13 @@ export function OnlineExamPage() {
                 <p className="text-xs font-semibold text-gray-500 mb-2">
                   Questions de la banque ({newExamQuestionIds.length} selectionnee(s)) :
                 </p>
-                {bankQuestions.length === 0 ? (
-                  <p className="text-xs text-gray-400">Ajoutez d&apos;abord des questions a la banque ci-dessous.</p>
+                {!newExam.courseElementId ? (
+                  <p className="text-xs text-gray-400">Sélectionnez d&apos;abord une matière.</p>
+                ) : eligibleExamQuestions.length === 0 ? (
+                  <p className="text-xs text-gray-400">Ajoutez d&apos;abord des questions pour cette matière dans la banque.</p>
                 ) : (
                   <div className="space-y-1.5 max-h-52 overflow-y-auto border border-gray-100 rounded-lg p-2">
-                    {bankQuestions.map((q) => (
+                    {eligibleExamQuestions.map((q) => (
                       <label key={q.id} className="flex items-start gap-2 p-1.5 rounded hover:bg-gray-50 cursor-pointer">
                         <input
                           type="checkbox"

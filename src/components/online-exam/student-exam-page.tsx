@@ -94,7 +94,7 @@ export function StudentExamPage() {
         body: JSON.stringify({ examId }),
       })
       const json = await res.json()
-      if (!res.ok) throw new Error(json.error || "Impossible de demarrer l'examen")
+      if (!res.ok) throw new Error(json.error || "Impossible de démarrer l’examen")
       submittedRef.current = false
       setSession(json)
       setAnswers(json.answers || {})
@@ -103,7 +103,7 @@ export function StudentExamPage() {
       const remaining = Math.max(0, json.durationMinutes * 60 - Math.floor(elapsedMs / 1000))
       setRemainingSeconds(remaining)
     } catch (e) {
-      toast.error('Erreur', { description: e instanceof Error ? e.message : "Impossible de demarrer l'examen" })
+      toast.error('Erreur', { description: e instanceof Error ? e.message : "Impossible de démarrer l’examen" })
     }
   }
 
@@ -118,14 +118,14 @@ export function StudentExamPage() {
         body: JSON.stringify({ resultId: session.resultId }),
       })
       const json = await res.json()
-      if (!res.ok) throw new Error(json.error || 'Echec de la soumission')
+      if (!res.ok) throw new Error(json.error || 'Échec de la soumission')
       toast.success('Examen soumis avec succes')
       queryClient.invalidateQueries({ queryKey: ['myExams'] })
       setSession(null)
       setShowConfirm(false)
     } catch (e) {
       submittedRef.current = false
-      toast.error('Erreur', { description: e instanceof Error ? e.message : 'Echec de la soumission' })
+      toast.error('Erreur', { description: e instanceof Error ? e.message : 'Échec de la soumission' })
     } finally {
       setIsSubmitting(false)
     }
@@ -189,7 +189,7 @@ export function StudentExamPage() {
             <div className="mb-4">
               <div className="flex items-center justify-between mb-1">
                 <span className="text-xs text-gray-500">Progression</span>
-                <span className="text-xs font-semibold text-[var(--institution-secondary)]">{answeredCount}/{session.questions.length} repondues</span>
+                <span className="text-xs font-semibold text-[var(--institution-secondary)]">{answeredCount}/{session.questions.length} répondues</span>
               </div>
               <Progress value={(answeredCount / session.questions.length) * 100} className="h-2" />
             </div>
@@ -254,9 +254,9 @@ export function StudentExamPage() {
                 </div>
                 <h3 className="text-lg font-bold text-[var(--institution-primary)] mb-2">Confirmer la soumission</h3>
                 <p className="text-sm text-gray-600 mb-4">
-                  Vous avez repondu a {answeredCount} question(s) sur {session.questions.length}.
+                  Vous avez répondu à {answeredCount} question(s) sur {session.questions.length}.
                   {answeredCount < session.questions.length && (
-                    <span className="text-[#c62828] font-medium"> {session.questions.length - answeredCount} question(s) sans reponse.</span>
+                    <span className="text-[#c62828] font-medium"> {session.questions.length - answeredCount} question(s) sans réponse.</span>
                   )}
                 </p>
                 <div className="flex gap-2">
@@ -280,13 +280,13 @@ export function StudentExamPage() {
         <h1 className="text-xl font-bold text-[var(--institution-primary)] flex items-center gap-2">
           <Monitor className="size-6" /> Mes examens en ligne
         </h1>
-        <p className="text-sm text-gray-500 mt-1">Consultez et passez vos examens programmes</p>
+        <p className="text-sm text-gray-500 mt-1">Consultez et passez vos examens programmés</p>
       </div>
 
       {isLoading ? (
         <p className="text-sm text-gray-400">Chargement...</p>
       ) : exams.length === 0 ? (
-        <Card><CardContent className="p-8 text-center text-sm text-gray-400">Aucun examen programme pour le moment.</CardContent></Card>
+        <Card><CardContent className="p-8 text-center text-sm text-gray-400">Aucun examen programmé pour le moment.</CardContent></Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {exams.map((exam) => (
@@ -327,7 +327,7 @@ export function StudentExamPage() {
                   </Button>
                 )}
                 {exam.questionCount === 0 && !exam.submitted && (
-                  <p className="text-[10px] text-gray-400 text-center mt-1">Questions pas encore configurees</p>
+                  <p className="text-[10px] text-gray-400 text-center mt-1">Questions pas encore configurées</p>
                 )}
               </CardContent>
             </Card>

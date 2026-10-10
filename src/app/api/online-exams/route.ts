@@ -5,11 +5,12 @@ import { getTeacherScope } from '@/lib/auth/teacher-scope'
 
 const KNOWN_QUESTION_TYPES = ['QCM', 'Dissertation', 'Vrai-Faux']
 const KNOWN_DIFFICULTIES = ['Facile', 'Moyen', 'Difficile']
+const EXAM_MANAGEMENT_ROLES = ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'RECTORAT', 'SCOLARITE', 'FACULTE', 'DEPARTEMENT', 'RESPONSABLE_FILIERE', 'ENSEIGNANT']
 
 function computeMention(score: number, maxScore: number): string {
   const ratio = maxScore > 0 ? score / maxScore : 0
   if (ratio >= 0.9) return 'Excellent'
-  if (ratio >= 0.7) return 'Tres Bien'
+  if (ratio >= 0.7) return 'Très Bien'
   if (ratio >= 0.6) return 'Bien'
   if (ratio >= 0.5) return 'Assez Bien'
   if (ratio >= 0.45) return 'Passable'
@@ -40,7 +41,7 @@ async function handleGetForStudent(user: SessionUser, tenantId: string) {
   try {
     const student = await resolveCurrentStudent(user.id, tenantId)
     if (!student) {
-      return NextResponse.json({ error: 'No student profile linked to this account' }, { status: 403 })
+      return NextResponse.json({ error: 'Aucun profil étudiant n’est lié à ce compte' }, { status: 403 })
     }
 
     const registrations = await db.pedagogicalRegistration.findMany({
@@ -51,13 +52,22 @@ async function handleGetForStudent(user: SessionUser, tenantId: string) {
       where: { teachingUnitId: { in: registrations.map((registration) => registration.teachingUnitId) } },
       select: { id: true },
     }) : []
-    const [exams, myResults] = await Promise.all([
-      db.onlineExam.findMany({
-        where: { tenantId, status: { in: ['PLANNED', 'IN_PROGRESS'] }, OR: [{ courseElementId: null }, { courseElementId: { in: eligibleElements.map((element) => element.id) } }] },
-        orderBy: { examDate: 'asc' },
-      }),
-      db.examResult.findMany({ where: { tenantId, studentId: student.id } }),
-    ])
+    const myResults = await db.examResult.findMany({ where: { tenantId, studentId: student.id } })
+    const submittedOrStartedExamIds = myResults.map((result) => result.examId)
+    const exams = await db.onlineExam.findMany({
+      where: {
+        tenantId,
+        AND: [
+          { OR: [{ status: 'IN_PROGRESS' }, { id: { in: submittedOrStartedExamIds } }] },
+          { OR: [
+            { courseElementId: { in: eligibleElements.map((element) => element.id) } },
+            { id: { in: submittedOrStartedExamIds } },
+          ] },
+        ],
+      },
+      orderBy: { examDate: 'asc' },
+      take: 100,
+    })
 
     const resultByExam = new Map(myResults.map((r) => [r.examId, r]))
 
@@ -84,7 +94,7 @@ async function handleGetForStudent(user: SessionUser, tenantId: string) {
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error('Student online exams error:', error)
-    return NextResponse.json({ error: 'Failed to fetch exams' }, { status: 500 })
+    return NextResponse.json({ error: 'Impossible de charger les examens' }, { status: 500 })
   }
 }
 
@@ -95,7 +105,7 @@ async function handleGet(user: SessionUser, tenantId: string, _request: NextRequ
     const where = { tenantId, ...(scope ? { courseElementId: { in: scope.courseElementIds }, teacherId: scope.teacherId ?? '' } : {}) }
     const resultWhere = { tenantId, ...(scope ? { exam: { courseElementId: { in: scope.courseElementIds }, teacherId: scope.teacherId ?? '' } } : {}) }
 
-    const [exams, planned, inProgress, completed, bankQuestions, resultRows, incidentRows] = await Promise.all([
+    const [exams, planned, inProgress, completed, bankQuestions, resultRows, incidentRows, courses] = await Promise.all([
       db.onlineExam.findMany({
         where,
         orderBy: { examDate: 'desc' },
@@ -119,6 +129,25 @@ async function handleGet(user: SessionUser, tenantId: string, _request: NextRequ
         },
         orderBy: { occurredAt: 'desc' },
         take: 100,
+      }),
+      db.courseElement.findMany({
+        where: {
+          ...(scope ? { id: { in: scope.courseElementIds } } : {}),
+          teachingUnit: { semester: { level: { program: { tenantId, isActive: true } } } },
+        },
+        select: {
+          id: true,
+          code: true,
+          name: true,
+          teachingUnit: {
+            select: {
+              name: true,
+              semester: { select: { name: true, level: { select: { name: true, program: { select: { name: true } } } } } },
+            },
+          },
+        },
+        orderBy: { name: 'asc' },
+        take: 500,
       }),
     ])
 
@@ -149,12 +178,12 @@ async function handleGet(user: SessionUser, tenantId: string, _request: NextRequ
       severity: i.severity,
     }))
 
-    return NextResponse.json({ exams, stats, bankQuestions, results, incidents })
+    return NextResponse.json({ exams, stats, bankQuestions, results, incidents, courses })
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error('Online exams API error:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch online exams' },
+      { error: 'Impossible de charger les examens en ligne' },
       { status: 500 }
     )
   }
@@ -163,18 +192,20 @@ async function handleGet(user: SessionUser, tenantId: string, _request: NextRequ
 // POST /api/online-exams?entity=question - add a question to the reusable bank
 async function createBankQuestionHandler(user: SessionUser, tenantId: string, request: NextRequest) {
   try {
+    if (!EXAM_MANAGEMENT_ROLES.includes(user.role)) return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
     const body = await request.json()
     const { text, type, difficulty, points, course, options, correctAnswer } = body
     const scope = user.role === 'ENSEIGNANT' ? await getTeacherScope(user, tenantId) : null
     const courseElementId = typeof body.courseElementId === 'string' ? body.courseElementId : null
-    if (scope && (!scope.linked || !courseElementId || !scope.courseElementIds.includes(courseElementId))) {
+    if (!courseElementId) return NextResponse.json({ error: 'Une matière est requise' }, { status: 400 })
+    if (scope && (!scope.linked || !scope.courseElementIds.includes(courseElementId))) {
       return NextResponse.json({ error: 'Matière non attribuée' }, { status: 403 })
     }
     const element = courseElementId ? await db.courseElement.findFirst({ where: { id: courseElementId, teachingUnit: { semester: { level: { program: { tenantId } } } } }, select: { name: true } }) : null
     if (courseElementId && !element) return NextResponse.json({ error: 'Matière introuvable' }, { status: 404 })
 
     if (!text || typeof text !== 'string' || !text.trim()) {
-      return NextResponse.json({ error: 'text is required' }, { status: 400 })
+      return NextResponse.json({ error: 'Le texte de la question est requis' }, { status: 400 })
     }
     if (type !== undefined && !KNOWN_QUESTION_TYPES.includes(type)) {
       return NextResponse.json({ error: `type must be one of: ${KNOWN_QUESTION_TYPES.join(', ')}` }, { status: 400 })
@@ -188,7 +219,7 @@ async function createBankQuestionHandler(user: SessionUser, tenantId: string, re
     // options/correctAnswer and always requires manual correction.
     const isAutoGradable = type === 'QCM' || type === 'Vrai-Faux'
     if (isAutoGradable && (cleanOptions.length < 2 || !Number.isInteger(correctAnswer) || correctAnswer < 0 || correctAnswer >= cleanOptions.length)) {
-      return NextResponse.json({ error: 'correctAnswer must be a valid index into options' }, { status: 400 })
+      return NextResponse.json({ error: 'La bonne réponse doit correspondre à une option proposée' }, { status: 400 })
     }
 
     const question = await db.examBankQuestion.create({
@@ -210,18 +241,20 @@ async function createBankQuestionHandler(user: SessionUser, tenantId: string, re
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error('Create bank question error:', error)
-    return NextResponse.json({ error: 'Failed to create question' }, { status: 500 })
+    return NextResponse.json({ error: 'Impossible de créer la question' }, { status: 500 })
   }
 }
 
 // POST /api/online-exams - Create a new online exam
 async function handlePost(user: SessionUser, tenantId: string, request: NextRequest) {
   try {
+    if (!EXAM_MANAGEMENT_ROLES.includes(user.role)) return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
     const body = await request.json()
     const { name, course, examDate, duration, type, questionIds } = body
     const scope = user.role === 'ENSEIGNANT' ? await getTeacherScope(user, tenantId) : null
     const courseElementId = typeof body.courseElementId === 'string' ? body.courseElementId : null
-    if (scope && (!scope.linked || !courseElementId || !scope.courseElementIds.includes(courseElementId))) {
+    if (!courseElementId) return NextResponse.json({ error: 'Une matière est requise' }, { status: 400 })
+    if (scope && (!scope.linked || !scope.courseElementIds.includes(courseElementId))) {
       return NextResponse.json({ error: 'Matière non attribuée' }, { status: 403 })
     }
     const element = courseElementId ? await db.courseElement.findFirst({ where: { id: courseElementId, teachingUnit: { semester: { level: { program: { tenantId } } } } }, select: { name: true } }) : null
@@ -230,7 +263,7 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
 
     if (!name || !(element?.name || course) || !duration || !questions || !type) {
       return NextResponse.json(
-        { error: 'name, course, duration, questions, and type are required fields' },
+        { error: 'Le nom, la matière, la durée, les questions et le type sont requis' },
         { status: 400 }
       )
     }
@@ -245,7 +278,7 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
 
     if (typeof questions !== 'number' || questions < 1) {
       return NextResponse.json(
-        { error: 'questions must be a positive number' },
+        { error: 'Le nombre de questions doit être positif' },
         { status: 400 }
       )
     }
@@ -281,9 +314,64 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
     // eslint-disable-next-line no-console
     console.error('Create online exam error:', error)
     return NextResponse.json(
-      { error: 'Failed to create online exam' },
+      { error: 'Impossible de créer l’examen en ligne' },
       { status: 500 }
     )
+  }
+}
+
+// PUT /api/online-exams?entity=status&id=<examId> - explicit publication lifecycle.
+// PLANNED is a draft, IN_PROGRESS is published to eligible students and
+// COMPLETED closes the session while keeping submitted results visible.
+async function updateExamStatusHandler(user: SessionUser, tenantId: string, request: NextRequest, examId: string) {
+  try {
+    if (!EXAM_MANAGEMENT_ROLES.includes(user.role)) {
+      return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
+    }
+    const body = await request.json().catch(() => null)
+    const nextStatus = body?.status
+    if (!['PLANNED', 'IN_PROGRESS', 'COMPLETED'].includes(nextStatus)) {
+      return NextResponse.json({ error: 'Statut d’examen invalide' }, { status: 400 })
+    }
+
+    const scope = user.role === 'ENSEIGNANT' ? await getTeacherScope(user, tenantId) : null
+    if (scope && !scope.linked) return NextResponse.json({ error: 'Profil enseignant non lié' }, { status: 403 })
+
+    const exam = await db.onlineExam.findFirst({
+      where: {
+        id: examId,
+        tenantId,
+        ...(scope ? { teacherId: scope.teacherId ?? '', courseElementId: { in: scope.courseElementIds } } : {}),
+      },
+      select: { id: true, status: true, questionIds: true, courseElementId: true },
+    })
+    if (!exam) return NextResponse.json({ error: 'Examen introuvable ou hors de votre périmètre' }, { status: 404 })
+
+    const allowedTransitions: Record<string, string[]> = {
+      PLANNED: ['IN_PROGRESS'],
+      IN_PROGRESS: ['PLANNED', 'COMPLETED'],
+      COMPLETED: [],
+    }
+    if (exam.status === nextStatus) return NextResponse.json({ exam })
+    if (!allowedTransitions[exam.status]?.includes(nextStatus)) {
+      return NextResponse.json({ error: `Transition ${exam.status} → ${nextStatus} interdite` }, { status: 409 })
+    }
+    if (nextStatus === 'IN_PROGRESS' && (!exam.courseElementId || exam.questionIds.length === 0)) {
+      return NextResponse.json({ error: 'Une matière réelle et au moins une question sont requises avant publication' }, { status: 409 })
+    }
+    if (nextStatus === 'PLANNED') {
+      const startedSessions = await db.examResult.count({ where: { tenantId, examId, startedAt: { not: null } } })
+      if (startedSessions > 0) {
+        return NextResponse.json({ error: 'Impossible de retirer un examen déjà commencé par un étudiant' }, { status: 409 })
+      }
+    }
+
+    const updated = await db.onlineExam.update({ where: { id: exam.id }, data: { status: nextStatus } })
+    return NextResponse.json({ exam: updated })
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('Update online exam status error:', error)
+    return NextResponse.json({ error: 'Impossible de modifier la publication de l’examen' }, { status: 500 })
   }
 }
 
@@ -292,30 +380,36 @@ async function startSessionHandler(user: SessionUser, tenantId: string, request:
   try {
     const student = await resolveCurrentStudent(user.id, tenantId)
     if (!student) {
-      return NextResponse.json({ error: 'No student profile linked to this account' }, { status: 403 })
+      return NextResponse.json({ error: 'Aucun profil étudiant n’est lié à ce compte' }, { status: 403 })
     }
 
     const body = await request.json()
     const { examId } = body
     if (!examId) {
-      return NextResponse.json({ error: 'examId is required' }, { status: 400 })
+      return NextResponse.json({ error: 'L’identifiant de l’examen est requis' }, { status: 400 })
     }
 
     const exam = await db.onlineExam.findFirst({ where: { id: examId, tenantId } })
     if (!exam) {
-      return NextResponse.json({ error: 'Exam not found' }, { status: 404 })
+      return NextResponse.json({ error: 'Examen introuvable' }, { status: 404 })
+    }
+    if (exam.status !== 'IN_PROGRESS') {
+      return NextResponse.json({ error: 'Cet examen n’est pas publié ou est déjà clôturé' }, { status: 409 })
+    }
+    if (exam.examDate.getTime() > Date.now()) {
+      return NextResponse.json({ error: 'Cet examen n’est pas encore ouvert' }, { status: 409 })
     }
     if (exam.courseElementId && !await db.pedagogicalRegistration.findFirst({
       where: { studentId: student.id, teachingUnit: { courseElements: { some: { id: exam.courseElementId } } }, status: 'ACTIVE' },
       select: { id: true },
     })) return NextResponse.json({ error: 'Examen hors de votre inscription pédagogique' }, { status: 403 })
     if (exam.questionIds.length === 0) {
-      return NextResponse.json({ error: 'This exam has no questions configured yet' }, { status: 409 })
+      return NextResponse.json({ error: 'Aucune question n’est encore configurée pour cet examen' }, { status: 409 })
     }
 
     let result = await db.examResult.findFirst({ where: { tenantId, examId, studentId: student.id } })
     if (result?.submittedAt) {
-      return NextResponse.json({ error: 'This exam has already been submitted' }, { status: 409 })
+      return NextResponse.json({ error: 'Cet examen a déjà été soumis' }, { status: 409 })
     }
     if (!result) {
       result = await db.examResult.create({
@@ -343,7 +437,7 @@ async function startSessionHandler(user: SessionUser, tenantId: string, request:
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error('Start exam session error:', error)
-    return NextResponse.json({ error: 'Failed to start exam session' }, { status: 500 })
+    return NextResponse.json({ error: 'Impossible de démarrer la session d’examen' }, { status: 500 })
   }
 }
 
@@ -521,6 +615,10 @@ export const PUT = withTenantAuth(async (user: SessionUser, tenantId: string, re
   if (searchParams.get('entity') === 'answer' && id) {
     if (!['ETUDIANT', 'ETUDIANT_SANTE'].includes(user.role)) return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
     return answerHandler(user, tenantId, request, id)
+  }
+  if (searchParams.get('entity') === 'status' && id) {
+    if (['ETUDIANT', 'ETUDIANT_SANTE'].includes(user.role)) return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
+    return updateExamStatusHandler(user, tenantId, request, id)
   }
   return NextResponse.json({ error: 'Unsupported operation' }, { status: 400 })
 })

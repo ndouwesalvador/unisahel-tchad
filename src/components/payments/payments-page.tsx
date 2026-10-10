@@ -260,7 +260,12 @@ export function PaymentsPage() {
       toast.success('Paiement enregistré', {
         description: `Reçu ${json.data?.receiptNumber ?? ''} : ${formatFCFA(Number(newPayment.montant))}`,
       })
-      queryClient.invalidateQueries({ queryKey: ['payments'] })
+      setCurrentPage(1)
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['payments'], refetchType: 'active' }),
+        queryClient.invalidateQueries({ queryKey: ['paymentStats'], refetchType: 'active' }),
+        queryClient.invalidateQueries({ queryKey: ['dashboard'], refetchType: 'active' }),
+      ])
       setShowNewPayment(false)
       setNewPayment({ studentId: '', studentLabel: '', montant: '', description: '', methode: '', reference: '' })
       setStudentSearch('')
