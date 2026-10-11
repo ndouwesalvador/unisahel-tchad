@@ -96,6 +96,7 @@ const StructurePage = lazyView(() => import('@/components/structure/structure-pa
 const GradesPage = lazyView(() => import('@/components/grades/grades-page').then(m => m.GradesPage))
 const DeliberationPage = lazyView(() => import('@/components/deliberation/deliberation-page').then(m => m.DeliberationPage))
 const DocumentsPage = lazyView(() => import('@/components/documents/documents-page').then(m => m.DocumentsPage))
+const StudentDocumentsPage = lazyView(() => import('@/components/documents/student-documents-page').then(m => m.StudentDocumentsPage))
 const PaymentsPage = lazyView(() => import('@/components/payments/payments-page').then(m => m.PaymentsPage))
 const StudentPaymentsPage = lazyView(() => import('@/components/payments/student-payments-page').then(m => m.StudentPaymentsPage))
 const HealthPage = lazyView(() => import('@/components/health/health-page').then(m => m.HealthPage))
@@ -309,6 +310,7 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
     { icon: LayoutDashboard, label: 'Tableau de bord', view: 'dashboard' },
     { icon: FileCheck, label: 'Mes Notes', view: 'grades' },
     { icon: FileText, label: 'Mes Documents', view: 'documents' },
+    { icon: CreditCard, label: 'Mes Paiements', view: 'payments' },
     { icon: Briefcase, label: 'Mes Stages', view: 'internships' },
     { icon: Stethoscope, label: 'Mon carnet', view: 'health', module: 'health' },
     { icon: Calendar, label: 'Emploi du temps', view: 'timetable' },
@@ -347,7 +349,7 @@ const institutionSettingsRoles = new Set<UserRole>(['SUPER_ADMIN', 'ADMIN_INSTIT
 const commonStudentViews = new Set<AppView>(['dashboard', 'grades', 'documents', 'timetable', 'profile', 'verify'])
 const studentRoleViews: Record<'ETUDIANT' | 'ETUDIANT_SANTE', Set<AppView>> = {
   ETUDIANT: new Set<AppView>(['payments', 'student-exam']),
-  ETUDIANT_SANTE: new Set<AppView>(['internships', 'health']),
+  ETUDIANT_SANTE: new Set<AppView>(['payments', 'internships', 'health']),
 }
 
 export function canManageInstitutionSettings(role: UserRole) {
@@ -605,7 +607,9 @@ function MainContent({ view }: { view: AppView }) {
     case 'deliberation':
       return <DeliberationPage />
     case 'documents':
-      return <DocumentsPage />
+      return user?.role === 'ETUDIANT' || user?.role === 'ETUDIANT_SANTE'
+        ? <StudentDocumentsPage />
+        : <DocumentsPage />
     case 'payments':
       return user?.role === 'ETUDIANT' || user?.role === 'ETUDIANT_SANTE'
         ? <StudentPaymentsPage />

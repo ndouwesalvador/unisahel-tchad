@@ -13,6 +13,7 @@ import {
 } from '@/lib/pdf/templates'
 import { expectedPvSheetCount, type PvSection } from '@/lib/pdf/pv-matrix'
 import { prepareDocumentArtwork } from '@/lib/pdf/artwork'
+import { isStudentDocumentType } from '@/lib/documents/student-document-access'
 
 const STAFF_ROLES = new Set(['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'RECTORAT', 'SCOLARITE'])
 
@@ -34,7 +35,7 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
   }
   if (isStudentSelfRole(user.role)) {
     const ownStudentId = await resolveOwnStudentId(user)
-    if (!ownStudentId || document.studentId !== ownStudentId) {
+    if (!ownStudentId || document.studentId !== ownStudentId || !document.validatedAt || !isStudentDocumentType(document.type)) {
       return NextResponse.json({ error: 'Accès refusé.' }, { status: 403 })
     }
   }

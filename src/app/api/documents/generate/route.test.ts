@@ -118,7 +118,7 @@ describe('POST /api/documents/generate', () => {
     expect(dbMock.officialDocument.create).not.toHaveBeenCalled()
   })
 
-  it('refuses a student account with no linked student record', async () => {
+  it('refuses document generation from every student account', async () => {
     authMock.mockResolvedValue({ user: { id: 'user-A', role: 'ETUDIANT', tenantId } })
     dbMock.student.findFirst.mockResolvedValue(null)
 

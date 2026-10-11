@@ -3,6 +3,8 @@ import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
 import { resolveOwnStudentId, isStudentSelfRole } from '@/lib/auth/student-scope'
 import { getOrganizationScope, isOrganizationManager } from '@/lib/auth/organization-scope'
+import { Prisma } from '@prisma/client'
+import { STUDENT_DOCUMENT_TYPES } from '@/lib/documents/student-document-access'
 
 const DOCUMENT_READ_ROLES = new Set(['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'RECTORAT', 'SCOLARITE', 'FACULTE', 'DEPARTEMENT', 'ETUDIANT', 'ETUDIANT_SANTE'])
 
@@ -31,7 +33,16 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
     }
     const requestedStudentId = ownStudentId ? null : new URL(request.url).searchParams.get('studentId')
     const scopedStudentId = ownStudentId || requestedStudentId
-    const where = scopedStudentId ? { tenantId, studentId: scopedStudentId } : { tenantId }
+    const where: Prisma.OfficialDocumentWhereInput = scopedStudentId
+      ? {
+          tenantId,
+          studentId: scopedStudentId,
+          ...(ownStudentId ? {
+            type: { in: [...STUDENT_DOCUMENT_TYPES] },
+            validatedAt: { not: null },
+          } : {}),
+        }
+      : { tenantId }
 
     const now = new Date()
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)

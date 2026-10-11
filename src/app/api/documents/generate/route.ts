@@ -17,7 +17,9 @@ import { parseHeaderLines } from '@/lib/institution-branding'
 import { prepareDocumentArtwork, prepareDocumentPhoto } from '@/lib/pdf/artwork'
 
 const SIGNING_ROLES = new Set(['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'RECTORAT', 'SCOLARITE', 'JURY', 'FACULTE', 'DEPARTEMENT'])
-const GENERATING_ROLES = new Set([...SIGNING_ROLES, 'ETUDIANT', 'ETUDIANT_SANTE'])
+// Student portals are read-only for official documents. A student may only
+// download a validated document previously issued by an authorised office.
+const GENERATING_ROLES = SIGNING_ROLES
 
 export async function POST(request: NextRequest) {
   try {

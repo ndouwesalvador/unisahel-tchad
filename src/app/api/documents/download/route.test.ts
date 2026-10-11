@@ -83,6 +83,22 @@ describe('GET /api/documents/download', () => {
     expect(renderMock).not.toHaveBeenCalled()
   })
 
+  it('does not let a student download an internal PV even if it references them', async () => {
+    dbMock.officialDocument.findFirst.mockResolvedValue({ ...document, type: 'PV_DELIBERATION' })
+    dbMock.student.findFirst.mockResolvedValue({ id: 'student-A' })
+    const response = await handler({ id: 'student-user-A', role: 'ETUDIANT', tenantId: 'tenant-A' }, 'tenant-A', request)
+    expect(response.status).toBe(403)
+    expect(renderMock).not.toHaveBeenCalled()
+  })
+
+  it('does not let a student download an unvalidated preview', async () => {
+    dbMock.officialDocument.findFirst.mockResolvedValue({ ...document, validatedAt: null })
+    dbMock.student.findFirst.mockResolvedValue({ id: 'student-A' })
+    const response = await handler({ id: 'student-user-A', role: 'ETUDIANT', tenantId: 'tenant-A' }, 'tenant-A', request)
+    expect(response.status).toBe(403)
+    expect(renderMock).not.toHaveBeenCalled()
+  })
+
   it('rejects unsupported staff roles and corrupt snapshots', async () => {
     const teacher = await handler({ id: 'teacher-A', role: 'ENSEIGNANT', tenantId: 'tenant-A' }, 'tenant-A', request)
     expect(teacher.status).toBe(403)

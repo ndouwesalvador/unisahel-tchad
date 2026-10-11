@@ -20,6 +20,9 @@ const { GET, PUT } = await import('./route')
 beforeEach(() => {
   vi.clearAllMocks()
   dbMock.student.findFirst.mockResolvedValue(null)
+  dbMock.officialDocument.findMany.mockResolvedValue([])
+  dbMock.officialDocument.count.mockResolvedValue(0)
+  dbMock.officialDocument.groupBy.mockResolvedValue([])
 })
 
 describe('GET /api/documents', () => {
@@ -43,6 +46,25 @@ describe('GET /api/documents', () => {
 
     expect(response.status).toBe(403)
     expect(dbMock.officialDocument.findMany).not.toHaveBeenCalled()
+  })
+
+  it('limits a linked student to legitimate personal document types', async () => {
+    dbMock.student.findFirst.mockResolvedValue({ id: 'student-A' })
+    const user = { id: 'student-user-A', role: 'ETUDIANT', tenantId: 'tenant-A' }
+    const request = new NextRequest('http://localhost:3000/api/documents')
+    const handler = GET as unknown as (sessionUser: typeof user, tenantId: string, request: NextRequest) => Promise<Response>
+
+    const response = await handler(user, 'tenant-A', request)
+
+    expect(response.status).toBe(200)
+    expect(dbMock.officialDocument.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        tenantId: 'tenant-A',
+        studentId: 'student-A',
+        type: { in: ['RELEVE_NOTES', 'ATTESTATION_INSCRIPTION', 'CERTIFICAT_SCOLARITE', 'ATTESTATION_NIVEAU', 'DIPLOME'] },
+        validatedAt: { not: null },
+      }),
+    }))
   })
 
   it('shows a department manager only PVs belonging to their department', async () => {

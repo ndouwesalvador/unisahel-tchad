@@ -27,6 +27,7 @@ import {
 import { useAcademicYears, useStructure, useTimetable, useRooms } from '@/lib/api-hooks'
 import { useAppStore } from '@/lib/store'
 import { TimetablePublicationPanel } from './timetable-publication-panel'
+import { openTimetablePrintView } from './published-timetable-view'
 import {
   Calendar,
   Plus,
@@ -812,9 +813,18 @@ export function TimetablePage() {
                 </motion.p>
               </div>
               <div className="flex items-center gap-3">
-                <Button variant="outline" size="sm" className="text-xs bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white" onClick={() => window.print()}>
+                <Button variant="outline" size="sm" className="text-xs bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white" onClick={() => {
+                  const opened = openTimetablePrintView({
+                    slots: (timetableQuery?.slots ?? []) as TimetableSlotRecord[],
+                    institutionName: user?.tenantName || 'Établissement',
+                    academicYear: availableYears.find((year) => year.id === activeYearId)?.name || 'Année sélectionnée',
+                    title: 'Emploi du temps',
+                    scopeLabel: [programs.find((program) => program.id === filterProgram)?.label, levels.find((level) => level.id === filterLevel)?.label].filter(Boolean).join(' · ') || 'Vue institutionnelle',
+                  })
+                  if (!opened) toast.error('Fenêtre bloquée', { description: 'Autorisez les fenêtres contextuelles pour exporter l’emploi du temps.' })
+                }}>
                   <Download className="size-3.5 mr-1.5" />
-                  Export PDF
+                  Exporter en PDF
                 </Button>
                 {canManageSlots && <Button
                   size="sm"
