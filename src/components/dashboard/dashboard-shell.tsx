@@ -97,6 +97,7 @@ const GradesPage = lazyView(() => import('@/components/grades/grades-page').then
 const DeliberationPage = lazyView(() => import('@/components/deliberation/deliberation-page').then(m => m.DeliberationPage))
 const DocumentsPage = lazyView(() => import('@/components/documents/documents-page').then(m => m.DocumentsPage))
 const PaymentsPage = lazyView(() => import('@/components/payments/payments-page').then(m => m.PaymentsPage))
+const StudentPaymentsPage = lazyView(() => import('@/components/payments/student-payments-page').then(m => m.StudentPaymentsPage))
 const HealthPage = lazyView(() => import('@/components/health/health-page').then(m => m.HealthPage))
 const StatisticsPage = lazyView(() => import('@/components/statistics/statistics-page').then(m => m.StatisticsPage))
 const VerifyPage = lazyView(() => import('@/components/verify/verify-page').then(m => m.VerifyPage))
@@ -606,7 +607,9 @@ function MainContent({ view }: { view: AppView }) {
     case 'documents':
       return <DocumentsPage />
     case 'payments':
-      return <PaymentsPage />
+      return user?.role === 'ETUDIANT' || user?.role === 'ETUDIANT_SANTE'
+        ? <StudentPaymentsPage />
+        : <PaymentsPage />
     case 'health':
       return <HealthPage />
     case 'internships':
