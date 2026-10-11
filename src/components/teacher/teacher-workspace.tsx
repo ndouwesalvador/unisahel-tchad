@@ -169,7 +169,7 @@ export function TeacherTimetablePage() {
 
   return <div className="space-y-6 text-slate-900">
     {yearLoading || slotsQuery.isLoading ? <Empty>Chargement de votre emploi du temps…</Empty> : !academicYear ? <Empty>Aucune année académique active n’est disponible.</Empty> : slotsQuery.isError ? <Empty>Impossible de charger votre emploi du temps.</Empty> : slots.length === 0 ? <Empty>Aucun créneau publié pour cette année.</Empty> :
-      <PublishedTimetableView slots={slots} academicYear={academicYear.name} title="Mon emploi du temps" description="Tableau de vos créneaux publiés. Les brouillons et les cours des autres enseignants restent invisibles." showTeacher={false} />}
+      <PublishedTimetableView slots={slots} academicYearId={academicYear.id} academicYear={academicYear.name} title="Mon emploi du temps" description="Tableau de vos créneaux publiés. Les brouillons et les cours des autres enseignants restent invisibles." showTeacher={false} />}
   </div>
 }
 

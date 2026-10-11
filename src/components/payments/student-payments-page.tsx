@@ -172,7 +172,10 @@ export function StudentPaymentsPage() {
                       <TableCell>{methodLabel[payment.paymentMethod] || payment.paymentMethod}</TableCell>
                       <TableCell className="whitespace-nowrap font-semibold">{formatAmount(payment.amount, payment.currency)}</TableCell>
                       <TableCell><Badge variant="outline" className={payment.status === 'VALIDATED' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : payment.status === 'PENDING' ? 'border-amber-200 bg-amber-50 text-amber-700' : 'border-red-200 bg-red-50 text-red-700'}>{statusLabel[payment.status] || payment.status}</Badge></TableCell>
-                      <TableCell className="text-right"><Button size="sm" variant="ghost" onClick={() => void printReceipt(payment.id)} aria-label={`Imprimer le reçu ${payment.receiptNumber || payment.id}`}><Printer className="mr-2 size-4" />Imprimer</Button></TableCell>
+                      <TableCell className="text-right">{payment.status === 'VALIDATED'
+                        ? <Button size="sm" variant="ghost" onClick={() => void printReceipt(payment.id)} aria-label={`Imprimer le reçu ${payment.receiptNumber || payment.id}`}><Printer className="mr-2 size-4" />Imprimer</Button>
+                        : <span className="text-xs text-slate-500">Après validation</span>}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

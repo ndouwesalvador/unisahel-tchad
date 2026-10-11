@@ -411,7 +411,9 @@ async function getPaymentReceiptHandler(user: SessionUser, tenantId: string, req
 
     const ownStudentId = await resolveOwnStudentId(user)
     const payment = await db.payment.findFirst({
-      where: ownStudentId ? { id, tenantId, studentId: ownStudentId } : { id, tenantId },
+      // A receipt certifies an encashment. Student accounts may therefore
+      // retrieve it only after validation by the cashiering workflow.
+      where: ownStudentId ? { id, tenantId, studentId: ownStudentId, status: 'VALIDATED' } : { id, tenantId },
       include: {
         student: {
           include: {

@@ -8,6 +8,8 @@ const { authMock, dbMock } = vi.hoisted(() => ({
       findFirst: vi.fn(),
       update: vi.fn(),
     },
+    student: { findFirst: vi.fn() },
+    feeStructure: { findMany: vi.fn() },
     auditLog: {
       create: vi.fn(),
     },
@@ -35,6 +37,8 @@ function req(url: string, init?: { method?: string; body?: string }) {
 beforeEach(() => {
   vi.clearAllMocks()
   authMock.mockResolvedValue({ user: sessionUser })
+  dbMock.student.findFirst.mockResolvedValue(null)
+  dbMock.feeStructure.findMany.mockResolvedValue([])
 })
 
 // Regression tests for the Mobile Money honesty fix: these endpoints used to
@@ -88,5 +92,20 @@ describe('auth on the payments route', () => {
     authMock.mockResolvedValue(null)
     const res = await GET(req('/api/payments'))
     expect(res.status).toBe(401)
+  })
+})
+
+describe('GET /api/payments?receipt=true', () => {
+  it('allows a student to retrieve only their own validated receipt', async () => {
+    authMock.mockResolvedValue({ user: { ...sessionUser, id: 'student-user-A', role: 'ETUDIANT' } })
+    dbMock.student.findFirst.mockResolvedValue({ id: 'student-A' })
+    dbMock.payment.findFirst.mockResolvedValue(null)
+
+    const response = await GET(req('/api/payments?receipt=true&id=payment-A'))
+
+    expect(response.status).toBe(404)
+    expect(dbMock.payment.findFirst).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: 'payment-A', tenantId: 'tenant-A', studentId: 'student-A', status: 'VALIDATED' },
+    }))
   })
 })

@@ -2,40 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { Prisma } from '@prisma/client'
 import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
-import { getTeacherScope } from '@/lib/auth/teacher-scope'
 import { getOrganizationScope } from '@/lib/auth/organization-scope'
-import { isStudentSelfRole, resolveOwnStudentId } from '@/lib/auth/student-scope'
-import { latestPublishedVersions, parsePublishedSlots } from '@/lib/timetable-publication'
+import { readVisibleTimetable, TimetableAccessError } from '@/lib/timetable/visible-timetable'
 
 const VALID_TYPES = ['CM', 'TD', 'TP', 'EXAM']
-
-// TimetableSlot only stores scalar FK-style ids (courseElementId, teacherId,
-// roomId, programId, levelId), not Prisma relations, so related display
-// names (course/teacher/room) are resolved here with a few batched queries
-// instead of a Prisma `include`.
-async function resolveSlotNames(tenantId: string, slots: { courseElementId: string | null; teacherId: string | null; roomId: string | null }[]) {
-  const courseElementIds = [...new Set(slots.map((s) => s.courseElementId).filter((v): v is string => !!v))]
-  const teacherIds = [...new Set(slots.map((s) => s.teacherId).filter((v): v is string => !!v))]
-  const roomIds = [...new Set(slots.map((s) => s.roomId).filter((v): v is string => !!v))]
-
-  const [courseElements, teachers, rooms] = await Promise.all([
-    courseElementIds.length
-      ? db.courseElement.findMany({ where: { id: { in: courseElementIds }, teachingUnit: { semester: { level: { program: { tenantId } } } } }, select: { id: true, name: true } })
-      : [],
-    teacherIds.length
-      ? db.teacher.findMany({ where: { id: { in: teacherIds }, tenantId }, select: { id: true, user: { select: { firstName: true, lastName: true } } } })
-      : [],
-    roomIds.length
-      ? db.room.findMany({ where: { id: { in: roomIds }, tenantId }, select: { id: true, name: true } })
-      : [],
-  ])
-
-  const courseMap = new Map(courseElements.map((c) => [c.id, c.name]))
-  const teacherMap = new Map(teachers.map((t) => [t.id, t.user ? `${t.user.firstName} ${t.user.lastName}` : '']))
-  const roomMap = new Map(rooms.map((r) => [r.id, r.name]))
-
-  return { courseMap, teacherMap, roomMap }
-}
 
 // GET /api/timetable - list weekly timetable slots
 async function handleGet(user: SessionUser, tenantId: string, request: NextRequest) {
@@ -44,102 +14,11 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
     const programId = searchParams.get('programId') || undefined
     const levelId = searchParams.get('levelId') || undefined
     const academicYearId = searchParams.get('academicYearId') || undefined
-    if (academicYearId && !await db.academicYear.findFirst({ where: { id: academicYearId, tenantId }, select: { id: true } })) {
-      return NextResponse.json({ error: 'Année académique introuvable' }, { status: 404 })
-    }
-    const canReadDraft = ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE', 'FACULTE', 'DEPARTEMENT'].includes(user.role)
-    if (!canReadDraft) {
-      if (!['ENSEIGNANT', 'RECTORAT'].includes(user.role) && !isStudentSelfRole(user.role)) {
-        return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
-      }
-      if (!academicYearId) return NextResponse.json({ error: 'Année académique requise' }, { status: 400 })
-      let teacherId: string | null = null
-      let studentProgramId: string | null = null
-      let studentLevelId: string | null = null
-      if (user.role === 'ENSEIGNANT') {
-        const teacher = await db.teacher.findFirst({ where: { userId: user.id, tenantId, isActive: true }, select: { id: true } })
-        if (!teacher) return NextResponse.json({ slots: [], source: 'published' })
-        teacherId = teacher.id
-      }
-      if (isStudentSelfRole(user.role)) {
-        const studentId = await resolveOwnStudentId(user)
-        if (!studentId) return NextResponse.json({ slots: [], source: 'published', registration: null })
-        const registration = await db.administrativeRegistration.findFirst({
-          where: { tenantId, studentId, academicYearId, status: 'INSCRIT' },
-          select: { programId: true, levelId: true }, orderBy: { registrationDate: 'desc' },
-        })
-        if (!registration) return NextResponse.json({ slots: [], source: 'published', registration: null })
-        studentProgramId = registration.programId
-        studentLevelId = registration.levelId
-        if ((programId && programId !== studentProgramId) || (levelId && levelId !== studentLevelId)) {
-          return NextResponse.json({ error: 'Programme ou niveau hors de votre inscription.' }, { status: 403 })
-        }
-      }
-      const publications = await db.timetablePublication.findMany({ where: {
-        tenantId, academicYearId, status: { in: ['PUBLISHED', 'LEGACY_BASELINE'] },
-      }, select: { departmentId: true, version: true, snapshot: true } })
-      const slots = [] as NonNullable<ReturnType<typeof parsePublishedSlots>>
-      for (const publication of latestPublishedVersions(publications)) {
-        const snapshot = parsePublishedSlots(publication.snapshot)
-        if (!snapshot) return NextResponse.json({ error: 'Version publiée invalide.' }, { status: 500 })
-        slots.push(...snapshot.filter(slot =>
-          (!teacherId || slot.teacherId === teacherId)
-          && (!studentProgramId || slot.programId === studentProgramId && slot.levelId === studentLevelId)
-          && (!programId || slot.programId === programId)
-          && (!levelId || slot.levelId === levelId)
-        ))
-      }
-      slots.sort((a, b) => a.dayOfWeek - b.dayOfWeek || a.startTime.localeCompare(b.startTime))
-      return NextResponse.json({ slots, source: 'published', ...(studentProgramId ? { registration: { programId: studentProgramId, levelId: studentLevelId } } : {}) })
-    }
-    const teacherScope = user.role === 'ENSEIGNANT' ? await getTeacherScope(user, tenantId) : null
-    if (teacherScope && !teacherScope.linked) return NextResponse.json({ slots: [] })
-    const organizationScope = await getOrganizationScope(user, tenantId)
-    if (organizationScope && organizationScope.departmentIds.length === 0) return NextResponse.json({ slots: [] })
-    const scopedProgramIds = organizationScope ? (await db.program.findMany({
-      where: { tenantId, isActive: true, departmentId: { in: organizationScope.departmentIds } }, select: { id: true },
-    })).map((program) => program.id) : null
-    if (scopedProgramIds && programId && !scopedProgramIds.includes(programId)) {
-      return NextResponse.json({ error: 'Programme hors de votre périmètre' }, { status: 403 })
-    }
-
-    const where = {
-      tenantId,
-      ...(scopedProgramIds ? { programId: { in: programId ? [programId] : scopedProgramIds } } : programId ? { programId } : {}),
-      ...(levelId ? { levelId } : {}),
-      ...(academicYearId ? { academicYearId } : {}),
-      // Slots carry their actual annual teacher. A current EC/UE assignment
-      // must never reveal another teacher's schedule or hide approved visitors.
-      ...(teacherScope ? { teacherId: teacherScope.teacherId } : {}),
-    }
-
-    const slots = await db.timetableSlot.findMany({
-      where,
-      orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }],
-      take: 300,
-    })
-
-    const { courseMap, teacherMap, roomMap } = await resolveSlotNames(tenantId, slots)
-
-    const data = slots.map((s) => ({
-      id: s.id,
-      dayOfWeek: s.dayOfWeek,
-      startTime: s.startTime,
-      endTime: s.endTime,
-      type: s.type,
-      course: (s.courseElementId && courseMap.get(s.courseElementId)) || '',
-      teacher: (s.teacherId && teacherMap.get(s.teacherId)) || '',
-      room: (s.roomId && roomMap.get(s.roomId)) || '',
-      courseElementId: s.courseElementId,
-      academicYearId: s.academicYearId,
-      teacherId: s.teacherId,
-      roomId: s.roomId,
-      programId: s.programId,
-      levelId: s.levelId,
-    }))
-
-    return NextResponse.json({ slots: data })
+    return NextResponse.json(await readVisibleTimetable(user, tenantId, { programId, levelId, academicYearId }))
   } catch (error) {
+    if (error instanceof TimetableAccessError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     console.error('Timetable API error:', error)
     return NextResponse.json({ error: "Impossible de charger l'emploi du temps" }, { status: 500 })
   }

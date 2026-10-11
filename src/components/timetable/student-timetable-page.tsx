@@ -24,6 +24,6 @@ export function StudentTimetablePage() {
       <p className="rounded-xl border border-red-200 bg-white p-5 text-sm text-red-700">Impossible de charger votre emploi du temps.</p> : registration === null ?
       <p className="rounded-xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-950">Votre inscription administrative pour cette année n’est pas encore validée. Contactez la scolarité pour vérifier votre dossier.</p> : slots.length === 0 ?
       <p className="rounded-xl border bg-white p-5 text-sm text-slate-700">Votre inscription est validée, mais aucun créneau n’a encore été publié pour votre programme et votre niveau.</p> :
-      <PublishedTimetableView slots={slots} academicYear={academicYearLabel} title="Mon emploi du temps" description="Tableau des créneaux publiés pour votre inscription. La version exportée contient uniquement votre filière et votre niveau." />}
+      <PublishedTimetableView slots={slots} academicYearId={yearId} academicYear={academicYearLabel} title="Mon emploi du temps" description="Tableau des créneaux publiés pour votre inscription. La version exportée contient uniquement votre filière et votre niveau." />}
   </div>
 }

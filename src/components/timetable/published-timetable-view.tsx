@@ -1,9 +1,9 @@
 'use client'
 
-import { Download, MapPin, UserRound } from 'lucide-react'
+import { useState } from 'react'
+import { Download, Loader2, MapPin, UserRound } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
-import { useAppStore } from '@/lib/store'
 
 export type PublishedTimetableSlot = {
   id: string
@@ -17,21 +17,11 @@ export type PublishedTimetableSlot = {
 }
 
 const DAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
-const TYPE_LABELS: Record<string, string> = { CM: 'Cours magistral', TD: 'Travaux dirigés', TP: 'Travaux pratiques', EXAM: 'Examen' }
 const TYPE_STYLES: Record<string, string> = {
   CM: 'border-blue-200 bg-blue-50 text-blue-950',
   TD: 'border-emerald-200 bg-emerald-50 text-emerald-950',
   TP: 'border-amber-200 bg-amber-50 text-amber-950',
   EXAM: 'border-red-200 bg-red-50 text-red-950',
-}
-
-function escapeHtml(value: unknown) {
-  return String(value ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#039;')
 }
 
 function slotTime(slot: PublishedTimetableSlot) {
@@ -42,53 +32,32 @@ function sortedSlots(slots: PublishedTimetableSlot[]) {
   return [...slots].sort((a, b) => a.dayOfWeek - b.dayOfWeek || a.startTime.localeCompare(b.startTime) || a.endTime.localeCompare(b.endTime))
 }
 
-export function openTimetablePrintView({
-  slots,
-  institutionName,
-  academicYear,
-  title,
-  scopeLabel,
+export async function downloadTimetablePdf({
+  academicYearId,
+  programId,
+  levelId,
 }: {
-  slots: PublishedTimetableSlot[]
-  institutionName: string
-  academicYear: string
-  title: string
-  scopeLabel?: string
+  academicYearId: string
+  programId?: string
+  levelId?: string
 }) {
-  const printWindow = window.open('', '_blank', 'width=1200,height=850')
-  if (!printWindow) return false
-
-  const ordered = sortedSlots(slots)
-  const activeDays = DAYS.map((label, index) => ({ label, index })).filter((day) => ordered.some((slot) => slot.dayOfWeek === day.index))
-  const timeRanges = [...new Set(ordered.map(slotTime))].sort((a, b) => a.localeCompare(b))
-  const cells = timeRanges.map((time) => `<tr><th>${escapeHtml(time)}</th>${activeDays.map((day) => {
-    const entries = ordered.filter((slot) => slot.dayOfWeek === day.index && slotTime(slot) === time)
-    return `<td>${entries.length === 0 ? '<span class="empty">—</span>' : entries.map((slot) => `<div class="slot"><strong>${escapeHtml(slot.course || 'Matière non précisée')}</strong><span>${escapeHtml(TYPE_LABELS[slot.type] || slot.type)}</span><span>${escapeHtml(slot.teacher || 'Enseignant non précisé')}</span><span>${escapeHtml(slot.room || 'Salle non précisée')}</span></div>`).join('')}</td>`
-  }).join('')}</tr>`).join('')
-
-  printWindow.document.write(`<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>
-    @page { size: A4 landscape; margin: 10mm; }
-    * { box-sizing: border-box; }
-    body { margin: 0; color: #172033; font-family: Arial, sans-serif; }
-    header { text-align: center; border-bottom: 2px solid #172033; padding-bottom: 8px; margin-bottom: 10px; }
-    header h1 { margin: 0; font-size: 16px; text-transform: uppercase; }
-    header h2 { margin: 6px 0 0; font-size: 14px; }
-    header p { margin: 4px 0 0; color: #526071; font-size: 10px; }
-    table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-    th, td { border: 1px solid #aeb6c1; padding: 4px; vertical-align: top; }
-    thead th { background: #172033; color: white; font-size: 9px; text-transform: uppercase; letter-spacing: .04em; }
-    tbody th { width: 58px; background: #f1f3f5; font-size: 9px; vertical-align: middle; }
-    td { height: 54px; }
-    .slot { border-left: 3px solid #21765a; padding: 3px 4px; margin-bottom: 3px; background: #f5f8f7; break-inside: avoid; }
-    .slot:last-child { margin-bottom: 0; }
-    .slot strong, .slot span { display: block; }
-    .slot strong { font-size: 8.5px; line-height: 1.15; }
-    .slot span { margin-top: 1px; color: #4d5868; font-size: 7px; line-height: 1.15; }
-    .empty { display: block; padding-top: 14px; text-align: center; color: #c2c7cf; }
-    footer { margin-top: 7px; color: #697586; font-size: 8px; text-align: right; }
-  </style></head><body><header><h1>${escapeHtml(institutionName)}</h1><h2>${escapeHtml(title)}</h2><p>Année académique ${escapeHtml(academicYear)}${scopeLabel ? ` · ${escapeHtml(scopeLabel)}` : ''}</p></header><table><thead><tr><th>Horaire</th>${activeDays.map(day => `<th>${escapeHtml(day.label)}</th>`).join('')}</tr></thead><tbody>${cells}</tbody></table><footer>Emploi du temps publié · UniSahel</footer><script>window.onload=()=>window.print()</script></body></html>`)
-  printWindow.document.close()
-  return true
+  const params = new URLSearchParams({ academicYearId })
+  if (programId) params.set('programId', programId)
+  if (levelId) params.set('levelId', levelId)
+  const response = await fetch(`/api/timetable/export?${params.toString()}`)
+  const contentType = response.headers.get('content-type') || ''
+  if (!response.ok) {
+    const body = contentType.includes('application/json') ? await response.json().catch(() => ({})) : {}
+    throw new Error(body.error || 'Export PDF impossible.')
+  }
+  const url = URL.createObjectURL(await response.blob())
+  const link = window.document.createElement('a')
+  link.href = url
+  link.download = 'emploi_du_temps.pdf'
+  window.document.body.appendChild(link)
+  link.click()
+  link.remove()
+  window.setTimeout(() => URL.revokeObjectURL(url), 30_000)
 }
 
 function SlotCard({ slot, showTeacher }: { slot: PublishedTimetableSlot; showTeacher: boolean }) {
@@ -107,6 +76,7 @@ function SlotCard({ slot, showTeacher }: { slot: PublishedTimetableSlot; showTea
 
 export function PublishedTimetableView({
   slots,
+  academicYearId,
   academicYear,
   title,
   description,
@@ -114,20 +84,27 @@ export function PublishedTimetableView({
   showTeacher = true,
 }: {
   slots: PublishedTimetableSlot[]
+  academicYearId: string
   academicYear: string
   title: string
   description: string
   scopeLabel?: string
   showTeacher?: boolean
 }) {
-  const tenantName = useAppStore((state) => state.user?.tenantName) || 'Établissement'
+  const [isExporting, setIsExporting] = useState(false)
   const ordered = sortedSlots(slots)
   const activeDays = DAYS.map((label, index) => ({ label, index })).filter((day) => ordered.some((slot) => slot.dayOfWeek === day.index))
   const timeRanges = [...new Set(ordered.map(slotTime))].sort((a, b) => a.localeCompare(b))
 
-  const exportPdf = () => {
-    if (!openTimetablePrintView({ slots: ordered, institutionName: tenantName, academicYear, title, scopeLabel })) {
-      toast.error('Fenêtre bloquée', { description: 'Autorisez les fenêtres contextuelles pour exporter l’emploi du temps.' })
+  const exportPdf = async () => {
+    setIsExporting(true)
+    try {
+      await downloadTimetablePdf({ academicYearId })
+      toast.success('Emploi du temps exporté')
+    } catch (error) {
+      toast.error('Export impossible', { description: error instanceof Error ? error.message : 'Veuillez réessayer.' })
+    } finally {
+      setIsExporting(false)
     }
   }
 
@@ -135,8 +112,8 @@ export function PublishedTimetableView({
     <div className="rounded-2xl bg-[#142d36] p-6 text-white sm:p-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div><h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{title}</h1><p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#d6e8e1] sm:text-base">{description}</p></div>
-        <Button type="button" variant="outline" className="border-white/30 bg-white/10 text-white hover:bg-white/20 hover:text-white" onClick={exportPdf}>
-          <Download className="mr-2 size-4" aria-hidden="true" />Exporter en PDF
+        <Button type="button" variant="outline" className="border-white/30 bg-white/10 text-white hover:bg-white/20 hover:text-white" onClick={() => void exportPdf()} disabled={isExporting}>
+          {isExporting ? <Loader2 className="mr-2 size-4 animate-spin" aria-hidden="true" /> : <Download className="mr-2 size-4" aria-hidden="true" />}{isExporting ? 'Préparation…' : 'Télécharger le PDF'}
         </Button>
       </div>
       <p className="mt-4 text-xs font-semibold uppercase tracking-[0.16em] text-white/70">Année académique {academicYear}{scopeLabel ? ` · ${scopeLabel}` : ''}</p>

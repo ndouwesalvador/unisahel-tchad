@@ -1,7 +1,7 @@
 import React from 'react'
 import { describe, expect, it } from 'vitest'
 import { countPdfPages } from './utils'
-import { AttestationInscriptionPDF, AttestationNiveauPDF, CertificatScolaritePDF, DiplomePDF, ListeEtudiantsPDF, PVDeliberationPDF, ReleveNotesPDF, renderPDF } from './templates'
+import { AttestationInscriptionPDF, AttestationNiveauPDF, CertificatScolaritePDF, DiplomePDF, ListeEtudiantsPDF, paginateTimetable, PVDeliberationPDF, ReleveNotesPDF, renderPDF, TimetablePDF, type TimetablePdfSlot } from './templates'
 import { expectedPvSheetCount, type PvSection } from './pv-matrix'
 import { renderArabicHeader, renderArabicMotto } from './arabic-header'
 import { prepareDocumentArtwork, prepareDocumentPhoto } from './artwork'
@@ -212,6 +212,32 @@ describe('printed academic documents', () => {
     }))
     expect(countPdfPages(pdf)).toBe(1)
     await savePreview('liste-etudiants-fr-seul.pdf', pdf)
+  })
+
+  it('prints a branded timetable on predictable A4 landscape sheets', async () => {
+    const slots: TimetablePdfSlot[] = Array.from({ length: 8 }, (_, rangeIndex) =>
+      Array.from({ length: 5 }, (_, dayOfWeek) => ({
+        id: `slot-${rangeIndex}-${dayOfWeek}`,
+        dayOfWeek,
+        startTime: `${String(7 + rangeIndex).padStart(2, '0')}:00`,
+        endTime: `${String(8 + rangeIndex).padStart(2, '0')}:00`,
+        type: ['CM', 'TD', 'TP', 'EXAM'][rangeIndex % 4],
+        course: `Systèmes électriques ${rangeIndex + 1}`,
+        teacher: `Enseignant ${dayOfWeek + 1}`,
+        room: `Salle ${rangeIndex + 1}`,
+      }))
+    ).flat()
+    expect(paginateTimetable(slots)).toHaveLength(2)
+    const pdf = await renderPDF(React.createElement(TimetablePDF, {
+      tenant,
+      slots,
+      academicYear: '2026-2027',
+      scopeLabel: 'Master Génie électrique · Master I',
+      source: 'published',
+    }))
+    expect(countPdfPages(pdf)).toBe(2)
+    expect(pdf.toString('latin1')).toContain('/MediaBox [0 0 841.890')
+    await savePreview('emploi-du-temps-deux-pages.pdf', pdf)
   })
 
   it('tiles a department PV by columns and students with matching row numbers', async () => {

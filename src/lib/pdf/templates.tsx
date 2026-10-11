@@ -970,6 +970,107 @@ export function ListeEtudiantsPDF({
   )
 }
 
+export interface TimetablePdfSlot {
+  id: string
+  dayOfWeek: number
+  startTime: string
+  endTime: string
+  type: string
+  course: string
+  teacher?: string | null
+  room?: string | null
+}
+
+const timetableDays = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
+const timetableTypeLabels: Record<string, string> = {
+  CM: 'Cours magistral',
+  TD: 'Travaux dirigés',
+  TP: 'Travaux pratiques',
+  EXAM: 'Examen',
+}
+const timetableTypeColors: Record<string, string> = {
+  CM: '#eef4ff',
+  TD: '#edf8f2',
+  TP: '#fff8e8',
+  EXAM: '#fff0f0',
+}
+
+function timetableRange(slot: TimetablePdfSlot) {
+  return `${slot.startTime}–${slot.endTime}`
+}
+
+export function paginateTimetable(slots: TimetablePdfSlot[], rangesPerPage = 7): string[][] {
+  const ranges = [...new Set(slots.map(timetableRange))].sort((left, right) => left.localeCompare(right))
+  const pages: string[][] = []
+  for (let index = 0; index < ranges.length; index += rangesPerPage) pages.push(ranges.slice(index, index + rangesPerPage))
+  return pages.length ? pages : [[]]
+}
+
+export function TimetablePDF({
+  tenant,
+  slots,
+  academicYear,
+  scopeLabel,
+  source = 'published',
+}: {
+  tenant: TenantInfo
+  slots: TimetablePdfSlot[]
+  academicYear: string
+  scopeLabel: string
+  source?: 'published' | 'draft'
+}) {
+  const ordered = [...slots].sort((left, right) =>
+    left.dayOfWeek - right.dayOfWeek || left.startTime.localeCompare(right.startTime) || left.endTime.localeCompare(right.endTime)
+  )
+  const activeDays = timetableDays
+    .map((label, index) => ({ label, index }))
+    .filter((day) => ordered.some((slot) => slot.dayOfWeek === day.index))
+  const pages = paginateTimetable(ordered)
+  const dayWidth = activeDays.length ? `${88 / activeDays.length}%` : '88%'
+
+  return <Document>
+    {pages.map((ranges, pageIndex) => <Page
+      key={`${pageIndex}-${ranges.join(':')}`}
+      size="A4"
+      orientation="landscape"
+      style={{ ...styles.page, paddingTop: 16, paddingHorizontal: 30, paddingBottom: 28 }}
+    >
+      <DocumentHeader tenant={tenant} compact />
+      <DocumentHeading
+        title="EMPLOI DU TEMPS"
+        subtitle={`${scopeLabel} · Année académique ${academicYear}`}
+        eyebrow={source === 'published' ? 'VERSION PUBLIÉE' : 'VERSION DE TRAVAIL'}
+        isSigned={false}
+        compact
+        subtle
+      />
+      <View style={{ borderWidth: 0.7, borderColor: colors.border }}>
+        <View style={{ flexDirection: 'row', backgroundColor: colors.primary, minHeight: 24, alignItems: 'center' }}>
+          <Text style={{ width: '12%', color: '#ffffff', fontSize: 7.2, fontWeight: 'bold', textAlign: 'center' }}>HORAIRE</Text>
+          {activeDays.map((day) => <Text key={day.index} style={{ width: dayWidth, color: '#ffffff', fontSize: 7.2, fontWeight: 'bold', textAlign: 'center', borderLeftWidth: 0.5, borderLeftColor: '#60708d' }}>{day.label.toUpperCase()}</Text>)}
+        </View>
+        {ranges.length === 0 ? <Text style={{ padding: 18, textAlign: 'center', color: colors.muted, fontSize: 8 }}>Aucun créneau publié pour cette sélection.</Text> : ranges.map((range, rowIndex) => <View key={range} wrap={false} style={{ flexDirection: 'row', minHeight: 49, borderTopWidth: 0.55, borderTopColor: colors.border, backgroundColor: rowIndex % 2 ? '#fafbfc' : '#ffffff' }}>
+          <View style={{ width: '12%', padding: 5, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 7.2, fontWeight: 'bold', color: colors.primary }}>{range}</Text></View>
+          {activeDays.map((day) => {
+            const entries = ordered.filter((slot) => slot.dayOfWeek === day.index && timetableRange(slot) === range)
+            return <View key={`${day.index}-${range}`} style={{ width: dayWidth, borderLeftWidth: 0.55, borderLeftColor: colors.border, padding: 2.5 }}>
+              {entries.length === 0 ? <Text style={{ color: '#b8c0ca', fontSize: 6.5, textAlign: 'center', marginTop: 15 }}>Libre</Text> : entries.map((slot) => <View key={slot.id} wrap={false} style={{ padding: 3, marginBottom: 2, borderLeftWidth: 2, borderLeftColor: colors.secondary, backgroundColor: timetableTypeColors[slot.type] || '#f4f6f8' }}>
+                <Text style={{ fontSize: 6.9, lineHeight: 1.15, fontWeight: 'bold', color: colors.primary }}>{slot.course || 'Matière non précisée'}</Text>
+                <Text style={{ marginTop: 1.5, fontSize: 5.9, color: colors.muted }}>{timetableTypeLabels[slot.type] || slot.type}{slot.room ? ` · ${slot.room}` : ''}</Text>
+                {slot.teacher && <Text style={{ marginTop: 1, fontSize: 5.8, color: colors.muted }}>{slot.teacher}</Text>}
+              </View>)}
+            </View>
+          })}
+        </View>)}
+      </View>
+      <View style={{ position: 'absolute', bottom: 12, left: 30, right: 30, borderTopWidth: 0.7, borderTopColor: colors.border, paddingTop: 4, flexDirection: 'row', justifyContent: 'space-between' }}>
+        <Text style={{ fontSize: 6.6, color: colors.muted }}>{tenant.name} · {source === 'published' ? 'Emploi du temps publié' : 'Document de travail'} · {formatDate(new Date())}</Text>
+        <Text style={{ fontSize: 6.6, color: colors.muted }}>{pageIndex + 1} / {pages.length}</Text>
+      </View>
+    </Page>)}
+  </Document>
+}
+
 export async function renderPDF(element: React.ReactElement): Promise<Buffer> {
   const { renderToBuffer } = await import('@react-pdf/renderer')
   return renderToBuffer(element as React.ReactElement<Record<string, unknown>>)
