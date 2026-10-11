@@ -18,6 +18,22 @@ export async function prepareDocumentArtwork(tenant: TenantInfo): Promise<Tenant
       // A malformed old image remains untouched; generation can still fall back.
     }
   }
+  if (tenant.diplomaDesign) {
+    prepared.diplomaDesign = { ...tenant.diplomaDesign }
+    for (const field of ['nationalEmblem', 'medallion'] as const) {
+      const value = tenant.diplomaDesign[field]
+      if (!value?.startsWith('data:image/') || !value.includes(';base64,')) continue
+      try {
+        const source = Buffer.from(value.split(';base64,')[1], 'base64')
+        const cropped = await sharp(source, { failOn: 'error' }).rotate().trim({ threshold: 12 })
+          .resize({ width: 520, height: 520, fit: 'inside', withoutEnlargement: true })
+          .png({ compressionLevel: 9 }).toBuffer()
+        prepared.diplomaDesign[field] = `data:image/png;base64,${cropped.toString('base64')}`
+      } catch {
+        prepared.diplomaDesign[field] = undefined
+      }
+    }
+  }
   return prepared
 }
 

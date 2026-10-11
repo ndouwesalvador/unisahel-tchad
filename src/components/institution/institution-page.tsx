@@ -43,6 +43,8 @@ import {
   Trash2,
 } from 'lucide-react'
 import { parseHeaderLines, readableBrandColor, validBrandColor } from '@/lib/institution-branding'
+import type { DiplomaDesignConfig } from '@/lib/diploma-design'
+import { DiplomaDesigner } from '@/components/institution/diploma-designer'
 
 // ─── Custom useCountUp Hook ────────────────────────────────────────────────────
 
@@ -139,6 +141,7 @@ interface TenantData {
   subscriptionPlan: string
   subscriptionEnd: string | null
   settings: TenantSettingsData | null
+  diplomaDesign?: DiplomaDesignConfig
 }
 
 interface InstitutionStats {
@@ -1444,9 +1447,10 @@ function AcademiqueTab() {
 
 // ─── Documents Tab ───────────────────────────────────────────────────────────
 function DocumentsTab() {
-  const { data: institutionQuery, isLoading } = useInstitution({ includeAssets: true }) as {
+  const { data: institutionQuery, isLoading, refetch } = useInstitution({ includeAssets: true }) as {
     data: InstitutionResponse | undefined
     isLoading: boolean
+    refetch: () => void
   }
   const tenant = institutionQuery?.tenant
 
@@ -1460,6 +1464,8 @@ function DocumentsTab() {
 
   return (
     <div className="space-y-6">
+      {tenant && <DiplomaDesigner tenant={tenant} onSaved={() => void refetch()} />}
+
       {/* Document formats */}
       <Card>
         <CardHeader className="pb-3">
@@ -1469,11 +1475,11 @@ function DocumentsTab() {
         <CardContent>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
-              'Releve de notes',
+              'Relevé de notes',
               'Attestation',
-              'Diplome',
+              'Diplôme',
               'Reçu de paiement',
-              'Proces-verbal',
+              'Procès-verbal',
             ].map((doc) => (
               <div
                 key={doc}
@@ -1511,7 +1517,7 @@ function DocumentsTab() {
         {/* Verification */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Verification</CardTitle>
+            <CardTitle className="text-base">Vérification</CardTitle>
             <CardDescription>Référence et intégrité du PDF sont deux vérifications distinctes.</CardDescription>
           </CardHeader>
           <CardContent>
@@ -1531,7 +1537,7 @@ function DocumentsTab() {
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base">En-tête des documents générés</CardTitle>
-          <CardDescription>Compose a partir des informations de l&apos;onglet Informations — aucun champ separe a remplir ici</CardDescription>
+          <CardDescription>Composé à partir des informations de l&apos;onglet Informations ; aucun champ séparé n&apos;est nécessaire ici.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="p-3 rounded-lg border border-gray-200 bg-gray-50 max-w-md text-xs text-gray-500 space-y-1">
@@ -1540,10 +1546,10 @@ function DocumentsTab() {
               <span>{tenant?.name || 'Nom de l’institution'}</span>
             </div>
             <div className="flex items-center gap-2 pl-5">
-              <span>{[tenant?.address, tenant?.city].filter(Boolean).join(', ') || 'Adresse non renseignee'}</span>
+              <span>{[tenant?.address, tenant?.city].filter(Boolean).join(', ') || 'Adresse non renseignée'}</span>
             </div>
             <div className="flex items-center gap-2 pl-5">
-              <span>{[tenant?.phone, tenant?.email].filter(Boolean).join(' | ') || 'Contact non renseigne'}</span>
+              <span>{[tenant?.phone, tenant?.email].filter(Boolean).join(' | ') || 'Contact non renseigné'}</span>
             </div>
           </div>
         </CardContent>

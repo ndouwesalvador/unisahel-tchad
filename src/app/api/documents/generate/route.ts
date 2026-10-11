@@ -16,6 +16,7 @@ import { renderArabicHeader, renderArabicMotto } from '@/lib/pdf/arabic-header'
 import { parseHeaderLines } from '@/lib/institution-branding'
 import { prepareDocumentArtwork, prepareDocumentPhoto } from '@/lib/pdf/artwork'
 import { curriculumIndex, parseCurriculumSnapshot } from '@/lib/curriculum/versioning'
+import { DIPLOMA_TEMPLATE_TYPE, parseDiplomaDesign } from '@/lib/diploma-design'
 
 const SIGNING_ROLES = new Set(['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'RECTORAT', 'SCOLARITE', 'JURY', 'FACULTE', 'DEPARTEMENT'])
 // Student portals are read-only for official documents. A student may only
@@ -74,7 +75,8 @@ export async function POST(request: NextRequest) {
     // Fetch real tenant data
     const tenantDb = await db.tenant.findUnique({
       where: { id: tenantId },
-      select: { id: true, name: true, shortName: true, address: true, city: true, country: true, ministry: true, phone: true, email: true, website: true, logo: true, secondaryLogo: true, thirdLogo: true, stamp: true, signature: true, secondarySignature: true, thirdSignature: true, secondaryStamp: true, thirdStamp: true, secondarySignerName: true, secondarySignerTitle: true, thirdSignerName: true, thirdSignerTitle: true, headerLanguageMode: true, arabicCountry: true, arabicName: true, arabicMinistry: true, arabicMotto: true, contactPlacement: true, sealSizeMm: true, headerLinesFr: true, headerLinesAr: true, rectorName: true, rectorTitle: true, motto: true },
+      select: { id: true, name: true, shortName: true, address: true, city: true, country: true, ministry: true, phone: true, email: true, website: true, logo: true, secondaryLogo: true, thirdLogo: true, stamp: true, signature: true, secondarySignature: true, thirdSignature: true, secondaryStamp: true, thirdStamp: true, secondarySignerName: true, secondarySignerTitle: true, thirdSignerName: true, thirdSignerTitle: true, headerLanguageMode: true, arabicCountry: true, arabicName: true, arabicMinistry: true, arabicMotto: true, contactPlacement: true, sealSizeMm: true, headerLinesFr: true, headerLinesAr: true, rectorName: true, rectorTitle: true, motto: true,
+        documentTemplates: { where: { type: DIPLOMA_TEMPLATE_TYPE, isActive: true }, orderBy: { updatedAt: 'desc' }, take: 1, select: { template: true } } },
     })
 
     if (!tenantDb) {
@@ -129,6 +131,7 @@ export async function POST(request: NextRequest) {
       rectorName: tenantDb.rectorName || '',
       rectorTitle: tenantDb.rectorTitle || 'Recteur',
       motto: tenantDb.motto || '',
+      diplomaDesign: parseDiplomaDesign(tenantDb.documentTemplates?.[0]?.template),
     })
 
     // Fetch real student data

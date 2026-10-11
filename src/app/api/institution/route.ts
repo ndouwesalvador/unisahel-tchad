@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
 import { validBrandColor, validHeaderLines } from '@/lib/institution-branding'
+import { DIPLOMA_TEMPLATE_TYPE, defaultDiplomaDesign, parseDiplomaDesign, validateDiplomaDesign } from '@/lib/diploma-design'
 
 const TENANT_FIELDS = [
   'name', 'shortName', 'motto', 'ministry', 'country', 'city', 'address',
@@ -25,7 +26,7 @@ const SETTINGS_FIELDS = [
 async function handleGet(_user: SessionUser, tenantId: string, request: NextRequest) {
   try {
     const includeAssets = request.nextUrl.searchParams.get('includeAssets') === '1'
-    const [tenant, students, teachers, staffUsers, payments, documentsGenerated, auditLogCount, oldestAuditLog] = await Promise.all([
+    const [tenant, diplomaTemplate, students, teachers, staffUsers, payments, documentsGenerated, auditLogCount, oldestAuditLog] = await Promise.all([
       db.tenant.findUnique({
         where: { id: tenantId },
         select: {
@@ -70,6 +71,13 @@ async function handleGet(_user: SessionUser, tenantId: string, request: NextRequ
           thirdStamp: includeAssets,
         },
       }),
+      includeAssets
+        ? db.documentTemplate.findFirst({
+            where: { tenantId, type: DIPLOMA_TEMPLATE_TYPE, isActive: true },
+            orderBy: { updatedAt: 'desc' },
+            select: { template: true },
+          })
+        : Promise.resolve(null),
       db.student.count({ where: { tenantId } }),
       db.teacher.count({ where: { tenantId } }),
       db.user.count({ where: { tenantId, role: { notIn: ['ETUDIANT', 'ETUDIANT_SANTE', 'PARENT'] } } }),
@@ -84,7 +92,10 @@ async function handleGet(_user: SessionUser, tenantId: string, request: NextRequ
     }
 
     return NextResponse.json({
-      tenant,
+      tenant: {
+        ...tenant,
+        ...(includeAssets ? { diplomaDesign: diplomaTemplate ? parseDiplomaDesign(diplomaTemplate.template) : defaultDiplomaDesign } : {}),
+      },
       stats: { students, teachers, staffUsers, payments, documentsGenerated, auditLogCount, oldestAuditLogDate: oldestAuditLog?.createdAt ?? null },
       emailStatus: { resendConfigured: Boolean(process.env.RESEND_API_KEY) },
     })
@@ -145,6 +156,10 @@ async function handlePut(user: SessionUser, tenantId: string, request: NextReque
         return NextResponse.json({ error: 'Pays et nom officiel en arabe requis pour l’en-tête bilingue' }, { status: 400 })
       }
     }
+    const diplomaDesign = body.diplomaDesign === undefined ? null : validateDiplomaDesign(body.diplomaDesign)
+    if (diplomaDesign && !diplomaDesign.valid) {
+      return NextResponse.json({ error: diplomaDesign.error }, { status: 400 })
+    }
 
     const tenantData: Record<string, unknown> = {}
     for (const field of TENANT_FIELDS) {
@@ -157,12 +172,12 @@ async function handlePut(user: SessionUser, tenantId: string, request: NextReque
       if (body[field] !== undefined) settingsData[field] = body[field]
     }
 
-    if (Object.keys(tenantData).length === 0 && Object.keys(settingsData).length === 0) {
+    if (Object.keys(tenantData).length === 0 && Object.keys(settingsData).length === 0 && !diplomaDesign) {
       return NextResponse.json({ error: 'No recognized fields to update' }, { status: 400 })
     }
 
-    const [tenant] = await db.$transaction([
-      db.tenant.update({
+    const tenant = await db.$transaction(async (transaction) => {
+      const updatedTenant = await transaction.tenant.update({
         where: { id: tenantId },
         data: {
           ...tenantData,
@@ -171,8 +186,24 @@ async function handlePut(user: SessionUser, tenantId: string, request: NextReque
             : {}),
         },
         include: { settings: true },
-      }),
-    ])
+      })
+      if (diplomaDesign?.valid) {
+        const existing = await transaction.documentTemplate.findFirst({
+          where: { tenantId, type: DIPLOMA_TEMPLATE_TYPE, isActive: true },
+          orderBy: { updatedAt: 'desc' },
+          select: { id: true },
+        })
+        const serialized = JSON.stringify(diplomaDesign.value)
+        if (existing) {
+          await transaction.documentTemplate.update({ where: { id: existing.id }, data: { template: serialized, name: 'Identité visuelle du diplôme' } })
+        } else {
+          await transaction.documentTemplate.create({ data: {
+            tenantId, type: DIPLOMA_TEMPLATE_TYPE, name: 'Identité visuelle du diplôme', template: serialized, isActive: true,
+          } })
+        }
+      }
+      return updatedTenant
+    })
 
     await db.auditLog.create({
       data: {
@@ -181,7 +212,7 @@ async function handlePut(user: SessionUser, tenantId: string, request: NextReque
         action: 'UPDATE',
         entity: 'Tenant',
         entityId: tenantId,
-        details: JSON.stringify({ fields: [...Object.keys(tenantData), ...Object.keys(settingsData)] }),
+        details: JSON.stringify({ fields: [...Object.keys(tenantData), ...Object.keys(settingsData), ...(diplomaDesign ? ['diplomaDesign'] : [])] }),
       },
     })
 

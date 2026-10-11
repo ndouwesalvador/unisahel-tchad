@@ -3,8 +3,9 @@ import sharp from 'sharp'
 import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
 
-const ASSET_KINDS = ['logo', 'secondaryLogo', 'thirdLogo', 'stamp', 'signature', 'secondarySignature', 'thirdSignature', 'secondaryStamp', 'thirdStamp'] as const
+const ASSET_KINDS = ['logo', 'secondaryLogo', 'thirdLogo', 'stamp', 'signature', 'secondarySignature', 'thirdSignature', 'secondaryStamp', 'thirdStamp', 'diplomaEmblem', 'diplomaMedallion'] as const
 type AssetKind = typeof ASSET_KINDS[number]
+const SQUARE_ASSETS = new Set<AssetKind>(['logo', 'secondaryLogo', 'thirdLogo', 'stamp', 'secondaryStamp', 'thirdStamp', 'diplomaEmblem', 'diplomaMedallion'])
 
 async function handlePost(user: SessionUser, tenantId: string, request: NextRequest) {
   try {
@@ -24,14 +25,18 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
     }
     // Crop wide white/transparent margins: otherwise a real logo or signature
     // appears minuscule inside the document's fixed image box.
+    const squareAsset = SQUARE_ASSETS.has(kind as AssetKind)
     const optimized = await sharp(input, { failOn: 'error' })
-      .rotate().trim({ threshold: 12 }).resize({ width: ['logo', 'secondaryLogo', 'thirdLogo', 'stamp', 'secondaryStamp', 'thirdStamp'].includes(kind) ? 520 : 540, height: ['logo', 'secondaryLogo', 'thirdLogo', 'stamp', 'secondaryStamp', 'thirdStamp'].includes(kind) ? 520 : 180,
+      .rotate().trim({ threshold: 12 }).resize({ width: squareAsset ? 520 : 540, height: squareAsset ? 520 : 180,
         fit: 'inside', withoutEnlargement: true })
       .png({ compressionLevel: 9, palette: true }).toBuffer()
     if (optimized.length > 300_000) {
       return NextResponse.json({ error: 'Image trop détaillée après optimisation (300 Ko maximum).' }, { status: 400 })
     }
     const dataUrl = `data:image/png;base64,${optimized.toString('base64')}`
+    if (kind === 'diplomaEmblem' || kind === 'diplomaMedallion') {
+      return NextResponse.json({ kind, dataUrl })
+    }
     await db.tenant.update({ where: { id: tenantId }, data: { [kind]: dataUrl } })
     await db.auditLog.create({ data: { tenantId, userId: user.id, action: 'UPDATE', entity: 'Tenant',
       entityId: tenantId, details: JSON.stringify({ field: kind, bytes: optimized.length }) } })

@@ -3,6 +3,7 @@ import React from 'react'
 import { Document, Page, Text, View, StyleSheet, Image, Svg, Rect, Path, Ellipse } from '@react-pdf/renderer'
 import { formatDate, formatNumber, getVerificationUrl, TenantInfo, StudentInfo } from './utils'
 import { PV_COLUMNS_PER_SHEET, PV_ROWS_PER_SHEET, PV_A4_COLUMNS_PER_SHEET, PV_A4_ROWS_PER_SHEET, type PvSection } from './pv-matrix'
+import { parseDiplomaDesign } from '@/lib/diploma-design'
 
 const colors = {
   primary: '#1a2744',
@@ -297,6 +298,7 @@ function DocumentSignatories({ tenant, compact = false, anchored = false, bottom
 // Stable institution-specific guilloché, drawn as light vector strokes.
 // It is decorative artwork, not a claim of counterfeit-proof security.
 function DiplomaSecurityFrame({ tenant }: { tenant: TenantInfo }) {
+  const design = parseDiplomaDesign(tenant.diplomaDesign)
   const seed = [...(tenant.id || tenant.name)].reduce((hash, char) => (hash * 31 + char.charCodeAt(0)) >>> 0, 7)
   const petals = 10 + seed % 9
   const loops = Array.from({ length: petals }, (_, index) => {
@@ -314,28 +316,47 @@ function DiplomaSecurityFrame({ tenant }: { tenant: TenantInfo }) {
     const x = 270 + index * 50 + (seed % 7)
     return `M ${x} 48 l 12 12 l -12 12 l -12 -12 Z M ${x} 523 l 12 12 l -12 12 l -12 -12 Z`
   }).join(' ')
+  const rosettes = Array.from({ length: 8 }, (_, index) => {
+    const radius = 24 + index * 3
+    return <Ellipse key={index} cx={421} cy={298} rx={radius * 2.15} ry={radius} fill="none"
+      stroke={index % 2 ? design.primaryColor : design.accentColor} strokeWidth={0.45} opacity={0.1} />
+  })
   return <View style={{ position: 'absolute', left: 0, top: 0, width: 842, height: 595 }} fixed>
   <Svg width={842} height={595} viewBox="0 0 842 595">
-    <Rect x={15} y={15} width={812} height={565} fill="none" stroke={colors.accent} strokeWidth={2} />
-    <Rect x={22} y={22} width={798} height={551} fill="none" stroke="#c2a257" strokeWidth={0.9} />
-    <Rect x={29} y={29} width={784} height={537} fill="none" stroke={colors.accent} strokeWidth={0.35} />
-    <Path d={loops} fill="none" stroke={colors.secondary} strokeWidth={0.7} opacity={0.11} />
-    <Path d={braid} fill="none" stroke={colors.accent} strokeWidth={0.35} opacity={0.2} />
-    <Path d={diamonds} fill="none" stroke={colors.secondary} strokeWidth={0.55} opacity={0.25} />
-    <Ellipse cx={421} cy={298} rx={155 + seed % 12} ry={103 + seed % 9} fill="none" stroke={colors.secondary} strokeWidth={0.7} opacity={0.07} />
-    <Ellipse cx={421} cy={298} rx={137 + seed % 10} ry={87 + seed % 8} fill="none" stroke={colors.accent} strokeWidth={0.45} opacity={0.08} />
+    <Rect x={0} y={0} width={842} height={595} fill={design.paperColor} />
+    <Rect x={15} y={15} width={812} height={565} fill="none" stroke={design.accentColor} strokeWidth={design.border === 'DOUBLE_FILET' ? 1.4 : 2} />
+    <Rect x={22} y={22} width={798} height={551} fill="none" stroke={design.primaryColor} strokeWidth={design.border === 'GEOMETRIQUE' ? 1.15 : 0.75} opacity={0.72} />
+    {design.border !== 'DOUBLE_FILET' && <Rect x={29} y={29} width={784} height={537} fill="none" stroke={design.accentColor} strokeWidth={0.35} />}
+    {design.border === 'GUILLOCHE' && <Path d={braid} fill="none" stroke={design.accentColor} strokeWidth={0.35} opacity={0.24} />}
+    {design.border === 'GEOMETRIQUE' && <Path d={diamonds} fill="none" stroke={design.primaryColor} strokeWidth={0.65} opacity={0.38} />}
+    {design.pattern === 'ROSETTES' && rosettes}
+    {design.pattern === 'VAGUES' && <Path d={`${loops} ${braid}`} fill="none" stroke={design.primaryColor} strokeWidth={0.55} opacity={0.1} />}
+    {design.pattern === 'DIAMANTS' && <Path d={diamonds} fill="none" stroke={design.accentColor} strokeWidth={0.65} opacity={0.24} />}
+    <Ellipse cx={421} cy={298} rx={155 + seed % 12} ry={103 + seed % 9} fill="none" stroke={design.primaryColor} strokeWidth={0.7} opacity={0.06} />
+    <Ellipse cx={421} cy={298} rx={137 + seed % 10} ry={87 + seed % 8} fill="none" stroke={design.accentColor} strokeWidth={0.45} opacity={0.09} />
     {[0, 1, 2, 3].map((corner) => {
       const x = corner % 2 ? 776 : 66
       const y = corner > 1 ? 531 : 64
       return <React.Fragment key={corner}>
-        <Ellipse cx={x} cy={y} rx={31 + seed % 7} ry={18 + seed % 5} fill="none" stroke={colors.accent} strokeWidth={0.8} opacity={0.5} />
-        <Ellipse cx={x} cy={y} rx={19 + seed % 5} ry={29 + seed % 7} fill="none" stroke={colors.secondary} strokeWidth={0.6} opacity={0.4} />
+        <Ellipse cx={x} cy={y} rx={31 + seed % 7} ry={18 + seed % 5} fill="none" stroke={design.accentColor} strokeWidth={0.8} opacity={0.5} />
+        <Ellipse cx={x} cy={y} rx={19 + seed % 5} ry={29 + seed % 7} fill="none" stroke={design.primaryColor} strokeWidth={0.6} opacity={0.4} />
       </React.Fragment>
     })}
     {Array.from({ length: 8 }, (_, index) => <Path key={index}
       d={`M 36 ${80 + index * 58} Q ${110 + seed % 60} ${65 + index * 58} 190 ${80 + index * 58} M 652 ${80 + index * 58} Q ${730 - seed % 60} ${65 + index * 58} 806 ${80 + index * 58}`}
-      fill="none" stroke={colors.accent} strokeWidth={0.4} opacity={0.24} />)}
+      fill="none" stroke={design.accentColor} strokeWidth={0.4} opacity={0.24} />)}
   </Svg>
+  {design.showWatermark && tenant.logo?.startsWith('data:image/') && <Image src={tenant.logo}
+    style={{ position: 'absolute', width: 225, height: 225, left: 309, top: 185, objectFit: 'contain', opacity: 0.035 }} />}
+  {design.nationalEmblem?.startsWith('data:image/') && <Image src={design.nationalEmblem}
+    style={{ position: 'absolute', width: 54, height: 54, left: 47, top: 45, objectFit: 'contain', opacity: 0.92 }} />}
+  {design.showMedallion && design.medallion?.startsWith('data:image/') && <Image src={design.medallion}
+    style={{ position: 'absolute', width: 62, height: 62, right: 48, top: 279, objectFit: 'contain', opacity: 0.9 }} />}
+  {design.showMedallion && !design.medallion && <View style={{ position: 'absolute', width: 58, height: 58, right: 50, top: 281,
+    borderRadius: 29, borderWidth: 2, borderColor: design.accentColor, alignItems: 'center', justifyContent: 'center', opacity: 0.58 }}>
+    <Text style={{ fontSize: 7, color: design.primaryColor, fontWeight: 'bold', textAlign: 'center' }}>{tenant.shortName || tenant.name.slice(0, 10)}</Text>
+    <Text style={{ fontSize: 5.5, color: design.accentColor, marginTop: 2 }}>EXCELLENCE</Text>
+  </View>}
   </View>
 }
 
@@ -611,29 +632,34 @@ export function DiplomePDF({
 }: {
   tenant: TenantInfo; student: StudentInfo; diploma: { title: string; program: string; mention?: string; date: string; credits: number }; docNumber: string; verificationCode: string; qrCodeDataUrl?: string; isSigned?: boolean
 }) {
+  const design = parseDiplomaDesign(tenant.diplomaDesign)
   return (
     <Document>
-      <Page size="A4" orientation="landscape" style={{ ...styles.page, paddingTop: 27, paddingBottom: 87 }}>
+      <Page size="A4" orientation="landscape" style={{ ...styles.page, paddingTop: 25, paddingBottom: 87, backgroundColor: design.paperColor }}>
         <DiplomaSecurityFrame tenant={tenant} />
-        <DocumentHeader tenant={tenant} docNumber={docNumber} />
-        <DocumentHeading title="DIPLÔME" subtitle={diploma.program} isSigned={isSigned} compact />
+        <DocumentHeader tenant={tenant} docNumber={docNumber} compact subtle />
+        <Text style={{ fontFamily: 'Times-Roman', fontSize: 8, letterSpacing: 2.2, textAlign: 'center', color: design.accentColor, marginBottom: 4 }}>
+          {isSigned ? 'TITRE OFFICIEL DÉLIVRÉ PAR L’ÉTABLISSEMENT' : 'APERÇU NON VALIDÉ'}
+        </Text>
+        <Text style={{ fontFamily: 'Times-Bold', fontSize: 28, letterSpacing: 3.2, textAlign: 'center', color: design.primaryColor }}>DIPLÔME</Text>
+        <Text style={{ fontFamily: 'Times-Roman', fontSize: 9, textAlign: 'center', color: '#39434d', marginTop: 2, marginBottom: 7 }}>{diploma.program}</Text>
 
-        <View style={{ height: 160, marginVertical: 5, paddingVertical: 8, paddingHorizontal: 18, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: colors.accent, backgroundColor: '#ffffffde' }} wrap={false}>
-          <Text style={{ fontSize: 9, color: colors.muted, marginBottom: 8, letterSpacing: 1 }}>DÉCERNÉ À</Text>
-          <Text style={{ fontSize: 19, fontWeight: 'bold', color: colors.primary, marginVertical: 8, textAlign: 'center' }}>
+        <View style={{ height: 155, marginVertical: 3, marginHorizontal: 35, paddingVertical: 8, paddingHorizontal: 18, alignItems: 'center', justifyContent: 'center', borderTopWidth: 0.8, borderBottomWidth: 0.8, borderColor: design.accentColor, backgroundColor: '#ffffffc9' }} wrap={false}>
+          <Text style={{ fontFamily: 'Times-Roman', fontSize: 8, color: '#58636e', marginBottom: 5, letterSpacing: 1.6 }}>LE CONSEIL ACADÉMIQUE DÉCERNE À</Text>
+          <Text style={{ fontFamily: 'Times-Bold', fontSize: 21, color: design.primaryColor, marginVertical: 6, textAlign: 'center', textTransform: 'uppercase' }}>
             {student.firstName} {student.lastName}
           </Text>
-          {student.dateOfBirth && <Text style={{ fontSize: 9, color: colors.muted }}>Né(e) le {formatDate(student.dateOfBirth)}{student.placeOfBirth ? ` à ${student.placeOfBirth}` : ''}</Text>}
-          <Text style={{ fontSize: 10, marginTop: 10 }}>A obtenu le diplôme de</Text>
-          <Text style={{ fontSize: 16, fontWeight: 'bold', color: colors.secondary, marginVertical: 8, textAlign: 'center' }}>
+          {student.dateOfBirth && <Text style={{ fontFamily: 'Times-Roman', fontSize: 8.5, color: '#58636e' }}>Né(e) le {formatDate(student.dateOfBirth)}{student.placeOfBirth ? ` à ${student.placeOfBirth}` : ''}</Text>}
+          <Text style={{ fontFamily: 'Times-Roman', fontSize: 10, marginTop: 7 }}>le diplôme de</Text>
+          <Text style={{ fontFamily: 'Times-Bold', fontSize: 17, color: design.primaryColor, marginVertical: 6, textAlign: 'center' }}>
             {diploma.title}
           </Text>
-          <Text style={{ fontSize: 10, textAlign: 'center' }}>Après validation des {diploma.credits} crédits requis du cursus</Text>
-          {diploma.mention && <Text style={{ fontSize: 10, marginTop: 8 }}>Mention : <Text style={{ fontWeight: 'bold', color: colors.primary }}>{diploma.mention}</Text></Text>}
-          <Text style={{ fontSize: 9, color: colors.muted, marginTop: 8 }}>Décision finale du jury du {formatDate(diploma.date)}</Text>
+          <Text style={{ fontFamily: 'Times-Roman', fontSize: 9.5, textAlign: 'center' }}>après validation des {diploma.credits} crédits du cursus</Text>
+          {diploma.mention && <Text style={{ fontFamily: 'Times-Roman', fontSize: 9.5, marginTop: 5 }}>Mention : <Text style={{ fontFamily: 'Times-Bold', color: design.primaryColor }}>{diploma.mention}</Text></Text>}
+          <Text style={{ fontFamily: 'Times-Roman', fontSize: 8, color: '#58636e', marginTop: 5 }}>Décision définitive du jury du {formatDate(diploma.date)}</Text>
         </View>
 
-        <DocumentSignatories tenant={tenant} compact anchored bottom={108} />
+        <DocumentSignatories tenant={tenant} compact anchored bottom={125} />
 
         <Footer tenant={tenant} docNumber={docNumber} verificationCode={verificationCode} qrCodeDataUrl={qrCodeDataUrl} isSigned={isSigned} diploma />
       </Page>
