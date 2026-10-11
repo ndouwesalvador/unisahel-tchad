@@ -44,7 +44,10 @@ function formatAmount(amount: number, currency?: string | null) {
 export function StudentDocumentsPage() {
   const setView = useAppStore((state) => state.setView)
   const documentsQuery = useDocuments()
-  const paymentsQuery = usePayments({ status: 'VALIDATED', page: 1, limit: 100 })
+  const paymentsQuery = usePayments(
+    { status: 'VALIDATED', page: 1, limit: 100 },
+    { staleTime: 0, refetchOnWindowFocus: true, refetchInterval: 30_000 },
+  )
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
 
   const documents = useMemo<StudentDocument[]>(() => (

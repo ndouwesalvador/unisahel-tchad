@@ -54,4 +54,29 @@ describe('student online exam visibility', () => {
     const body = await response.json()
     expect(body.exams).toEqual([expect.objectContaining({ id: 'exam-A', submitted: true, score: 12 })])
   })
+
+  it('uses the validated annual level when detailed pedagogical registrations are missing', async () => {
+    mocks.studentFindFirst.mockResolvedValue({
+      id: 'student-A', firstName: 'Amina', lastName: 'Test', currentLevelId: 'level-A',
+      registrations: [{ levelId: 'level-A' }],
+    })
+    mocks.registrationFindMany.mockResolvedValue([])
+    mocks.elementFindMany.mockResolvedValue([{ id: 'element-A' }])
+
+    const response = await call()
+
+    expect(response.status).toBe(200)
+    expect(mocks.elementFindMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        OR: [{ teachingUnit: { semester: { levelId: { in: ['level-A'] } } } }],
+      }),
+    }))
+    expect(mocks.examFindMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        AND: expect.arrayContaining([
+          { OR: [{ courseElementId: { in: ['element-A'] } }, { id: { in: [] } }] },
+        ]),
+      }),
+    }))
+  })
 })

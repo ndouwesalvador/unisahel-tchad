@@ -56,7 +56,10 @@ function escapeHtml(value: unknown) {
 }
 
 export function StudentPaymentsPage() {
-  const { data, isLoading, isError, refetch, isFetching } = usePayments({ page: 1, limit: 100 })
+  const { data, isLoading, isError, refetch, isFetching } = usePayments(
+    { page: 1, limit: 100 },
+    { staleTime: 0, refetchOnWindowFocus: true, refetchInterval: 30_000 },
+  )
   const payments = useMemo<StudentPayment[]>(() => data?.data ?? [], [data])
 
   const totals = useMemo(() => payments.reduce(
@@ -117,9 +120,14 @@ export function StudentPaymentsPage() {
           <h1 className="mt-1 text-2xl font-bold text-gray-900">Mes paiements</h1>
           <p className="mt-1 text-sm text-gray-500">Consultez uniquement vos encaissements, leur statut et vos reçus.</p>
         </div>
-        <Button variant="outline" onClick={() => void refetch()} disabled={isFetching}>
-          {isFetching ? 'Actualisation…' : 'Actualiser'}
-        </Button>
+        <div className="flex flex-wrap items-center gap-3">
+          <span aria-live="polite" className="text-xs font-medium text-emerald-700">
+            {isFetching ? 'Synchronisation en cours…' : 'Mise à jour automatique'}
+          </span>
+          <Button variant="outline" onClick={() => void refetch()} disabled={isFetching}>
+            {isFetching ? 'Actualisation…' : 'Actualiser maintenant'}
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">

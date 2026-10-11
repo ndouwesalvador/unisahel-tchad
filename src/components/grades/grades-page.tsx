@@ -23,6 +23,8 @@ interface PublishedGrade {
 }
 
 function OversightGradesPage() {
+  const role = useAppStore((state) => state.user?.role)
+  const setView = useAppStore((state) => state.setView)
   const [page, setPage] = useState(1)
   const { data: dashboard } = useDashboardStats()
   const academicYearId = dashboard?.academicYear?.id ?? dashboard?.currentAcademicYear?.id
@@ -38,6 +40,19 @@ function OversightGradesPage() {
   })
   return <div className="space-y-5 text-slate-900">
     <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm"><p className="text-sm font-semibold uppercase tracking-wide text-emerald-800">Consultation</p><h1 className="mt-1 text-2xl font-bold text-slate-950">Notes de l’établissement</h1><p className="mt-2 text-sm text-slate-700">Vue en lecture seule. La saisie et le verrouillage restent réservés aux personnes habilitées.</p></div>
+    <Card className="border-blue-200 bg-blue-50/60">
+      <CardContent className="flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <h2 className="font-bold text-slate-950">Circuit officiel de validation</h2>
+          <ol className="mt-2 grid gap-1 text-sm text-slate-700 sm:grid-cols-3 sm:gap-4">
+            <li><strong>1. Enseignant :</strong> saisit une seule fois le contrôle continu et le TP.</li>
+            <li><strong>2. Jury :</strong> saisit l’examen, corrige avec un motif, puis utilise « Verrouiller ».</li>
+            <li><strong>3. Publication :</strong> la note verrouillée devient visible et utilisable dans le PV.</li>
+          </ol>
+        </div>
+        {['ADMIN_INSTITUTION', 'SCOLARITE'].includes(role || '') ? <Button type="button" variant="outline" className="shrink-0 border-blue-300 bg-white" onClick={() => setView('staff-users')}>Configurer les jurys</Button> : null}
+      </CardContent>
+    </Card>
     {isError ? <Card><CardContent className="flex items-center gap-3 p-5 text-sm">Impossible de charger les notes.<Button variant="outline" onClick={() => refetch()}>Réessayer</Button></CardContent></Card>
       : !academicYearId ? <Card><CardContent className="p-5 text-sm">Aucune année académique active.</CardContent></Card>
       : isLoading ? <Card><CardContent className="p-5 text-sm">Chargement des notes…</CardContent></Card>

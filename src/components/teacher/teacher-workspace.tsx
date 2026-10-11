@@ -247,6 +247,12 @@ type BankQuestion = { id: string; courseElementId: string | null; text: string; 
 type TeacherExam = { id: string; courseElementId: string | null; name: string; course: string; examDate: string; duration: string; status: string; questions: number }
 type ExamResult = { id: string; name: string; matricule: string; score: number | null; maxScore: number; status: string }
 
+const examStatusLabels: Record<string, string> = {
+  PLANNED: 'Brouillon',
+  IN_PROGRESS: 'Publié aux étudiants',
+  COMPLETED: 'Clôturé',
+}
+
 export function TeacherOnlineExamPage() {
   const queryClient = useQueryClient()
   const { data: courses = [], isLoading: coursesLoading } = useTeacherCourses()
@@ -260,6 +266,7 @@ export function TeacherOnlineExamPage() {
   const [duration, setDuration] = useState('1h00')
   const [selectedQuestionIds, setSelectedQuestionIds] = useState<string[]>([])
   const [busy, setBusy] = useState(false)
+  const [updatingExamId, setUpdatingExamId] = useState<string | null>(null)
   const selectedCourseId = courseId || courses[0]?.id || ''
   const questions = (examsQuery.data?.bankQuestions ?? []).filter((question) => question.courseElementId === selectedCourseId)
 
@@ -290,6 +297,34 @@ export function TeacherOnlineExamPage() {
     finally { setBusy(false) }
   }
 
+  const updateExamStatus = async (exam: TeacherExam, status: 'PLANNED' | 'IN_PROGRESS' | 'COMPLETED') => {
+    const confirmation = status === 'IN_PROGRESS'
+      ? `Publier « ${exam.name} » aux étudiants inscrits dans cette matière ?`
+      : status === 'COMPLETED'
+        ? `Clôturer « ${exam.name} » ? Les nouvelles participations seront bloquées.`
+        : `Retirer « ${exam.name} » de l’espace étudiant ?`
+    if (!window.confirm(confirmation)) return
+
+    setUpdatingExamId(exam.id)
+    try {
+      await readJson(`/api/online-exams?entity=status&id=${encodeURIComponent(exam.id)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      })
+      await queryClient.invalidateQueries({ queryKey: ['teacher-online-exams'] })
+      toast.success(status === 'IN_PROGRESS'
+        ? 'Examen publié aux étudiants.'
+        : status === 'COMPLETED'
+          ? 'Examen clôturé.'
+          : 'Examen retiré de l’espace étudiant.')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Changement de statut impossible')
+    } finally {
+      setUpdatingExamId(null)
+    }
+  }
+
   return <div className="space-y-6 text-slate-900">
     <PageHeading icon={FileQuestion} title="Examens en ligne" description="Préparez des QCM et consultez les résultats uniquement pour vos matières affectées. Les examens sans matière identifiée restent gérés par l’administration." />
     {coursesLoading || examsQuery.isLoading ? <Empty>Chargement de vos examens…</Empty> : courses.length === 0 ? <Empty>Aucune matière ne vous est attribuée. Aucun examen d’un autre enseignant n’est visible ici.</Empty> : examsQuery.isError ? <Empty>Impossible de charger vos examens.</Empty> : <>
@@ -308,7 +343,32 @@ export function TeacherOnlineExamPage() {
         <div className="mt-2 space-y-2">{questions.length === 0 ? <p className="text-sm text-slate-600">Ajoutez d’abord une question à cette matière.</p> : questions.map((question) => <label key={question.id} className="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 p-3 text-sm"><input type="checkbox" checked={selectedQuestionIds.includes(question.id)} onChange={(event) => setSelectedQuestionIds((current) => event.target.checked ? [...current, question.id] : current.filter((id) => id !== question.id))} className="mt-1" /><span className="text-slate-900">{question.text}</span></label>)}</div>
         <button type="button" onClick={createExam} disabled={busy || questions.length === 0} className="mt-4 min-h-11 rounded-lg bg-emerald-800 px-5 text-sm font-bold text-white hover:bg-emerald-900 disabled:opacity-50">Créer l’examen</button>
       </section>
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6"><h2 className="text-lg font-bold text-slate-950">Mes examens</h2><div className="mt-3 divide-y divide-slate-200">{(examsQuery.data?.exams ?? []).length === 0 ? <p className="py-4 text-sm text-slate-600">Aucun examen rattaché à vos matières.</p> : examsQuery.data?.exams.map((exam) => <div key={exam.id} className="py-3"><p className="font-semibold text-slate-950">{exam.name} · {exam.course}</p><p className="mt-1 text-sm text-slate-600">{new Date(exam.examDate).toLocaleString('fr-FR')} · {exam.duration} · {exam.questions} question(s) · {exam.status}</p></div>)}</div></section>
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
+        <h2 className="text-lg font-bold text-slate-950">Mes examens</h2>
+        <p className="mt-1 text-sm text-slate-600">Un examen créé reste en brouillon jusqu’à sa publication explicite.</p>
+        <div className="mt-3 divide-y divide-slate-200">
+          {(examsQuery.data?.exams ?? []).length === 0 ? <p className="py-4 text-sm text-slate-600">Aucun examen rattaché à vos matières.</p> : examsQuery.data?.exams.map((exam) => <article key={exam.id} className="flex flex-col gap-3 py-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="font-semibold text-slate-950">{exam.name} · {exam.course}</p>
+                <span className={`rounded-full px-2 py-1 text-xs font-semibold ${exam.status === 'IN_PROGRESS' ? 'bg-emerald-100 text-emerald-900' : exam.status === 'COMPLETED' ? 'bg-slate-200 text-slate-800' : 'bg-amber-100 text-amber-900'}`}>
+                  {examStatusLabels[exam.status] || exam.status}
+                </span>
+              </div>
+              <p className="mt-1 text-sm text-slate-600">{new Date(exam.examDate).toLocaleString('fr-FR')} · {exam.duration} · {exam.questions} question(s)</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {exam.status === 'PLANNED' ? <button type="button" disabled={updatingExamId === exam.id} onClick={() => void updateExamStatus(exam, 'IN_PROGRESS')} className="min-h-10 rounded-lg bg-emerald-800 px-4 text-sm font-bold text-white hover:bg-emerald-900 disabled:opacity-50">
+                {updatingExamId === exam.id ? 'Publication…' : 'Publier aux étudiants'}
+              </button> : null}
+              {exam.status === 'IN_PROGRESS' ? <>
+                <button type="button" disabled={updatingExamId === exam.id} onClick={() => void updateExamStatus(exam, 'PLANNED')} className="min-h-10 rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-50">Retirer</button>
+                <button type="button" disabled={updatingExamId === exam.id} onClick={() => void updateExamStatus(exam, 'COMPLETED')} className="min-h-10 rounded-lg bg-slate-900 px-4 text-sm font-bold text-white hover:bg-slate-800 disabled:opacity-50">Clôturer</button>
+              </> : null}
+            </div>
+          </article>)}
+        </div>
+      </section>
       <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6"><h2 className="text-lg font-bold text-slate-950">Résultats de mes examens</h2><div className="mt-3 divide-y divide-slate-200">{(examsQuery.data?.results ?? []).length === 0 ? <p className="py-4 text-sm text-slate-600">Aucun résultat enregistré.</p> : examsQuery.data?.results.map((result) => <div key={result.id} className="flex flex-wrap justify-between gap-2 py-3 text-sm"><span className="font-semibold text-slate-900">{result.name} · {result.matricule}</span><span className="text-slate-700">{result.score === null ? 'En correction' : `${result.score}/${result.maxScore}`} · {result.status}</span></div>)}</div></section>
     </>}
   </div>

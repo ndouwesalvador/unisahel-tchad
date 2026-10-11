@@ -119,7 +119,7 @@ export function StudentExamPage() {
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Échec de la soumission')
-      toast.success('Examen soumis avec succes')
+      toast.success('Examen soumis avec succès')
       queryClient.invalidateQueries({ queryKey: ['myExams'] })
       setSession(null)
       setShowConfirm(false)
@@ -156,7 +156,7 @@ export function StudentExamPage() {
         body: JSON.stringify({ questionId, optionIndex }),
       })
     } catch {
-      toast.error('Reponse non enregistree - verifiez votre connexion')
+      toast.error('Réponse non enregistrée — vérifiez votre connexion')
     }
   }
 
@@ -230,7 +230,7 @@ export function StudentExamPage() {
 
             <div className="flex items-center justify-between mt-4">
               <Button size="sm" variant="outline" onClick={() => setCurrentIndex((p) => Math.max(0, p - 1))} disabled={currentIndex === 0}>
-                <ChevronLeft className="size-3.5 mr-1" /> Precedente
+                <ChevronLeft className="size-3.5 mr-1" /> Précédente
               </Button>
               {currentIndex < session.questions.length - 1 ? (
                 <Button size="sm" className="bg-[var(--institution-primary)] hover:bg-[var(--institution-primary)]/90 text-white" onClick={() => setCurrentIndex((p) => Math.min(session.questions.length - 1, p + 1))}>
@@ -280,7 +280,7 @@ export function StudentExamPage() {
         <h1 className="text-xl font-bold text-[var(--institution-primary)] flex items-center gap-2">
           <Monitor className="size-6" /> Mes examens en ligne
         </h1>
-        <p className="text-sm text-gray-500 mt-1">Consultez et passez vos examens programmés</p>
+        <p className="text-sm text-gray-500 mt-1">Les examens publiés par vos enseignants apparaissent automatiquement ici.</p>
       </div>
 
       {isLoading ? (
@@ -289,7 +289,10 @@ export function StudentExamPage() {
         <Card><CardContent className="p-8 text-center text-sm text-gray-400">Aucun examen programmé pour le moment.</CardContent></Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {exams.map((exam) => (
+          {exams.map((exam) => {
+            const opensAt = new Date(exam.examDate)
+            const isUpcoming = opensAt.getTime() > Date.now()
+            return (
             <Card key={exam.id} className="border-l-4 border-l-[var(--institution-primary)]">
               <CardContent className="p-4">
                 <div className="flex items-start justify-between gap-2 mb-2">
@@ -303,12 +306,14 @@ export function StudentExamPage() {
                     </Badge>
                   ) : exam.inProgress ? (
                     <Badge className="text-[10px] bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0">En cours</Badge>
+                  ) : isUpcoming ? (
+                    <Badge className="border-0 bg-blue-50 text-[10px] text-blue-800">Programmé</Badge>
                   ) : (
-                    <Badge className="text-[10px] bg-[var(--institution-primary-10)] text-[var(--institution-primary)] border-0">A passer</Badge>
+                    <Badge className="text-[10px] bg-[var(--institution-primary-10)] text-[var(--institution-primary)] border-0">À passer</Badge>
                   )}
                 </div>
                 <div className="flex items-center gap-3 text-xs text-gray-500 mb-3">
-                  <span>{new Date(exam.examDate).toLocaleDateString('fr-FR')}</span>
+                  <span>{opensAt.toLocaleString('fr-FR')}</span>
                   <span>{exam.duration}</span>
                   <span>{exam.questionCount} question(s)</span>
                 </div>
@@ -321,9 +326,9 @@ export function StudentExamPage() {
                     size="sm"
                     className="w-full text-xs bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white"
                     onClick={() => startExam(exam.id)}
-                    disabled={exam.questionCount === 0}
+                    disabled={exam.questionCount === 0 || isUpcoming}
                   >
-                    {exam.inProgress ? 'Reprendre' : 'Commencer'}
+                    {isUpcoming ? 'Pas encore ouvert' : exam.inProgress ? 'Reprendre' : 'Commencer'}
                   </Button>
                 )}
                 {exam.questionCount === 0 && !exam.submitted && (
@@ -331,7 +336,7 @@ export function StudentExamPage() {
                 )}
               </CardContent>
             </Card>
-          ))}
+          )})}
         </div>
       )}
     </div>

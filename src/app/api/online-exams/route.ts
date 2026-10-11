@@ -33,7 +33,55 @@ function parseDurationMinutes(duration: string): number {
 }
 
 async function resolveCurrentStudent(userId: string, tenantId: string) {
-  return db.student.findFirst({ where: { userId, tenantId }, select: { id: true, firstName: true, lastName: true } })
+  return db.student.findFirst({
+    where: { userId, tenantId },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      currentLevelId: true,
+      registrations: {
+        where: { status: 'INSCRIT' },
+        orderBy: { registrationDate: 'desc' },
+        take: 1,
+        select: { levelId: true },
+      },
+    },
+  })
+}
+
+async function eligibleCourseElementIds(
+  student: NonNullable<Awaited<ReturnType<typeof resolveCurrentStudent>>>,
+  tenantId: string,
+) {
+  const pedagogicalRegistrations = await db.pedagogicalRegistration.findMany({
+    where: {
+      studentId: student.id,
+      status: 'ACTIVE',
+      teachingUnit: { semester: { level: { program: { tenantId } } } },
+    },
+    select: { teachingUnitId: true },
+  })
+  const teachingUnitIds = pedagogicalRegistrations.map((registration) => registration.teachingUnitId)
+  const levelIds = Array.from(new Set([
+    student.currentLevelId,
+    ...(student.registrations ?? []).map((registration) => registration.levelId),
+  ].filter((value): value is string => Boolean(value))))
+
+  const accessRules = [
+    ...(teachingUnitIds.length > 0 ? [{ teachingUnitId: { in: teachingUnitIds } }] : []),
+    ...(levelIds.length > 0 ? [{ teachingUnit: { semester: { levelId: { in: levelIds } } } }] : []),
+  ]
+  if (accessRules.length === 0) return []
+
+  const elements = await db.courseElement.findMany({
+    where: {
+      teachingUnit: { semester: { level: { program: { tenantId } } } },
+      OR: accessRules,
+    },
+    select: { id: true },
+  })
+  return elements.map((element) => element.id)
 }
 
 // GET /api/online-exams?scope=me - a logged-in student's own available exams + results
@@ -44,14 +92,7 @@ async function handleGetForStudent(user: SessionUser, tenantId: string) {
       return NextResponse.json({ error: 'Aucun profil étudiant n’est lié à ce compte' }, { status: 403 })
     }
 
-    const registrations = await db.pedagogicalRegistration.findMany({
-      where: { studentId: student.id, status: 'ACTIVE', teachingUnit: { semester: { level: { program: { tenantId } } } } },
-      select: { teachingUnitId: true },
-    })
-    const eligibleElements = registrations.length ? await db.courseElement.findMany({
-      where: { teachingUnitId: { in: registrations.map((registration) => registration.teachingUnitId) } },
-      select: { id: true },
-    }) : []
+    const eligibleElementIds = await eligibleCourseElementIds(student, tenantId)
     const myResults = await db.examResult.findMany({ where: { tenantId, studentId: student.id } })
     const submittedOrStartedExamIds = myResults.map((result) => result.examId)
     const exams = await db.onlineExam.findMany({
@@ -60,7 +101,7 @@ async function handleGetForStudent(user: SessionUser, tenantId: string) {
         AND: [
           { OR: [{ status: 'IN_PROGRESS' }, { id: { in: submittedOrStartedExamIds } }] },
           { OR: [
-            { courseElementId: { in: eligibleElements.map((element) => element.id) } },
+            { courseElementId: { in: eligibleElementIds } },
             { id: { in: submittedOrStartedExamIds } },
           ] },
         ],
@@ -399,10 +440,10 @@ async function startSessionHandler(user: SessionUser, tenantId: string, request:
     if (exam.examDate.getTime() > Date.now()) {
       return NextResponse.json({ error: 'Cet examen n’est pas encore ouvert' }, { status: 409 })
     }
-    if (exam.courseElementId && !await db.pedagogicalRegistration.findFirst({
-      where: { studentId: student.id, teachingUnit: { courseElements: { some: { id: exam.courseElementId } } }, status: 'ACTIVE' },
-      select: { id: true },
-    })) return NextResponse.json({ error: 'Examen hors de votre inscription pédagogique' }, { status: 403 })
+    const eligibleElementIds = await eligibleCourseElementIds(student, tenantId)
+    if (exam.courseElementId && !eligibleElementIds.includes(exam.courseElementId)) {
+      return NextResponse.json({ error: 'Examen hors de votre inscription académique' }, { status: 403 })
+    }
     if (exam.questionIds.length === 0) {
       return NextResponse.json({ error: 'Aucune question n’est encore configurée pour cet examen' }, { status: 409 })
     }

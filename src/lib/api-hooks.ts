@@ -95,9 +95,15 @@ export function useTeachers(params?: { search?: string; departmentId?: string; g
   });
 }
 
-export function usePayments(params?: { search?: string; status?: string; paymentMethod?: string; studentId?: string; startDate?: string; endDate?: string; page?: number; limit?: number }) {
+export function usePayments(
+  params?: { search?: string; status?: string; paymentMethod?: string; studentId?: string; startDate?: string; endDate?: string; page?: number; limit?: number },
+  options?: { staleTime?: number; refetchInterval?: number | false; refetchOnWindowFocus?: boolean },
+) {
   return useQuery({
     queryKey: ['payments', params],
+    staleTime: options?.staleTime,
+    refetchInterval: options?.refetchInterval,
+    refetchOnWindowFocus: options?.refetchOnWindowFocus,
     queryFn: async () => {
       const url = new URL('/api/payments', window.location.origin);
       if (params) {
@@ -204,7 +210,18 @@ export function useOnlineExams() {
 }
 
 export function useMyExams() {
-  return useSimpleGet('myExams', '/api/online-exams?scope=me');
+  return useQuery({
+    queryKey: ['myExams'],
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+    refetchInterval: 30_000,
+    refetchIntervalInBackground: false,
+    queryFn: async () => {
+      const response = await fetch('/api/online-exams?scope=me')
+      if (!response.ok) throw new Error('Impossible de charger vos examens')
+      return response.json()
+    },
+  })
 }
 
 export function useReports() {
