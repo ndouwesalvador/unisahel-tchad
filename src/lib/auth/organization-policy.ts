@@ -6,6 +6,7 @@ const methods: Record<string, readonly string[]> = {
   '/api/teachers': ['GET', 'POST', 'PUT', 'DELETE'],
   '/api/students': ['GET'],
   '/api/timetable': ['GET', 'POST', 'PUT', 'DELETE'],
+  '/api/timetable/export': ['GET'],
   '/api/timetable-publications': ['GET', 'POST', 'PATCH'],
   '/api/teaching-services': ['GET', 'POST', 'PATCH'],
   '/api/rooms': ['GET'],

@@ -7,6 +7,8 @@ describe('organization API policy', () => {
     expect(isOrganizationApiAllowed('/api/timetable', 'POST')).toBe(true)
     expect(isOrganizationApiAllowed('/api/timetable', 'PUT')).toBe(true)
     expect(isOrganizationApiAllowed('/api/timetable', 'DELETE')).toBe(true)
+    expect(isOrganizationApiAllowed('/api/timetable/export', 'GET')).toBe(true)
+    expect(isOrganizationApiAllowed('/api/timetable/export', 'POST')).toBe(false)
   })
   it('allows department jury corrections only through the scoped deliberation endpoint', () => {
     expect(isOrganizationApiAllowed('/api/deliberation', 'PATCH')).toBe(true)

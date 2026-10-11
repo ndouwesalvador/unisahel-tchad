@@ -53,6 +53,8 @@ describe('teacher perimeter', () => {
     expect(isTeacherApiAllowed('/api/teachers', 'GET')).toBe(false)
     expect(isTeacherApiAllowed('/api/structure', 'POST')).toBe(false)
     expect(isTeacherApiAllowed('/api/timetable', 'POST')).toBe(false)
+    expect(isTeacherApiAllowed('/api/timetable/export', 'GET')).toBe(true)
+    expect(isTeacherApiAllowed('/api/timetable/export', 'POST')).toBe(false)
     expect(isTeacherApiAllowed('/api/communications', 'DELETE')).toBe(false)
     expect(isTeacherApiAllowed('/api/grades', 'GET')).toBe(true)
     expect(isTeacherApiAllowed('/api/attendance', 'POST')).toBe(true)
