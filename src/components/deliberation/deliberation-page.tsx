@@ -201,9 +201,6 @@ export function DeliberationPage() {
   const departments: { id: string; name: string; shortName: string | null }[] = useMemo(
     () => deliberationData?.departments ?? [], [deliberationData?.departments]
   )
-  useEffect(() => {
-    if (!selectedDepartmentId && departments.length > 0) setSelectedDepartmentId(departments[0].id)
-  }, [departments, selectedDepartmentId])
   const juryScopes: JuryScopeOption[] = useMemo(() => deliberationData?.juryScopes ?? [], [deliberationData?.juryScopes])
   useEffect(() => {
     if (userRole !== 'JURY' || selectedProgramId || selectedLevelId || juryScopes.length === 0) return
@@ -224,10 +221,20 @@ export function DeliberationPage() {
   )
 
   useEffect(() => {
+    if (selectedDepartmentId || departments.length === 0 || userRole === 'JURY') return
+    const latestDepartmentId = deliberations.find((session) => session.academicYearId === currentYearId)?.departmentId
+    setSelectedDepartmentId(latestDepartmentId || departments[0].id)
+  }, [currentYearId, deliberations, departments, selectedDepartmentId, userRole])
+
+  useEffect(() => {
     const expectedType = apiSessionType === 'RATTRAPAGE' ? 'RATTRAPAGE' : 'ANNUEL'
     const latestSession = deliberations.find((session) => session.type === expectedType && session.academicYearId === currentYearId &&
+      (!selectedDepartmentId || session.departmentId === selectedDepartmentId) &&
       (!selectedProgramId || session.programId === selectedProgramId) && (!selectedLevelId || session.levelId === selectedLevelId))
     if (!selectedSession && latestSession) {
+      if (latestSession.departmentId) setSelectedDepartmentId(latestSession.departmentId)
+      setSelectedProgramId(latestSession.programId || null)
+      setSelectedLevelId(latestSession.levelId || null)
       setSelectedSession(latestSession.id)
     }
   }, [apiSessionType, deliberations, selectedSession, currentYearId, selectedProgramId, selectedLevelId])
@@ -1371,7 +1378,13 @@ export function DeliberationPage() {
                     <TableRow
                       key={session.id}
                       className={`cursor-pointer transition-colors ${selectedSession === session.id ? 'bg-[var(--institution-secondary-08)]' : 'hover:bg-gray-50'}`}
-                      onClick={() => { setSelectedSession(session.id); setJuryMembers([]) }}
+                      onClick={() => {
+                        if (session.departmentId) setSelectedDepartmentId(session.departmentId)
+                        setSelectedProgramId(session.programId || null)
+                        setSelectedLevelId(session.levelId || null)
+                        setSelectedSession(session.id)
+                        setJuryMembers([])
+                      }}
                     >
                       <TableCell className="text-sm font-medium text-[var(--institution-primary)]">{session.titre}</TableCell>
                       <TableCell className="text-sm text-gray-500">{session.date}</TableCell>
@@ -1381,7 +1394,15 @@ export function DeliberationPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" className="h-7 text-xs text-[var(--institution-secondary)]" onClick={(event) => { event.stopPropagation(); setSelectedSession(session.id); setJuryMembers([]); toast.success(`Session ${session.titre} sélectionnée`) }}>
+                        <Button variant="ghost" size="sm" className="h-7 text-xs text-[var(--institution-secondary)]" onClick={(event) => {
+                          event.stopPropagation()
+                          if (session.departmentId) setSelectedDepartmentId(session.departmentId)
+                          setSelectedProgramId(session.programId || null)
+                          setSelectedLevelId(session.levelId || null)
+                          setSelectedSession(session.id)
+                          setJuryMembers([])
+                          toast.success(`Session ${session.titre} sélectionnée`)
+                        }}>
                           <ChevronRight className="size-3.5 mr-1" />
                           Détail
                         </Button>
