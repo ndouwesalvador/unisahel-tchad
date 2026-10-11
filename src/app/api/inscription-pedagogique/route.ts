@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Prisma } from '@prisma/client'
 import { db } from '@/lib/db'
+import { curriculumIndex, parseCurriculumSnapshot } from '@/lib/curriculum/versioning'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
 const REGISTRATION_ROLES = ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'RECTORAT', 'SCOLARITE']
 
@@ -196,11 +197,15 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
       const year = await tx.academicYear.findFirst({ where: { tenantId, isCurrent: true }, select: { id: true } })
       if (!year) throw new RegistrationRejected('Aucune année académique courante configurée', 409)
       const academicYearId = year.id
-
-      const levelUnits = await tx.teachingUnit.findMany({
-        where: { semester: { level: { id: level.id, isActive: true, program: { tenantId, isActive: true } } } },
-        select: { id: true, type: true },
+      const annualRegistration = await tx.administrativeRegistration.findFirst({
+        where: { tenantId, studentId, academicYearId, status: 'INSCRIT', programId: level.programId, levelId: level.id },
+        select: { curriculumVersion: { select: { snapshot: true, status: true } } },
       })
+      if (!annualRegistration?.curriculumVersion || annualRegistration.curriculumVersion.status !== 'FROZEN') {
+        throw new RegistrationRejected('Validez d’abord l’inscription annuelle et sa maquette figée', 409)
+      }
+      const curriculum = curriculumIndex(parseCurriculumSnapshot(annualRegistration.curriculumVersion.snapshot))
+      const levelUnits = [...curriculum.units.values()].map((unit) => ({ id: unit.id, type: unit.type }))
       const levelUnitIds = levelUnits.map((unit) => unit.id)
       const availableIds = new Set(levelUnitIds)
       if (requestedIds.some((id) => !availableIds.has(id))) throw new RegistrationRejected('Une ou plusieurs UE ne font pas partie du niveau de cet étudiant', 400)

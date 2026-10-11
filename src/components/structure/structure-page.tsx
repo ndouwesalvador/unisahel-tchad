@@ -158,6 +158,10 @@ interface StructureResponse {
     courseElements: number
     students?: number
   }
+  versioning?: {
+    currentAcademicYear: { id: string; name: string } | null
+    frozenCurricula: number
+  }
 }
 
 interface DuplicateLevelAudit {
@@ -1082,6 +1086,24 @@ export function StructurePage() {
           />
         </div>
       </motion.div>
+
+      {structureQuery?.versioning?.currentAcademicYear && (
+        <Card className="border-emerald-200 bg-emerald-50/70">
+          <CardContent className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <CalendarRange className="mt-0.5 size-5 shrink-0 text-emerald-700" />
+              <div>
+                <p className="font-semibold text-emerald-950">Maquettes annuelles protégées</p>
+                <p className="text-sm text-emerald-900">
+                  {structureQuery.versioning.frozenCurricula} maquette(s) figée(s) pour {structureQuery.versioning.currentAcademicYear.name}.
+                  Les changements effectués ici préparent les prochaines inscriptions sans modifier les années antérieures.
+                </p>
+              </div>
+            </div>
+            <Badge className="w-fit border-emerald-300 bg-white text-emerald-800">Historique immuable</Badge>
+          </CardContent>
+        </Card>
+      )}
 
       {canAudit && duplicateAuditError && (
         <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-900">

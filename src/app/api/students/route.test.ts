@@ -158,7 +158,7 @@ describe('GET /api/students', () => {
     } }))
     expect(dbMock.administrativeRegistration.findFirst).toHaveBeenCalledWith({
       where: { tenantId: 'tenant-A', studentId: 'student-A', academicYearId: 'year-A', status: 'INSCRIT' },
-      select: { id: true, programId: true, levelId: true },
+      select: { id: true, programId: true, levelId: true, curriculumVersionId: true },
     })
   })
 })

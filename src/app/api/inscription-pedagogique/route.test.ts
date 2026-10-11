@@ -6,6 +6,7 @@ const { authMock, dbMock } = vi.hoisted(() => ({
   dbMock: {
     $transaction: vi.fn(),
     academicYear: { findFirst: vi.fn() },
+    administrativeRegistration: { findFirst: vi.fn() },
     auditLog: { create: vi.fn() },
     grade: { count: vi.fn() },
     payment: { groupBy: vi.fn() },
@@ -41,6 +42,15 @@ beforeEach(() => {
   dbMock.student.findFirst.mockResolvedValue({ id: studentId, currentLevelId: levelId, currentProgramId: 'program-A' })
   dbMock.level.findFirst.mockResolvedValue({ id: levelId, programId: 'program-A' })
   dbMock.academicYear.findFirst.mockResolvedValue({ id: yearId, name: '2026-2027' })
+  dbMock.administrativeRegistration.findFirst.mockResolvedValue({ curriculumVersion: { status: 'FROZEN', snapshot: {
+    schemaVersion: 1, capturedAt: '2026-10-11T00:00:00.000Z',
+    program: { id: 'program-A', code: 'INFO', name: 'Informatique' },
+    level: { id: levelId, code: 'L1', name: 'Licence 1', orderIndex: 1 },
+    semesters: [{ id: 'semester-A', code: 'S1', name: 'Semestre 1', orderIndex: 1, units: [
+      { id: 'unit-required', code: 'UE1', name: 'UE obligatoire', credits: 6, type: 'FONDAMENTALE', compensable: true, orderIndex: 1, semesterId: 'semester-A', elements: [] },
+      { id: 'unit-optional', code: 'UE2', name: 'UE optionnelle', credits: 6, type: 'COMPLEMENTAIRE', compensable: true, orderIndex: 2, semesterId: 'semester-A', elements: [] },
+    ] }],
+  } } })
   dbMock.teachingUnit.findMany.mockResolvedValue([
     { id: 'unit-required', type: 'FONDAMENTALE' },
     { id: 'unit-optional', type: 'COMPLEMENTAIRE' },
@@ -84,10 +94,7 @@ describe('pedagogical registration tenant isolation', () => {
     const response = await POST(request('POST', { studentId, teachingUnitIds: ['unit-required', 'foreign-unit'] }))
 
     expect(response.status).toBe(400)
-    expect(dbMock.teachingUnit.findMany).toHaveBeenCalledWith({
-      where: { semester: { level: { id: levelId, isActive: true, program: { tenantId, isActive: true } } } },
-      select: { id: true, type: true },
-    })
+    expect(dbMock.administrativeRegistration.findFirst).toHaveBeenCalled()
     expect(dbMock.pedagogicalRegistration.deleteMany).not.toHaveBeenCalled()
   })
 

@@ -15,6 +15,7 @@ import { countPdfPages } from '@/lib/pdf/utils'
 import { renderArabicHeader, renderArabicMotto } from '@/lib/pdf/arabic-header'
 import { parseHeaderLines } from '@/lib/institution-branding'
 import { prepareDocumentArtwork, prepareDocumentPhoto } from '@/lib/pdf/artwork'
+import { curriculumIndex, parseCurriculumSnapshot } from '@/lib/curriculum/versioning'
 
 const SIGNING_ROLES = new Set(['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'RECTORAT', 'SCOLARITE', 'JURY', 'FACULTE', 'DEPARTEMENT'])
 // Student portals are read-only for official documents. A student may only
@@ -204,7 +205,8 @@ export async function POST(request: NextRequest) {
         }
         const registration = await db.administrativeRegistration.findFirst({
           where: { tenantId, studentId, academicYearId: acYearId, status: 'INSCRIT' },
-          select: { id: true, programId: true, levelId: true },
+          select: { id: true, programId: true, levelId: true,
+            curriculumVersion: { select: { id: true, status: true, snapshot: true } } },
         })
         if (!registration) {
           return NextResponse.json({ error: 'Inscription administrative annuelle non validée : relevé indisponible' }, { status: 409 })
@@ -214,6 +216,10 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: 'Programme ou niveau de cette inscription introuvable' }, { status: 409 })
         }
         student = annualContext.student
+        const annualCurriculum = curriculumIndex(parseCurriculumSnapshot(registration.curriculumVersion?.snapshot))
+        if (!registration.curriculumVersion || registration.curriculumVersion.status !== 'FROZEN' || annualCurriculum.units.size === 0) {
+          return NextResponse.json({ error: 'La maquette annuelle historique de cette inscription est introuvable' }, { status: 409 })
+        }
         const academicYear = requestedYear?.name || ''
         let semester = ''
         let ueGrades: Array<{ ue: string; code: string; credits: number; notes: Array<{ ec: string; code?: string; coef: number; cc?: number; tp?: number; exam?: number; final?: number }>; moyenne?: number }> = []
@@ -224,16 +230,9 @@ export async function POST(request: NextRequest) {
             where: {
               studentId,
               academicYearId: acYearId,
+              curriculumVersionId: registration.curriculumVersion.id,
               session: 'NORMALE',
               student: { tenantId },
-              teachingUnit: {
-                semester: { levelId: registration.levelId,
-                  level: { programId: registration.programId, program: { tenantId } } },
-              },
-              OR: [
-                { courseElementId: null },
-                { courseElement: { teachingUnit: { semester: { level: { program: { tenantId } } } } } },
-              ],
             },
             include: {
               teachingUnit: { include: { semester: true } },
@@ -252,45 +251,40 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Toutes les notes du relevé doivent être verrouillées avant publication' }, { status: 409 })
           }
           if (sign) {
-            const curriculumUnits = await db.teachingUnit.findMany({
-              where: { semester: { levelId: registration.levelId,
-                level: { programId: registration.programId, program: { tenantId } } } },
-              include: { courseElements: { select: { id: true } } },
-            })
+            const curriculumUnits = [...annualCurriculum.units.values()]
             const completeGrades = new Set(grades.filter((grade) => grade.isLocked && grade.finalGrade !== null).map((grade) => grade.courseElementId))
             if (curriculumUnits.length === 0 || curriculumUnits.some((unit) =>
-              unit.courseElements.length === 0 || unit.courseElements.some((element) => !completeGrades.has(element.id)))) {
+              unit.elements.length === 0 || unit.elements.some((element) => !completeGrades.has(element.id)))) {
               return NextResponse.json({ error: 'Relevé incomplet : toutes les matières inscrites doivent avoir une note définitive verrouillée' }, { status: 409 })
             }
           }
-          const semesterIds = [...new Set(grades.map(g => g.teachingUnit?.semester?.id).filter(Boolean))] as string[]
-          if (semesterIds.length > 0) {
-            const semesters = await db.semester.findMany({
-              where: { id: { in: semesterIds }, level: { program: { tenantId } } },
-              include: { level: { include: { program: true } } },
-            })
-            semester = semesters.length === 1 ? semesters[0].name : 'Plusieurs semestres'
-          }
+          const semesterIds = [...new Set(grades.map(g => g.teachingUnitId ? annualCurriculum.units.get(g.teachingUnitId)?.semesterId : null).filter(Boolean))] as string[]
+          const semesters = semesterIds.map((id) => annualCurriculum.semesters.get(id)).filter(Boolean)
+          semester = semesters.length === 1 ? semesters[0]!.name : 'Plusieurs semestres'
 
           const ueMap = new Map<string, { ue: string; code: string; credits: number; notes: Array<{ ec: string; code?: string; coef: number; cc?: number; tp?: number; exam?: number; final?: number }>; moyenne?: number }>()
           // Keep the transcript in curriculum order, not database insertion order.
           const orderedGrades = [...grades].sort((a, b) =>
-            (a.teachingUnit?.semester?.orderIndex ?? 0) - (b.teachingUnit?.semester?.orderIndex ?? 0) ||
-            (a.teachingUnit?.orderIndex ?? 0) - (b.teachingUnit?.orderIndex ?? 0) ||
-            (a.courseElement?.orderIndex ?? 0) - (b.courseElement?.orderIndex ?? 0) ||
-            (a.teachingUnit?.code ?? '').localeCompare(b.teachingUnit?.code ?? '')
+            (annualCurriculum.semesters.get(annualCurriculum.units.get(a.teachingUnitId ?? '')?.semesterId ?? '')?.orderIndex ?? 0) -
+              (annualCurriculum.semesters.get(annualCurriculum.units.get(b.teachingUnitId ?? '')?.semesterId ?? '')?.orderIndex ?? 0) ||
+            (annualCurriculum.units.get(a.teachingUnitId ?? '')?.orderIndex ?? 0) - (annualCurriculum.units.get(b.teachingUnitId ?? '')?.orderIndex ?? 0) ||
+            (annualCurriculum.elements.get(a.courseElementId ?? '')?.orderIndex ?? 0) - (annualCurriculum.elements.get(b.courseElementId ?? '')?.orderIndex ?? 0)
           )
           for (const g of orderedGrades) {
-            if (!g.teachingUnit) continue
-            const key = g.teachingUnit.id
+            if (!g.teachingUnitId) continue
+            const snapshotUnit = annualCurriculum.units.get(g.teachingUnitId)
+            const snapshotElement = g.courseElementId ? annualCurriculum.elements.get(g.courseElementId) : null
+            if (!snapshotUnit || !snapshotElement) continue
+            const key = snapshotUnit.id
             if (!ueMap.has(key)) {
-              ueMap.set(key, { ue: g.teachingUnit.name, code: g.teachingUnit.code || '', credits: g.teachingUnit.credits, notes: [] })
+              ueMap.set(key, { ue: g.unitNameSnapshot || snapshotUnit.name, code: g.unitCodeSnapshot || snapshotUnit.code || '',
+                credits: g.unitCreditsSnapshot ?? snapshotUnit.credits, notes: [] })
             }
             const entry = ueMap.get(key)!
             entry.notes.push({
-              ec: g.courseElement?.name || 'EC',
-              code: g.courseElement?.code || undefined,
-              coef: g.courseElement?.coefficient || 1,
+              ec: g.elementNameSnapshot || snapshotElement.name,
+              code: g.elementCodeSnapshot || snapshotElement.code || undefined,
+              coef: g.elementCoefficientSnapshot ?? snapshotElement.coefficient,
               cc: g.ccGrade ?? undefined,
               tp: g.tpGrade ?? undefined,
               exam: g.examGrade ?? undefined,
@@ -507,15 +501,12 @@ export async function POST(request: NextRequest) {
         const [annualRegistrations, pedagogicalRegistrationsResult, gradeRows] = await Promise.all([
           db.administrativeRegistration.findMany({
             where: { tenantId, academicYearId: acYearId, status: 'INSCRIT', studentId: { in: decisionIds } },
-            select: { studentId: true, programId: true, levelId: true },
+            select: { studentId: true, programId: true, levelId: true,
+              curriculumVersion: { select: { status: true, snapshot: true } } },
           }),
           db.pedagogicalRegistration.findMany({
             where: { academicYearId: acYearId, status: 'ACTIVE', studentId: { in: decisionIds }, student: { tenantId } },
-            select: { studentId: true, teachingUnitId: true, teachingUnit: { select: {
-              id: true, code: true, name: true, credits: true, orderIndex: true,
-              semester: { select: { levelId: true, orderIndex: true } },
-              courseElements: { select: { id: true, code: true, name: true, coefficient: true, orderIndex: true } },
-            } } },
+            select: { studentId: true, teachingUnitId: true },
           }),
           db.grade.findMany({
             where: { studentId: { in: decisionIds }, academicYearId: acYearId,
@@ -523,50 +514,47 @@ export async function POST(request: NextRequest) {
             select: { studentId: true, teachingUnitId: true, courseElementId: true, ccGrade: true, tpGrade: true, examGrade: true, finalGrade: true, isLocked: true },
           }),
         ])
-        let pedagogicalRegistrations = pedagogicalRegistrationsResult
-        // Keep PV generation aligned with the deliberation roster when a
-        // current enrolled student has not yet received an annual row.
-        const annualByStudent = new Map(annualRegistrations.map((registration) => [registration.studentId, registration]))
-        const effectiveAnnualRegistrations = [...annualRegistrations]
-        for (const student of decisionStudents) {
-          if (annualByStudent.has(student.id)) continue
-          if (!student.currentProgram || !student.currentLevel || student.currentLevel.programId !== student.currentProgram.id) continue
-          effectiveAnnualRegistrations.push({ studentId: student.id, programId: student.currentProgram.id, levelId: student.currentLevel.id })
+        if (annualRegistrations.length !== decisionIds.length) {
+          return NextResponse.json({ error: 'Chaque décision du PV exige une inscription annuelle validée.' }, { status: 409 })
         }
-        const registeredPedagogicalStudents = new Set(pedagogicalRegistrations.map((registration) => registration.studentId))
-        const missingPedagogicalStudents = decisionStudents.filter((student) => !registeredPedagogicalStudents.has(student.id))
-        if (missingPedagogicalStudents.length > 0) {
-          const units = await db.teachingUnit.findMany({
-            where: { semester: { level: { programId: { in: effectiveAnnualRegistrations.map((registration) => registration.programId) } } } },
-            select: {
-              id: true, code: true, name: true, credits: true, orderIndex: true,
-              semester: { select: { levelId: true, orderIndex: true } },
-              courseElements: { select: { id: true, code: true, name: true, coefficient: true, orderIndex: true } },
-            },
+        const selectedUnits = new Map<string, Set<string>>()
+        for (const row of pedagogicalRegistrationsResult) {
+          const units = selectedUnits.get(row.studentId) ?? new Set<string>()
+          units.add(row.teachingUnitId)
+          selectedUnits.set(row.studentId, units)
+        }
+        const effectiveAnnualRegistrations = [] as Array<{ studentId: string; programId: string; levelId: string; program: { name: string }; level: { name: string; orderIndex: number } }>
+        const pedagogicalRegistrations = [] as Array<{ studentId: string; teachingUnitId: string; teachingUnit: {
+          id: string; code: string | null; name: string; credits: number; orderIndex: number;
+          semester: { levelId: string; orderIndex: number };
+          courseElements: Array<{ id: string; code: string | null; name: string; coefficient: number; orderIndex: number }>;
+        } }>
+        for (const registration of annualRegistrations) {
+          const snapshot = parseCurriculumSnapshot(registration.curriculumVersion?.snapshot)
+          const index = curriculumIndex(snapshot)
+          if (registration.curriculumVersion?.status !== 'FROZEN' || !snapshot || index.units.size === 0) {
+            return NextResponse.json({ error: 'Une maquette annuelle figée manque pour un étudiant du PV.' }, { status: 409 })
+          }
+          effectiveAnnualRegistrations.push({
+            studentId: registration.studentId, programId: registration.programId, levelId: registration.levelId,
+            program: { name: snapshot.program.name }, level: { name: snapshot.level.name, orderIndex: snapshot.level.orderIndex ?? 0 },
           })
-          const annualLevelByStudent = new Map(effectiveAnnualRegistrations.map((registration) => [registration.studentId, registration.levelId]))
-          pedagogicalRegistrations = [...pedagogicalRegistrations, ...missingPedagogicalStudents.flatMap((student) =>
-            units.filter((unit) => unit.semester.levelId === annualLevelByStudent.get(student.id)).map((unit) => ({
-              studentId: student.id, teachingUnitId: unit.id, teachingUnit: unit,
-            }))
-          )]
-        }
-        const [programs, levels] = await Promise.all([
-          db.program.findMany({ where: { id: { in: effectiveAnnualRegistrations.map(r => r.programId) }, tenantId, departmentId: department.id },
-            select: { id: true, name: true } }),
-          db.level.findMany({ where: { id: { in: effectiveAnnualRegistrations.map(r => r.levelId) }, program: { tenantId, departmentId: department.id } },
-            select: { id: true, programId: true, name: true, orderIndex: true } }),
-        ])
-        const programById = new Map(programs.map(p => [p.id, p]))
-        const levelById = new Map(levels.map(l => [l.id, l]))
-        if (effectiveAnnualRegistrations.length !== decisionIds.length || effectiveAnnualRegistrations.some(r =>
-          !programById.has(r.programId) || levelById.get(r.levelId)?.programId !== r.programId)) {
-          return NextResponse.json({ error: 'Inscriptions annuelles incohérentes avec les filières du département' }, { status: 409 })
+          const selected = selectedUnits.get(registration.studentId)
+          for (const unit of index.units.values()) {
+            if (selected && !selected.has(unit.id)) continue
+            const semester = index.semesters.get(unit.semesterId)
+            if (!semester) continue
+            pedagogicalRegistrations.push({ studentId: registration.studentId, teachingUnitId: unit.id, teachingUnit: {
+              id: unit.id, code: unit.code, name: unit.name, credits: unit.credits, orderIndex: unit.orderIndex,
+              semester: { levelId: registration.levelId, orderIndex: semester.orderIndex },
+              courseElements: unit.elements,
+            } })
+          }
         }
         let sections
         try {
           sections = buildPvMatrix({
-            registrations: effectiveAnnualRegistrations.map(r => ({ ...r, program: programById.get(r.programId)!, level: levelById.get(r.levelId)! })),
+            registrations: effectiveAnnualRegistrations,
             pedagogicalRegistrations, grades: gradeRows, students: decisionStudents, decisions: delib.decisions,
           })
         } catch (error) {

@@ -49,6 +49,17 @@ const { AwardEligibilityError } = await import('@/lib/documents/eligibility')
 const tenantId = 'tenant-A'
 const studentId = 'student-A'
 const signature = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO6p8Z8AAAAASUVORK5CYII='
+const curriculumVersion = { id: 'curriculum-A', status: 'FROZEN', snapshot: {
+  schemaVersion: 1, capturedAt: '2026-10-11T00:00:00.000Z',
+  program: { id: 'program-A', code: 'INFO', name: 'Génie informatique' },
+  level: { id: 'level-A', code: 'L1', name: 'Licence 1' },
+  semesters: [{ id: 'sem-A', code: 'S1', name: 'Semestre 1', orderIndex: 1, units: [{
+    id: 'unit-A', code: 'MAT101', name: 'Mathématiques', credits: 6,
+    type: 'FONDAMENTALE', compensable: true, orderIndex: 1, semesterId: 'sem-A',
+    elements: [{ id: 'element-A', code: 'ALG101', name: 'Algèbre', coefficient: 2,
+      hoursCM: 20, hoursTD: 10, hoursTP: 0, hoursStage: 0, hoursPersonal: 0, orderIndex: 1 }],
+  }] }],
+} }
 
 function request(body: unknown) {
   return new NextRequest('http://localhost:3000/api/documents/generate', {
@@ -70,7 +81,7 @@ beforeEach(() => {
   dbMock.pedagogicalRegistration.findMany.mockResolvedValue([])
   dbMock.semester.findMany.mockResolvedValue([])
   dbMock.teachingUnit.findMany.mockResolvedValue([])
-  dbMock.administrativeRegistration.findFirst.mockResolvedValue({ id: 'registration-A', programId: 'program-A', levelId: 'level-A', academicYear: { name: '2026-2027' } })
+  dbMock.administrativeRegistration.findFirst.mockResolvedValue({ id: 'registration-A', programId: 'program-A', levelId: 'level-A', curriculumVersion, academicYear: { name: '2026-2027' } })
   dbMock.administrativeRegistration.findMany.mockResolvedValue([])
   dbMock.program.findFirst.mockResolvedValue({ name: 'Génie informatique', departmentId: 'department-A' })
   dbMock.program.findMany.mockResolvedValue([])
@@ -226,7 +237,7 @@ describe('POST /api/documents/generate', () => {
   })
 
   it('generates an attestation from a validated registration and records its source', async () => {
-    dbMock.administrativeRegistration.findFirst.mockResolvedValue({ id: 'registration-A', programId: 'program-A', levelId: 'level-A', academicYear: { name: '2026-2027' } })
+    dbMock.administrativeRegistration.findFirst.mockResolvedValue({ id: 'registration-A', programId: 'program-A', levelId: 'level-A', curriculumVersion, academicYear: { name: '2026-2027' } })
     const response = await POST(request({ type: 'ATTESTATION_INSCRIPTION', tenantId, studentId, data: { academicYear: 'Inventée' } }))
 
     expect(response.status).toBe(200)
@@ -262,8 +273,8 @@ describe('POST /api/documents/generate', () => {
     dbMock.grade.findMany.mockResolvedValue([{
       isLocked: true,
       teachingUnitId: 'unit-A', courseElementId: 'element-A',
-      teachingUnit: { id: 'unit-A', name: 'Mathématiques', code: 'MAT101', credits: 6, semester: { id: 'sem-A' } },
-      courseElement: { teachingUnitId: 'unit-A', name: 'Algèbre', coefficient: 2 },
+      teachingUnit: { id: 'unit-A', name: 'Mathématiques nouvelle', code: 'NEW101', credits: 12, semester: { id: 'sem-A' } },
+      courseElement: { teachingUnitId: 'unit-A', name: 'Algèbre nouvelle', coefficient: 9 },
       ccGrade: 14, tpGrade: 17, examGrade: 16, finalGrade: 15,
     }])
     dbMock.semester.findMany.mockResolvedValue([{ name: 'Semestre 1', level: { program: { tenantId } } }])
@@ -278,12 +289,18 @@ describe('POST /api/documents/generate', () => {
     expect(snapshot.student.firstName).toBe('Awa')
     expect(snapshot.student).toMatchObject({ program: 'Génie informatique', level: 'Licence 1' })
     expect(snapshot.ueGrades[0].ue).toBe('Mathématiques')
+    expect(snapshot.ueGrades[0].credits).toBe(6)
+    expect(snapshot.ueGrades[0].notes[0]).toMatchObject({ ec: 'Algèbre', coef: 2 })
     expect(snapshot.ueGrades[0].notes[0].tp).toBe(17)
     expect(snapshot.ueGrades[0].moyenne).toBe(15)
     expect(snapshot.academicYear).toBe('2026-2027')
   })
 
   it('refuses to certify a transcript with a missing registered subject', async () => {
+    const annualVersion = structuredClone(curriculumVersion)
+    annualVersion.snapshot.semesters[0].units[0].elements.push({ id: 'element-B', code: 'ANA101', name: 'Analyse', coefficient: 2,
+      hoursCM: 20, hoursTD: 10, hoursTP: 0, hoursStage: 0, hoursPersonal: 0, orderIndex: 2 })
+    dbMock.administrativeRegistration.findFirst.mockResolvedValue({ id: 'registration-A', programId: 'program-A', levelId: 'level-A', curriculumVersion: annualVersion })
     dbMock.grade.findMany.mockResolvedValue([{
       isLocked: true, teachingUnitId: 'unit-A', courseElementId: 'element-A', finalGrade: 15,
       teachingUnit: { id: 'unit-A', name: 'Mathématiques', code: 'MAT101', credits: 6, semester: { id: 'sem-A' } },
@@ -299,6 +316,11 @@ describe('POST /api/documents/generate', () => {
   })
 
   it('certifies a complete locked transcript and calculates the weighted UE average', async () => {
+    const annualVersion = structuredClone(curriculumVersion)
+    annualVersion.snapshot.semesters[0].units[0].elements[0].coefficient = 1
+    annualVersion.snapshot.semesters[0].units[0].elements.push({ id: 'element-B', code: 'ANA101', name: 'Analyse', coefficient: 2,
+      hoursCM: 20, hoursTD: 10, hoursTP: 0, hoursStage: 0, hoursPersonal: 0, orderIndex: 2 })
+    dbMock.administrativeRegistration.findFirst.mockResolvedValue({ id: 'registration-A', programId: 'program-A', levelId: 'level-A', curriculumVersion: annualVersion })
     dbMock.grade.findMany.mockResolvedValue([
       { isLocked: true, teachingUnitId: 'unit-A', courseElementId: 'element-A', finalGrade: 12,
         teachingUnit: { id: 'unit-A', name: 'Mathématiques', code: 'MAT101', credits: 6, semester: { id: 'sem-A' } },
@@ -355,7 +377,17 @@ describe('POST /api/documents/generate', () => {
       decisions: [{ studentId, average: 13.9, decision: 'ADMI_DETTE' }],
     })
     dbMock.student.findMany.mockResolvedValue([{ id: studentId, firstName: 'Awa', lastName: 'Test', matricule: 'A-001' }])
-    dbMock.administrativeRegistration.findMany.mockResolvedValue([{ studentId, programId: 'program-A', levelId: 'level-A' }])
+    dbMock.administrativeRegistration.findMany.mockResolvedValue([{ studentId, programId: 'program-A', levelId: 'level-A', curriculumVersion: {
+      status: 'FROZEN', snapshot: {
+        schemaVersion: 1, capturedAt: '2026-10-11T00:00:00.000Z',
+        program: { id: 'program-A', code: 'INFO', name: 'Génie informatique' },
+        level: { id: 'level-A', code: 'L1', name: 'Licence 1', orderIndex: 1 },
+        semesters: [{ id: 'sem-A', code: 'S1', name: 'Semestre 1', orderIndex: 1, units: [{
+          id: 'ue-A', code: 'UE1', name: 'Mathématiques', credits: 6, type: 'FONDAMENTALE', compensable: true, orderIndex: 1, semesterId: 'sem-A',
+          elements: [{ id: 'ec-A', code: 'MAT1', name: 'Algèbre', coefficient: 1, hoursCM: 20, hoursTD: 10, hoursTP: 0, hoursStage: 0, hoursPersonal: 0, orderIndex: 1 }],
+        }] }],
+      },
+    } }])
     dbMock.program.findMany.mockResolvedValue([{ id: 'program-A', name: 'Génie informatique' }])
     dbMock.level.findMany.mockResolvedValue([{ id: 'level-A', programId: 'program-A', name: 'Licence 1', orderIndex: 1 }])
     dbMock.pedagogicalRegistration.findMany.mockResolvedValue([{ studentId, teachingUnitId: 'ue-A', teachingUnit: {

@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client'
 import { z } from 'zod'
 import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
+import { curriculumIndex, ensureFrozenCurriculumVersion, parseCurriculumSnapshot } from '@/lib/curriculum/versioning'
 
 const registrationSchema = z.object({
   studentId: z.string().cuid(),
@@ -34,17 +35,20 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
         ])
         if (!program || !level) throw new Error('PROGRAM_LEVEL_MISMATCH')
         if (existing) throw new Error('ALREADY_REGISTERED')
+        const curriculumVersion = await ensureFrozenCurriculumVersion(tx, {
+          tenantId,
+          academicYearId,
+          programId: program.id,
+          levelId: level.id,
+          createdById: user.id,
+        })
+        const curriculum = curriculumIndex(parseCurriculumSnapshot(curriculumVersion.snapshot))
+        if (curriculum.units.size === 0) throw new Error('CURRICULUM_EMPTY')
         const created = await tx.administrativeRegistration.create({ data: {
           tenantId, studentId, academicYearId, programId: program.id, levelId: level.id,
-          status: 'INSCRIT',
+          curriculumVersionId: curriculumVersion.id, status: 'INSCRIT',
         } })
-        const mandatoryUnits = await tx.teachingUnit.findMany({
-          where: {
-            type: 'FONDAMENTALE',
-            semester: { level: { id: level.id, program: { tenantId, isActive: true } } },
-          },
-          select: { id: true },
-        })
+        const mandatoryUnits = [...curriculum.units.values()].filter((unit) => unit.type === 'FONDAMENTALE')
         if (mandatoryUnits.length > 0) {
           await tx.pedagogicalRegistration.createMany({
             data: mandatoryUnits.map((unit) => ({
@@ -60,7 +64,7 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
         await tx.auditLog.create({ data: { tenantId, userId: user.id, action: 'CREATE', entity: 'AdministrativeRegistration', entityId: created.id,
           details: JSON.stringify({
             studentId, academicYearId, programId: program.id, levelId: level.id,
-            status: 'INSCRIT', mandatoryTeachingUnits: mandatoryUnits.length,
+            curriculumVersionId: curriculumVersion.id, status: 'INSCRIT', mandatoryTeachingUnits: mandatoryUnits.length,
           }) } })
         return created
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable })
@@ -77,6 +81,8 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
           STUDENT_NOT_READY: ['Le dossier doit être inscrit, avec un programme et un niveau, avant validation annuelle.', 409],
           PROGRAM_LEVEL_MISMATCH: ['Programme ou niveau inactif ou incohérent.', 409],
           ALREADY_REGISTERED: ['Une inscription existe déjà pour cet étudiant et cette année.', 409],
+          CURRICULUM_EMPTY: ['La maquette de ce niveau est vide : ajoutez les UE et matières avant l’inscription.', 409],
+          CURRICULUM_LEVEL_NOT_FOUND: ['Impossible de figer la maquette de ce programme et de ce niveau.', 409],
         }
         if (failures[error.message]) return NextResponse.json({ error: failures[error.message][0] }, { status: failures[error.message][1] })
       }

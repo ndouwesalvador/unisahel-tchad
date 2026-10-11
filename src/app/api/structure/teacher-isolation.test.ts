@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 
-const mocks = vi.hoisted(() => ({ scope: vi.fn(), tenant: vi.fn(), faculties: vi.fn(), studentGroup: vi.fn() }))
+const mocks = vi.hoisted(() => ({ scope: vi.fn(), tenant: vi.fn(), faculties: vi.fn(), studentGroup: vi.fn(), curriculumVersions: vi.fn() }))
 vi.mock('@/lib/auth/helpers', () => ({ withTenantAuth: (handler: unknown) => handler }))
 vi.mock('@/lib/auth/teacher-scope', () => ({ getTeacherScope: mocks.scope }))
 vi.mock('@/lib/db', () => ({ db: {
   tenant: { findUnique: mocks.tenant }, faculty: { findMany: mocks.faculties }, student: { groupBy: mocks.studentGroup },
+  curriculumVersion: { findMany: mocks.curriculumVersions },
 } }))
 
 const { GET } = await import('./route')
@@ -16,6 +17,7 @@ describe('teacher structure isolation', () => {
     vi.resetAllMocks()
     mocks.scope.mockResolvedValue({ linked: true, teacherId: 'teacher-A', courseElementIds: ['element-A'], teachingUnitIds: ['unit-A'] })
     mocks.tenant.mockResolvedValue({ id: 'tenant-A', name: 'Université', settings: {} })
+    mocks.curriculumVersions.mockResolvedValue([])
     const program = (name: string, unitId: string, elementId: string) => ({ id: name, name, levels: [{ id: `${name}-level`, name: 'L1', semesters: [{ id: `${name}-semester`, name: 'S1', teachingUnits: [{ id: unitId, name: `${name}-UE`, courseElements: [{ id: elementId, name: `${name}-course` }] }] }] }] })
     mocks.faculties.mockResolvedValue([{ id: 'faculty-A', name: 'Faculté', departments: [{ id: 'department-A', name: 'Département', programs: [program('Assigned', 'unit-A', 'element-A'), program('Foreign', 'unit-B', 'element-B')] }] }])
   })

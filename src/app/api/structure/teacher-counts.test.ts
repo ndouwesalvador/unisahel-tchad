@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 
 const mocks = vi.hoisted(() => ({
-  scope: vi.fn(), tenant: vi.fn(), faculties: vi.fn(), studentGroup: vi.fn(), teacherGroup: vi.fn(),
+  scope: vi.fn(), tenant: vi.fn(), faculties: vi.fn(), studentGroup: vi.fn(), teacherGroup: vi.fn(), curriculumVersions: vi.fn(),
 }))
 vi.mock('@/lib/auth/helpers', () => ({ withTenantAuth: (handler: unknown) => handler }))
 vi.mock('@/lib/auth/teacher-scope', () => ({ getTeacherScope: mocks.scope }))
@@ -11,6 +11,7 @@ vi.mock('@/lib/db', () => ({ db: {
   faculty: { findMany: mocks.faculties },
   student: { groupBy: mocks.studentGroup },
   teacher: { groupBy: mocks.teacherGroup },
+  curriculumVersion: { findMany: mocks.curriculumVersions },
 } }))
 
 const { GET } = await import('./route')
@@ -24,6 +25,7 @@ beforeEach(() => {
   ] }])
   mocks.studentGroup.mockResolvedValue([])
   mocks.teacherGroup.mockResolvedValue([{ departmentId: 'department-1', _count: { _all: 2 } }])
+  mocks.curriculumVersions.mockResolvedValue([])
 })
 
 describe('structure teacher counts', () => {

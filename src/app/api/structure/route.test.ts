@@ -16,7 +16,7 @@ const { authMock, dbMock } = vi.hoisted(() => ({
 vi.mock('@/lib/auth/config', () => ({ auth: authMock }))
 vi.mock('@/lib/db', () => ({ db: dbMock }))
 
-const { PUT } = await import('./route')
+const { PUT, DELETE } = await import('./route')
 
 const tenantId = 'ctenant0000000000000000a1'
 const unitId = 'cunit00000000000000000001'
@@ -27,6 +27,10 @@ function request(type: string, body: unknown) {
     method: 'PUT',
     body: JSON.stringify(body),
   })
+}
+
+function deleteRequest(type: string, id: string) {
+  return new NextRequest(`http://localhost:3000/api/structure?type=${type}&id=${id}`, { method: 'DELETE' })
 }
 
 beforeEach(() => {
@@ -123,5 +127,13 @@ describe('PUT /api/structure', () => {
     const response = await PUT(request('teaching-unit', { id: unitId, responsibleId: null }))
     expect(response.status).toBe(200)
     expect(dbMock.teachingUnit.update).toHaveBeenCalledWith({ where: { id: unitId }, data: { responsibleId: null } })
+  })
+
+  it('retires a used curriculum node instead of deleting historical relations', async () => {
+    const response = await DELETE(deleteRequest('course-element', elementId))
+    expect(response.status).toBe(200)
+    expect(await response.json()).toMatchObject({ data: { id: elementId, deleted: true, retired: true } })
+    expect(dbMock.courseElement.update).toHaveBeenCalledWith({ where: { id: elementId }, data: { isActive: false } })
+    expect(dbMock.auditLog.create).toHaveBeenCalledWith({ data: expect.objectContaining({ action: 'RETIRE', entityId: elementId }) })
   })
 })

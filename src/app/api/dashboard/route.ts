@@ -39,7 +39,7 @@ async function getStudentDashboardHandler(studentId: string, tenantId: string, a
 
   const annualRegistration = currentAcademicYear ? await db.administrativeRegistration.findFirst({
     where: { tenantId, studentId, academicYearId: currentAcademicYear.id, status: 'INSCRIT' },
-    select: { id: true, programId: true, levelId: true },
+    select: { id: true, programId: true, levelId: true, curriculumVersionId: true },
   }) : null
 
   const [pedagogicalRegistrations, grades] = await Promise.all([
@@ -49,9 +49,11 @@ async function getStudentDashboardHandler(studentId: string, tenantId: string, a
     }) : Promise.resolve([]),
     annualRegistration && currentAcademicYear ? db.grade.findMany({
       where: { studentId, academicYearId: currentAcademicYear.id, session: 'NORMALE', isLocked: true, finalGrade: { not: null },
-        teachingUnit: { semester: { levelId: annualRegistration.levelId,
-          level: { programId: annualRegistration.programId, program: { tenantId } } } } },
-      select: { finalGrade: true, courseElement: { select: { coefficient: true } } },
+        ...(annualRegistration.curriculumVersionId
+          ? { curriculumVersionId: annualRegistration.curriculumVersionId }
+          : { teachingUnit: { semester: { levelId: annualRegistration.levelId,
+            level: { programId: annualRegistration.programId, program: { tenantId } } } } }) },
+      select: { finalGrade: true, elementCoefficientSnapshot: true, courseElement: { select: { coefficient: true } } },
     }) : Promise.resolve([]),
   ])
 
@@ -95,7 +97,7 @@ async function getStudentDashboardHandler(studentId: string, tenantId: string, a
   let weightTotal = 0
   for (const g of grades) {
     if (g.finalGrade === null) continue
-    const coeff = g.courseElement?.coefficient ?? 1
+    const coeff = g.elementCoefficientSnapshot ?? g.courseElement?.coefficient ?? 1
     weightedSum += g.finalGrade * coeff
     weightTotal += coeff
   }

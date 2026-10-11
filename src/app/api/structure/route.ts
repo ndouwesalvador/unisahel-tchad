@@ -89,12 +89,15 @@ async function handler(user: SessionUser, tenantId: string, request: NextRequest
                   orderBy: { orderIndex: 'asc' },
                   include: {
                     semesters: {
+                      where: { isActive: true },
                       orderBy: { orderIndex: 'asc' },
                       include: {
                         teachingUnits: {
+                          where: { isActive: true },
                           orderBy: { orderIndex: 'asc' },
                           include: {
                             courseElements: {
+                              where: { isActive: true },
                               orderBy: { orderIndex: 'asc' },
                               include: {
                                 teacher: {
@@ -290,11 +293,21 @@ async function handler(user: SessionUser, tenantId: string, request: NextRequest
       ),
       students: facultiesWithCounts.reduce((acc, f) => acc + f.studentCount, 0),
     }
+    const frozenVersions = await db.curriculumVersion.findMany({
+      where: { tenantId, status: 'FROZEN', academicYear: { isCurrent: true } },
+      select: { id: true, programId: true, levelId: true, version: true,
+        academicYear: { select: { id: true, name: true } } },
+    })
 
     return NextResponse.json({
       tenant,
       faculties: facultiesWithCounts,
       stats,
+      versioning: {
+        currentAcademicYear: frozenVersions[0]?.academicYear ?? null,
+        frozenCurricula: frozenVersions.length,
+        versions: frozenVersions,
+      },
     })
   } catch (error) {
     // eslint-disable-next-line no-console
@@ -905,27 +918,15 @@ async function deleteEntityHandler(user: SessionUser, tenantId: string, request:
       return NextResponse.json({ data: { id, deleted: true } })
     }
 
-    // Semester/UE/EC have no isActive column, so they are hard-deleted — but
-    // never when real academic data hangs off them (a cascade would silently
-    // erase student grades).
-    if (type === 'course-element') {
-      const grades = await db.grade.count({ where: { courseElementId: id } })
-      if (grades > 0) return NextResponse.json({ error: 'Des notes sont rattachées à cette matière (EC).' }, { status: 409 })
-    }
-    if (type === 'teaching-unit') {
-      const grades = await db.grade.count({ where: { teachingUnitId: id } })
-      if (grades > 0) return NextResponse.json({ error: 'Des notes sont rattachées à cette UE.' }, { status: 409 })
-    }
-    if (type === 'semester') {
-      const units = await db.teachingUnit.count({ where: { semesterId: id } })
-      if (units > 0) return NextResponse.json({ error: "Ce semestre contient des UE ; supprimez-les d'abord." }, { status: 409 })
-    }
-
-    await delegate(type).delete({ where: { id } })
+    // Annual curriculum snapshots may still reference these identifiers.
+    // Retiring the editable template node keeps all historical relations and
+    // grades intact while excluding it from every future curriculum version.
+    await delegate(type).update({ where: { id }, data: { isActive: false } })
     await db.auditLog.create({
-      data: { tenantId, userId: user.id, action: 'DELETE', entity: ENTITY_LABEL[type], entityId: id, details: JSON.stringify({ soft: false }) },
+      data: { tenantId, userId: user.id, action: 'RETIRE', entity: ENTITY_LABEL[type], entityId: id,
+        details: JSON.stringify({ soft: true, reason: 'Retiré des futures versions de maquette' }) },
     })
-    return NextResponse.json({ data: { id, deleted: true } })
+    return NextResponse.json({ data: { id, deleted: true, retired: true } })
   } catch (error) {
     if (error instanceof LinkedStructureError) return NextResponse.json({ error: error.message }, { status: 409 })
     console.error(`Delete ${type} error:`, error)

@@ -65,6 +65,8 @@ async function computeStudentDecisions(tenantId: string, academicYearId: string,
       studentId: true,
       finalGrade: true,
       teachingUnitId: true,
+      unitCreditsSnapshot: true,
+      elementCoefficientSnapshot: true,
       courseElement: { select: { coefficient: true } },
       teachingUnit: { select: { credits: true } },
       student: { select: { id: true, firstName: true, lastName: true, matricule: true } },
@@ -81,7 +83,7 @@ async function computeStudentDecisions(tenantId: string, academicYearId: string,
 
   for (const g of gradeRows) {
     if (g.finalGrade === null) continue
-    const coeff = g.courseElement?.coefficient ?? 1
+    const coeff = g.elementCoefficientSnapshot ?? g.courseElement?.coefficient ?? 1
     let agg = byStudent.get(g.studentId)
     if (!agg) {
       agg = { student: g.student, weightedSum: 0, weightTotal: 0, ues: new Map() }
@@ -96,7 +98,7 @@ async function computeStudentDecisions(tenantId: string, academicYearId: string,
       existing.weightedSum += g.finalGrade * coeff
       existing.weightTotal += coeff
     } else {
-      agg.ues.set(ueId, { credits: g.teachingUnit?.credits ?? 0, weightedSum: g.finalGrade * coeff, weightTotal: coeff })
+      agg.ues.set(ueId, { credits: g.unitCreditsSnapshot ?? g.teachingUnit?.credits ?? 0, weightedSum: g.finalGrade * coeff, weightTotal: coeff })
     }
   }
 

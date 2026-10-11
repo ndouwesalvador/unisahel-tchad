@@ -163,7 +163,7 @@ describe('GET /api/dashboard — role isolation', () => {
     expect(await response.json()).toMatchObject({ isEnrolledForYear: true, stats: { moyenneGenerale: 15 } })
     expect(mocks.annualRegistrationFindFirst).toHaveBeenCalledWith({
       where: { tenantId: 'tenant-A', studentId: 'student-A', academicYearId: 'year-A', status: 'INSCRIT' },
-      select: { id: true, programId: true, levelId: true },
+      select: { id: true, programId: true, levelId: true, curriculumVersionId: true },
     })
     expect(mocks.gradeFindMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({
       teachingUnit: { semester: { levelId: 'level-A', level: { programId: 'program-A', program: { tenantId: 'tenant-A' } } } },

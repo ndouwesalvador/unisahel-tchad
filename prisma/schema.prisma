@@ -83,6 +83,7 @@ model Tenant {
   domains                Domain[]
   programs               Program[]
   academicYears          AcademicYear[]
+  curriculumVersions     CurriculumVersion[]
   timetablePublications  TimetablePublication[]
   juryAssignments        JuryAssignment[]
   users                  User[]
@@ -288,45 +289,47 @@ model Track {
 }
 
 model Program {
-  id              String           @id @default(cuid())
-  tenantId        String
-  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  facultyId       String?
-  faculty         Faculty?         @relation(fields: [facultyId], references: [id], onDelete: SetNull)
-  departmentId    String?
-  department      Department?      @relation(fields: [departmentId], references: [id], onDelete: SetNull)
-  mentionId       String?
-  mention         Mention?         @relation(fields: [mentionId], references: [id], onDelete: SetNull)
-  name            String
-  code            String?
-  cycle           String           @default("LICENCE")
-  diplomaType     String?
-  duration        Int              @default(3)
-  isActive        Boolean          @default(true)
-  levels          Level[]
-  students        Student[]
-  admissions      Admission[]
-  juryAssignments JuryAssignment[]
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  id                 String              @id @default(cuid())
+  tenantId           String
+  tenant             Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  facultyId          String?
+  faculty            Faculty?            @relation(fields: [facultyId], references: [id], onDelete: SetNull)
+  departmentId       String?
+  department         Department?         @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  mentionId          String?
+  mention            Mention?            @relation(fields: [mentionId], references: [id], onDelete: SetNull)
+  name               String
+  code               String?
+  cycle              String              @default("LICENCE")
+  diplomaType        String?
+  duration           Int                 @default(3)
+  isActive           Boolean             @default(true)
+  levels             Level[]
+  students           Student[]
+  admissions         Admission[]
+  juryAssignments    JuryAssignment[]
+  curriculumVersions CurriculumVersion[]
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
 
   @@index([tenantId, departmentId, isActive])
   @@index([tenantId, facultyId, isActive])
 }
 
 model Level {
-  id              String           @id @default(cuid())
-  programId       String
-  program         Program          @relation(fields: [programId], references: [id], onDelete: Cascade)
-  name            String
-  code            String?
-  orderIndex      Int              @default(0)
-  isActive        Boolean          @default(true)
-  semesters       Semester[]
-  students        Student[]
-  juryAssignments JuryAssignment[]
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  id                 String              @id @default(cuid())
+  programId          String
+  program            Program             @relation(fields: [programId], references: [id], onDelete: Cascade)
+  name               String
+  code               String?
+  orderIndex         Int                 @default(0)
+  isActive           Boolean             @default(true)
+  semesters          Semester[]
+  students           Student[]
+  juryAssignments    JuryAssignment[]
+  curriculumVersions CurriculumVersion[]
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
 
   @@index([programId, isActive, orderIndex])
 }
@@ -338,11 +341,13 @@ model Semester {
   name          String
   code          String?
   orderIndex    Int            @default(0)
+  isActive      Boolean        @default(true)
   teachingUnits TeachingUnit[]
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 
   @@index([levelId, orderIndex])
+  @@index([levelId, isActive, orderIndex])
 }
 
 model TeachingUnit {
@@ -358,6 +363,7 @@ model TeachingUnit {
   responsibleId            String?
   responsible              Teacher?                  @relation(fields: [responsibleId], references: [id], onDelete: SetNull)
   orderIndex               Int                       @default(0)
+  isActive                 Boolean                   @default(true)
   courseElements           CourseElement[]
   grades                   Grade[]
   pedagogicalRegistrations PedagogicalRegistration[]
@@ -366,6 +372,7 @@ model TeachingUnit {
   updatedAt                DateTime                  @updatedAt
 
   @@index([semesterId, orderIndex])
+  @@index([semesterId, isActive, orderIndex])
   @@index([responsibleId])
 }
 
@@ -384,12 +391,14 @@ model CourseElement {
   teacherId        String?
   teacher          Teacher?          @relation(fields: [teacherId], references: [id], onDelete: SetNull)
   orderIndex       Int               @default(0)
+  isActive         Boolean           @default(true)
   grades           Grade[]
   teachingServices TeachingService[]
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
 
   @@index([teachingUnitId, orderIndex])
+  @@index([teachingUnitId, isActive, orderIndex])
   @@index([teacherId])
 }
 
@@ -412,11 +421,42 @@ model AcademicYear {
   admissions            Admission[]
   registrations         AdministrativeRegistration[]
   juryAssignments       JuryAssignment[]
+  curriculumVersions    CurriculumVersion[]
   createdAt             DateTime                     @default(now())
   updatedAt             DateTime                     @updatedAt
 
   @@index([tenantId, isCurrent])
   @@index([tenantId, isActive])
+}
+
+// Immutable annual curriculum snapshot. The editable Program -> Level ->
+// Semester -> UE -> EC hierarchy is only the template for a future cohort;
+// every validated annual registration points to the exact published version
+// that governs grades, deliberations and official documents for that year.
+model CurriculumVersion {
+  id             String                       @id @default(cuid())
+  tenantId       String
+  tenant         Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  academicYearId String
+  academicYear   AcademicYear                 @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  programId      String
+  program        Program                      @relation(fields: [programId], references: [id], onDelete: Restrict)
+  levelId        String
+  level          Level                        @relation(fields: [levelId], references: [id], onDelete: Restrict)
+  version        Int                          @default(1)
+  status         String                       @default("FROZEN")
+  snapshot       Json
+  createdById    String?
+  publishedAt    DateTime                     @default(now())
+  frozenAt       DateTime                     @default(now())
+  registrations  AdministrativeRegistration[]
+  grades         Grade[]
+  createdAt      DateTime                     @default(now())
+  updatedAt      DateTime                     @updatedAt
+
+  @@unique([tenantId, academicYearId, programId, levelId, version])
+  @@index([tenantId, academicYearId, status])
+  @@index([programId, levelId, academicYearId])
 }
 
 model ExamSession {
@@ -653,25 +693,28 @@ model Admission {
 // ============================================
 
 model AdministrativeRegistration {
-  id                 String       @id @default(cuid())
-  tenantId           String
-  studentId          String
-  student            Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  academicYearId     String
-  academicYear       AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
-  programId          String
-  levelId            String
-  registrationDate   DateTime     @default(now())
-  status             String       @default("PRE_INSCRIT")
-  paymentStatus      String       @default("UNPAID")
-  documentsSubmitted String?
-  receiptNumber      String?
-  createdAt          DateTime     @default(now())
-  updatedAt          DateTime     @updatedAt
+  id                  String             @id @default(cuid())
+  tenantId            String
+  studentId           String
+  student             Student            @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  academicYearId      String
+  academicYear        AcademicYear       @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  programId           String
+  levelId             String
+  curriculumVersionId String?
+  curriculumVersion   CurriculumVersion? @relation(fields: [curriculumVersionId], references: [id], onDelete: Restrict)
+  registrationDate    DateTime           @default(now())
+  status              String             @default("PRE_INSCRIT")
+  paymentStatus       String             @default("UNPAID")
+  documentsSubmitted  String?
+  receiptNumber       String?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
 
   @@unique([tenantId, studentId, academicYearId])
   @@index([tenantId, academicYearId, status])
   @@index([tenantId, programId, levelId, academicYearId])
+  @@index([curriculumVersionId])
 }
 
 model PedagogicalRegistration {
@@ -728,39 +771,48 @@ model CompensationRule {
 }
 
 model Grade {
-  id              String           @id @default(cuid())
-  studentId       String
-  student         Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  teachingUnitId  String?
-  teachingUnit    TeachingUnit?    @relation(fields: [teachingUnitId], references: [id], onDelete: Cascade)
-  courseElementId String?
-  courseElement   CourseElement?   @relation(fields: [courseElementId], references: [id], onDelete: Cascade)
-  academicYearId  String
-  session         String           @default("NORMALE")
-  ccGrade         Float?
-  examGrade       Float?
-  tpGrade         Float?
-  stageGrade      Float?
-  oralGrade       Float?
-  memoireGrade    Float?
-  projectGrade    Float?
-  finalGrade      Float?
-  isAbsent        Boolean          @default(false)
-  isJustified     Boolean          @default(false)
-  isDefaillant    Boolean          @default(false)
-  isLocked        Boolean          @default(false)
-  comment         String?
-  enteredBy       String?
-  validatedBy     String?
-  lockedBy        String?
-  changeLogs      GradeChangeLog[]
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  id                         String             @id @default(cuid())
+  studentId                  String
+  student                    Student            @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  teachingUnitId             String?
+  teachingUnit               TeachingUnit?      @relation(fields: [teachingUnitId], references: [id], onDelete: Cascade)
+  courseElementId            String?
+  courseElement              CourseElement?     @relation(fields: [courseElementId], references: [id], onDelete: Cascade)
+  academicYearId             String
+  curriculumVersionId        String?
+  curriculumVersion          CurriculumVersion? @relation(fields: [curriculumVersionId], references: [id], onDelete: Restrict)
+  unitCodeSnapshot           String?
+  unitNameSnapshot           String?
+  unitCreditsSnapshot        Int?
+  elementCodeSnapshot        String?
+  elementNameSnapshot        String?
+  elementCoefficientSnapshot Float?
+  session                    String             @default("NORMALE")
+  ccGrade                    Float?
+  examGrade                  Float?
+  tpGrade                    Float?
+  stageGrade                 Float?
+  oralGrade                  Float?
+  memoireGrade               Float?
+  projectGrade               Float?
+  finalGrade                 Float?
+  isAbsent                   Boolean            @default(false)
+  isJustified                Boolean            @default(false)
+  isDefaillant               Boolean            @default(false)
+  isLocked                   Boolean            @default(false)
+  comment                    String?
+  enteredBy                  String?
+  validatedBy                String?
+  lockedBy                   String?
+  changeLogs                 GradeChangeLog[]
+  createdAt                  DateTime           @default(now())
+  updatedAt                  DateTime           @updatedAt
 
   @@index([studentId, academicYearId, session])
   @@index([courseElementId, academicYearId, session])
   @@index([teachingUnitId, academicYearId, session])
   @@index([enteredBy, isLocked])
+  @@index([curriculumVersionId])
 }
 
 model GradeImport {

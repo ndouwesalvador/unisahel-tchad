@@ -8,6 +8,8 @@ const mocks = vi.hoisted(() => ({
   settings: vi.fn(), deliberation: vi.fn(), changeLog: vi.fn(), audit: vi.fn(),
   transaction: vi.fn(), advisory: vi.fn(),
   juryAssignments: vi.fn(),
+  curriculumVersions: vi.fn(),
+  curriculumVersionFirst: vi.fn(),
 }))
 vi.mock('@/lib/auth/config', () => ({ auth: mocks.auth }))
 vi.mock('@/lib/db', () => ({ db: {
@@ -16,6 +18,7 @@ vi.mock('@/lib/db', () => ({ db: {
   teachingService: { findMany: mocks.services }, courseElement: { findMany: mocks.courses, findFirst: mocks.course },
   pedagogicalRegistration: { findMany: mocks.registrations, findFirst: mocks.registration },
   administrativeRegistration: { findFirst: mocks.administrativeRegistration },
+  curriculumVersion: { findMany: mocks.curriculumVersions, findFirst: mocks.curriculumVersionFirst },
   student: { findMany: mocks.studentFindMany, findFirst: mocks.studentFindFirst },
   grade: { findMany: mocks.grades, create: mocks.gradeCreate, update: mocks.gradeUpdate,
     findFirst: mocks.gradeFind, updateMany: mocks.gradeUpdateMany },
@@ -47,6 +50,18 @@ const storedGrade = { id: gradeId, studentId, courseElementId, academicYearId, s
   ccGrade: 12, tpGrade: null, examGrade: null, stageGrade: null,
   isAbsent: false, isDefaillant: false, isLocked: false, finalGrade: null }
 
+const curriculumSnapshot = (hoursTP = 12) => ({
+  schemaVersion: 1, capturedAt: '2026-10-11T00:00:00.000Z',
+  program: { id: 'cprogram000000000000000001', code: 'INFO', name: 'Informatique' },
+  level: { id: 'clevel000000000000000001', code: 'L1', name: 'Licence 1' },
+  semesters: [{ id: 'semester-A', code: 'S1', name: 'Semestre 1', orderIndex: 1, units: [{
+    id: course.teachingUnitId, code: 'UE1', name: 'Informatique', credits: 6,
+    type: 'FONDAMENTALE', compensable: true, orderIndex: 1, semesterId: 'semester-A',
+    elements: [{ id: courseElementId, code: 'EC1', name: 'Algorithmique', coefficient: 1,
+      hoursCM: 20, hoursTD: 10, hoursTP, hoursStage: 0, hoursPersonal: 0, orderIndex: 1 }],
+  }] }],
+})
+
 beforeEach(() => {
   vi.resetAllMocks()
   mocks.auth.mockResolvedValue({ user: teacher })
@@ -61,7 +76,10 @@ beforeEach(() => {
     teachingUnit: { id: course.teachingUnitId, name: 'Informatique', code: 'UE1',
       semester: { name: 'S1', level: { id: 'clevel000000000000000001', name: 'L1', program: { name: 'Informatique' } } } } }])
   mocks.registration.mockResolvedValue({ id: 'cregistration0000000000001' })
-  mocks.administrativeRegistration.mockResolvedValue({ id: 'cregistration0000000000001' })
+  mocks.curriculumVersions.mockResolvedValue([{ snapshot: curriculumSnapshot() }])
+  mocks.curriculumVersionFirst.mockResolvedValue({ snapshot: curriculumSnapshot() })
+  mocks.administrativeRegistration.mockResolvedValue({ id: 'cregistration0000000000001',
+    curriculumVersionId: 'curriculum-A', curriculumVersion: { status: 'FROZEN', snapshot: curriculumSnapshot() } })
   mocks.studentFindMany.mockResolvedValue([{ id: studentId, firstName: 'Awa', lastName: 'Tahir', matricule: 'UPM-001' }])
   mocks.studentFindFirst.mockResolvedValue({ id: studentId })
   mocks.registrations.mockResolvedValue([{ student: { id: studentId, firstName: 'Awa', lastName: 'Tahir', matricule: 'UPM-001' } }])
@@ -94,7 +112,7 @@ describe('scoped grade entry', () => {
     expect(mocks.services).toHaveBeenCalledWith({ where: { tenantId, academicYearId, teacherId, status: 'APPROVED' },
       select: { courseElementId: true } })
     expect(mocks.studentFindMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({
-      OR: expect.arrayContaining([expect.objectContaining({ currentLevelId: 'clevel000000000000000001' })]),
+      registrations: { some: expect.objectContaining({ levelId: 'clevel000000000000000001' }) },
     }) }))
   })
 
@@ -108,6 +126,8 @@ describe('scoped grade entry', () => {
   it('refuses teacher exam grades and TP for a matter without TP', async () => {
     expect((await post(body('examGrade'))).status).toBe(403)
     mocks.course.mockResolvedValue({ ...course, hoursTP: 0 })
+    mocks.administrativeRegistration.mockResolvedValue({ id: 'cregistration0000000000001',
+      curriculumVersionId: 'curriculum-A', curriculumVersion: { status: 'FROZEN', snapshot: curriculumSnapshot(0) } })
     expect((await post(body('tpGrade'))).status).toBe(409)
     expect(mocks.gradeCreate).not.toHaveBeenCalled()
   })
@@ -138,7 +158,7 @@ describe('scoped grade entry', () => {
   })
 
   it('refuses any note for a student without active annual enrollment', async () => {
-    mocks.studentFindFirst.mockResolvedValue(null)
+    mocks.administrativeRegistration.mockResolvedValue(null)
     const response = await post(body('ccGrade'))
     expect(response.status).toBe(403)
     expect(mocks.gradeCreate).not.toHaveBeenCalled()
@@ -170,6 +190,8 @@ describe('scoped grade entry', () => {
   it('does not require a TP grade for a matter without TP hours', async () => {
     mocks.auth.mockResolvedValue({ user: jury })
     mocks.course.mockResolvedValue({ ...course, hoursTP: 0 })
+    mocks.administrativeRegistration.mockResolvedValue({ id: 'cregistration0000000000001',
+      curriculumVersionId: 'curriculum-A', curriculumVersion: { status: 'FROZEN', snapshot: curriculumSnapshot(0) } })
     mocks.settings.mockResolvedValue({ ccWeight: 0.3, examWeight: 0.5, tpWeight: 0.2, stageWeight: 0 })
     mocks.grades.mockResolvedValue([storedGrade])
     const response = await post(body('examGrade', 16))

@@ -95,7 +95,7 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
         }),
         db.administrativeRegistration.findFirst({
           where: { tenantId, studentId, academicYearId, status: 'INSCRIT' },
-          select: { programId: true, levelId: true },
+          select: { programId: true, levelId: true, curriculumVersionId: true },
         }),
       ])
       if (!student) {
@@ -114,12 +114,16 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
 
       const grades = await db.grade.findMany({
         where: { studentId, academicYearId, session: sessionType, finalGrade: { not: null },
-          teachingUnit: { semester: { levelId: registration.levelId,
-            level: { programId: registration.programId, program: { tenantId } } } },
+          ...(registration.curriculumVersionId
+            ? { curriculumVersionId: registration.curriculumVersionId }
+            : { teachingUnit: { semester: { levelId: registration.levelId,
+              level: { programId: registration.programId, program: { tenantId } } } } }),
           ...(isStudentSelfRole(user.role) ? { isLocked: true } : {}),
         },
         select: {
           finalGrade: true,
+          unitCodeSnapshot: true, unitNameSnapshot: true, unitCreditsSnapshot: true,
+          elementCoefficientSnapshot: true,
           courseElement: { select: { coefficient: true } },
           teachingUnit: { select: { id: true, code: true, name: true, credits: true } },
         },
@@ -131,7 +135,7 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
 
       for (const g of grades) {
         if (g.finalGrade === null || !g.teachingUnit) continue
-        const coeff = g.courseElement?.coefficient ?? 1
+        const coeff = g.elementCoefficientSnapshot ?? g.courseElement?.coefficient ?? 1
         weightedSum += g.finalGrade * coeff
         weightTotal += coeff
 
@@ -141,9 +145,9 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
           existing.weightTotal += coeff
         } else {
           ueMap.set(g.teachingUnit.id, {
-            code: g.teachingUnit.code || g.teachingUnit.id.slice(0, 6).toUpperCase(),
-            name: g.teachingUnit.name,
-            credit: g.teachingUnit.credits,
+            code: g.unitCodeSnapshot || g.teachingUnit.code || g.teachingUnit.id.slice(0, 6).toUpperCase(),
+            name: g.unitNameSnapshot || g.teachingUnit.name,
+            credit: g.unitCreditsSnapshot ?? g.teachingUnit.credits,
             weightedSum: g.finalGrade * coeff,
             weightTotal: coeff,
           })
@@ -216,6 +220,8 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
         studentId: true,
         finalGrade: true,
         teachingUnitId: true,
+        unitCreditsSnapshot: true,
+        elementCoefficientSnapshot: true,
         courseElement: { select: { coefficient: true } },
         teachingUnit: { select: { credits: true } },
         student: { select: { id: true, firstName: true, lastName: true, matricule: true } },
@@ -232,7 +238,7 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
 
     for (const g of grades) {
       if (g.finalGrade === null) continue
-      const coeff = g.courseElement?.coefficient ?? 1
+      const coeff = g.elementCoefficientSnapshot ?? g.courseElement?.coefficient ?? 1
 
       let agg = byStudent.get(g.studentId)
       if (!agg) {
@@ -248,7 +254,7 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
         existingUe.weightedSum += g.finalGrade * coeff
         existingUe.weightTotal += coeff
       } else {
-        agg.ues.set(ueId, { credits: g.teachingUnit?.credits ?? 0, weightedSum: g.finalGrade * coeff, weightTotal: coeff })
+        agg.ues.set(ueId, { credits: g.unitCreditsSnapshot ?? g.teachingUnit?.credits ?? 0, weightedSum: g.finalGrade * coeff, weightTotal: coeff })
       }
     }
 

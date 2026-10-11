@@ -314,9 +314,9 @@ async function getGradesHandler(user: SessionUser, tenantId: string, request: Ne
           teachingUnit: grade.teachingUnit
             ? {
                 id: grade.teachingUnit.id,
-                code: grade.teachingUnit.code,
-                name: grade.teachingUnit.name,
-                credits: grade.teachingUnit.credits,
+                code: grade.unitCodeSnapshot ?? grade.teachingUnit.code,
+                name: grade.unitNameSnapshot ?? grade.teachingUnit.name,
+                credits: grade.unitCreditsSnapshot ?? grade.teachingUnit.credits,
                 type: grade.teachingUnit.type,
                 compensable: grade.teachingUnit.compensable,
               }
@@ -327,7 +327,12 @@ async function getGradesHandler(user: SessionUser, tenantId: string, request: Ne
 
       groupedGrades[semesterKey].teachingUnits[ueKey].grades.push({
         id: grade.id,
-        courseElement: grade.courseElement,
+        courseElement: grade.courseElement ? {
+          ...grade.courseElement,
+          code: grade.elementCodeSnapshot ?? grade.courseElement.code,
+          name: grade.elementNameSnapshot ?? grade.courseElement.name,
+          coefficient: grade.elementCoefficientSnapshot ?? grade.courseElement.coefficient,
+        } : null,
         ccGrade: grade.ccGrade,
         examGrade: grade.examGrade,
         tpGrade: grade.tpGrade,

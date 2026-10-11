@@ -4,6 +4,7 @@ import { db } from '@/lib/db'
 import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
 import { calculateFinalGrade, isValidGradingPolicy, resolveGradingPolicy } from '@/lib/grading-policy'
 import { getJuryScope } from '@/lib/auth/jury-scope'
+import { curriculumIndex, parseCurriculumSnapshot } from '@/lib/curriculum/versioning'
 
 const componentSchema = z.object({
   academicYearId: z.string().cuid(),
@@ -67,9 +68,23 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
     const selectedYear = await year(tenantId, params.get('academicYearId'))
     const allowed = await scope(user, tenantId)
     const serviceIds = await allowedCourseIds(tenantId, selectedYear.id, allowed.teacherId)
+    const annualCurricula = await db.curriculumVersion.findMany({
+      where: {
+        tenantId,
+        academicYearId: selectedYear.id,
+        status: { in: ['PUBLISHED', 'FROZEN'] },
+        ...(allowed.levelIds ? { levelId: { in: allowed.levelIds } } : {}),
+      },
+      select: { snapshot: true },
+    })
+    const curriculumCourseIds = new Set(annualCurricula.flatMap((version) =>
+      [...curriculumIndex(parseCurriculumSnapshot(version.snapshot)).elements.keys()]))
+    const visibleCourseIds = serviceIds
+      ? serviceIds.filter((id) => curriculumCourseIds.has(id))
+      : [...curriculumCourseIds]
     const courses = await db.courseElement.findMany({
       where: {
-        ...(serviceIds ? { id: { in: serviceIds } } : {}),
+        id: { in: visibleCourseIds },
         teachingUnit: { semester: { level: { program: {
           tenantId, departmentId: { not: null },
           ...(allowed.departmentId ? { departmentId: allowed.departmentId } : {}),
@@ -93,13 +108,13 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
     // student validated in this level must be immediately visible to the
     // teacher of every course in that level.
     const registrations = await db.student.findMany({
-      where: { tenantId, OR: [
-        { currentLevelId: course.teachingUnit.semester.level.id },
-        { registrations: { some: {
+      where: { tenantId,
+        registrations: { some: {
           tenantId, academicYearId: selectedYear.id, status: 'INSCRIT',
           levelId: course.teachingUnit.semester.level.id,
-        } } },
-      ] },
+          curriculumVersion: { status: { in: ['PUBLISHED', 'FROZEN'] } },
+        } },
+      },
       select: { id: true, matricule: true, firstName: true, lastName: true },
       orderBy: { lastName: 'asc' },
     })
@@ -146,6 +161,11 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
       if (!course || !departmentId) throw new EntryError('Matière hors du périmètre du jury.', 403)
       const levelId = course.teachingUnit.semester.levelId
       const programId = course.teachingUnit.semester.level.programId
+      const annualVersion = await db.curriculumVersion.findFirst({ where: {
+        tenantId, academicYearId: input.academicYearId, programId, levelId, status: 'FROZEN',
+      }, select: { snapshot: true } })
+      const annualElement = curriculumIndex(parseCurriculumSnapshot(annualVersion?.snapshot)).elements.get(input.courseElementId)
+      if (!annualElement) throw new EntryError('Matière absente de la maquette annuelle figée.', 409)
       const lockedPv = await db.deliberation.findFirst({ where: {
         tenantId,
         academicYearId: input.academicYearId,
@@ -157,10 +177,10 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
       if (lockedPv) throw new EntryError('La délibération de ce programme et de ce niveau est déjà finalisée.', 409)
 
       const students = await db.student.findMany({
-        where: { tenantId, OR: [
-          { currentLevelId: levelId },
-          { registrations: { some: { tenantId, academicYearId: input.academicYearId, status: 'INSCRIT', levelId } } },
-        ] },
+        where: { tenantId, registrations: { some: {
+          tenantId, academicYearId: input.academicYearId, status: 'INSCRIT', levelId,
+          curriculumVersion: { status: { in: ['PUBLISHED', 'FROZEN'] } },
+        } } },
         select: { id: true },
       })
       const grades = await db.grade.findMany({
@@ -174,12 +194,12 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
         select: { id: true, ccGrade: true, tpGrade: true, examGrade: true, finalGrade: true },
       })
       const readyIds = grades.filter((grade) => grade.finalGrade !== null && grade.ccGrade !== null &&
-        grade.examGrade !== null && (course.hoursTP <= 0 || grade.tpGrade !== null)).map((grade) => grade.id)
+        grade.examGrade !== null && (annualElement.hoursTP <= 0 || grade.tpGrade !== null)).map((grade) => grade.id)
       if (readyIds.length === 0) throw new EntryError('Aucune note complète n’est prête à être verrouillée pour cette matière.', 409)
       const result = await db.$transaction(async (tx) => {
         const updated = await tx.grade.updateMany({
           where: { id: { in: readyIds }, isLocked: false, finalGrade: { not: null },
-            ccGrade: { not: null }, examGrade: { not: null }, ...(course.hoursTP > 0 ? { tpGrade: { not: null } } : {}) },
+            ccGrade: { not: null }, examGrade: { not: null }, ...(annualElement.hoursTP > 0 ? { tpGrade: { not: null } } : {}) },
           data: { isLocked: true, lockedBy: user.id, validatedBy: user.id },
         })
         await tx.auditLog.create({ data: {
@@ -202,15 +222,18 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
         teachingUnit: { semester: { level: { id: { in: allowed.levelIds ?? [] }, program: { tenantId,
           ...(allowed.departmentId ? { departmentId: allowed.departmentId } : {}),
         } } } },
-      }, select: { id: true, finalGrade: true, isLocked: true, academicYearId: true, session: true,
+      }, select: { id: true, finalGrade: true, isLocked: true, academicYearId: true, session: true, courseElementId: true,
         ccGrade: true, tpGrade: true, examGrade: true, courseElement: { select: { hoursTP: true } },
+        curriculumVersion: { select: { snapshot: true } },
         teachingUnit: { select: { semester: { select: { levelId: true,
           level: { select: { programId: true, program: { select: { departmentId: true } } } },
         } } } },
       } })
       if (!grade) throw new EntryError('Note hors du département du jury.', 403)
+      const lockedElement = curriculumIndex(parseCurriculumSnapshot(grade.curriculumVersion?.snapshot)).elements.get(grade.courseElementId ?? '')
+      const requiresTp = lockedElement ? lockedElement.hoursTP > 0 : Boolean(grade.courseElement && grade.courseElement.hoursTP > 0)
       if (grade.finalGrade === null || grade.ccGrade === null || grade.examGrade === null ||
-          (grade.courseElement && grade.courseElement.hoursTP > 0 && grade.tpGrade === null)) {
+          (requiresTp && grade.tpGrade === null)) {
         throw new EntryError('Contrôle, examen et TP éventuel doivent être saisis avant validation.', 409)
       }
       if (grade.isLocked) return NextResponse.json({ data: grade })
@@ -252,24 +275,29 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
     if (!course.teachingUnit.semester.level.program.departmentId) {
       throw new EntryError('Rattachez le programme à un département avant la saisie.', 409)
     }
-    if (input.component === 'tpGrade' && course.hoursTP <= 0) throw new EntryError('Cette matière ne comporte pas de TP.', 409)
-    const studentEnrollment = await db.student.findFirst({ where: {
-      id: input.studentId,
+    const studentEnrollment = await db.administrativeRegistration.findFirst({ where: {
+      studentId: input.studentId,
       tenantId,
-      OR: [
-        { currentLevelId: course.teachingUnit.semester.levelId },
-        { registrations: { some: {
-          tenantId, academicYearId: input.academicYearId, status: 'INSCRIT',
-          programId: course.teachingUnit.semester.level.programId,
-          levelId: course.teachingUnit.semester.levelId,
-        } } },
-      ],
-    }, select: { id: true } })
+      academicYearId: input.academicYearId,
+      status: 'INSCRIT',
+      programId: course.teachingUnit.semester.level.programId,
+      levelId: course.teachingUnit.semester.levelId,
+    }, select: { id: true, curriculumVersionId: true,
+      curriculumVersion: { select: { snapshot: true, status: true } } } })
     if (!studentEnrollment) throw new EntryError('Étudiant hors du niveau de cette matière.', 403)
+    const annualCurriculum = curriculumIndex(parseCurriculumSnapshot(studentEnrollment.curriculumVersion?.snapshot))
+    const annualElement = annualCurriculum.elements.get(input.courseElementId)
+    const annualUnit = annualElement ? annualCurriculum.units.get(annualElement.teachingUnitId) : null
+    if (!studentEnrollment.curriculumVersionId || studentEnrollment.curriculumVersion?.status !== 'FROZEN' || !annualElement || !annualUnit) {
+      throw new EntryError('Cette matière ne fait pas partie de la maquette annuelle figée de l’étudiant.', 409)
+    }
+    if (input.component === 'tpGrade' && annualElement.hoursTP <= 0) {
+      throw new EntryError('Cette matière ne comporte pas de TP dans cette maquette annuelle.', 409)
+    }
     const settings = await db.tenantSettings.findUnique({ where: { tenantId } })
     const policy = resolveGradingPolicy(settings)
-    const applicablePolicy = { ...policy, tpWeight: course.hoursTP > 0 ? policy.tpWeight : 0,
-      stageWeight: course.hoursStage > 0 ? policy.stageWeight : 0 }
+    const applicablePolicy = { ...policy, tpWeight: annualElement.hoursTP > 0 ? policy.tpWeight : 0,
+      stageWeight: annualElement.hoursStage > 0 ? policy.stageWeight : 0 }
     if (!isValidGradingPolicy(applicablePolicy)) throw new EntryError('Coefficients de notation invalides pour cette matière.', 409)
     const result = await db.$transaction(async (tx) => {
       // Serialize edits to this student's grade, including the first component.
@@ -314,6 +342,10 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
           finalGrade, isLocked: false, lockedBy: null, validatedBy: null } })
         : await tx.grade.create({ data: { studentId: input.studentId, teachingUnitId: course.teachingUnitId,
           courseElementId: input.courseElementId, academicYearId: input.academicYearId,
+          curriculumVersionId: studentEnrollment.curriculumVersionId,
+          unitCodeSnapshot: annualUnit.code, unitNameSnapshot: annualUnit.name,
+          unitCreditsSnapshot: annualUnit.credits, elementCodeSnapshot: annualElement.code,
+          elementNameSnapshot: annualElement.name, elementCoefficientSnapshot: annualElement.coefficient,
           session: input.session, [input.component]: input.value, finalGrade, enteredBy: user.id } })
       await tx.gradeChangeLog.create({ data: { gradeId: saved.id, field: input.component,
         oldValue: previous === null ? null : String(previous), newValue: String(input.value),
