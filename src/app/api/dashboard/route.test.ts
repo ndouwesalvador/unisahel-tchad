@@ -15,7 +15,9 @@ const mocks = vi.hoisted(() => ({
   tenantSettingsFindUnique: vi.fn(),
   paymentFindMany: vi.fn(),
   examSessionFindMany: vi.fn(),
+  onlineExamFindMany: vi.fn(),
   annualRegistrationFindFirst: vi.fn(),
+  pedagogicalRegistrationFindMany: vi.fn(),
 }))
 
 vi.mock('@/lib/auth/helpers', () => ({ withTenantAuth: (handler: unknown) => handler }))
@@ -34,7 +36,9 @@ vi.mock('@/lib/db', () => ({ db: {
   tenantSettings: { findUnique: mocks.tenantSettingsFindUnique },
   payment: { findMany: mocks.paymentFindMany },
   examSession: { findMany: mocks.examSessionFindMany },
+  onlineExam: { findMany: mocks.onlineExamFindMany },
   administrativeRegistration: { findFirst: mocks.annualRegistrationFindFirst },
+  pedagogicalRegistration: { findMany: mocks.pedagogicalRegistrationFindMany },
 } }))
 
 const { GET } = await import('./route')
@@ -59,7 +63,9 @@ describe('GET /api/dashboard — role isolation', () => {
     mocks.tenantSettingsFindUnique.mockResolvedValue({ passingGrade: 10 })
     mocks.paymentFindMany.mockResolvedValue([])
     mocks.examSessionFindMany.mockResolvedValue([])
+    mocks.onlineExamFindMany.mockResolvedValue([])
     mocks.annualRegistrationFindFirst.mockResolvedValue(null)
+    mocks.pedagogicalRegistrationFindMany.mockResolvedValue([])
   })
 
   it('shows a teacher only their assigned courses and grade counts scoped to tenant and year', async () => {
@@ -162,6 +168,36 @@ describe('GET /api/dashboard — role isolation', () => {
     expect(mocks.gradeFindMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({
       teachingUnit: { semester: { levelId: 'level-A', level: { programId: 'program-A', program: { tenantId: 'tenant-A' } } } },
     }) }))
+  })
+
+  it('shows a future published online exam only when it belongs to the student curriculum', async () => {
+    const examDate = new Date('2027-02-10T08:00:00.000Z')
+    mocks.studentFindFirst.mockResolvedValue({
+      id: 'student-A', firstName: 'Awa', lastName: 'Test', matricule: 'A-001', status: 'INSCRIT',
+      currentProgram: { name: 'Informatique' }, currentLevel: { name: 'Licence 1' },
+    })
+    mocks.academicYearFindFirst.mockResolvedValue({ id: 'year-A', name: '2026-2027', startDate: new Date(), endDate: new Date(), sessions: [] })
+    mocks.annualRegistrationFindFirst.mockResolvedValue({ id: 'registration-A', programId: 'program-A', levelId: 'level-A' })
+    mocks.pedagogicalRegistrationFindMany.mockResolvedValue([{ teachingUnitId: 'unit-A' }])
+    mocks.courseElementFindMany.mockResolvedValue([{ id: 'element-A' }])
+    mocks.onlineExamFindMany.mockResolvedValue([{ id: 'online-A', name: 'Algorithmique', course: 'INFO101', examDate }])
+
+    const response = await handler({ id: 'admin-A', role: 'ADMIN_INSTITUTION', tenantId: 'tenant-A' }, 'tenant-A', request('?studentId=student-A'))
+    expect(await response.json()).toMatchObject({
+      upcomingEvents: [{ id: 'online-online-A', title: 'Algorithmique · INFO101', type: 'exam' }],
+    })
+    expect(mocks.onlineExamFindMany).toHaveBeenCalledWith({
+      where: {
+        tenantId: 'tenant-A',
+        courseElementId: { in: ['element-A'] },
+        status: 'IN_PROGRESS',
+        examDate: { gte: expect.any(Date) },
+        results: { none: { studentId: 'student-A', submittedAt: { not: null } } },
+      },
+      orderBy: { examDate: 'asc' },
+      take: 5,
+      select: { id: true, name: true, course: true, examDate: true },
+    })
   })
 
   it('rejects a student preview from another institution', async () => {

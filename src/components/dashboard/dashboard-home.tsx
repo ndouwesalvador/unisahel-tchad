@@ -312,7 +312,7 @@ function StudentDashboardHome({ data }: { data: StudentDashboardResponse }) {
           <CardHeader className="pb-3">
             <CardTitle className="text-base font-semibold text-[var(--institution-primary)] flex items-center gap-2">
               <Timer className="size-4 text-[var(--institution-accent)]" />
-              Examens a venir
+              Examens à venir
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">

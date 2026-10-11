@@ -42,11 +42,52 @@ async function getStudentDashboardHandler(studentId: string, tenantId: string, a
     select: { id: true, programId: true, levelId: true },
   }) : null
 
-  const grades = annualRegistration && currentAcademicYear ? await db.grade.findMany({
-    where: { studentId, academicYearId: currentAcademicYear.id, session: 'NORMALE', isLocked: true, finalGrade: { not: null },
-      teachingUnit: { semester: { levelId: annualRegistration.levelId,
-        level: { programId: annualRegistration.programId, program: { tenantId } } } } },
-    select: { finalGrade: true, courseElement: { select: { coefficient: true } } },
+  const [pedagogicalRegistrations, grades] = await Promise.all([
+    currentAcademicYear ? db.pedagogicalRegistration.findMany({
+      where: { studentId, academicYearId: currentAcademicYear.id, status: 'ACTIVE' },
+      select: { teachingUnitId: true },
+    }) : Promise.resolve([]),
+    annualRegistration && currentAcademicYear ? db.grade.findMany({
+      where: { studentId, academicYearId: currentAcademicYear.id, session: 'NORMALE', isLocked: true, finalGrade: { not: null },
+        teachingUnit: { semester: { levelId: annualRegistration.levelId,
+          level: { programId: annualRegistration.programId, program: { tenantId } } } } },
+      select: { finalGrade: true, courseElement: { select: { coefficient: true } } },
+    }) : Promise.resolve([]),
+  ])
+
+  const registeredTeachingUnitIds = pedagogicalRegistrations.map((registration) => registration.teachingUnitId)
+  const eligibleCourseElements = annualRegistration ? await db.courseElement.findMany({
+    where: {
+      teachingUnit: { semester: { level: { program: { tenantId } } } },
+      OR: [
+        {
+          teachingUnit: {
+            semester: {
+              levelId: annualRegistration.levelId,
+              level: { programId: annualRegistration.programId },
+            },
+          },
+        },
+        ...(registeredTeachingUnitIds.length > 0
+          ? [{ teachingUnitId: { in: registeredTeachingUnitIds } }]
+          : []),
+      ],
+    },
+    select: { id: true },
+  }) : []
+
+  const eligibleCourseElementIds = eligibleCourseElements.map((element) => element.id)
+  const upcomingOnlineExams = eligibleCourseElementIds.length > 0 ? await db.onlineExam.findMany({
+    where: {
+      tenantId,
+      courseElementId: { in: eligibleCourseElementIds },
+      status: 'IN_PROGRESS',
+      examDate: { gte: now },
+      results: { none: { studentId, submittedAt: { not: null } } },
+    },
+    orderBy: { examDate: 'asc' },
+    take: 5,
+    select: { id: true, name: true, course: true, examDate: true },
   }) : []
 
   const passingGrade = settings?.passingGrade ?? 10
@@ -64,12 +105,20 @@ async function getStudentDashboardHandler(studentId: string, tenantId: string, a
   const pendingPaymentsCount = payments.filter((p) => p.status === 'PENDING').length
   const lastPayment = payments[0] ?? null
 
-  const upcomingEvents = upcomingExamSessions.map((e) => ({
-    id: `exam-${e.id}`,
-    date: e.startDate,
-    title: e.name,
-    type: 'exam' as const,
-  }))
+  const upcomingEvents = [
+    ...upcomingExamSessions.map((e) => ({
+      id: `session-${e.id}`,
+      date: e.startDate,
+      title: e.name,
+      type: 'exam' as const,
+    })),
+    ...upcomingOnlineExams.map((exam) => ({
+      id: `online-${exam.id}`,
+      date: exam.examDate,
+      title: `${exam.name} · ${exam.course}`,
+      type: 'exam' as const,
+    })),
+  ].sort((left, right) => left.date.getTime() - right.date.getTime()).slice(0, 5)
 
   const recentActivity = announcements.map((a) => ({
     id: `announcement-${a.id}`,
