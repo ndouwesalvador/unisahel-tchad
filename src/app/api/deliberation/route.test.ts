@@ -9,7 +9,7 @@ const { authMock, scopeMock, juryScopeMock, readinessMock, dbMock } = vi.hoisted
     academicYear: { findFirst: vi.fn() },
     department: { findMany: vi.fn() },
     deliberation: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), updateMany: vi.fn() },
-    deliberationDecision: { findMany: vi.fn(), findFirst: vi.fn(), update: vi.fn() },
+    deliberationDecision: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn(), deleteMany: vi.fn() },
     grade: { findMany: vi.fn() },
     student: { findMany: vi.fn() },
     tenantSettings: { findUnique: vi.fn() },
@@ -185,6 +185,47 @@ describe('department deliberation boundary', () => {
     expect(response.status).toBe(409)
     expect(dbMock.deliberationDecision.update).not.toHaveBeenCalled()
     expect(dbMock.auditLog.create).not.toHaveBeenCalled()
+  })
+
+  it('lets central administration reopen a finalized deliberation only with an audited reason', async () => {
+    authMock.mockResolvedValue({ user: { id: 'admin-A', role: 'ADMIN_INSTITUTION', tenantId: 'tenant-A' } })
+    dbMock.deliberation.updateMany.mockResolvedValue({ count: 1 })
+    const response = await PATCH(request('PATCH', '?id=delib-A&action=REOPEN', {
+      reason: 'Ajout tardif autorisé par la scolarité centrale',
+    }))
+    expect(response.status).toBe(200)
+    expect(dbMock.deliberation.updateMany).toHaveBeenCalledWith({
+      where: { id: 'delib-A', tenantId: 'tenant-A', isLocked: true, status: 'TERMINEE' },
+      data: { isLocked: false, status: 'EN_COURS', lockedBy: null },
+    })
+    expect(dbMock.auditLog.create).toHaveBeenCalledWith({ data: expect.objectContaining({
+      action: 'DELIBERATION_REOPENED', entityId: 'delib-A', userId: 'admin-A',
+    }) })
+  })
+
+  it('does not let a jury account reopen its own finalized deliberation', async () => {
+    authMock.mockResolvedValue({ user: { id: 'jury-A', role: 'JURY', tenantId: 'tenant-A' } })
+    const response = await PATCH(request('PATCH', '?id=delib-A&action=REOPEN', {
+      reason: 'Tentative de réouverture directe par le jury',
+    }))
+    expect(response.status).toBe(403)
+    expect(dbMock.deliberation.updateMany).not.toHaveBeenCalled()
+  })
+
+  it('synchronizes an open jury cohort from the complete locked grades', async () => {
+    dbMock.deliberation.findFirst.mockResolvedValue({ id: 'delib-A', academicYearId: 'year-A', departmentId: 'department-A',
+      programId: null, levelId: null, type: 'ANNUEL', isLocked: false, status: 'EN_COURS' })
+    dbMock.deliberation.updateMany.mockResolvedValue({ count: 1 })
+    dbMock.deliberationDecision.findMany.mockResolvedValue([{ id: 'decision-A', studentId: 'student-A', isModified: false }])
+    dbMock.deliberationDecision.update.mockResolvedValue({ id: 'decision-A' })
+    const response = await PATCH(request('PATCH', '?id=delib-A&action=SYNC', {}))
+    expect(response.status).toBe(200)
+    expect(dbMock.deliberationDecision.update).toHaveBeenCalledWith({ where: { id: 'decision-A' }, data: {
+      average: 14, creditsAcquired: 6, decision: 'ADMI_DETTE',
+    } })
+    expect(dbMock.auditLog.create).toHaveBeenCalledWith({ data: expect.objectContaining({
+      action: 'DELIBERATION_COHORT_SYNCED', entityId: 'delib-A',
+    }) })
   })
 
   it('limits a jury preview to its assigned programme and level', async () => {

@@ -57,6 +57,8 @@ import {
   Trash2,
   ChevronRight,
   Activity,
+  RefreshCcw,
+  RotateCcw,
 } from 'lucide-react'
 
 // ─── Types and API-backed data mapping ────────────────────────────────────────
@@ -184,6 +186,10 @@ export function DeliberationPage() {
   const [editedDecision, setEditedDecision] = useState<Decision>('AJOURNE')
   const [correctionReason, setCorrectionReason] = useState('')
   const [isSavingCorrection, setIsSavingCorrection] = useState(false)
+  const [reopenDialogOpen, setReopenDialogOpen] = useState(false)
+  const [reopenReason, setReopenReason] = useState('')
+  const [isReopening, setIsReopening] = useState(false)
+  const [isSyncing, setIsSyncing] = useState(false)
 
   const apiSessionType = selectedSessionType === 'normale' ? 'NORMALE' : 'RATTRAPAGE'
   const { data: deliberationData, isLoading: isDeliberationLoading } = useDeliberation(
@@ -230,6 +236,7 @@ export function DeliberationPage() {
   const readiness: DeliberationReadiness | null = deliberationData?.readiness ?? null
   const isReadyForJury = Boolean(readiness?.ready)
   const isLocked: boolean = deliberationData?.selected?.isLocked ?? false
+  const needsDecisionSync: boolean = deliberationData?.selected?.needsDecisionSync ?? false
   useEffect(() => {
     const stored = deliberationData?.selected?.juryMembers
     if (isLocked && Array.isArray(stored)) {
@@ -243,7 +250,9 @@ export function DeliberationPage() {
   const trackedStudentCount = deliberationStudents.length || readiness?.studentsTotal || 0
   const canExportPV = Boolean(selectedSession && isLocked && hasStudents && isReadyForJury &&
     juryMembers.length > 0 && juryMembers.every((member) => Boolean(member.signature)))
-  const canLock = Boolean(selectedSession && !isLocked && hasStudents && isReadyForJury && juryMembers.filter((member) => member.role === 'President').length === 1)
+  const canLock = Boolean(selectedSession && !isLocked && hasStudents && isReadyForJury && !needsDecisionSync &&
+    juryMembers.filter((member) => member.role === 'President').length === 1)
+  const canReopen = Boolean(selectedSession && isLocked && ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE'].includes(userRole || ''))
 
   const uploadJurySignature = async (memberIndex: number, file?: File) => {
     if (!selectedSession || !file) return
@@ -366,6 +375,47 @@ export function DeliberationPage() {
     } finally {
       setIsLocking(false)
     }
+  }
+
+  const handleSyncDecisions = async () => {
+    if (!selectedSession || isLocked || !isReadyForJury || isSyncing) return
+    setIsSyncing(true)
+    try {
+      const response = await fetch(`/api/deliberation?id=${encodeURIComponent(selectedSession)}&action=SYNC`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: '{}',
+      })
+      const result = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(result.error || 'Synchronisation impossible')
+      await queryClient.invalidateQueries({ queryKey: ['deliberation'] })
+      toast.success('Décisions synchronisées', {
+        description: `${result.data?.students ?? 0} étudiant(s) sont prêts pour l’examen du jury.`,
+      })
+    } catch (error) {
+      toast.error('Synchronisation refusée', { description: error instanceof Error ? error.message : 'Veuillez réessayer.' })
+    } finally { setIsSyncing(false) }
+  }
+
+  const handleReopen = async () => {
+    if (!selectedSession || !canReopen || isReopening) return
+    const reason = reopenReason.trim()
+    if (reason.length < 10 || reason.length > 1000) {
+      toast.error('Motif incomplet', { description: 'Saisissez un motif de 10 à 1000 caractères.' })
+      return
+    }
+    setIsReopening(true)
+    try {
+      const response = await fetch(`/api/deliberation?id=${encodeURIComponent(selectedSession)}&action=REOPEN`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }),
+      })
+      const result = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(result.error || 'Réouverture impossible')
+      setReopenDialogOpen(false)
+      setReopenReason('')
+      await queryClient.invalidateQueries({ queryKey: ['deliberation'] })
+      toast.success('Délibération réouverte', { description: 'Le motif et l’auteur sont conservés dans le journal d’audit.' })
+    } catch (error) {
+      toast.error('Réouverture refusée', { description: error instanceof Error ? error.message : 'Veuillez réessayer.' })
+    } finally { setIsReopening(false) }
   }
 
   const exportPV = useCallback(async () => {
@@ -586,13 +636,13 @@ export function DeliberationPage() {
                     }`}>
                       {!currentSession ? 'Aucune délibération sélectionnée' :
                        juryStatus === 'active' ? 'Jury actif : délibération en cours' :
-                       juryStatus === 'pending' ? 'Jury en attente - Planifie' :
+                       juryStatus === 'pending' ? 'Jury en attente : session planifiée' :
                        'Délibération terminée'}
                     </span>
                   </div>
                   {juryStatus === 'active' && (
                     <Badge className="text-[10px] bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0">
-                      {juryMembers.length} membres presents
+                      {juryMembers.length} membre{juryMembers.length === 1 ? '' : 's'} présent{juryMembers.length === 1 ? '' : 's'}
                     </Badge>
                   )}
                 </div>
@@ -934,7 +984,7 @@ export function DeliberationPage() {
           <div className="space-y-4">
             {/* Summary Cards with Gradient Accent Bars */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              {/* Reussites */}
+              {/* Réussites */}
               <motion.div
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -960,13 +1010,13 @@ export function DeliberationPage() {
                     </div>
                     <p className="text-2xl font-bold text-[var(--institution-secondary)]">{stats.admis + stats.admisDette}</p>
                     <p className="text-xs text-gray-500 mt-1">
-                      {isReadyForJury ? 'Reussites' : 'Reussites provisoires'}
+                      {isReadyForJury ? 'Réussites' : 'Réussites provisoires'}
                     </p>
                   </CardContent>
                 </Card>
               </motion.div>
 
-              {/* Compenses */}
+              {/* Compensés */}
               <motion.div
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -991,12 +1041,12 @@ export function DeliberationPage() {
                       </Tooltip>
                     </div>
                     <p className="text-2xl font-bold text-[var(--institution-primary)]">{stats.compenses}</p>
-                    <p className="text-xs text-gray-500 mt-1">Compenses</p>
+                    <p className="text-xs text-gray-500 mt-1">Compensés</p>
                   </CardContent>
                 </Card>
               </motion.div>
 
-              {/* Ajournes */}
+              {/* Ajournés */}
               <motion.div
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -1016,12 +1066,12 @@ export function DeliberationPage() {
                           </Badge>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>Ajournes + Redoublants</p>
+                          <p>Ajournés et redoublants</p>
                         </TooltipContent>
                       </Tooltip>
                     </div>
                     <p className="text-2xl font-bold text-[var(--institution-accent)]">{stats.ajournes}</p>
-                    <p className="text-xs text-gray-500 mt-1">Ajournes</p>
+                    <p className="text-xs text-gray-500 mt-1">Ajournés</p>
                   </CardContent>
                 </Card>
               </motion.div>
@@ -1046,7 +1096,7 @@ export function DeliberationPage() {
                           </Badge>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>Exclusion definitive - moyenne eliminatorie</p>
+                          <p>Exclusion définitive : moyenne éliminatoire</p>
                         </TooltipContent>
                       </Tooltip>
                     </div>
@@ -1083,7 +1133,7 @@ export function DeliberationPage() {
                     </div>
                     <div className="flex items-center gap-1">
                       <div className="w-2.5 h-2.5 rounded-sm bg-[var(--institution-primary)]" />
-                      <span className="text-[10px] text-gray-400">Compense</span>
+                      <span className="text-[10px] text-gray-400">Compensé</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <div className="w-2.5 h-2.5 rounded-sm bg-[var(--institution-accent)]" />
@@ -1091,7 +1141,7 @@ export function DeliberationPage() {
                     </div>
                     <div className="flex items-center gap-1">
                       <div className="w-2.5 h-2.5 rounded-sm bg-[#c62828]" />
-                      <span className="text-[10px] text-gray-400">Ajourne</span>
+                      <span className="text-[10px] text-gray-400">Ajourné</span>
                     </div>
                   </div>
                 </div>
@@ -1128,6 +1178,18 @@ export function DeliberationPage() {
                     {isExportingPV ? <Loader2 className="size-3.5 mr-1.5 animate-spin" /> : <Download className="size-3.5 mr-1.5" />}
                     PV
                   </Button>
+                  {!isLocked && isReadyForJury && needsDecisionSync && (
+                    <Button variant="outline" size="sm" className="text-xs" onClick={() => void handleSyncDecisions()} disabled={isSyncing}>
+                      {isSyncing ? <Loader2 className="size-3.5 mr-1.5 animate-spin" /> : <RefreshCcw className="size-3.5 mr-1.5" />}
+                      Synchroniser les décisions
+                    </Button>
+                  )}
+                  {canReopen && (
+                    <Button variant="outline" size="sm" className="text-xs border-amber-300 text-amber-800 hover:bg-amber-50"
+                      onClick={() => setReopenDialogOpen(true)}>
+                      <RotateCcw className="size-3.5 mr-1.5" />Réouvrir avec un motif
+                    </Button>
+                  )}
                   <Button
                     size="sm"
                     className="bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white text-xs"
@@ -1141,7 +1203,9 @@ export function DeliberationPage() {
               </div>
             </CardHeader>
             {selectedSession && !isLocked && hasStudents && (
-              <p className="px-5 pb-3 text-xs text-gray-600">Les décisions ci-dessous sont proposées automatiquement. Le jury peut les corriger avec un motif avant la validation finale ; moyenne et crédits restent issus des notes verrouillées.</p>
+              <p className="px-5 pb-3 text-xs text-gray-600">{needsDecisionSync
+                ? 'Les notes ont changé depuis le dernier calcul. Synchronisez les décisions, contrôlez-les, puis finalisez la délibération.'
+                : 'Les décisions ci-dessous sont proposées automatiquement. Le jury peut les corriger avec un motif avant la validation finale ; moyenne et crédits restent issus des notes verrouillées.'}</p>
             )}
             <CardContent className="p-0">
               <div className="overflow-x-auto">
@@ -1150,10 +1214,10 @@ export function DeliberationPage() {
                     <TableRow className="bg-gray-50">
                       <TableHead className="text-xs font-semibold text-gray-500 w-8">#</TableHead>
                       <TableHead className="text-xs font-semibold text-gray-500">Matricule</TableHead>
-                      <TableHead className="text-xs font-semibold text-gray-500">Nom Prenom</TableHead>
+                      <TableHead className="text-xs font-semibold text-gray-500">Nom et prénom</TableHead>
                       <TableHead className="text-xs font-semibold text-gray-500 text-center">Moyenne</TableHead>
-                      <TableHead className="text-xs font-semibold text-gray-500 text-center">Credits valides</TableHead>
-                      <TableHead className="text-xs font-semibold text-gray-500">Decision</TableHead>
+                      <TableHead className="text-xs font-semibold text-gray-500 text-center">Crédits validés</TableHead>
+                      <TableHead className="text-xs font-semibold text-gray-500">Décision</TableHead>
                       <TableHead className="text-xs font-semibold text-gray-500">Observation</TableHead>
                       <TableHead className="text-xs font-semibold text-gray-500 text-right">Action du jury</TableHead>
                     </TableRow>
@@ -1319,7 +1383,7 @@ export function DeliberationPage() {
                       <TableCell className="text-right">
                         <Button variant="ghost" size="sm" className="h-7 text-xs text-[var(--institution-secondary)]" onClick={(event) => { event.stopPropagation(); setSelectedSession(session.id); setJuryMembers([]); toast.success(`Session ${session.titre} sélectionnée`) }}>
                           <ChevronRight className="size-3.5 mr-1" />
-                          Detail
+                          Détail
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -1369,6 +1433,32 @@ export function DeliberationPage() {
             <Button variant="outline" onClick={() => setEditingStudent(null)} disabled={isSavingCorrection}>Annuler</Button>
             <Button onClick={saveDecisionCorrection} disabled={isSavingCorrection || !editingStudent || editedDecision === editingStudent.decision || correctionReason.trim().length < 10}>
               {isSavingCorrection ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}Enregistrer la correction
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={reopenDialogOpen} onOpenChange={(open) => { if (!isReopening) setReopenDialogOpen(open) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Réouvrir la délibération finalisée</DialogTitle>
+            <DialogDescription>
+              Cette action remet la session en cours sans effacer les notes ni les décisions. Après les corrections, le jury devra synchroniser la cohorte, contrôler les décisions et finaliser à nouveau.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-1.5">
+            <Label htmlFor="reopen-reason">Motif administratif obligatoire</Label>
+            <Textarea id="reopen-reason" value={reopenReason} onChange={(event) => setReopenReason(event.target.value)}
+              maxLength={1000} rows={4} disabled={isReopening}
+              placeholder="Exemple : étudiant ajouté après la première délibération, correction autorisée par la scolarité…" />
+            <p className="text-xs text-gray-500">{reopenReason.trim().length}/1000 caractères · auteur, date et motif seront audités.</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReopenDialogOpen(false)} disabled={isReopening}>Annuler</Button>
+            <Button onClick={() => void handleReopen()} disabled={isReopening || reopenReason.trim().length < 10}
+              className="bg-amber-700 text-white hover:bg-amber-800">
+              {isReopening ? <Loader2 className="mr-2 size-4 animate-spin" /> : <RotateCcw className="mr-2 size-4" />}
+              Confirmer la réouverture
             </Button>
           </DialogFooter>
         </DialogContent>

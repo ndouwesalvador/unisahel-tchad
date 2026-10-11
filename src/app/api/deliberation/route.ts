@@ -235,6 +235,18 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
       }) : []
       const correctionByDecision = new Map(latestCorrections.map((entry) => [entry.entityId, entry]))
       const creditsTotal = settings?.creditsPerYear ?? 60
+      let needsDecisionSync = true
+      if (readiness.ready) {
+        const currentDecisions = await computeStudentDecisions(
+          tenantId, deliberation.academicYearId, readinessSession, readiness.studentIds, deliberation.levelId
+        )
+        const currentByStudent = new Map(currentDecisions.map((decision) => [decision.studentId, decision]))
+        needsDecisionSync = decisionRows.length !== currentDecisions.length || decisionRows.some((decision) => {
+          const current = currentByStudent.get(decision.studentId)
+          return !current || decision.average !== current.moyenne || decision.creditsAcquired !== current.credits ||
+            (!decision.isModified && decision.decision !== current.decision)
+        })
+      }
       const studentRows = await db.student.findMany({
         where: { id: { in: decisionRows.map((d) => d.studentId) }, tenantId },
         select: { id: true, firstName: true, lastName: true, matricule: true },
@@ -264,7 +276,8 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
       return NextResponse.json({
         departments, juryScopes: juryScope?.assignments ?? [], sessions,
         selected: { id: deliberation.id, departmentId: deliberation.departmentId, programId: deliberation.programId,
-          levelId: deliberation.levelId, isLocked: deliberation.isLocked, juryMembers: deliberation.juryMembers },
+          levelId: deliberation.levelId, isLocked: deliberation.isLocked, juryMembers: deliberation.juryMembers,
+          needsDecisionSync },
         students, readiness, rules: juryRuleSummary(settings),
       })
     }
@@ -310,10 +323,97 @@ async function handlePatch(user: SessionUser, tenantId: string, request: NextReq
   try {
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
+    const action = searchParams.get('action')
+    const body = await request.json().catch(() => ({}))
+    if (action === 'REOPEN') {
+      if (!id) return NextResponse.json({ error: 'Délibération requise' }, { status: 400 })
+      if (!['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE'].includes(user.role)) {
+        return NextResponse.json({ error: 'Seule la scolarité centrale peut réouvrir une délibération finalisée' }, { status: 403 })
+      }
+      const reason = typeof body.reason === 'string' ? body.reason.trim() : ''
+      if (reason.length < 10 || reason.length > 1000) {
+        return NextResponse.json({ error: 'Un motif de 10 à 1000 caractères est obligatoire' }, { status: 400 })
+      }
+      const reopened = await db.$transaction(async (tx) => {
+        const result = await tx.deliberation.updateMany({
+          where: { id, tenantId, isLocked: true, status: 'TERMINEE' },
+          data: { isLocked: false, status: 'EN_COURS', lockedBy: null },
+        })
+        if (result.count !== 1) throw new DecisionEditError('Délibération introuvable ou déjà ouverte', 409)
+        await tx.auditLog.create({ data: {
+          tenantId, userId: user.id, action: 'DELIBERATION_REOPENED', entity: 'Deliberation', entityId: id,
+          details: JSON.stringify({ reason }),
+        } })
+        return result
+      })
+      return NextResponse.json({ data: { id, isLocked: false, status: 'EN_COURS', reopened: reopened.count === 1 } })
+    }
+
+    if (action === 'SYNC') {
+      if (!id) return NextResponse.json({ error: 'Délibération requise' }, { status: 400 })
+      const deliberation = await db.deliberation.findFirst({
+        where: { id, tenantId },
+        select: { id: true, academicYearId: true, departmentId: true, programId: true, levelId: true,
+          type: true, isLocked: true, status: true },
+      })
+      if (!deliberation?.departmentId) return NextResponse.json({ error: 'Délibération introuvable' }, { status: 404 })
+      if (deliberation.isLocked || deliberation.status !== 'EN_COURS') {
+        return NextResponse.json({ error: 'Réouvrez la délibération avant de synchroniser sa cohorte' }, { status: 409 })
+      }
+      const juryScope = user.role === 'JURY' ? await getJuryScope(user, tenantId, deliberation.academicYearId) : null
+      const departments = await availableDepartments(user, tenantId, juryScope)
+      if (!departments.some((department) => department.id === deliberation.departmentId) ||
+          (juryScope && !juryScope.assignments.some((assignment) => assignment.departmentId === deliberation.departmentId &&
+            assignment.programId === deliberation.programId && assignment.levelId === deliberation.levelId))) {
+        return NextResponse.json({ error: 'Délibération hors de votre périmètre' }, { status: 403 })
+      }
+      const sessionType = deliberation.type === 'RATTRAPAGE' ? 'RATTRAPAGE' : 'NORMALE'
+      const readiness = await computeGradeReadiness(tenantId, deliberation.academicYearId, sessionType,
+        deliberation.departmentId, deliberation.programId ?? undefined, deliberation.levelId ?? undefined)
+      if (!readiness.ready) {
+        return NextResponse.json({ error: 'Toutes les notes doivent être complètes et verrouillées avant la synchronisation', readiness }, { status: 409 })
+      }
+      const computed = await computeStudentDecisions(tenantId, deliberation.academicYearId, sessionType,
+        readiness.studentIds, deliberation.levelId)
+      const result = await db.$transaction(async (tx) => {
+        const parent = await tx.deliberation.updateMany({
+          where: { id, tenantId, isLocked: false, status: 'EN_COURS' },
+          data: { updatedAt: new Date() },
+        })
+        if (parent.count !== 1) throw new DecisionEditError('La délibération a changé ; actualisez la page', 409)
+        const existing = await tx.deliberationDecision.findMany({ where: { deliberationId: id },
+          select: { id: true, studentId: true, isModified: true } })
+        const byStudent = new Map(existing.map((decision) => [decision.studentId, decision]))
+        const expectedIds = new Set(computed.map((decision) => decision.studentId))
+        const obsoleteIds = existing.filter((decision) => !expectedIds.has(decision.studentId)).map((decision) => decision.id)
+        if (obsoleteIds.length > 0) await tx.deliberationDecision.deleteMany({ where: { id: { in: obsoleteIds } } })
+        let created = 0
+        let updated = 0
+        for (const decision of computed) {
+          const previous = byStudent.get(decision.studentId)
+          if (previous) {
+            await tx.deliberationDecision.update({ where: { id: previous.id }, data: {
+              average: decision.moyenne, creditsAcquired: decision.credits,
+              ...(previous.isModified ? {} : { decision: decision.decision }),
+            } })
+            updated += 1
+          } else {
+            await tx.deliberationDecision.create({ data: { deliberationId: id, studentId: decision.studentId,
+              decision: decision.decision, average: decision.moyenne, creditsAcquired: decision.credits } })
+            created += 1
+          }
+        }
+        await tx.auditLog.create({ data: {
+          tenantId, userId: user.id, action: 'DELIBERATION_COHORT_SYNCED', entity: 'Deliberation', entityId: id,
+          details: JSON.stringify({ students: computed.length, created, updated, removed: obsoleteIds.length }),
+        } })
+        return { students: computed.length, created, updated, removed: obsoleteIds.length }
+      })
+      return NextResponse.json({ data: result })
+    }
+
     const decisionId = searchParams.get('decisionId')
     if (!id || !decisionId) return NextResponse.json({ error: 'Délibération et décision requises' }, { status: 400 })
-
-    const body = await request.json().catch(() => ({}))
     const nextDecision = body.decision
     const reason = typeof body.reason === 'string' ? body.reason.trim() : ''
     if (!DECISIONS.has(nextDecision) || reason.length < 10 || reason.length > 1000 ||
@@ -532,7 +632,8 @@ async function handlePut(user: SessionUser, tenantId: string, request: NextReque
   }
 }
 
-export const GET = withTenantAuth(handleGet, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'FACULTE', 'DEPARTEMENT', 'JURY'])
-export const POST = withTenantAuth(handlePost, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'FACULTE', 'DEPARTEMENT', 'JURY'])
-export const PUT = withTenantAuth(handlePut, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'FACULTE', 'DEPARTEMENT', 'JURY'])
-export const PATCH = withTenantAuth(handlePatch, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'FACULTE', 'DEPARTEMENT', 'JURY'])
+const DELIBERATION_ROLES = ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE', 'FACULTE', 'DEPARTEMENT', 'JURY'] as const
+export const GET = withTenantAuth(handleGet, [...DELIBERATION_ROLES])
+export const POST = withTenantAuth(handlePost, [...DELIBERATION_ROLES])
+export const PUT = withTenantAuth(handlePut, [...DELIBERATION_ROLES])
+export const PATCH = withTenantAuth(handlePatch, [...DELIBERATION_ROLES])
