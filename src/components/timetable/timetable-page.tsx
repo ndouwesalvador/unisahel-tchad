@@ -525,6 +525,18 @@ export function TimetablePage() {
     setShowCreateSlot(true)
   }
 
+  const openNewSlot = () => {
+    if (!canManageSlots) return
+    setSlotForm((form) => ({
+      ...form,
+      programId: filterProgram === 'all' ? form.programId : filterProgram,
+      levelId: filterLevel === 'all' ? form.levelId : filterLevel,
+      courseElementId: filterProgram === 'all' && filterLevel === 'all' ? form.courseElementId : '',
+    }))
+    setEditingSlotId(null)
+    setShowCreateSlot(true)
+  }
+
   const handleCreateSlot = async () => {
     if (!canCreateTimetableSlot) {
       toast.error('Création impossible', {
@@ -810,7 +822,7 @@ export function TimetablePage() {
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.4, delay: 0.1 }}
                 >
-                  Gestion et suivi des creneaux horaires
+                  Gestion et suivi des créneaux horaires
                 </motion.p>
               </div>
               <div className="flex items-center gap-3">
@@ -833,21 +845,13 @@ export function TimetablePage() {
                   {isExporting ? 'Préparation…' : 'Télécharger le PDF'}
                 </Button>
                 {canManageSlots && <Button
+                  type="button"
                   size="sm"
                   className="bg-[var(--institution-secondary)] hover:bg-[var(--institution-secondary-dark)] text-white text-xs border border-white/20"
-                  onClick={() => {
-                    setSlotForm((form) => ({
-                      ...form,
-                      programId: filterProgram === 'all' ? form.programId : filterProgram,
-                      levelId: filterLevel === 'all' ? form.levelId : filterLevel,
-                      courseElementId: filterProgram === 'all' && filterLevel === 'all' ? form.courseElementId : '',
-                    }))
-                    setEditingSlotId(null)
-                    setShowCreateSlot(true)
-                  }}
+                  onClick={openNewSlot}
                 >
                   <Plus className="size-3.5 mr-1.5" />
-                  Ajouter creneau
+                  Ajouter un créneau
                 </Button>}
               </div>
             </div>
@@ -861,11 +865,11 @@ export function TimetablePage() {
             >
               <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/15">
                 <p className="text-2xl font-bold text-white">{animatedCours}</p>
-                <p className="text-[11px] text-white/70 mt-0.5">Cours planifies</p>
+                <p className="text-[11px] text-white/70 mt-0.5">Cours planifiés</p>
               </div>
               <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/15">
                 <p className="text-2xl font-bold text-white">{animatedSalles}</p>
-                <p className="text-[11px] text-white/70 mt-0.5">Salles utilisees</p>
+                <p className="text-[11px] text-white/70 mt-0.5">Salles utilisées</p>
               </div>
               <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/15">
                 <div className="flex items-center gap-2">
@@ -957,7 +961,7 @@ export function TimetablePage() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-[10px] text-gray-500 uppercase font-medium">Salles occupees</p>
+                  <p className="text-[10px] text-gray-500 uppercase font-medium">Salles occupées</p>
                   <p className="text-2xl font-bold text-[var(--institution-accent)]">{occupiedRooms}/{rooms.length}</p>
                 </div>
                 <div className="w-10 h-10 rounded-xl bg-[var(--institution-accent-15)] flex items-center justify-center">
@@ -1078,15 +1082,21 @@ export function TimetablePage() {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
               <Card className="shadow-sm">
                 <CardHeader className="pb-2 pt-4 px-4">
-                  <CardTitle className="text-sm font-semibold text-[var(--institution-primary)] flex items-center gap-2">
-                    <Calendar className="size-4" />
-                    Semaine en cours
-                  </CardTitle>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <CardTitle className="text-sm font-semibold text-[var(--institution-primary)] flex items-center gap-2">
+                      <Calendar className="size-4" />
+                      Semaine en cours
+                    </CardTitle>
+                    {canManageSlots && <Button type="button" size="sm" onClick={openNewSlot} className="bg-[var(--institution-secondary)] text-white hover:bg-[var(--institution-secondary-dark)]">
+                      <Plus className="mr-1.5 size-3.5" />
+                      Ajouter un créneau
+                    </Button>}
+                  </div>
                 </CardHeader>
                 <CardContent className="p-0">
                   {isLoading ? (
                     <div className="py-16 text-center text-sm text-gray-400">
-                      Chargement des creneaux...
+                      Chargement des créneaux…
                     </div>
                   ) : (
                     <div className="overflow-x-auto">
@@ -1157,18 +1167,24 @@ export function TimetablePage() {
                       <Calendar className="size-4" />
                       Vue par jour
                     </CardTitle>
-                    <div className="flex flex-wrap gap-1">
-                      {days.map(day => (
-                        <Button
-                          key={day}
-                          variant={selectedDay === day ? 'default' : 'outline'}
-                          size="sm"
-                          className={`h-7 text-[10px] px-3 ${selectedDay === day ? 'bg-[var(--institution-primary)] text-white' : 'border-[var(--institution-primary)]/20 text-[var(--institution-primary)]'} ${day === todayFrench ? 'ring-2 ring-[var(--institution-secondary-40)]' : ''}`}
-                          onClick={() => setSelectedDay(day)}
-                        >
-                          {day.substring(0, 3)}
-                        </Button>
-                      ))}
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                      <div className="flex flex-wrap gap-1">
+                        {days.map(day => (
+                          <Button
+                            key={day}
+                            variant={selectedDay === day ? 'default' : 'outline'}
+                            size="sm"
+                            className={`h-7 text-[10px] px-3 ${selectedDay === day ? 'bg-[var(--institution-primary)] text-white' : 'border-[var(--institution-primary)]/20 text-[var(--institution-primary)]'} ${day === todayFrench ? 'ring-2 ring-[var(--institution-secondary-40)]' : ''}`}
+                            onClick={() => setSelectedDay(day)}
+                          >
+                            {day.substring(0, 3)}
+                          </Button>
+                        ))}
+                      </div>
+                      {canManageSlots && <Button type="button" size="sm" onClick={openNewSlot} className="h-8 bg-[var(--institution-secondary)] text-white hover:bg-[var(--institution-secondary-dark)]">
+                        <Plus className="mr-1.5 size-3.5" />
+                        Ajouter un créneau
+                      </Button>}
                     </div>
                   </div>
                 </CardHeader>
