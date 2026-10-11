@@ -15,6 +15,12 @@ const componentSchema = z.object({
   reason: z.string().trim().max(500).optional(),
 })
 const lockSchema = z.object({ gradeId: z.string().cuid(), action: z.literal('LOCK') })
+const lockCourseSchema = z.object({
+  action: z.literal('LOCK_COURSE'),
+  academicYearId: z.string().cuid(),
+  courseElementId: z.string().cuid(),
+  session: z.enum(['NORMALE', 'RATTRAPAGE']).default('NORMALE'),
+})
 
 class EntryError extends Error {
   constructor(message: string, readonly status: number) { super(message) }
@@ -115,6 +121,80 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
 async function handlePost(user: SessionUser, tenantId: string, request: NextRequest) {
   try {
     const raw: unknown = await request.json().catch(() => null)
+    if (user.role === 'JURY' && lockCourseSchema.safeParse(raw).success) {
+      const input = lockCourseSchema.parse(raw)
+      const allowed = await scope(user, tenantId)
+      await year(tenantId, input.academicYearId)
+      const course = await db.courseElement.findFirst({
+        where: {
+          id: input.courseElementId,
+          teachingUnit: { semester: { level: {
+            id: { in: allowed.levelIds ?? [] },
+            program: { tenantId, ...(allowed.departmentId ? { departmentId: allowed.departmentId } : {}) },
+          } } },
+        },
+        select: {
+          id: true,
+          hoursTP: true,
+          teachingUnit: { select: { semester: { select: {
+            levelId: true,
+            level: { select: { programId: true, program: { select: { departmentId: true } } } },
+          } } } },
+        },
+      })
+      const departmentId = course?.teachingUnit.semester.level.program.departmentId
+      if (!course || !departmentId) throw new EntryError('Matière hors du périmètre du jury.', 403)
+      const levelId = course.teachingUnit.semester.levelId
+      const programId = course.teachingUnit.semester.level.programId
+      const lockedPv = await db.deliberation.findFirst({ where: {
+        tenantId,
+        academicYearId: input.academicYearId,
+        departmentId,
+        type: input.session === 'RATTRAPAGE' ? 'RATTRAPAGE' : 'ANNUEL',
+        isLocked: true,
+        OR: [{ programId: null, levelId: null }, { programId, levelId }],
+      }, select: { id: true } })
+      if (lockedPv) throw new EntryError('La délibération de ce programme et de ce niveau est déjà finalisée.', 409)
+
+      const students = await db.student.findMany({
+        where: { tenantId, OR: [
+          { currentLevelId: levelId },
+          { registrations: { some: { tenantId, academicYearId: input.academicYearId, status: 'INSCRIT', levelId } } },
+        ] },
+        select: { id: true },
+      })
+      const grades = await db.grade.findMany({
+        where: {
+          studentId: { in: students.map((student) => student.id) },
+          courseElementId: input.courseElementId,
+          academicYearId: input.academicYearId,
+          session: input.session,
+          isLocked: false,
+        },
+        select: { id: true, ccGrade: true, tpGrade: true, examGrade: true, finalGrade: true },
+      })
+      const readyIds = grades.filter((grade) => grade.finalGrade !== null && grade.ccGrade !== null &&
+        grade.examGrade !== null && (course.hoursTP <= 0 || grade.tpGrade !== null)).map((grade) => grade.id)
+      if (readyIds.length === 0) throw new EntryError('Aucune note complète n’est prête à être verrouillée pour cette matière.', 409)
+      const result = await db.$transaction(async (tx) => {
+        const updated = await tx.grade.updateMany({
+          where: { id: { in: readyIds }, isLocked: false, finalGrade: { not: null },
+            ccGrade: { not: null }, examGrade: { not: null }, ...(course.hoursTP > 0 ? { tpGrade: { not: null } } : {}) },
+          data: { isLocked: true, lockedBy: user.id, validatedBy: user.id },
+        })
+        await tx.auditLog.create({ data: {
+          tenantId,
+          userId: user.id,
+          action: 'VALIDATE_COURSE_GRADES',
+          entity: 'CourseElement',
+          entityId: input.courseElementId,
+          details: JSON.stringify({ academicYearId: input.academicYearId, session: input.session,
+            levelId, programId, validatedCount: updated.count }),
+        } })
+        return updated
+      })
+      return NextResponse.json({ data: { validatedCount: result.count } })
+    }
     if (user.role === 'JURY' && lockSchema.safeParse(raw).success) {
       const { gradeId } = lockSchema.parse(raw)
       const allowed = await scope(user, tenantId)
@@ -122,17 +202,30 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
         teachingUnit: { semester: { level: { id: { in: allowed.levelIds ?? [] }, program: { tenantId,
           ...(allowed.departmentId ? { departmentId: allowed.departmentId } : {}),
         } } } },
-      }, select: { id: true, finalGrade: true, isLocked: true, academicYearId: true,
-        ccGrade: true, tpGrade: true, examGrade: true, courseElement: { select: { hoursTP: true } } } })
+      }, select: { id: true, finalGrade: true, isLocked: true, academicYearId: true, session: true,
+        ccGrade: true, tpGrade: true, examGrade: true, courseElement: { select: { hoursTP: true } },
+        teachingUnit: { select: { semester: { select: { levelId: true,
+          level: { select: { programId: true, program: { select: { departmentId: true } } } },
+        } } } },
+      } })
       if (!grade) throw new EntryError('Note hors du département du jury.', 403)
       if (grade.finalGrade === null || grade.ccGrade === null || grade.examGrade === null ||
           (grade.courseElement && grade.courseElement.hoursTP > 0 && grade.tpGrade === null)) {
         throw new EntryError('Contrôle, examen et TP éventuel doivent être saisis avant validation.', 409)
       }
       if (grade.isLocked) return NextResponse.json({ data: grade })
+      const gradeDepartmentId = grade.teachingUnit?.semester.level.program.departmentId
+      if (!gradeDepartmentId || !grade.teachingUnit) throw new EntryError('Périmètre académique de la note introuvable.', 409)
       const locked = await db.deliberation.findFirst({ where: { tenantId, academicYearId: grade.academicYearId,
-        departmentId: allowed.departmentId!, isLocked: true }, select: { id: true } })
-      if (locked) throw new EntryError('Le PV du département est déjà verrouillé.', 409)
+        departmentId: gradeDepartmentId,
+        type: grade.session === 'RATTRAPAGE' ? 'RATTRAPAGE' : 'ANNUEL',
+        isLocked: true,
+        OR: [
+          { programId: null, levelId: null },
+          { programId: grade.teachingUnit.semester.level.programId, levelId: grade.teachingUnit.semester.levelId },
+        ],
+      }, select: { id: true } })
+      if (locked) throw new EntryError('La délibération de ce programme, de ce niveau et de cette session est déjà finalisée.', 409)
       const result = await db.grade.updateMany({ where: { id: gradeId, isLocked: false, finalGrade: { not: null } },
         data: { isLocked: true, lockedBy: user.id, validatedBy: user.id } })
       if (result.count !== 1) throw new EntryError('La note a changé ; actualisez la page.', 409)
@@ -202,9 +295,15 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
       }
       const departmentId = course.teachingUnit.semester.level.program.departmentId
       const lockedPv = departmentId ? await tx.deliberation.findFirst({ where: { tenantId,
-        academicYearId: input.academicYearId, departmentId, isLocked: true,
+        academicYearId: input.academicYearId, departmentId,
+        type: input.session === 'RATTRAPAGE' ? 'RATTRAPAGE' : 'ANNUEL',
+        isLocked: true,
+        OR: [
+          { programId: null, levelId: null },
+          { programId: course.teachingUnit.semester.level.programId, levelId: course.teachingUnit.semester.levelId },
+        ],
       }, select: { id: true } }) : null
-      if (lockedPv) throw new EntryError('Le PV de ce département est verrouillé : saisie suspendue.', 409)
+      if (lockedPv) throw new EntryError('La délibération de ce programme, de ce niveau et de cette session est finalisée : saisie suspendue.', 409)
       const components = { ccGrade: existing?.ccGrade ?? null, tpGrade: existing?.tpGrade ?? null,
         examGrade: existing?.examGrade ?? null, stageGrade: existing?.stageGrade ?? null,
         isAbsent: existing?.isAbsent ?? false, isDefaillant: existing?.isDefaillant ?? false,

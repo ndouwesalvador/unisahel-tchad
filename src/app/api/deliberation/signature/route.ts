@@ -42,7 +42,7 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
         details: JSON.stringify({ memberIndex, memberName: members[memberIndex].name, replacement: previous }) } })
       return members[memberIndex]
     })
-    if (!result) return NextResponse.json({ error: 'Délibération verrouillée ou membre introuvable.' }, { status: 404 })
+    if (!result) return NextResponse.json({ error: 'La délibération doit être finalisée et le membre doit appartenir au jury enregistré.' }, { status: 404 })
     return NextResponse.json({ memberIndex, signature })
   } catch (error) {
     if (error instanceof Error && /unsupported|input image|corrupt|invalid/i.test(error.message)) {

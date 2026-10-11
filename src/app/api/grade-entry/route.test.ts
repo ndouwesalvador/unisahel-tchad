@@ -72,7 +72,8 @@ beforeEach(() => {
   mocks.settings.mockResolvedValue(null)
   mocks.deliberation.mockResolvedValue(null)
   mocks.transaction.mockImplementation(async (callback) => callback({
-    $queryRaw: mocks.advisory, grade: { findMany: mocks.grades, create: mocks.gradeCreate, update: mocks.gradeUpdate },
+    $queryRaw: mocks.advisory, grade: { findMany: mocks.grades, create: mocks.gradeCreate, update: mocks.gradeUpdate,
+      updateMany: mocks.gradeUpdateMany },
     deliberation: { findFirst: mocks.deliberation }, gradeChangeLog: { create: mocks.changeLog },
     auditLog: { create: mocks.audit },
   }))
@@ -196,7 +197,11 @@ describe('scoped grade entry', () => {
 
   it('allows only the jury to publish a complete final mark', async () => {
     mocks.gradeFind.mockResolvedValue({ id: gradeId, finalGrade: 14.4, isLocked: false, academicYearId,
-      ccGrade: 12, examGrade: 16, tpGrade: 14, courseElement: { hoursTP: 12 } })
+      session: 'NORMALE', ccGrade: 12, examGrade: 16, tpGrade: 14, courseElement: { hoursTP: 12 },
+      teachingUnit: { semester: { levelId: 'clevel000000000000000001', level: {
+        programId: 'cprogram000000000000000001', program: { departmentId },
+      } } },
+    })
     expect((await post({ action: 'LOCK', gradeId })).status).toBe(400)
     mocks.auth.mockResolvedValue({ user: jury })
     const response = await post({ action: 'LOCK', gradeId })
@@ -205,5 +210,30 @@ describe('scoped grade entry', () => {
       where: { id: gradeId, isLocked: false, finalGrade: { not: null } },
       data: { isLocked: true, lockedBy: jury.id, validatedBy: jury.id },
     }))
+    expect(mocks.deliberation).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({
+      departmentId, type: 'ANNUEL',
+      OR: [{ programId: null, levelId: null }, {
+        programId: 'cprogram000000000000000001', levelId: 'clevel000000000000000001',
+      }],
+    }) }))
+  })
+
+  it('lets the jury lock every complete grade for the selected matter in one traced action', async () => {
+    mocks.auth.mockResolvedValue({ user: jury })
+    mocks.studentFindMany.mockResolvedValue([{ id: studentId }])
+    mocks.grades.mockResolvedValue([{
+      id: gradeId, ccGrade: 12, tpGrade: 14, examGrade: 16, finalGrade: 14.4, isLocked: false,
+    }])
+    const response = await post({ action: 'LOCK_COURSE', academicYearId, courseElementId, session: 'NORMALE' })
+    expect(response.status).toBe(200)
+    expect(await response.json()).toMatchObject({ data: { validatedCount: 1 } })
+    expect(mocks.gradeUpdateMany).toHaveBeenCalledWith({
+      where: { id: { in: [gradeId] }, isLocked: false, finalGrade: { not: null },
+        ccGrade: { not: null }, examGrade: { not: null }, tpGrade: { not: null } },
+      data: { isLocked: true, lockedBy: jury.id, validatedBy: jury.id },
+    })
+    expect(mocks.audit).toHaveBeenCalledWith({ data: expect.objectContaining({
+      action: 'VALIDATE_COURSE_GRADES', entity: 'CourseElement', entityId: courseElementId,
+    }) })
   })
 })

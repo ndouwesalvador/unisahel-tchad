@@ -8,7 +8,9 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Badge } from '@/components/ui/badge'
 import { useAppStore } from '@/lib/store'
+import { CheckCircle2, LockKeyhole, ShieldCheck, TriangleAlert } from 'lucide-react'
 
 type ComponentName = 'ccGrade' | 'tpGrade' | 'examGrade'
 type Grade = { id: string; ccGrade: number | null; tpGrade: number | null; examGrade: number | null;
@@ -96,6 +98,7 @@ export function GradeEntryPage() {
   const [courseId, setCourseId] = useState('')
   const [session, setSession] = useState('NORMALE')
   const [locking, setLocking] = useState<string | null>(null)
+  const [lockingCourse, setLockingCourse] = useState(false)
   useEffect(() => { setCourseId('') }, [selectedAcademicYearId])
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['grade-entry', courseId, session, selectedAcademicYearId],
@@ -122,13 +125,39 @@ export function GradeEntryPage() {
     } catch (error) { toast.error(error instanceof Error ? error.message : 'Validation impossible.') }
     finally { setLocking(null) }
   }
+  const lockReadyCourseGrades = async () => {
+    if (!selected || !data || lockingCourse) return
+    const readyCount = data.students.filter((student) => student.grade && !student.grade.isLocked &&
+      student.grade.finalGrade !== null && student.grade.ccGrade !== null && student.grade.examGrade !== null &&
+      (selected.hoursTP <= 0 || student.grade.tpGrade !== null)).length
+    if (readyCount === 0) return
+    if (!window.confirm(`Verrouiller et publier ${readyCount} note(s) complète(s) pour ${selected.name} ?`)) return
+    setLockingCourse(true)
+    try {
+      const response = await fetch('/api/grade-entry', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'LOCK_COURSE', academicYearId: data.academicYear.id,
+          courseElementId: selected.id, session }) })
+      const body = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(body.error || 'Verrouillage impossible.')
+      await refresh()
+      toast.success(`${body.data?.validatedCount ?? readyCount} note(s) verrouillée(s) et publiée(s).`)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Verrouillage impossible.')
+    } finally { setLockingCourse(false) }
+  }
+
+  const readyToLockCount = selected && data ? data.students.filter((student) => student.grade && !student.grade.isLocked &&
+    student.grade.finalGrade !== null && student.grade.ccGrade !== null && student.grade.examGrade !== null &&
+    (selected.hoursTP <= 0 || student.grade.tpGrade !== null)).length : 0
+  const lockedCount = data?.students.filter((student) => student.grade?.isLocked).length ?? 0
+  const incompleteCount = Math.max(0, (data?.students.length ?? 0) - lockedCount - readyToLockCount)
 
   return <div className="space-y-5 text-slate-900">
     <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
       <p className="text-sm font-semibold uppercase tracking-wide text-emerald-800">{jury ? 'Jury académique' : 'Espace enseignant'}</p>
       <h1 className="mt-1 text-2xl font-bold text-slate-950">Saisie des notes</h1>
       <p className="mt-2 text-sm text-slate-700">{jury
-        ? 'Examens des programmes et niveaux qui vous sont affectés. Toute correction d’une note déjà enregistrée exige un motif et reste tracée.'
+        ? 'Saisissez l’examen, contrôlez la moyenne, puis verrouillez la note. Le verrouillage publie le résultat et le rend utilisable par la délibération.'
         : 'Contrôle continu et TP de vos services annuels approuvés uniquement. La première note est enregistrée au départ du champ et ne peut plus être modifiée par vous.'}</p>
       {data?.academicYear && <p className="mt-2 text-sm font-medium text-slate-800">Année académique : {data.academicYear.name}</p>}
     </div>
@@ -149,8 +178,22 @@ export function GradeEntryPage() {
               <SelectContent><SelectItem value="NORMALE">Normale</SelectItem><SelectItem value="RATTRAPAGE">Rattrapage</SelectItem></SelectContent></Select></div>
         </CardContent></Card>
         {selected && <Card className="border-slate-200 bg-white"><CardContent className="p-0">
-          <div className="border-b border-slate-200 p-5"><h2 className="text-lg font-bold text-slate-950">{selected.name}</h2>
-            <p className="text-sm text-slate-700">{selected.teachingUnit.name} · {selected.teachingUnit.semester.name} · {data.students.length} étudiant(s) inscrit(s)</p></div>
+          <div className="border-b border-slate-200 p-5">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div><h2 className="text-lg font-bold text-slate-950">{selected.name}</h2>
+                <p className="text-sm text-slate-700">{selected.teachingUnit.name} · {selected.teachingUnit.semester.name} · {data.students.length} étudiant(s) inscrit(s)</p></div>
+              {jury && <Button type="button" onClick={() => void lockReadyCourseGrades()}
+                disabled={lockingCourse || readyToLockCount === 0} className="w-full lg:w-auto">
+                <LockKeyhole className="mr-2 size-4" />
+                {lockingCourse ? 'Verrouillage…' : `Verrouiller les notes prêtes (${readyToLockCount})`}
+              </Button>}
+            </div>
+            {jury && <div className="mt-4 grid gap-2 sm:grid-cols-3">
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3"><p className="text-xs text-emerald-800">Verrouillées et publiées</p><p className="text-xl font-bold text-emerald-950">{lockedCount}</p></div>
+              <div className="rounded-lg border border-blue-200 bg-blue-50 p-3"><p className="text-xs text-blue-800">Prêtes à verrouiller</p><p className="text-xl font-bold text-blue-950">{readyToLockCount}</p></div>
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3"><p className="text-xs text-amber-800">À compléter</p><p className="text-xl font-bold text-amber-950">{incompleteCount}</p></div>
+            </div>}
+          </div>
           {data.students.length === 0 ? <p className="p-5 text-sm text-slate-700">Aucun étudiant ne possède une inscription annuelle validée dans le niveau de cette UE pour l’année sélectionnée.</p>
             : <div className="overflow-x-auto"><table className="w-full min-w-[760px] text-sm">
               <thead className="bg-slate-50 text-left text-slate-800"><tr>
@@ -165,12 +208,20 @@ export function GradeEntryPage() {
                 <td className="p-3 text-right"><GradeCell student={student} course={selected} component="examGrade" jury={jury} yearId={data.academicYear.id} session={session} refresh={refresh} /></td>
                 <td className="p-3 text-right font-bold text-slate-950">{student.grade?.finalGrade == null ? '—' : student.grade.finalGrade.toFixed(2)}
                   <p className="font-normal text-slate-600">{student.grade?.isLocked ? 'Publiée' : 'En cours'}</p></td>
-                {jury && <td className="p-3 text-right">{student.grade && !student.grade.isLocked && student.grade.finalGrade !== null &&
+                {jury && <td className="p-3 text-right">{student.grade?.isLocked
+                  ? <Badge className="bg-emerald-100 text-emerald-900 hover:bg-emerald-100"><ShieldCheck className="mr-1 size-3" />Verrouillée</Badge>
+                  : student.grade && student.grade.finalGrade !== null &&
                   student.grade.ccGrade !== null && student.grade.examGrade !== null &&
                   (selected.hoursTP <= 0 || student.grade.tpGrade !== null)
-                  ? <Button type="button" size="sm" disabled={locking === student.grade.id} onClick={() => lock(student.grade!.id)}>Valider</Button>
-                  : '—'}</td>}
+                  ? <Button type="button" size="sm" disabled={locking === student.grade.id} onClick={() => lock(student.grade!.id)}>
+                      <LockKeyhole className="mr-1 size-3" />{locking === student.grade.id ? 'Verrouillage…' : 'Verrouiller'}
+                    </Button>
+                  : <Badge variant="outline" className="border-amber-300 text-amber-800"><TriangleAlert className="mr-1 size-3" />À compléter</Badge>}</td>}
               </tr>)}</tbody></table></div>}
+          {jury && data.students.length > 0 && <div className="border-t border-slate-200 bg-slate-50 p-4 text-xs text-slate-700">
+            <p className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-700" />
+              Une note complète comprend le contrôle continu, l’examen et le TP lorsque la matière en prévoit un. Après verrouillage, seule une correction motivée du jury avant la finalisation de la délibération peut rouvrir son calcul.</p>
+          </div>}
         </CardContent></Card>}
       </>}
   </div>

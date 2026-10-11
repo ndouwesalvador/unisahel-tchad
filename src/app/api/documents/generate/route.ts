@@ -466,7 +466,7 @@ export async function POST(request: NextRequest) {
           if (!allowed) return NextResponse.json({ error: 'PV hors du périmètre du jury' }, { status: 403 })
         }
         if (!delib.isLocked || delib.status !== 'TERMINEE') {
-          return NextResponse.json({ error: 'Le PV exige une délibération finale verrouillée' }, { status: 409 })
+          return NextResponse.json({ error: 'Le PV exige une délibération finalisée par le jury' }, { status: 409 })
         }
         if (delib.decisions.length === 0) {
           return NextResponse.json({ error: 'Aucune décision de jury à publier' }, { status: 409 })
@@ -476,7 +476,7 @@ export async function POST(request: NextRequest) {
           delib.programId, delib.levelId
         )
         if (!readiness.ready) {
-          return NextResponse.json({ error: 'Le PV officiel exige toutes les notes définitives verrouillées', readiness }, { status: 409 })
+          return NextResponse.json({ error: 'Le PV officiel exige que toutes les notes définitives soient verrouillées par le jury', readiness }, { status: 409 })
         }
         const decisionIds = delib.decisions.map((decision) => decision.studentId)
         const registeredStudentIds = new Set(readiness.studentIds)

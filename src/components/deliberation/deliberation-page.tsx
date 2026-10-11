@@ -141,17 +141,17 @@ function describeReadinessIssue(readiness: DeliberationReadiness): string {
 
 const decisionConfig: Record<Decision, { label: string; className: string; icon: React.ElementType; tooltip: string }> = {
   ADMI: { label: 'Admis', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0 hover:bg-[var(--institution-secondary-15)]', icon: CheckCircle2, tooltip: 'Étudiant admis avec succès' },
-  AJOURNE: { label: 'Ajourne', className: 'bg-[#ef6c0015] text-[#ef6c00] border-0 hover:bg-[#ef6c0015]', icon: Clock, tooltip: 'Passage en session de rattrapage' },
+  AJOURNE: { label: 'Ajourné', className: 'bg-[#ef6c0015] text-[#ef6c00] border-0 hover:bg-[#ef6c0015]', icon: Clock, tooltip: 'Passage en session de rattrapage' },
   REDOUBLANT: { label: 'Redoublant', className: 'bg-[#c6282815] text-[#c62828] border-0 hover:bg-[#c6282815]', icon: XCircle, tooltip: 'Redoublement du semestre' },
-  EXCLU: { label: 'Exclu', className: 'bg-[#8b000015] text-[#8b0000] border-0 hover:bg-[#8b000015]', icon: AlertTriangle, tooltip: 'Exclusion definitive' },
-  ADMI_DETTE: { label: 'Admis avec dette', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0 hover:bg-[var(--institution-accent-15)]', icon: Award, tooltip: 'Admis mais avec des credits en dette' },
-  COMPENSE: { label: 'Compense', className: 'bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0 hover:bg-[var(--institution-primary-15)]', icon: TrendingUp, tooltip: 'Compensation inter-UE validee' },
+  EXCLU: { label: 'Exclu', className: 'bg-[#8b000015] text-[#8b0000] border-0 hover:bg-[#8b000015]', icon: AlertTriangle, tooltip: 'Exclusion définitive' },
+  ADMI_DETTE: { label: 'Admis avec dette', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0 hover:bg-[var(--institution-accent-15)]', icon: Award, tooltip: 'Admis mais avec des crédits en dette' },
+  COMPENSE: { label: 'Compensé', className: 'bg-[var(--institution-primary-15)] text-[var(--institution-primary)] border-0 hover:bg-[var(--institution-primary-15)]', icon: TrendingUp, tooltip: 'Compensation inter-UE validée' },
 }
 
 const sessionStatusConfig: Record<string, { label: string; className: string }> = {
-  planifiee: { label: 'Planifiee', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0' },
+  planifiee: { label: 'Planifiée', className: 'bg-[var(--institution-accent-15)] text-[var(--institution-accent)] border-0' },
   en_cours: { label: 'En cours', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0' },
-  terminee: { label: 'Terminee', className: 'bg-gray-100 text-gray-500 border-0' },
+  terminee: { label: 'Terminée', className: 'bg-gray-100 text-gray-500 border-0' },
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -357,7 +357,7 @@ export function DeliberationPage() {
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(json.error || 'Échec de la validation')
-      toast.success('Délibération validée', { description: 'Les résultats sont officialisés' })
+      toast.success('Délibération finalisée', { description: 'Les résultats sont officialisés et le PV peut être généré.' })
       queryClient.invalidateQueries({ queryKey: ['deliberation'] })
     } catch (error) {
       toast.error('Échec de la validation', {
@@ -624,7 +624,7 @@ export function DeliberationPage() {
                         {isReadyForJury ? 'Notes prêtes pour jury' : 'Délibération bloquée : notes incomplètes ou incohérentes'}
                       </h3>
                       <p className="text-xs text-gray-500 mt-1">
-                        Le jury utilise uniquement les notes verrouillées des UE réellement inscrites. Les PV officiels sont bloqués tant que cette vérification n&apos;est pas complète.
+                        Le jury utilise uniquement les notes verrouillées des UE réellement inscrites. Ouvrez « Notes et examens », saisissez les examens, puis utilisez « Verrouiller les notes prêtes » avant de revenir ici.
                       </p>
                     </div>
                   </div>
@@ -694,7 +694,7 @@ export function DeliberationPage() {
                 {!['FACULTE', 'DEPARTEMENT'].includes(userRole || '') && (
                   <div className="flex lg:flex-col gap-2">
                     <Button variant="outline" size="sm" className="text-xs" onClick={() => setView('grades')}>
-                      <BookOpen className="size-3.5 mr-1.5" />Ouvrir Notes
+                      <BookOpen className="size-3.5 mr-1.5" />Ouvrir la validation des notes
                     </Button>
                   </div>
                 )}
@@ -1135,7 +1135,7 @@ export function DeliberationPage() {
                     disabled={!canLock || isLocking}
                   >
                     <CheckSquare className="size-3.5 mr-1.5" />
-                    {isLocked ? 'Délibération validée' : isLocking ? 'Validation…' : 'Valider la délibération'}
+                    {isLocked ? 'Délibération finalisée' : isLocking ? 'Finalisation…' : 'Finaliser la délibération et le PV'}
                   </Button>
                 </div>
               </div>
