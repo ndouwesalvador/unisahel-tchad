@@ -409,20 +409,22 @@ export async function POST(request: NextRequest) {
           const registration = registrations[0]
           const [program, level] = await Promise.all([
             db.program.findFirst({ where: { id: registration.programId, tenantId }, select: { id: true, name: true, diplomaType: true } }),
-            db.level.findFirst({ where: { id: registration.levelId, programId: registration.programId, program: { tenantId } }, select: { id: true, name: true } }),
+            db.level.findFirst({
+              where: { id: registration.levelId, programId: registration.programId, program: { tenantId } },
+              select: { id: true, name: true, semesters: { select: { teachingUnits: { select: { credits: true } } } } },
+            }),
           ])
           if (!program || !level) {
             return NextResponse.json({ error: 'Programme ou niveau introuvable pour cet aperçu.' }, { status: 409 })
           }
-          const levelAward = await getValidatedLevelAward({
-            tenantId, studentId, academicYearId: acYearId, programId: program.id, levelId: level.id,
-          })
+          const configuredCredits = level.semesters.reduce(
+            (total, semester) => total + semester.teachingUnits.reduce((sum, unit) => sum + unit.credits, 0), 0,
+          )
           const diploma = {
             title: program.diplomaType?.trim() || level.name,
             program: program.name,
-            date: levelAward.juryDate.toISOString(),
-            credits: levelAward.creditsRequired,
-            mention: levelAward.average >= 16 ? 'Très bien' : levelAward.average >= 14 ? 'Bien' : levelAward.average >= 12 ? 'Assez bien' : 'Passable',
+            date: issuedAt,
+            credits: configuredCredits,
           }
           DocumentComponent = React.createElement(DiplomePDF, {
             tenant, student: { ...student, program: program.name, level: level.name },
@@ -430,7 +432,6 @@ export async function POST(request: NextRequest) {
           })
           documentData = {
             diploma, preview: true, programId: program.id, levelId: level.id,
-            deliberationId: levelAward.deliberationId, decisionId: levelAward.decisionId,
           }
           break
         }
