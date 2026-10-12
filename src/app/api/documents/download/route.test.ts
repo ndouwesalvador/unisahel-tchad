@@ -99,6 +99,16 @@ describe('GET /api/documents/download', () => {
     expect(renderMock).not.toHaveBeenCalled()
   })
 
+  it('lets the rectorat download only validated PVs', async () => {
+    const user = { id: 'rectorat-A', role: 'RECTORAT', tenantId: 'tenant-A' }
+    const studentDocument = await handler(user, 'tenant-A', request)
+    expect(studentDocument.status).toBe(403)
+
+    dbMock.officialDocument.findFirst.mockResolvedValue({ ...document, studentId: null, type: 'PV_DELIBERATION', validatedAt: null })
+    const draftPv = await handler(user, 'tenant-A', request)
+    expect(draftPv.status).toBe(403)
+  })
+
   it('rejects unsupported staff roles and corrupt snapshots', async () => {
     const teacher = await handler({ id: 'teacher-A', role: 'ENSEIGNANT', tenantId: 'tenant-A' }, 'tenant-A', request)
     expect(teacher.status).toBe(403)

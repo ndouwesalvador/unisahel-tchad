@@ -1,7 +1,7 @@
 'use client'
 
-import { useDashboardStats, useReports } from '@/lib/api-hooks'
-import { useAppStore } from '@/lib/store'
+import { useDashboardStats, useOversight, useReports } from '@/lib/api-hooks'
+import { useAppStore, type AppView } from '@/lib/store'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { AlertTriangle, Download, FileText, RefreshCw } from 'lucide-react'
@@ -33,6 +33,21 @@ type ReportRecord = {
   format: string
   status: string
   createdAt: string
+}
+
+type OversightData = {
+  academicYear: { id: string; name: string } | null
+  totals: { students: number; teachers: number; programs: number; faculties: number; departments: number; signedPvs: number }
+  statuses: Array<{ status: string; count: number }>
+  programs: Array<{
+    id: string
+    name: string
+    cycle: string
+    students: number
+    department: string
+    faculty: string
+    levels: Array<{ id: string; name: string; students: number }>
+  }>
 }
 
 const statusLabels: Record<string, string> = {
@@ -74,11 +89,23 @@ function buildRows(data: DashboardData) {
 }
 
 export function ReportsPage() {
-  const { setView } = useAppStore()
-  const dashboard = useDashboardStats()
-  const reports = useReports()
+  const { setView, user } = useAppStore()
+  const isRectorat = user?.role === 'RECTORAT'
+  const dashboard = useDashboardStats(undefined, { enabled: !isRectorat })
+  const oversight = useOversight({ enabled: isRectorat })
+  const reports = useReports({ enabled: !isRectorat })
   const data = dashboard.data as DashboardData | undefined
   const history = (reports.data?.reports ?? []) as ReportRecord[]
+
+  if (isRectorat) {
+    return <RectoratReports
+      data={oversight.data as OversightData | undefined}
+      isPending={oversight.isPending}
+      isError={oversight.isError}
+      refetch={() => oversight.refetch()}
+      setView={setView}
+    />
+  }
 
   async function download(format: 'csv' | 'xlsx') {
     if (!data) return
@@ -182,6 +209,114 @@ export function ReportsPage() {
               ))}
             </ul>
           ) : <p className="text-sm text-gray-500">Aucune demande historique.</p>}
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+function RectoratReports({ data, isPending, isError, refetch, setView }: {
+  data?: OversightData
+  isPending: boolean
+  isError: boolean
+  refetch: () => unknown
+  setView: (view: AppView) => void
+}) {
+  async function download() {
+    if (!data) return
+    const rows = data.programs.flatMap((program) => program.levels.length
+      ? program.levels.map((level) => ({
+          Faculté: program.faculty,
+          Département: program.department,
+          Programme: program.name,
+          Cycle: program.cycle,
+          Niveau: level.name,
+          Étudiants: level.students,
+        }))
+      : [{
+          Faculté: program.faculty,
+          Département: program.department,
+          Programme: program.name,
+          Cycle: program.cycle,
+          Niveau: 'Aucun niveau actif',
+          Étudiants: program.students,
+        }])
+    const { exportToExcel } = await import('@/lib/export')
+    exportToExcel(rows, `pilotage-rectorat-${new Date().toISOString().slice(0, 10)}`, 'Effectifs')
+  }
+
+  if (isPending) {
+    return <p role="status" className="p-6 text-gray-600">Chargement du pilotage académique…</p>
+  }
+  if (isError || !data) {
+    return (
+      <Card>
+        <CardContent className="flex items-center gap-4 p-6">
+          <AlertTriangle className="size-5 text-red-600" />
+          <p>Les indicateurs du rectorat sont momentanément indisponibles.</p>
+          <Button variant="outline" onClick={refetch}>Réessayer</Button>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  const cards = [
+    ['Étudiants', data.totals.students],
+    ['Enseignants actifs', data.totals.teachers],
+    ['Programmes actifs', data.totals.programs],
+    ['Départements', data.totals.departments],
+    ['Facultés', data.totals.faculties],
+    ['PV officiels', data.totals.signedPvs],
+  ] as const
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-[var(--institution-primary)]">Pilotage du rectorat</h1>
+          <p className="text-sm text-gray-600">Vue institutionnelle en lecture seule{data.academicYear ? ` · année ${data.academicYear.name}` : ''}.</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={refetch}><RefreshCw className="mr-2 size-4" />Actualiser</Button>
+          <Button onClick={download}><Download className="mr-2 size-4" />Exporter les effectifs</Button>
+        </div>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
+        {cards.map(([label, value]) => (
+          <Card key={label}><CardContent className="p-4"><p className="text-xs text-gray-600">{label}</p><p className="mt-2 text-2xl font-bold text-[var(--institution-primary)]">{value}</p></CardContent></Card>
+        ))}
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Card className="lg:col-span-2">
+          <CardHeader><CardTitle>Effectifs par programme et niveau</CardTitle></CardHeader>
+          <CardContent className="overflow-x-auto">
+            <table className="w-full min-w-[680px] text-sm">
+              <thead><tr className="border-b text-left"><th className="py-2">Faculté</th><th>Département</th><th>Programme</th><th>Cycle</th><th className="text-right">Étudiants</th></tr></thead>
+              <tbody>{data.programs.map((program) => (
+                <tr key={program.id} className="border-b">
+                  <td className="py-2">{program.faculty}</td><td>{program.department}</td>
+                  <td>{program.name}<div className="text-xs text-gray-500">{program.levels.map((level) => `${level.name}: ${level.students}`).join(' · ') || 'Aucun niveau actif'}</div></td>
+                  <td>{program.cycle}</td><td className="text-right font-semibold">{program.students}</td>
+                </tr>
+              ))}</tbody>
+            </table>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader><CardTitle>Statuts étudiants</CardTitle></CardHeader>
+          <CardContent className="space-y-2">{data.statuses.map((row) => <div key={row.status} className="flex justify-between border-b py-2 text-sm"><span>{statusLabels[row.status] ?? row.status}</span><strong>{row.count}</strong></div>)}</CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader><CardTitle>Consultation détaillée</CardTitle></CardHeader>
+        <CardContent className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => setView('students')}>Étudiants</Button>
+          <Button variant="outline" onClick={() => setView('teachers')}>Enseignants</Button>
+          <Button variant="outline" onClick={() => setView('structure')}>Structure</Button>
+          <Button variant="outline" onClick={() => setView('documents')}>PV officiels</Button>
         </CardContent>
       </Card>
     </div>

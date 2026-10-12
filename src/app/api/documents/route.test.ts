@@ -83,6 +83,19 @@ describe('GET /api/documents', () => {
     expect((await response.json()).documents).toEqual([expect.objectContaining({ id: 'pv-A' })])
     expect(dbMock.officialDocument.count).not.toHaveBeenCalled()
   })
+
+  it('shows the rectorat only validated official PVs', async () => {
+    const user = { id: 'rectorat-A', role: 'RECTORAT', tenantId: 'tenant-A' }
+    const request = new NextRequest('http://localhost:3000/api/documents')
+    const handler = GET as unknown as (sessionUser: typeof user, tenantId: string, request: NextRequest) => Promise<Response>
+
+    const response = await handler(user, 'tenant-A', request)
+
+    expect(response.status).toBe(200)
+    expect(dbMock.officialDocument.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { tenantId: 'tenant-A', type: 'PV_DELIBERATION', validatedAt: { not: null } },
+    }))
+  })
 })
 
 describe('PUT /api/documents', () => {

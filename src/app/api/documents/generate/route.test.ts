@@ -105,6 +105,13 @@ beforeEach(() => {
   dbMock.officialDocument.create.mockResolvedValue({ id: 'doc-A' })
 })
 
+it('keeps the rectorat read-only for official document generation', async () => {
+  authMock.mockResolvedValue({ user: { id: 'rectorat-A', role: 'RECTORAT', tenantId } })
+  const response = await POST(request({ type: 'DIPLOME', tenantId, studentId, academicYearId: 'year-A', sign: true }))
+  expect(response.status).toBe(403)
+  expect(renderPDFMock).not.toHaveBeenCalled()
+})
+
 describe('POST /api/documents/generate', () => {
   it('does not issue a diploma with a missing official logo', async () => {
     dbMock.tenant.findUnique.mockResolvedValue({ id: tenantId, name: 'Université A', logo: null })

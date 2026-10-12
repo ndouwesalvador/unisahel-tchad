@@ -31,9 +31,11 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
     if (isStudentSelfRole(user.role) && !ownStudentId) {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
     }
-    const requestedStudentId = ownStudentId ? null : new URL(request.url).searchParams.get('studentId')
+    const requestedStudentId = ownStudentId || user.role === 'RECTORAT' ? null : new URL(request.url).searchParams.get('studentId')
     const scopedStudentId = ownStudentId || requestedStudentId
-    const where: Prisma.OfficialDocumentWhereInput = scopedStudentId
+    const where: Prisma.OfficialDocumentWhereInput = user.role === 'RECTORAT'
+      ? { tenantId, type: 'PV_DELIBERATION', validatedAt: { not: null } }
+      : scopedStudentId
       ? {
           tenantId,
           studentId: scopedStudentId,
@@ -131,4 +133,4 @@ async function handlePut(_user: SessionUser, _tenantId: string, _request: NextRe
 }
 
 export const GET = withTenantAuth(handleGet)
-export const PUT = withTenantAuth(handlePut, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE', 'RECTORAT'])
+export const PUT = withTenantAuth(handlePut, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE'])

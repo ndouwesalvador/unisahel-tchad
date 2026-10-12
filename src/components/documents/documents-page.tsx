@@ -122,7 +122,8 @@ function useCountUp(target: number, duration: number = 1400) {
 
 export function DocumentsPage() {
   const { user, setView } = useAppStore()
-  const canManageDocuments = ['ADMIN_INSTITUTION', 'RECTORAT', 'SCOLARITE'].includes(user?.role ?? '')
+  const canManageDocuments = ['ADMIN_INSTITUTION', 'SCOLARITE'].includes(user?.role ?? '')
+  const isRectoratView = user?.role === 'RECTORAT'
   const isStudentView = user?.role === 'ETUDIANT' || user?.role === 'ETUDIANT_SANTE'
   const canOpenJury = user?.role === 'ADMIN_INSTITUTION'
   const queryClient = useQueryClient()
@@ -144,7 +145,7 @@ export function DocumentsPage() {
     data: { documents: Array<{ id: string; type: string; studentId: string | null; academicYearId: string | null; etudiant: string; matricule: string; date: string; statut: 'signe' | 'genere' | 'en_attente'; codeVerification: string }>; stats: { thisMonth: number; pending: number }; countByType: Record<string, number> } | undefined
   }
   const { data: studentMatches } = useStudents({ search: studentSearch, limit: 6 }, { enabled: canManageDocuments })
-  const { data: academicYearsResponse } = useAcademicYears()
+  const { data: academicYearsResponse } = useAcademicYears({ enabled: canManageDocuments })
   const academicYears = useMemo(
     () => (academicYearsResponse?.data ?? []) as Array<{ id: string; name: string; isCurrent: boolean }>,
     [academicYearsResponse?.data]
@@ -324,11 +325,13 @@ export function DocumentsPage() {
                 transition={{ duration: 0.4 }}
               >
                 <h1 className="text-2xl font-bold">
-                  {canManageDocuments ? 'Centre de génération de documents' : isStudentView ? 'Mes documents officiels' : 'Documents accessibles'}
+                  {canManageDocuments ? 'Centre de génération de documents' : isRectoratView ? 'PV officiels validés' : isStudentView ? 'Mes documents officiels' : 'Documents accessibles'}
                 </h1>
                 <p className="text-white/80 text-sm mt-1">
                   {canManageDocuments
                     ? 'Génération, signature et vérification des documents académiques'
+                    : isRectoratView
+                      ? 'Consultation en lecture seule des procès-verbaux validés par les jurys habilités.'
                     : isStudentView
                       ? 'Consultez et téléchargez uniquement les documents établis à votre nom.'
                       : 'Consultez les documents disponibles dans votre périmètre.'}

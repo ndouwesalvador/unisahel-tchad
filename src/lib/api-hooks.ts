@@ -15,9 +15,10 @@ function useSimpleGet(key: string | readonly unknown[], path: string) {
   });
 }
 
-export function useDashboardStats(academicYearId?: string | null) {
+export function useDashboardStats(academicYearId?: string | null, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ['dashboardStats', academicYearId ?? null],
+    enabled: options?.enabled ?? true,
     queryFn: async () => {
       const path = academicYearId ? `/api/dashboard?academicYearId=${encodeURIComponent(academicYearId)}` : '/api/dashboard';
       const res = await fetch(path);
@@ -255,8 +256,28 @@ export function useMyExams() {
   })
 }
 
-export function useReports() {
-  return useSimpleGet('reports', '/api/reports');
+export function useReports(options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: ['reports'],
+    enabled: options?.enabled ?? true,
+    queryFn: async () => {
+      const response = await fetch('/api/reports')
+      if (!response.ok) throw new Error('Impossible de charger les rapports')
+      return response.json()
+    },
+  })
+}
+
+export function useOversight(options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: ['oversight'],
+    enabled: options?.enabled ?? true,
+    queryFn: async () => {
+      const response = await fetch('/api/oversight')
+      if (!response.ok) throw new Error('Impossible de charger les indicateurs de pilotage')
+      return response.json()
+    },
+  })
 }
 
 export function useCommunications() {

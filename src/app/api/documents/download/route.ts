@@ -29,6 +29,10 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
   const document = await db.officialDocument.findFirst({ where: { id, tenantId } })
   if (!document) return NextResponse.json({ error: 'Document introuvable.' }, { status: 404 })
 
+  if (user.role === 'RECTORAT' && (document.type !== 'PV_DELIBERATION' || !document.validatedAt)) {
+    return NextResponse.json({ error: 'Le rectorat consulte uniquement les PV officiels validés.' }, { status: 403 })
+  }
+
   if (!isStudentSelfRole(user.role) && !STAFF_ROLES.has(user.role) &&
       (document.type !== 'PV_DELIBERATION' || !['JURY', 'FACULTE', 'DEPARTEMENT'].includes(user.role))) {
     return NextResponse.json({ error: 'Accès refusé.' }, { status: 403 })

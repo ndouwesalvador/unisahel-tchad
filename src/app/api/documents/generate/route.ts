@@ -18,7 +18,7 @@ import { prepareDocumentArtwork, prepareDocumentPhoto } from '@/lib/pdf/artwork'
 import { curriculumIndex, parseCurriculumSnapshot } from '@/lib/curriculum/versioning'
 import { DIPLOMA_TEMPLATE_TYPE, parseDiplomaDesign } from '@/lib/diploma-design'
 
-const SIGNING_ROLES = new Set(['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'RECTORAT', 'SCOLARITE', 'JURY', 'FACULTE', 'DEPARTEMENT'])
+const SIGNING_ROLES = new Set(['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE', 'JURY', 'FACULTE', 'DEPARTEMENT'])
 // Student portals are read-only for official documents. A student may only
 // download a validated document previously issued by an authorised office.
 const GENERATING_ROLES = SIGNING_ROLES
