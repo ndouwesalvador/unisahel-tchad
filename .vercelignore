@@ -1,0 +1,23 @@
+# Local browser automation and authenticated test state
+.playwright-cli/
+tmp/
+
+# Generated review artifacts and source references not used at runtime
+output/
+download/
+diplome_doc/
+archive/
+examples/
+
+# Local agent metadata
+.superpowers/
+.zscripts/
+
+# Test-only suites and reports
+e2e/
+coverage/
+playwright-report/
+test-results/
+
+# Local documentation and scratch data
+docs/
