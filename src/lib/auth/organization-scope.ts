@@ -1,22 +1,21 @@
 import { db } from '@/lib/db'
 import type { SessionUser } from '@/lib/auth/helpers'
+import { isOrganizationManager, isOrganizationScopedRole } from '@/lib/auth/role-capabilities'
 
-export function isOrganizationManager(role: string) {
-  return role === 'FACULTE' || role === 'DEPARTEMENT'
-}
+export { isOrganizationManager, isOrganizationScopedRole } from '@/lib/auth/role-capabilities'
 
 // Resolve permissions from the database on every request: a stale session
 // cannot retain access after a reassignment or deactivation.
 export async function getOrganizationScope(user: SessionUser, tenantId: string) {
-  if (!isOrganizationManager(user.role)) return null
+  if (!isOrganizationScopedRole(user.role)) return null
 
   const account = await db.user.findFirst({
-    where: { id: user.id, tenantId, role: user.role as 'FACULTE' | 'DEPARTEMENT', isActive: true },
+    where: { id: user.id, tenantId, role: user.role as 'FACULTE' | 'DEPARTEMENT' | 'RESPONSABLE_FILIERE', isActive: true },
     select: { facultyId: true, departmentId: true },
   })
   if (!account) return { facultyId: null, departmentIds: [] as string[] }
 
-  if (user.role === 'DEPARTEMENT') {
+  if (user.role === 'DEPARTEMENT' || user.role === 'RESPONSABLE_FILIERE') {
     const department = account.departmentId ? await db.department.findFirst({
       where: { id: account.departmentId, tenantId, isActive: true },
       select: { id: true, facultyId: true },

@@ -2,6 +2,7 @@ import { auth } from '@/lib/auth/config'
 import { NextRequest, NextResponse } from 'next/server'
 import { isTeacherApiAllowed } from '@/lib/auth/teacher-policy'
 import { isOrganizationApiAllowed } from '@/lib/auth/organization-policy'
+import { isOrganizationScopedRole } from '@/lib/auth/role-capabilities'
 
 export interface SessionUser {
   id: string
@@ -103,9 +104,9 @@ export function withAuth<T extends unknown[]>(
         return createAuthError('FORBIDDEN')
       }
 
-      if (sessionUser.role === 'FACULTE' || sessionUser.role === 'DEPARTEMENT') {
+      if (isOrganizationScopedRole(sessionUser.role)) {
         const request = args[0] as { url?: string; method?: string } | undefined
-        if (!request?.url || !isOrganizationApiAllowed(new URL(request.url).pathname, request.method || 'GET')) {
+        if (!request?.url || !isOrganizationApiAllowed(sessionUser.role, new URL(request.url).pathname, request.method || 'GET')) {
           return createAuthError('FORBIDDEN')
         }
       }
@@ -159,7 +160,7 @@ export function withTenantAuth(
       if (sessionUser.role === 'ENSEIGNANT' && !isTeacherApiAllowed(url.pathname, request.method)) {
         return createAuthError('FORBIDDEN')
       }
-      if ((sessionUser.role === 'FACULTE' || sessionUser.role === 'DEPARTEMENT') && !isOrganizationApiAllowed(url.pathname, request.method)) {
+      if (isOrganizationScopedRole(sessionUser.role) && !isOrganizationApiAllowed(sessionUser.role, url.pathname, request.method)) {
         return createAuthError('FORBIDDEN')
       }
       const tenantId = url.searchParams.get('tenantId') || sessionUser.tenantId

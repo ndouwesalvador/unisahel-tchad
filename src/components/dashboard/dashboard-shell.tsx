@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, type ComponentType } from 'react'
 import { motion } from 'framer-motion'
 import { signOut } from 'next-auth/react'
 import { useAppStore, type AppUser, type AppView, type UserRole } from '@/lib/store'
+import { isViewAllowed } from '@/lib/auth/role-capabilities'
 import { useAcademicYears, useNotifications } from '@/lib/api-hooks'
 import { useQuery } from '@tanstack/react-query'
 import { DEFAULT_BRAND, readableBrandColor } from '@/lib/institution-branding'
@@ -162,6 +163,7 @@ function getVisibleNavItems(user: AppUser | null): NavItem[] {
   if (!user) return []
 
   return (roleNavItems[user.role] || []).filter((item) => {
+    if (!isViewAllowed(user.role, item.view)) return false
     if (item.module === 'health') return isHealthAcademicSystem(user.tenantAcademicSystem)
     return true
   })
@@ -183,7 +185,6 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
     { icon: UserCog, label: 'Utilisateurs', view: 'staff-users' },
     { icon: UserPlus, label: 'Candidatures', view: 'candidature' },
     { icon: Building2, label: 'Structure', view: 'structure' },
-    { icon: BookOpen, label: 'Programmes', view: 'programs' },
     { icon: ClipboardList, label: 'Maquettes', view: 'maquette' },
     { icon: FileCheck, label: 'Notes', view: 'grades' },
     { icon: CheckSquare, label: 'Délibérations', view: 'deliberation' },
@@ -215,10 +216,11 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
   RECTORAT: [
     { icon: LayoutDashboard, label: 'Tableau de bord', view: 'dashboard' },
     { icon: Users, label: 'Étudiants', view: 'students' },
+    { icon: GraduationCap, label: 'Enseignants', view: 'teachers' },
+    { icon: Building2, label: 'Structure académique', view: 'structure' },
     { icon: BarChart3, label: 'Statistiques', view: 'statistics' },
-    { icon: FileText, label: 'Documents', view: 'documents' },
+    { icon: FileText, label: 'PV officiels', view: 'documents' },
     { icon: BarChart3, label: 'Rapports', view: 'reports' },
-    { icon: Users, label: 'Personnel', view: 'hr' },
   ],
   SCOLARITE: [
     { icon: LayoutDashboard, label: 'Tableau de bord', view: 'dashboard' },
@@ -247,6 +249,9 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
   ],
   FACULTE: [
     { icon: LayoutDashboard, label: 'Tableau de bord', view: 'dashboard' },
+    { icon: Users, label: 'Étudiants de la faculté', view: 'students' },
+    { icon: GraduationCap, label: 'Enseignants', view: 'teachers' },
+    { icon: Building2, label: 'Structure de la faculté', view: 'structure' },
     { icon: Calendar, label: 'Emploi du temps', view: 'timetable' },
     { icon: BookOpenCheck, label: 'Services enseignants', view: 'teaching-services' },
     { icon: CheckSquare, label: 'Délibérations', view: 'deliberation' },
@@ -294,7 +299,7 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
     { icon: LayoutDashboard, label: 'Tableau de bord', view: 'dashboard' },
     { icon: CreditCard, label: 'Paiements', view: 'payments' },
     { icon: Award, label: 'Bourses', view: 'scholarships' },
-    { icon: Receipt, label: 'Reçus', view: 'documents' },
+    { icon: Receipt, label: 'Reçus', view: 'receipts' },
     { icon: BarChart3, label: 'Statistiques', view: 'statistics' },
   ],
   ETUDIANT: [
@@ -552,6 +557,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void } = {}) {
 
 function MainContent({ view }: { view: AppView }) {
   const { user } = useAppStore()
+  if (user && !isViewAllowed(user.role, view)) return <DashboardHome />
   if ((user?.role === 'ETUDIANT' || user?.role === 'ETUDIANT_SANTE') && !isStudentViewAllowed(user.role, view)) {
     return <DashboardHome />
   }
@@ -614,6 +620,8 @@ function MainContent({ view }: { view: AppView }) {
       return user?.role === 'ETUDIANT' || user?.role === 'ETUDIANT_SANTE'
         ? <StudentPaymentsPage />
         : <PaymentsPage />
+    case 'receipts':
+      return <PaymentsPage />
     case 'health':
       return <HealthPage />
     case 'internships':

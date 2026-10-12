@@ -27,6 +27,16 @@ const methods: Record<string, readonly string[]> = {
   '/api/notifications': ['GET', 'PUT'],
 }
 
-export function isOrganizationApiAllowed(pathname: string, method: string): boolean {
-  return methods[pathname]?.includes(method.toUpperCase()) ?? false
+const filiereReadMethods: Record<string, readonly string[]> = {
+  '/api/structure': ['GET'],
+  '/api/students': ['GET'],
+  '/api/academic-years': ['GET'],
+  '/api/institution/branding': ['GET'],
+  '/api/profile': ['GET', 'PUT'],
+  '/api/notifications': ['GET', 'PUT'],
+}
+
+export function isOrganizationApiAllowed(role: string, pathname: string, method: string): boolean {
+  const policy = role === 'RESPONSABLE_FILIERE' ? filiereReadMethods : methods
+  return policy[pathname]?.includes(method.toUpperCase()) ?? false
 }
