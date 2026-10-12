@@ -135,14 +135,14 @@ interface RoleDashboardResponse {
 }
 
 const roleQuickActions: Record<string, { label: string; view: import('@/lib/store').AppView }[]> = {
-  RECTORAT: [{ label: 'Étudiants', view: 'students' }, { label: 'Rapports', view: 'reports' }, { label: 'Documents', view: 'documents' }],
+  RECTORAT: [{ label: 'Étudiants', view: 'students' }, { label: 'Rapports', view: 'reports' }, { label: 'PV officiels', view: 'documents' }],
   SCOLARITE: [{ label: 'Étudiants', view: 'students' }, { label: 'Candidatures', view: 'candidature' }, { label: 'Documents', view: 'documents' }, { label: 'Paiements', view: 'payments' }],
-  FACULTE: [{ label: 'Étudiants', view: 'students' }, { label: 'Notes', view: 'grades' }, { label: 'Délibérations', view: 'deliberation' }],
-  DEPARTEMENT: [{ label: 'Étudiants', view: 'students' }, { label: 'Notes', view: 'grades' }, { label: 'Rapports', view: 'reports' }],
-  RESPONSABLE_FILIERE: [{ label: 'Maquettes', view: 'maquette' }, { label: 'Notes', view: 'grades' }, { label: 'Délibérations', view: 'deliberation' }],
+  FACULTE: [{ label: 'Étudiants', view: 'students' }, { label: 'Enseignants', view: 'teachers' }, { label: 'Délibérations', view: 'deliberation' }],
+  DEPARTEMENT: [{ label: 'Étudiants', view: 'students' }, { label: 'Enseignants', view: 'teachers' }, { label: 'PV du département', view: 'documents' }],
+  RESPONSABLE_FILIERE: [{ label: 'Maquettes', view: 'maquette' }, { label: 'Étudiants', view: 'students' }],
   JURY: [{ label: 'Délibérations', view: 'deliberation' }, { label: 'Étudiants', view: 'students' }],
-  CAISSE: [{ label: 'Paiements', view: 'payments' }, { label: 'Documents', view: 'documents' }, { label: 'Bourses', view: 'scholarships' }],
-  MAITRE_STAGE: [{ label: 'Stages', view: 'internships' }, { label: 'Étudiants', view: 'students' }],
+  CAISSE: [{ label: 'Paiements', view: 'payments' }, { label: 'Reçus', view: 'receipts' }, { label: 'Bourses', view: 'scholarships' }],
+  MAITRE_STAGE: [{ label: 'Stages affectés', view: 'internships' }],
   PARENT: [{ label: 'Paiements', view: 'payments' }],
 }
 

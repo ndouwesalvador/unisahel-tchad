@@ -35,6 +35,7 @@ describe('organization API policy', () => {
   })
 
   it('keeps a filiere lead on scoped read-only endpoints', () => {
+    expect(isOrganizationApiAllowed('RESPONSABLE_FILIERE', '/api/dashboard', 'GET')).toBe(true)
     expect(isOrganizationApiAllowed('RESPONSABLE_FILIERE', '/api/students', 'GET')).toBe(true)
     expect(isOrganizationApiAllowed('RESPONSABLE_FILIERE', '/api/structure', 'GET')).toBe(true)
     expect(isOrganizationApiAllowed('RESPONSABLE_FILIERE', '/api/structure', 'POST')).toBe(false)

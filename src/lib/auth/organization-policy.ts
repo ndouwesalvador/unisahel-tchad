@@ -28,6 +28,7 @@ const methods: Record<string, readonly string[]> = {
 }
 
 const filiereReadMethods: Record<string, readonly string[]> = {
+  '/api/dashboard': ['GET'],
   '/api/structure': ['GET'],
   '/api/students': ['GET'],
   '/api/academic-years': ['GET'],
