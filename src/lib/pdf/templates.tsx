@@ -299,6 +299,9 @@ function DocumentSignatories({ tenant, compact = false, anchored = false, bottom
 // It is decorative artwork, not a claim of counterfeit-proof security.
 function DiplomaSecurityFrame({ tenant }: { tenant: TenantInfo }) {
   const design = parseDiplomaDesign(tenant.diplomaDesign)
+  const watermark = design.watermarkSource === 'EMBLEM'
+    ? design.nationalEmblem
+    : design.watermarkSource === 'LOGO' ? tenant.logo : undefined
   const seed = [...(tenant.id || tenant.name)].reduce((hash, char) => (hash * 31 + char.charCodeAt(0)) >>> 0, 7)
   const petals = 10 + seed % 9
   const loops = Array.from({ length: petals }, (_, index) => {
@@ -346,9 +349,9 @@ function DiplomaSecurityFrame({ tenant }: { tenant: TenantInfo }) {
       d={`M 36 ${80 + index * 58} Q ${110 + seed % 60} ${65 + index * 58} 190 ${80 + index * 58} M 652 ${80 + index * 58} Q ${730 - seed % 60} ${65 + index * 58} 806 ${80 + index * 58}`}
       fill="none" stroke={design.accentColor} strokeWidth={0.4} opacity={0.24} />)}
   </Svg>
-  {design.showWatermark && tenant.logo?.startsWith('data:image/') && <Image src={tenant.logo}
-    style={{ position: 'absolute', width: 225, height: 225, left: 309, top: 185, objectFit: 'contain', opacity: 0.035 }} />}
-  {design.nationalEmblem?.startsWith('data:image/') && <Image src={design.nationalEmblem}
+  {watermark?.startsWith('data:image/') && <Image src={watermark}
+    style={{ position: 'absolute', width: design.watermarkSize, height: design.watermarkSize, left: (842 - design.watermarkSize) / 2, top: (595 - design.watermarkSize) / 2, objectFit: 'contain', opacity: 0.05 }} />}
+  {design.nationalEmblem?.startsWith('data:image/') && design.watermarkSource !== 'EMBLEM' && <Image src={design.nationalEmblem}
     style={{ position: 'absolute', width: 54, height: 54, left: 47, top: 45, objectFit: 'contain', opacity: 0.92 }} />}
   {design.showMedallion && design.medallion?.startsWith('data:image/') && <Image src={design.medallion}
     style={{ position: 'absolute', width: 62, height: 62, right: 48, top: 279, objectFit: 'contain', opacity: 0.9 }} />}

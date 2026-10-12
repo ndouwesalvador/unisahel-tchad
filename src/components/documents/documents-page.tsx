@@ -172,7 +172,8 @@ export function DocumentsPage() {
   const animatedDocsMonth = useCountUp(docsData?.stats?.thisMonth ?? 0, 1400)
   const animatedPending = useCountUp(docsData?.stats?.pending ?? 0, 1200)
   const selectedDocumentType = documentTypeList.find((dt) => dt.key === selectedType)
-  const signedOnlyDocument = ['ATTESTATION_NIVEAU', 'DIPLOME'].includes(selectedDocumentType?.apiType || '')
+  const signedOnlyDocument = selectedDocumentType?.apiType === 'ATTESTATION_NIVEAU'
+  const diplomaPreview = selectedDocumentType?.apiType === 'DIPLOME'
   const canGenerateSelectedDocument = Boolean(
     selectedDocumentType?.implemented &&
     selectedDocumentType.apiType &&
@@ -183,7 +184,7 @@ export function DocumentsPage() {
     const docType = documentTypeList.find((dt) => dt.key === selectedType)
     const apiType = docType?.apiType
     if (!apiType || !user) return
-    if (['ATTESTATION_NIVEAU', 'DIPLOME'].includes(apiType) && !sign) {
+    if (apiType === 'ATTESTATION_NIVEAU' && !sign) {
       toast.error('Validation requise', { description: 'Ce document officiel ne peut pas être généré comme brouillon.' })
       return
     }
@@ -582,7 +583,7 @@ export function DocumentsPage() {
                   onClick={() => generateDoc(false)}
                 >
                   {isGenerating ? <Loader2 className="size-3.5 mr-1.5 animate-spin" /> : <Eye className="size-3.5 mr-1.5" />}
-                  Générer PDF
+                  {diplomaPreview ? 'Prévisualiser le diplôme' : 'Générer PDF'}
                 </Button>
               </div>
               <Button
@@ -600,7 +601,7 @@ export function DocumentsPage() {
                 Sélectionnez un étudiant pour activer la génération de ce document.
               </p>
             )}
-            {signedOnlyDocument && <p className="text-xs text-gray-500 mt-2">Ce document exige une délibération finale validée, les crédits complets sans dette et une validation par un responsable.</p>}
+            {(signedOnlyDocument || diplomaPreview) && <p className="text-xs text-gray-500 mt-2">{diplomaPreview ? 'L’aperçu porte la mention « non validé ». Le diplôme officiel exige le dernier niveau du programme, une délibération finale et tous les crédits sans dette.' : 'Ce document exige une délibération finale validée, les crédits complets sans dette et une validation par un responsable.'}</p>}
             <p className="text-xs text-gray-500 mt-2">Le logo et les signatures sont figés lors de l’émission. Après une modification de l’identité visuelle, générez un nouveau document pour l’utiliser ; les pièces déjà délivrées restent inchangées.</p>
             {selectedDocumentType && !selectedDocumentType.implemented && (
               <p className="text-xs text-[var(--institution-accent)] mt-2">

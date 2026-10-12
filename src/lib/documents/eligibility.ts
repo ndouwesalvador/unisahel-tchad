@@ -158,10 +158,14 @@ export async function getValidatedDiplomaAward(input: {
       levels: { orderBy: [{ orderIndex: 'asc' }, { id: 'asc' }], select: { id: true, name: true, orderIndex: true } },
     },
   })
-  if (!program || !program.diplomaType?.trim() || !Number.isInteger(program.duration) || program.duration < 1 ||
-      program.levels.length !== program.duration ||
-      new Set(program.levels.map((level) => level.orderIndex)).size !== program.levels.length) {
+  if (!program || !program.diplomaType?.trim() || !Number.isInteger(program.duration) || program.duration < 1 || program.levels.length === 0) {
     throw new AwardEligibilityError('Le diplôme, la durée et l’ordre des niveaux doivent être configurés sans ambiguïté dans le programme')
+  }
+  if (new Set(program.levels.map((level) => level.orderIndex)).size !== program.levels.length) {
+    throw new AwardEligibilityError('Chaque niveau du programme doit avoir un ordre unique avant l’émission du diplôme officiel')
+  }
+  if (program.levels.length !== program.duration) {
+    throw new AwardEligibilityError(`La structure du programme est incomplète : ${program.levels.length} niveau(x) configuré(s) sur ${program.duration}. Complétez les niveaux avant l’émission du diplôme officiel`)
   }
   if (program.levels.at(-1)?.id !== finalRegistration.levelId) {
     throw new AwardEligibilityError('L’étudiant n’est pas inscrit au dernier niveau du programme pour cette année')

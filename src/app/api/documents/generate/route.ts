@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
     if (['RELEVE_NOTES', 'ATTESTATION_INSCRIPTION', 'CERTIFICAT_SCOLARITE', 'ATTESTATION_NIVEAU', 'DIPLOME'].includes(type) && !studentId) {
       return NextResponse.json({ error: 'Étudiant requis' }, { status: 400 })
     }
-    if (['ATTESTATION_NIVEAU', 'DIPLOME'].includes(type) && !sign) {
+    if (type === 'ATTESTATION_NIVEAU' && !sign) {
       return NextResponse.json({ error: 'Ce document exige une validation par un responsable habilité' }, { status: 409 })
     }
 
@@ -398,6 +398,43 @@ export async function POST(request: NextRequest) {
         if (!acYearId || !studentId || !student) {
           return NextResponse.json({ error: 'Étudiant et année de diplomation requis' }, { status: 409 })
         }
+        if (!sign) {
+          const registrations = await db.administrativeRegistration.findMany({
+            where: { tenantId, studentId, academicYearId: acYearId, status: 'INSCRIT' },
+            select: { programId: true, levelId: true }, take: 2,
+          })
+          if (registrations.length !== 1) {
+            return NextResponse.json({ error: 'Une inscription annuelle unique est requise pour prévisualiser ce diplôme.' }, { status: 409 })
+          }
+          const registration = registrations[0]
+          const [program, level] = await Promise.all([
+            db.program.findFirst({ where: { id: registration.programId, tenantId }, select: { id: true, name: true, diplomaType: true } }),
+            db.level.findFirst({ where: { id: registration.levelId, programId: registration.programId, program: { tenantId } }, select: { id: true, name: true } }),
+          ])
+          if (!program || !level) {
+            return NextResponse.json({ error: 'Programme ou niveau introuvable pour cet aperçu.' }, { status: 409 })
+          }
+          const levelAward = await getValidatedLevelAward({
+            tenantId, studentId, academicYearId: acYearId, programId: program.id, levelId: level.id,
+          })
+          const diploma = {
+            title: program.diplomaType?.trim() || level.name,
+            program: program.name,
+            date: levelAward.juryDate.toISOString(),
+            credits: levelAward.creditsRequired,
+            mention: levelAward.average >= 16 ? 'Très bien' : levelAward.average >= 14 ? 'Bien' : levelAward.average >= 12 ? 'Assez bien' : 'Passable',
+          }
+          DocumentComponent = React.createElement(DiplomePDF, {
+            tenant, student: { ...student, program: program.name, level: level.name },
+            diploma, docNumber, verificationCode, qrCodeDataUrl, isSigned: false,
+          })
+          documentData = {
+            diploma, preview: true, programId: program.id, levelId: level.id,
+            deliberationId: levelAward.deliberationId, decisionId: levelAward.decisionId,
+          }
+          break
+        }
+
         const diplomaAward = await getValidatedDiplomaAward({ tenantId, studentId, academicYearId: acYearId })
         const diploma = {
           title: diplomaAward.program.diplomaType,

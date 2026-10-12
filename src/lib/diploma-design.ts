@@ -3,10 +3,12 @@ export const DIPLOMA_TEMPLATE_TYPE = 'DIPLOMA_DESIGN'
 export const diplomaStyles = ['HERITAGE_TCHADIEN', 'SAHEL_PRESTIGE', 'ACADEMIQUE'] as const
 export const diplomaBorders = ['GUILLOCHE', 'GEOMETRIQUE', 'DOUBLE_FILET'] as const
 export const diplomaPatterns = ['ROSETTES', 'VAGUES', 'DIAMANTS', 'AUCUN'] as const
+export const diplomaWatermarkSources = ['EMBLEM', 'LOGO', 'NONE'] as const
 
 export type DiplomaStyle = typeof diplomaStyles[number]
 export type DiplomaBorder = typeof diplomaBorders[number]
 export type DiplomaPattern = typeof diplomaPatterns[number]
+export type DiplomaWatermarkSource = typeof diplomaWatermarkSources[number]
 
 export interface DiplomaDesignConfig {
   version: 1
@@ -17,6 +19,8 @@ export interface DiplomaDesignConfig {
   accentColor: string
   paperColor: string
   showWatermark: boolean
+  watermarkSource: DiplomaWatermarkSource
+  watermarkSize: number
   showMedallion: boolean
   nationalEmblem?: string
   medallion?: string
@@ -31,6 +35,8 @@ export const defaultDiplomaDesign: DiplomaDesignConfig = {
   accentColor: '#B58A32',
   paperColor: '#FFFCF4',
   showWatermark: true,
+  watermarkSource: 'EMBLEM',
+  watermarkSize: 225,
   showMedallion: true,
 }
 
@@ -64,6 +70,12 @@ export function parseDiplomaDesign(value: unknown): DiplomaDesignConfig {
     accentColor: typeof record.accentColor === 'string' && HEX_COLOR.test(record.accentColor) ? record.accentColor.toUpperCase() : defaultDiplomaDesign.accentColor,
     paperColor: typeof record.paperColor === 'string' && HEX_COLOR.test(record.paperColor) ? record.paperColor.toUpperCase() : defaultDiplomaDesign.paperColor,
     showWatermark: typeof record.showWatermark === 'boolean' ? record.showWatermark : defaultDiplomaDesign.showWatermark,
+    watermarkSource: isOneOf(record.watermarkSource, diplomaWatermarkSources)
+      ? record.watermarkSource
+      : record.showWatermark === false ? 'NONE' : defaultDiplomaDesign.watermarkSource,
+    watermarkSize: typeof record.watermarkSize === 'number' && Number.isFinite(record.watermarkSize)
+      ? Math.min(360, Math.max(120, Math.round(record.watermarkSize)))
+      : defaultDiplomaDesign.watermarkSize,
     showMedallion: typeof record.showMedallion === 'boolean' ? record.showMedallion : defaultDiplomaDesign.showMedallion,
     nationalEmblem: safeImage(record.nationalEmblem),
     medallion: safeImage(record.medallion),
@@ -85,6 +97,12 @@ export function validateDiplomaDesign(value: unknown): { valid: true; value: Dip
   }
   for (const field of ['showWatermark', 'showMedallion'] as const) {
     if (typeof record[field] !== 'boolean') return { valid: false, error: `Option ${field} invalide.` }
+  }
+  if (!isOneOf(record.watermarkSource, diplomaWatermarkSources)) {
+    return { valid: false, error: 'Source du filigrane invalide.' }
+  }
+  if (typeof record.watermarkSize !== 'number' || !Number.isFinite(record.watermarkSize) || record.watermarkSize < 120 || record.watermarkSize > 360) {
+    return { valid: false, error: 'La taille du filigrane doit être comprise entre 120 et 360 points.' }
   }
   for (const field of ['nationalEmblem', 'medallion'] as const) {
     if (record[field] != null && safeImage(record[field]) === undefined) {

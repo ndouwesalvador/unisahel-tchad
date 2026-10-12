@@ -63,6 +63,10 @@ function DiplomaVectorPreview({ tenant, design }: { tenant: DiplomaDesignerTenan
   const logoStart = 560 - ((logos.length - 1) * 58) / 2
   const wavePaths = Array.from({ length: 8 }, (_, index) => `M 45 ${105 + index * 70} Q 155 ${75 + index * 70} 265 ${105 + index * 70} T 485 ${105 + index * 70}`)
   const diamonds = Array.from({ length: 12 }, (_, index) => `${110 + index * 82},28 ${126 + index * 82},44 ${110 + index * 82},60 ${94 + index * 82},44`).join(' ')
+  const watermark = design.watermarkSource === 'EMBLEM'
+    ? design.nationalEmblem
+    : design.watermarkSource === 'LOGO' ? tenant.logo : null
+  const watermarkSize = Math.round(design.watermarkSize * 1.24)
 
   return (
     <svg viewBox="0 0 1120 790" role="img" aria-label="Aperçu vectoriel du diplôme" className="h-auto w-full rounded-xl border bg-white shadow-sm">
@@ -77,8 +81,8 @@ function DiplomaVectorPreview({ tenant, design }: { tenant: DiplomaDesignerTenan
       ])}
       {design.pattern === 'ROSETTES' && Array.from({ length: 9 }, (_, index) => <ellipse key={index} cx="560" cy="415" rx={100 + index * 16} ry={55 + index * 9} fill="none" stroke={index % 2 ? design.accentColor : design.primaryColor} opacity="0.09" />)}
       {design.pattern === 'DIAMANTS' && Array.from({ length: 8 }, (_, index) => <rect key={index} x={90 + index * 125} y="340" width="88" height="88" transform={`rotate(45 ${134 + index * 125} 384)`} fill="none" stroke={design.accentColor} opacity="0.08" />)}
-      {design.showWatermark && tenant.logo && <image href={tenant.logo} x="420" y="270" width="280" height="280" preserveAspectRatio="xMidYMid meet" opacity="0.035" />}
-      {design.nationalEmblem && <image href={design.nationalEmblem} x="58" y="55" width="74" height="74" preserveAspectRatio="xMidYMid meet" />}
+      {watermark && <image href={watermark} x={560 - watermarkSize / 2} y={405 - watermarkSize / 2} width={watermarkSize} height={watermarkSize} preserveAspectRatio="xMidYMid meet" opacity="0.055" />}
+      {design.nationalEmblem && design.watermarkSource !== 'EMBLEM' && <image href={design.nationalEmblem} x="58" y="55" width="74" height="74" preserveAspectRatio="xMidYMid meet" />}
 
       <g fill="#111827" fontFamily="Arial, sans-serif" textAnchor="middle">
         {frenchLines.slice(0, 5).map((line, index) => <text key={line + index} x="235" y={72 + index * 18} fontSize={index === frenchLines.length - 1 ? 14 : 11} fontWeight={index === frenchLines.length - 1 ? 700 : 500}>{line}</text>)}
@@ -194,12 +198,13 @@ export function DiplomaDesigner({ tenant, onSaved }: DiplomaDesignerProps) {
           </div>
 
           <div className="space-y-3 rounded-xl border bg-slate-50 p-3">
-            <div className="flex items-center justify-between gap-4"><div><p className="text-sm font-medium">Filigrane du logo</p><p className="text-xs text-slate-500">Visible en transparence au centre.</p></div><Switch checked={design.showWatermark} onCheckedChange={(checked) => update('showWatermark', checked)} /></div>
+            <div><Label>Filigrane central</Label><Select value={design.watermarkSource} onValueChange={(value) => setDesign((current) => ({ ...current, watermarkSource: value as DiplomaDesignConfig['watermarkSource'], showWatermark: value !== 'NONE' }))}><SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="EMBLEM">Emblème national</SelectItem><SelectItem value="LOGO">Logo de l’institution</SelectItem><SelectItem value="NONE">Aucun filigrane</SelectItem></SelectContent></Select></div>
+            <div className={design.watermarkSource === 'NONE' ? 'opacity-50' : ''}><div className="flex items-center justify-between gap-3"><Label htmlFor="watermarkSize">Taille de l’emblème / filigrane</Label><span className="text-xs tabular-nums text-slate-500">{(design.watermarkSize * 2.54 / 72).toFixed(1)} cm</span></div><Input id="watermarkSize" type="range" min={120} max={360} step={5} value={design.watermarkSize} disabled={design.watermarkSource === 'NONE'} onChange={(event) => update('watermarkSize', Number(event.target.value))} className="mt-2 h-2 cursor-pointer p-0" /></div>
             <div className="flex items-center justify-between gap-4"><div><p className="text-sm font-medium">Médaillon d’authenticité</p><p className="text-xs text-slate-500">Rosette vectorielle ou visuel personnalisé.</p></div><Switch checked={design.showMedallion} onCheckedChange={(checked) => update('showMedallion', checked)} /></div>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-            <div className="rounded-xl border p-3"><div className="mb-2 flex items-center gap-2"><ImagePlus className="size-4 text-slate-600" /><p className="text-sm font-medium">Emblème national facultatif</p></div>{design.nationalEmblem && <NextImage unoptimized src={design.nationalEmblem} alt="Emblème national" width={160} height={64} className="mb-2 h-16 w-full object-contain" />}<Input type="file" accept="image/png,image/jpeg,image/webp" disabled={Boolean(uploading)} onChange={(event) => void upload('diplomaEmblem', event.target.files?.[0])} /><Button type="button" variant="ghost" size="sm" className="mt-1" disabled={!design.nationalEmblem} onClick={() => update('nationalEmblem', undefined)}>Retirer</Button></div>
+            <div className="rounded-xl border p-3"><div className="mb-2 flex items-center gap-2"><ImagePlus className="size-4 text-slate-600" /><p className="text-sm font-medium">Emblème national</p></div>{design.nationalEmblem && <NextImage unoptimized src={design.nationalEmblem} alt="Emblème national" width={160} height={64} className="mb-2 h-16 w-full object-contain" />}<Input type="file" accept="image/png,image/jpeg,image/webp" disabled={Boolean(uploading)} onChange={(event) => void upload('diplomaEmblem', event.target.files?.[0])} /><Button type="button" variant="ghost" size="sm" className="mt-1" disabled={!design.nationalEmblem} onClick={() => update('nationalEmblem', undefined)}>Retirer</Button></div>
             <div className="rounded-xl border p-3"><div className="mb-2 flex items-center gap-2"><Award className="size-4 text-slate-600" /><p className="text-sm font-medium">Médaillon personnalisé</p></div>{design.medallion && <NextImage unoptimized src={design.medallion} alt="Médaillon" width={160} height={64} className="mb-2 h-16 w-full object-contain" />}<Input type="file" accept="image/png,image/jpeg,image/webp" disabled={Boolean(uploading)} onChange={(event) => void upload('diplomaMedallion', event.target.files?.[0])} /><Button type="button" variant="ghost" size="sm" className="mt-1" disabled={!design.medallion} onClick={() => update('medallion', undefined)}>Utiliser la rosette vectorielle</Button></div>
           </div>
 
