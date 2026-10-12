@@ -648,18 +648,18 @@ export function DiplomePDF({
         <Text style={{ fontFamily: 'Times-Roman', fontSize: 9, textAlign: 'center', color: '#39434d', marginTop: 2, marginBottom: 7 }}>{diploma.program}</Text>
 
         <View style={{ height: 155, marginVertical: 3, marginHorizontal: 35, paddingVertical: 8, paddingHorizontal: 18, alignItems: 'center', justifyContent: 'center', borderTopWidth: 0.8, borderBottomWidth: 0.8, borderColor: design.accentColor, backgroundColor: '#ffffffc9' }} wrap={false}>
-          <Text style={{ fontFamily: 'Times-Roman', fontSize: 8, color: '#58636e', marginBottom: 5, letterSpacing: 1.6 }}>LE CONSEIL ACADÉMIQUE DÉCERNE À</Text>
+          <Text style={{ fontFamily: 'Times-Roman', fontSize: 8, color: '#58636e', marginBottom: 5, letterSpacing: 1.6 }}>{isSigned ? 'LE CONSEIL ACADÉMIQUE DÉCERNE À' : 'PRÉVISUALISATION PERSONNALISÉE POUR'}</Text>
           <Text style={{ fontFamily: 'Times-Bold', fontSize: 21, color: design.primaryColor, marginVertical: 6, textAlign: 'center', textTransform: 'uppercase' }}>
             {student.firstName} {student.lastName}
           </Text>
           {student.dateOfBirth && <Text style={{ fontFamily: 'Times-Roman', fontSize: 8.5, color: '#58636e' }}>Né(e) le {formatDate(student.dateOfBirth)}{student.placeOfBirth ? ` à ${student.placeOfBirth}` : ''}</Text>}
-          <Text style={{ fontFamily: 'Times-Roman', fontSize: 10, marginTop: 7 }}>le diplôme de</Text>
+          <Text style={{ fontFamily: 'Times-Roman', fontSize: 10, marginTop: 7 }}>{isSigned ? 'le diplôme de' : 'la maquette du diplôme de'}</Text>
           <Text style={{ fontFamily: 'Times-Bold', fontSize: 17, color: design.primaryColor, marginVertical: 6, textAlign: 'center' }}>
             {diploma.title}
           </Text>
-          <Text style={{ fontFamily: 'Times-Roman', fontSize: 9.5, textAlign: 'center' }}>après validation des {diploma.credits} crédits du cursus</Text>
+          <Text style={{ fontFamily: 'Times-Roman', fontSize: 9.5, textAlign: 'center' }}>{isSigned ? `après validation des ${diploma.credits} crédits du cursus` : `cursus configuré : ${diploma.credits} crédits`}</Text>
           {diploma.mention && <Text style={{ fontFamily: 'Times-Roman', fontSize: 9.5, marginTop: 5 }}>Mention : <Text style={{ fontFamily: 'Times-Bold', color: design.primaryColor }}>{diploma.mention}</Text></Text>}
-          <Text style={{ fontFamily: 'Times-Roman', fontSize: 8, color: '#58636e', marginTop: 5 }}>Décision définitive du jury du {formatDate(diploma.date)}</Text>
+          <Text style={{ fontFamily: 'Times-Roman', fontSize: 8, color: '#58636e', marginTop: 5 }}>{isSigned ? `Décision définitive du jury du ${formatDate(diploma.date)}` : `Aperçu de mise en page généré le ${formatDate(diploma.date)}`}</Text>
         </View>
 
         <DocumentSignatories tenant={tenant} compact anchored bottom={125} />
