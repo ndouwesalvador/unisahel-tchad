@@ -153,6 +153,32 @@ function juryDeliberationFilters(scope: JuryScope) {
   }))
 }
 
+type SuggestedJuryMember = { userId: string; name: string; role: 'President' | 'Membre' }
+
+async function assignedJuryMembers(
+  tenantId: string,
+  academicYearId: string,
+  departmentId: string,
+  programId?: string | null,
+  levelId?: string | null,
+): Promise<SuggestedJuryMember[]> {
+  if (!programId || !levelId) return []
+  const accounts = await db.user.findMany({
+    where: {
+      tenantId, role: 'JURY', isActive: true,
+      juryAssignments: { some: { tenantId, academicYearId, departmentId, programId, levelId } },
+    },
+    select: { id: true, firstName: true, lastName: true },
+    orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+    take: 12,
+  })
+  return accounts.map((account, index) => ({
+    userId: account.id,
+    name: `${account.firstName} ${account.lastName}`.trim(),
+    role: index === 0 ? 'President' : 'Membre',
+  }))
+}
+
 // GET /api/deliberation - list real deliberation sessions + decisions for the selected one
 // Jury/admin tool only -- no student-facing UI calls this, and it would otherwise
 // expose every student's suggested deliberation decision to any student account.
@@ -275,12 +301,16 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
           modifiedAt: correction?.createdAt.toISOString() || null,
         }
       })
+      const storedJuryMembers = parseJuryMembers(deliberation.juryMembers)
+      const suggestedJuryMembers = storedJuryMembers ? [] : await assignedJuryMembers(
+        tenantId, deliberation.academicYearId, deliberation.departmentId!, deliberation.programId, deliberation.levelId,
+      )
       return NextResponse.json({
         departments, juryScopes: juryScope?.assignments ?? [], sessions,
         selected: { id: deliberation.id, departmentId: deliberation.departmentId, programId: deliberation.programId,
           levelId: deliberation.levelId, isLocked: deliberation.isLocked, juryMembers: deliberation.juryMembers,
           needsDecisionSync },
-        students, readiness, rules: juryRuleSummary(settings),
+        students, readiness, rules: juryRuleSummary(settings), suggestedJuryMembers,
       })
     }
 
@@ -539,6 +569,9 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
     })
     if (existing) return NextResponse.json({ error: 'Une délibération existe déjà pour ce périmètre et cette session', id: existing.id }, { status: 409 })
 
+    const suggestedJuryMembers = await assignedJuryMembers(
+      tenantId, academicYear.id, department.id, selectedProgramId, selectedLevelId,
+    )
     const deliberation = await db.deliberation.create({
       data: {
         tenantId,
@@ -550,7 +583,10 @@ async function handlePost(user: SessionUser, tenantId: string, request: NextRequ
         name: `Délibération ${scopeLabel} · ${sessionType === 'RATTRAPAGE' ? 'Rattrapage' : 'Normale'} ${academicYear.name}`,
         date: new Date(),
         status: 'EN_COURS',
-        presidentId: user.id,
+        presidentId: suggestedJuryMembers[0]?.userId ?? user.id,
+        ...(suggestedJuryMembers.length > 0 ? {
+          juryMembers: suggestedJuryMembers.map(({ name, role }) => ({ name, role })),
+        } : {}),
         decisions: {
           create: computed.map((c) => ({
             studentId: c.studentId,

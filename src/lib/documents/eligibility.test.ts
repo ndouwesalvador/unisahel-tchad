@@ -67,6 +67,17 @@ describe('validated diploma award', () => {
     await expect(getValidatedDiplomaAward({ tenantId: 'tenant-A', studentId: 'student-A', academicYearId: 'year-2' }))
       .rejects.toThrow('configurés')
   })
+
+  it('explains that a student in the first year of a two-year master is not yet diplomable', async () => {
+    dbMock.administrativeRegistration.findMany.mockResolvedValueOnce([{ programId: 'program-A', levelId: 'level-1' }])
+    dbMock.program.findFirst.mockResolvedValue({
+      id: 'program-A', name: 'Master en Génie électrique', diplomaType: 'Master', duration: 2,
+      levels: [{ id: 'level-1', name: 'Master I', orderIndex: 1 }],
+    })
+
+    await expect(getValidatedDiplomaAward({ tenantId: 'tenant-A', studentId: 'student-A', academicYearId: 'year-1' }))
+      .rejects.toThrow(/Master I.*dernier niveau/)
+  })
 })
 
 describe('validated level award', () => {

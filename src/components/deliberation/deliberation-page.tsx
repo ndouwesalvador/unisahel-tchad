@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAppStore } from '@/lib/store'
@@ -17,6 +17,7 @@ import { Progress } from '@/components/ui/progress'
 import { Separator } from '@/components/ui/separator'
 import { QrDisplay } from '@/components/ui/qr-display'
 import { Loader2 } from 'lucide-react'
+import { createJuryMemberDrafts } from '@/lib/deliberations/jury'
 import {
   Table,
   TableBody,
@@ -190,6 +191,7 @@ export function DeliberationPage() {
   const [reopenReason, setReopenReason] = useState('')
   const [isReopening, setIsReopening] = useState(false)
   const [isSyncing, setIsSyncing] = useState(false)
+  const initializedJurySession = useRef<string | null>(null)
 
   const apiSessionType = selectedSessionType === 'normale' ? 'NORMALE' : 'RATTRAPAGE'
   const { data: deliberationData, isLoading: isDeliberationLoading } = useDeliberation(
@@ -237,7 +239,7 @@ export function DeliberationPage() {
       setSelectedLevelId(latestSession.levelId || null)
       setSelectedSession(latestSession.id)
     }
-  }, [apiSessionType, deliberations, selectedSession, currentYearId, selectedProgramId, selectedLevelId])
+  }, [apiSessionType, deliberations, selectedSession, currentYearId, selectedDepartmentId, selectedProgramId, selectedLevelId])
 
   const deliberationStudents: DeliberationStudent[] = useMemo(() => deliberationData?.students ?? [], [deliberationData])
   const readiness: DeliberationReadiness | null = deliberationData?.readiness ?? null
@@ -246,12 +248,23 @@ export function DeliberationPage() {
   const needsDecisionSync: boolean = deliberationData?.selected?.needsDecisionSync ?? false
   useEffect(() => {
     const stored = deliberationData?.selected?.juryMembers
-    if (isLocked && Array.isArray(stored)) {
-      setJuryMembers(stored.map((member: { name: string; role: string; signature?: string }, index: number) => ({
-        id: `${selectedSession}-${index}`, name: member.name, role: member.role, signature: member.signature,
-      })))
+    if (!selectedSession) {
+      initializedJurySession.current = null
+      return
     }
-  }, [isLocked, deliberationData?.selected?.juryMembers, selectedSession])
+    if (isLocked && Array.isArray(stored)) {
+      setJuryMembers(createJuryMemberDrafts(selectedSession, stored))
+      initializedJurySession.current = selectedSession
+      return
+    }
+    if (!isLocked && initializedJurySession.current !== selectedSession) {
+      const suggested = deliberationData?.suggestedJuryMembers
+      const source = Array.isArray(stored) && stored.length > 0 ? stored : suggested
+      if (!Array.isArray(source)) return
+      setJuryMembers(createJuryMemberDrafts(selectedSession, source))
+      initializedJurySession.current = selectedSession
+    }
+  }, [isLocked, deliberationData?.selected?.juryMembers, deliberationData?.suggestedJuryMembers, selectedSession])
   const currentSession = deliberations.find(d => d.id === selectedSession)
   const hasStudents = deliberationStudents.length > 0
   const trackedStudentCount = deliberationStudents.length || readiness?.studentsTotal || 0
@@ -926,7 +939,10 @@ export function DeliberationPage() {
                 </div>
                 {/* Add Member */}
                 <p className="text-[11px] text-gray-400">
-                  La composition du jury est enregistrée lors de la validation. Après validation, téléversez la signature scannée de chaque membre pour permettre l’émission du PV officiel. Ces images ne constituent pas une signature cryptographique.
+                  {deliberationData?.suggestedJuryMembers?.length > 0 && !isLocked
+                    ? 'Les comptes jury habilités pour ce programme et ce niveau ont été proposés automatiquement. Vérifiez les noms et les fonctions avant la validation.'
+                    : 'La composition du jury est enregistrée lors de la validation.'}
+                  {' '}Après validation, téléversez la signature scannée de chaque membre pour permettre l’émission du PV officiel. Ces images ne constituent pas une signature cryptographique.
                 </p>
                 <div className="flex items-center gap-2">
                   <Input
@@ -942,7 +958,7 @@ export function DeliberationPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="President">President</SelectItem>
+                      <SelectItem value="President">Président</SelectItem>
                       <SelectItem value="Membre">Membre</SelectItem>
                     </SelectContent>
                   </Select>

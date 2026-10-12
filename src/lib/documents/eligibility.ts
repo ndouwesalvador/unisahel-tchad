@@ -164,6 +164,12 @@ export async function getValidatedDiplomaAward(input: {
   if (new Set(program.levels.map((level) => level.orderIndex)).size !== program.levels.length) {
     throw new AwardEligibilityError('Chaque niveau du programme doit avoir un ordre unique avant l’émission du diplôme officiel')
   }
+  const registeredLevel = program.levels.find((level) => level.id === finalRegistration.levelId)
+  if (registeredLevel && registeredLevel.orderIndex < program.duration) {
+    throw new AwardEligibilityError(
+      `L’étudiant est inscrit en ${registeredLevel.name} (niveau ${registeredLevel.orderIndex} sur ${program.duration}) et n’a pas encore atteint le dernier niveau du programme. Émettez une attestation de niveau ; le diplôme officiel sera disponible après la validation du niveau terminal.`,
+    )
+  }
   if (program.levels.length !== program.duration) {
     throw new AwardEligibilityError(`La structure du programme est incomplète : ${program.levels.length} niveau(x) configuré(s) sur ${program.duration}. Complétez les niveaux avant l’émission du diplôme officiel`)
   }

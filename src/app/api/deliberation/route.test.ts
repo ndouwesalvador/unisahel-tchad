@@ -11,7 +11,9 @@ const { authMock, scopeMock, juryScopeMock, readinessMock, dbMock } = vi.hoisted
     deliberation: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), updateMany: vi.fn() },
     deliberationDecision: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn(), deleteMany: vi.fn() },
     grade: { findMany: vi.fn() },
+    level: { findFirst: vi.fn() },
     student: { findMany: vi.fn() },
+    user: { findMany: vi.fn() },
     tenantSettings: { findUnique: vi.fn() },
   },
 }))
@@ -36,12 +38,15 @@ beforeEach(() => {
   dbMock.academicYear.findFirst.mockResolvedValue({ id: 'year-A', name: '2026-2027' })
   dbMock.deliberation.findMany.mockResolvedValue([])
   dbMock.auditLog.findMany.mockResolvedValue([])
+  dbMock.user.findMany.mockResolvedValue([])
   dbMock.deliberation.findFirst.mockResolvedValue(null)
   dbMock.tenantSettings.findUnique.mockResolvedValue(null)
   dbMock.grade.findMany.mockResolvedValue([{
     studentId: 'student-A', finalGrade: 14, teachingUnitId: 'unit-A', courseElement: { coefficient: 1 },
     teachingUnit: { credits: 6 }, student: { id: 'student-A', firstName: 'Awa', lastName: 'Test', matricule: 'A-001' },
   }])
+  dbMock.level.findFirst.mockResolvedValue({ id: 'level-master-1', name: 'Master I',
+    program: { id: 'program-master-ge', name: 'Master Génie électrique' } })
   readinessMock.mockResolvedValue({ ready: true, studentIds: ['student-A'], studentsTotal: 1 })
   juryScopeMock.mockResolvedValue({ academicYearId: 'year-A', assignments: [], departmentIds: [], programIds: [], levelIds: [] })
   dbMock.deliberation.create.mockResolvedValue({ id: 'delib-A', departmentId: 'department-A', decisions: [{ studentId: 'student-A' }] })
@@ -88,6 +93,46 @@ describe('department deliberation boundary', () => {
     })
     expect(dbMock.auditLog.findMany).toHaveBeenCalledWith(expect.objectContaining({
       where: expect.objectContaining({ tenantId: 'tenant-A', entityId: { in: ['decision-A'] } }),
+    }))
+  })
+
+  it('proposes the assigned jury account as president of an existing scoped deliberation', async () => {
+    const changedAt = new Date('2026-10-06T12:00:00.000Z')
+    dbMock.deliberation.findMany.mockResolvedValue([{
+      id: 'delib-A', departmentId: 'department-A', programId: 'program-master-ge', levelId: 'level-master-1',
+      academicYearId: 'year-A', type: 'ANNUEL', date: changedAt, name: 'Jury Master GE', status: 'EN_COURS',
+      isLocked: false, juryMembers: null,
+    }])
+    dbMock.deliberationDecision.findMany.mockResolvedValue([])
+    dbMock.student.findMany.mockResolvedValue([])
+    dbMock.user.findMany.mockResolvedValue([{ id: 'jury-A', firstName: 'Amina', lastName: 'Mahamat' }])
+
+    const response = await GET(request('GET', '?id=delib-A&departmentId=department-A&programId=program-master-ge&levelId=level-master-1'))
+
+    expect(response.status).toBe(200)
+    expect((await response.json()).suggestedJuryMembers).toEqual([
+      { userId: 'jury-A', name: 'Amina Mahamat', role: 'President' },
+    ])
+    expect(dbMock.user.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ tenantId: 'tenant-A', role: 'JURY', isActive: true,
+        juryAssignments: { some: { tenantId: 'tenant-A', academicYearId: 'year-A', departmentId: 'department-A',
+          programId: 'program-master-ge', levelId: 'level-master-1' } } }),
+    }))
+  })
+
+  it('seeds a new scoped deliberation with its assigned jury president', async () => {
+    dbMock.user.findMany.mockResolvedValue([{ id: 'jury-A', firstName: 'Amina', lastName: 'Mahamat' }])
+
+    const response = await POST(request('POST', '', {
+      departmentId: 'department-A', programId: 'program-master-ge', levelId: 'level-master-1', session: 'NORMALE',
+    }))
+
+    expect(response.status).toBe(201)
+    expect(dbMock.deliberation.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        presidentId: 'jury-A',
+        juryMembers: [{ name: 'Amina Mahamat', role: 'President' }],
+      }),
     }))
   })
 
