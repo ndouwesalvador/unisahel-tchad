@@ -94,4 +94,14 @@ if (process.env.VERCEL_ENV === 'production') {
     '--schema', join('prisma', 'schema.prisma'),
   ], { stdio: 'inherit' })
   execFileSync(process.execPath, [join('scripts', 'backfill-curriculum-versions.mjs')], { stdio: 'inherit' })
+  execFileSync(process.execPath, [
+    prismaCli, 'db', 'execute',
+    '--file', join('prisma', 'migrations', '20261012120000_internship_supervisor_scope', 'migration.sql'),
+    '--schema', join('prisma', 'schema.prisma'),
+  ], { stdio: 'inherit' })
+  execFileSync(process.execPath, [
+    prismaCli, 'db', 'execute',
+    '--file', join('prisma', 'migrations', '20261012133000_onecs_diploma_authentication', 'migration.sql'),
+    '--schema', join('prisma', 'schema.prisma'),
+  ], { stdio: 'inherit' })
 }

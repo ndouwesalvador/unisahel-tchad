@@ -15,6 +15,8 @@ vi.mock('@/lib/db', () => ({ db: {
 
 const { GET, PUT } = await import('./route')
 const onecs = { id: 'onecs-A', role: 'ONECS' }
+const get = GET as unknown as (user: typeof onecs, request: NextRequest) => Promise<Response>
+const put = PUT as unknown as (user: typeof onecs, request: NextRequest) => Promise<Response>
 
 beforeEach(() => {
   vi.resetAllMocks()
@@ -24,7 +26,7 @@ beforeEach(() => {
 
 describe('ONECS diploma authentication', () => {
   it('lists only signed diplomas across institutions', async () => {
-    const response = await (GET as never as Function)(onecs, new NextRequest('http://localhost/api/onecs/diplomas'))
+    const response = await get(onecs, new NextRequest('http://localhost/api/onecs/diplomas'))
     expect(response.status).toBe(200)
     expect(mocks.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ type: 'DIPLOME', validatedAt: { not: null }, status: { not: 'REVOKED' } }) }))
   })
@@ -32,7 +34,7 @@ describe('ONECS diploma authentication', () => {
   it('authenticates an issued diploma without modifying its PDF', async () => {
     mocks.findFirst.mockResolvedValue({ id: 'doc-A', tenantId: 'tenant-A', type: 'DIPLOME', validatedAt: new Date(), status: 'GENERATED', onecsStatus: 'PENDING' })
     mocks.update.mockResolvedValue({ id: 'doc-A', onecsStatus: 'AUTHENTICATED', onecsReference: 'ONECS-2026-ABC' })
-    const response = await (PUT as never as Function)(onecs, new NextRequest('http://localhost/api/onecs/diplomas', { method: 'PUT', body: JSON.stringify({ id: 'doc-A', decision: 'AUTHENTICATED' }) }))
+    const response = await put(onecs, new NextRequest('http://localhost/api/onecs/diplomas', { method: 'PUT', body: JSON.stringify({ id: 'doc-A', decision: 'AUTHENTICATED' }) }))
     expect(response.status).toBe(200)
     expect(mocks.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'doc-A' }, data: expect.objectContaining({ onecsStatus: 'AUTHENTICATED', onecsAuthenticatedBy: 'onecs-A' }) }))
     expect(mocks.auditCreate).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ tenantId: 'tenant-A', entity: 'OfficialDocument', entityId: 'doc-A' }) }))
@@ -40,7 +42,7 @@ describe('ONECS diploma authentication', () => {
 
   it('requires a reason when rejecting a diploma', async () => {
     mocks.findFirst.mockResolvedValue({ id: 'doc-A', tenantId: 'tenant-A', type: 'DIPLOME', validatedAt: new Date(), status: 'GENERATED', onecsStatus: 'PENDING' })
-    const response = await (PUT as never as Function)(onecs, new NextRequest('http://localhost/api/onecs/diplomas', { method: 'PUT', body: JSON.stringify({ id: 'doc-A', decision: 'REJECTED' }) }))
+    const response = await put(onecs, new NextRequest('http://localhost/api/onecs/diplomas', { method: 'PUT', body: JSON.stringify({ id: 'doc-A', decision: 'REJECTED' }) }))
     expect(response.status).toBe(400)
     expect(mocks.update).not.toHaveBeenCalled()
   })
