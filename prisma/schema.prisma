@@ -26,6 +26,7 @@ enum UserRole {
   ETUDIANT_SANTE
   MAITRE_STAGE
   PARENT
+  ONECS
 }
 
 // ============================================
@@ -984,28 +985,34 @@ model DocumentTemplate {
 }
 
 model OfficialDocument {
-  id               String               @id @default(cuid())
-  tenantId         String
-  studentId        String?
-  student          Student?             @relation(fields: [studentId], references: [id], onDelete: SetNull)
-  type             String               @default("RELEVE_SEMESTRIEL")
-  number           String?              @unique
-  academicYearId   String?
-  content          String
-  hash             String?
-  pdfArtifact      OfficialDocumentPdf?
-  verificationCode String?              @unique
-  qrCodeData       String?
-  status           String               @default("DRAFT")
-  generatedBy      String?
-  validatedBy      String?
-  validatedAt      DateTime?
-  filePath         String?
-  createdAt        DateTime             @default(now())
-  updatedAt        DateTime             @updatedAt
+  id                   String               @id @default(cuid())
+  tenantId             String
+  studentId            String?
+  student              Student?             @relation(fields: [studentId], references: [id], onDelete: SetNull)
+  type                 String               @default("RELEVE_SEMESTRIEL")
+  number               String?              @unique
+  academicYearId       String?
+  content              String
+  hash                 String?
+  pdfArtifact          OfficialDocumentPdf?
+  verificationCode     String?              @unique
+  qrCodeData           String?
+  status               String               @default("DRAFT")
+  generatedBy          String?
+  validatedBy          String?
+  validatedAt          DateTime?
+  onecsStatus          String?
+  onecsReference       String?              @unique
+  onecsAuthenticatedBy String?
+  onecsAuthenticatedAt DateTime?
+  onecsNote            String?
+  filePath             String?
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
 
   @@index([tenantId, createdAt])
   @@index([tenantId, type, status])
+  @@index([type, onecsStatus, createdAt])
   @@index([studentId, academicYearId, type])
 }
 

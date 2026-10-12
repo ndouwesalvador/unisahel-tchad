@@ -57,6 +57,11 @@ export async function GET(
         institution: tenant?.name || contentTenantName,
         generatedAt: document.createdAt,
         validatedAt: document.validatedAt,
+        onecs: document.type === 'DIPLOME' ? {
+          status: document.onecsStatus ?? 'PENDING',
+          reference: document.onecsReference,
+          authenticatedAt: document.onecsAuthenticatedAt,
+        } : null,
         student: document.student
           ? { name: `${document.student.firstName} ${document.student.lastName}`, matricule: document.student.matricule }
           : null,

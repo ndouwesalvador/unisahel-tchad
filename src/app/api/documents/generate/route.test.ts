@@ -220,6 +220,7 @@ describe('POST /api/documents/generate', () => {
     const saved = dbMock.officialDocument.create.mock.calls[0][0].data
     const snapshot = JSON.parse(saved.content)
     expect(saved.validatedBy).toBe('admin-A')
+    expect(saved.onecsStatus).toBe('PENDING')
     expect(snapshot.diploma.title).toBe('Licence')
     expect(snapshot.diploma.mention).toBe('Bien')
     expect(snapshot.awards[0].decisionId).toBe('decision-A')

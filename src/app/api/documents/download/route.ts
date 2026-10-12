@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto'
 import React from 'react'
 import QRCode from 'qrcode'
 import { db } from '@/lib/db'
-import { withTenantAuth, type SessionUser } from '@/lib/auth/helpers'
+import { withAuth, type SessionUser } from '@/lib/auth/helpers'
 import { isStudentSelfRole, resolveOwnStudentId } from '@/lib/auth/student-scope'
 import { getOrganizationScope } from '@/lib/auth/organization-scope'
 import { countPdfPages, getVerificationUrl, type StudentInfo, type TenantInfo } from '@/lib/pdf/utils'
@@ -15,7 +15,7 @@ import { expectedPvSheetCount, type PvSection } from '@/lib/pdf/pv-matrix'
 import { prepareDocumentArtwork } from '@/lib/pdf/artwork'
 import { isStudentDocumentType } from '@/lib/documents/student-document-access'
 
-const STAFF_ROLES = new Set(['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'RECTORAT', 'SCOLARITE'])
+const STAFF_ROLES = new Set(['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'RECTORAT', 'SCOLARITE', 'ONECS'])
 
 function record(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
@@ -26,11 +26,14 @@ function record(value: unknown): value is Record<string, unknown> {
 async function handleGet(user: SessionUser, tenantId: string, request: NextRequest) {
   const id = request.nextUrl.searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'Document requis.' }, { status: 400 })
-  const document = await db.officialDocument.findFirst({ where: { id, tenantId } })
+  const document = await db.officialDocument.findFirst({ where: user.role === 'ONECS' ? { id } : { id, tenantId } })
   if (!document) return NextResponse.json({ error: 'Document introuvable.' }, { status: 404 })
 
   if (user.role === 'RECTORAT' && (document.type !== 'PV_DELIBERATION' || !document.validatedAt)) {
     return NextResponse.json({ error: 'Le rectorat consulte uniquement les PV officiels validés.' }, { status: 403 })
+  }
+  if (user.role === 'ONECS' && (document.type !== 'DIPLOME' || !document.validatedAt || document.status === 'REVOKED')) {
+    return NextResponse.json({ error: 'L’ONECS consulte uniquement les diplômes validés et non révoqués.' }, { status: 403 })
   }
 
   if (!isStudentSelfRole(user.role) && !STAFF_ROLES.has(user.role) &&
@@ -162,4 +165,12 @@ function pdfResponse(buffer: Buffer, type: string, number: string) {
   } })
 }
 
-export const GET = withTenantAuth(handleGet)
+export const GET = withAuth(async (user: SessionUser, request: NextRequest) => {
+  if (user.role === 'ONECS') return handleGet(user, '', request)
+  const tenantId = request.nextUrl.searchParams.get('tenantId') || user.tenantId
+  if (!tenantId) return NextResponse.json({ error: 'TENANT_REQUIRED', message: 'tenantId est requis' }, { status: 400 })
+  if (user.role !== 'SUPER_ADMIN' && user.tenantId !== tenantId) {
+    return NextResponse.json({ error: 'FORBIDDEN', message: 'Accès refusé' }, { status: 403 })
+  }
+  return handleGet(user, tenantId, request)
+})

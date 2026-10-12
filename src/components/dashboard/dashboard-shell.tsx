@@ -141,6 +141,7 @@ const RoomBookingPage = lazyView(() => import('@/components/room-booking/room-bo
 const ResultsPage = lazyView(() => import('@/components/results/results-page').then(m => m.ResultsPage))
 const TransportPage = lazyView(() => import('@/components/transport/transport-page').then(m => m.TransportPage))
 const StudentExamPage = lazyView(() => import('@/components/online-exam/student-exam-page').then(m => m.StudentExamPage))
+const OnecsPage = lazyView(() => import('@/components/onecs/onecs-page').then(m => m.OnecsPage))
 
 // ─── Navigation Config ────────────────────────────────────────────────────────
 
@@ -177,6 +178,7 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
   // specific institution once an ADMIN_INSTITUTION account is provisioned.
   SUPER_ADMIN: [
     { icon: School, label: 'Institutions', view: 'platform-institutions' },
+    { icon: Shield, label: 'Comptes ONECS', view: 'onecs' },
   ],
   ADMIN_INSTITUTION: [
     { icon: LayoutDashboard, label: 'Tableau de bord', view: 'dashboard' },
@@ -331,6 +333,9 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
     { icon: FileCheck, label: 'Notes', view: 'grades' },
     { icon: CreditCard, label: 'Paiements', view: 'payments' },
   ],
+  ONECS: [
+    { icon: Shield, label: 'Authentifier les diplômes', view: 'onecs' },
+  ],
 }
 
 const roleLabels: Record<UserRole, string> = {
@@ -348,6 +353,7 @@ const roleLabels: Record<UserRole, string> = {
   ETUDIANT_SANTE: 'Étudiant Santé',
   MAITRE_STAGE: 'Maître de Stage',
   PARENT: 'Parent',
+  ONECS: 'Responsable ONECS',
 }
 
 const institutionSettingsRoles = new Set<UserRole>(['SUPER_ADMIN', 'ADMIN_INSTITUTION'])
@@ -412,6 +418,7 @@ const viewLabels: Record<AppView, string> = {
   'room-booking': 'Réservation des Salles',
   transport: 'Transport & Navette',
   results: 'Gestion des Résultats',
+  onecs: 'Authentification ONECS',
 }
 
 // ─── Sidebar Component ────────────────────────────────────────────────────────
@@ -452,7 +459,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void } = {}) {
               Uni<span className="text-white">Sahel</span>
             </div>
             <div className="text-[10px] text-white/80 truncate">
-              {user.role === 'SUPER_ADMIN' ? 'Administration plateforme' : (user.tenantName || 'Établissement')}
+              {user.role === 'SUPER_ADMIN' ? 'Administration plateforme' : user.role === 'ONECS' ? 'Autorité nationale ONECS' : (user.tenantName || 'Établissement')}
             </div>
           </motion.div>
         )}
@@ -598,7 +605,7 @@ function MainContent({ view }: { view: AppView }) {
     case 'dashboard':
       // A SUPER_ADMIN has no tenant of their own -- /api/dashboard is
       // tenant-scoped, so their "dashboard" is the platform-wide view.
-      return user?.role === 'SUPER_ADMIN' ? <PlatformInstitutionsPage /> : <DashboardHome />
+      return user?.role === 'SUPER_ADMIN' ? <PlatformInstitutionsPage /> : user?.role === 'ONECS' ? <OnecsPage /> : <DashboardHome />
     case 'platform-institutions':
       return <PlatformInstitutionsPage />
     case 'staff-users':
@@ -631,6 +638,8 @@ function MainContent({ view }: { view: AppView }) {
       return <StatisticsPage />
     case 'verify':
       return <VerifyPage />
+    case 'onecs':
+      return <OnecsPage />
     case 'profile':
       return <ProfilePage />
     case 'settings':
@@ -727,8 +736,8 @@ export function DashboardShell() {
       for (const token of ['--primary', '--ring', '--chart-1', '--chart-2', '--chart-3', '--sidebar', '--sidebar-primary']) root.style.removeProperty(token)
     }
   }, [user?.tenantId, institutionTheme])
-  const { data: notificationsData } = useNotifications()
-  const { data: academicYearsData } = useAcademicYears({ enabled: Boolean(user?.tenantId) && user?.role !== 'SUPER_ADMIN' })
+  const { data: notificationsData } = useNotifications({ enabled: Boolean(user?.tenantId) })
+  const { data: academicYearsData } = useAcademicYears({ enabled: Boolean(user?.tenantId) && user?.role !== 'SUPER_ADMIN' && user?.role !== 'ONECS' })
   const unreadCount: number = notificationsData?.unreadCount ?? 0
   const [mobileOpen, setMobileOpen] = useState(false)
   const [isDesktop, setIsDesktop] = useState(false)

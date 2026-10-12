@@ -15,7 +15,7 @@ const { dbMock, renderMock } = vi.hoisted(() => ({
 }))
 
 vi.mock('@/lib/db', () => ({ db: dbMock }))
-vi.mock('@/lib/auth/helpers', () => ({ withTenantAuth: (handler: unknown) => handler }))
+vi.mock('@/lib/auth/helpers', () => ({ withAuth: (handler: unknown) => (user: unknown, _tenantId: string, request: NextRequest) => (handler as (user: unknown, request: NextRequest) => Promise<Response>)(user, request) }))
 vi.mock('qrcode', () => ({ default: { toDataURL: vi.fn(async () => 'data:image/png;base64,test') } }))
 vi.mock('@/lib/pdf/templates', () => ({
   renderPDF: renderMock,
@@ -28,7 +28,7 @@ vi.mock('@/lib/pdf/templates', () => ({
 }))
 
 const { GET } = await import('./route')
-const handler = GET as unknown as (user: { id: string; role: string; tenantId: string }, tenantId: string, request: NextRequest) => Promise<Response>
+const handler = GET as unknown as (user: { id: string; role: string; tenantId: string | null }, tenantId: string, request: NextRequest) => Promise<Response>
 const request = new NextRequest('http://localhost:3000/api/documents/download?id=doc-A')
 const document = {
   id: 'doc-A', tenantId: 'tenant-A', studentId: 'student-A', type: 'RELEVE_NOTES',
@@ -107,6 +107,15 @@ describe('GET /api/documents/download', () => {
     dbMock.officialDocument.findFirst.mockResolvedValue({ ...document, studentId: null, type: 'PV_DELIBERATION', validatedAt: null })
     const draftPv = await handler(user, 'tenant-A', request)
     expect(draftPv.status).toBe(403)
+  })
+
+  it('lets ONECS inspect only the immutable original of a validated diploma', async () => {
+    const original = Buffer.from('%PDF-1.4\nvalidated diploma')
+    dbMock.officialDocument.findFirst.mockResolvedValue({ ...document, type: 'DIPLOME', content: JSON.stringify({ type: 'DIPLOME', tenant: { name: 'Université A' } }), hash: createHash('sha256').update(original).digest('hex') })
+    dbMock.officialDocumentPdf.findUnique.mockResolvedValue({ bytes: Uint8Array.from(original) })
+    const response = await handler({ id: 'onecs-A', role: 'ONECS', tenantId: null }, 'tenant-A', request)
+    expect(response.status).toBe(200)
+    expect(Buffer.from(await response.arrayBuffer())).toEqual(original)
   })
 
   it('rejects unsupported staff roles and corrupt snapshots', async () => {

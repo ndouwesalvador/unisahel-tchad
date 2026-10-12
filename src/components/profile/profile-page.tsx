@@ -59,6 +59,7 @@ function formatDateFr(iso: string | null | undefined) {
 
 const roleLabels: Record<string, string> = {
   SUPER_ADMIN: 'Super Admin',
+  ONECS: 'Responsable ONECS',
   ADMIN_INSTITUTION: 'Admin Institution',
   RECTORAT: 'Rectorat',
   SCOLARITE: 'Scolarité',

@@ -13,6 +13,7 @@ export type UserRole =
   | 'ETUDIANT_SANTE'
   | 'MAITRE_STAGE'
   | 'PARENT'
+  | 'ONECS'
 
 export type AppView =
   | 'landing' | 'login' | 'signup' | 'student-login'
@@ -24,12 +25,12 @@ export type AppView =
   | 'inscription-pedagogique' | 'scholarships' | 'profile' | 'candidature'
   | 'exam-scheduling' | 'alumni' | 'advising' | 'library' | 'attendance'
   | 'communication' | 'online-exam' | 'student-exam' | 'reports' | 'hr'
-  | 'room-booking' | 'results' | 'transport'
+  | 'room-booking' | 'results' | 'transport' | 'onecs'
 
 const COMMON = ['dashboard', 'profile', 'verify'] as const
 
 const ROLE_VIEWS: Record<UserRole, ReadonlySet<AppView>> = {
-  SUPER_ADMIN: new Set([...COMMON, 'platform-institutions', 'settings']),
+  SUPER_ADMIN: new Set([...COMMON, 'platform-institutions', 'settings', 'onecs']),
   ADMIN_INSTITUTION: new Set([
     ...COMMON, 'students', 'student-detail', 'teachers', 'teacher-detail', 'staff-users',
     'candidature', 'structure', 'maquette', 'grades', 'deliberation', 'documents',
@@ -57,6 +58,7 @@ const ROLE_VIEWS: Record<UserRole, ReadonlySet<AppView>> = {
   ETUDIANT_SANTE: new Set([...COMMON, 'grades', 'documents', 'payments', 'internships', 'health', 'timetable']),
   MAITRE_STAGE: new Set([...COMMON, 'internships']),
   PARENT: new Set([...COMMON, 'grades', 'payments']),
+  ONECS: new Set([...COMMON, 'onecs']),
 }
 
 export function isViewAllowed(role: string | null | undefined, view: AppView): boolean {

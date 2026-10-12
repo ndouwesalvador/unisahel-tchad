@@ -42,6 +42,15 @@ describe('GET /api/documents/verify/[code]', () => {
     expect(result.valid).toBe(true)
     expect(result.fileVerificationAvailable).toBe(false)
   })
+
+  it('publishes the ONECS authentication state for a diploma', async () => {
+    dbMock.officialDocument.findUnique.mockResolvedValue({
+      tenantId: 'tenant-A', content: '{}', type: 'DIPLOME', number: 'D-1', status: 'GENERATED',
+      validatedAt: new Date(), student: null, onecsStatus: 'AUTHENTICATED', onecsReference: 'ONECS-2026-ABC', onecsAuthenticatedAt: new Date('2026-10-12'),
+    })
+    const result = await (await GET(request, context)).json()
+    expect(result.document.onecs).toMatchObject({ status: 'AUTHENTICATED', reference: 'ONECS-2026-ABC' })
+  })
 })
 
 describe('POST /api/documents/verify/[code]', () => {

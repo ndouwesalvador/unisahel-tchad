@@ -195,8 +195,16 @@ export function useScholarships() {
   return useSimpleGet('scholarships', '/api/scholarships');
 }
 
-export function useNotifications() {
-  return useSimpleGet('notifications', '/api/notifications');
+export function useNotifications(options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: ['notifications'],
+    enabled: options?.enabled ?? true,
+    queryFn: async () => {
+      const response = await fetch('/api/notifications')
+      if (!response.ok) throw new Error('Impossible de charger les notifications')
+      return response.json()
+    },
+  })
 }
 
 export function useAlumni() {

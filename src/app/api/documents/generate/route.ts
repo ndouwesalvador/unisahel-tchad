@@ -740,6 +740,7 @@ export async function POST(request: NextRequest) {
         generatedBy: sessionUser.id,
         validatedBy: isSigned ? sessionUser.id : undefined,
         validatedAt: isSigned ? new Date() : undefined,
+        onecsStatus: type === 'DIPLOME' && isSigned ? 'PENDING' : undefined,
       },
     })
 
