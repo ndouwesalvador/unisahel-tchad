@@ -7,7 +7,7 @@ import { Prisma } from '@prisma/client'
 import { createStudentPortalCredentials } from '@/lib/student-portal'
 import { prepareDocumentPhoto } from '@/lib/pdf/artwork'
 import { getTeacherScope } from '@/lib/auth/teacher-scope'
-import { getOrganizationScope } from '@/lib/auth/organization-scope'
+import { getOrganizationScope, isOrganizationScopedRole } from '@/lib/auth/organization-scope'
 import { getJuryScope } from '@/lib/auth/jury-scope'
 
 // Credits are awarded by a finalized jury, not by the mutable Student cache.
@@ -35,6 +35,25 @@ async function validatedCreditsByStudent(tenantId: string, studentIds: string[],
   return totals
 }
 
+async function studentReadScope(user: SessionUser, tenantId: string): Promise<Prisma.StudentWhereInput> {
+  if (isOrganizationScopedRole(user.role)) {
+    const scope = await getOrganizationScope(user, tenantId)
+    return { currentProgram: { departmentId: { in: scope?.departmentIds ?? [] } } }
+  }
+  if (user.role === 'ENSEIGNANT') {
+    const scope = await getTeacherScope(user, tenantId)
+    return { pedagogicalRegistrations: { some: { teachingUnitId: { in: scope.teachingUnitIds }, status: 'ACTIVE' } } }
+  }
+  if (user.role === 'JURY') {
+    const scope = await getJuryScope(user, tenantId)
+    return { AND: [{ OR: [
+      { currentLevelId: { in: scope.levelIds } },
+      { registrations: { some: { tenantId, academicYearId: scope.academicYearId, status: 'INSCRIT', levelId: { in: scope.levelIds } } } },
+    ] }] }
+  }
+  return {}
+}
+
 async function getStudentsHandler(user: SessionUser, tenantId: string, request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
@@ -47,20 +66,7 @@ async function getStudentsHandler(user: SessionUser, tenantId: string, request: 
       tenantId,
     }
 
-    if (user.role === 'DEPARTEMENT') {
-      const scope = await getOrganizationScope(user, tenantId)
-      where.currentProgram = { departmentId: { in: scope?.departmentIds ?? [] } }
-    } else if (user.role === 'ENSEIGNANT') {
-      const scope = await getTeacherScope(user, tenantId)
-      where.pedagogicalRegistrations = { some: { teachingUnitId: { in: scope.teachingUnitIds }, status: 'ACTIVE' } }
-    } else if (user.role === 'JURY') {
-      const scope = await getJuryScope(user, tenantId)
-      where.AND = [{ OR: [
-        { currentLevelId: { in: scope.levelIds } },
-        { registrations: { some: { tenantId, academicYearId: scope.academicYearId,
-          status: 'INSCRIT', levelId: { in: scope.levelIds } } } },
-      ] }]
-    }
+    Object.assign(where, await studentReadScope(user, tenantId))
 
     if (search) {
       where.OR = [
@@ -500,11 +506,7 @@ async function getStudentDetailHandler(user: SessionUser, tenantId: string, requ
       )
     }
 
-    const scopeFilter = user.role === 'DEPARTEMENT'
-      ? { currentProgram: { departmentId: { in: (await getOrganizationScope(user, tenantId))?.departmentIds ?? [] } } }
-      : user.role === 'ENSEIGNANT'
-        ? { pedagogicalRegistrations: { some: { teachingUnitId: { in: (await getTeacherScope(user, tenantId)).teachingUnitIds }, status: 'ACTIVE' } } }
-        : {}
+    const scopeFilter = await studentReadScope(user, tenantId)
     const student = await db.student.findFirst({
       where: { id, tenantId, ...scopeFilter },
       include: {
@@ -575,11 +577,7 @@ async function getStudentTranscriptHandler(user: SessionUser, tenantId: string, 
       )
     }
 
-    const scopeFilter = user.role === 'DEPARTEMENT'
-      ? { currentProgram: { departmentId: { in: (await getOrganizationScope(user, tenantId))?.departmentIds ?? [] } } }
-      : user.role === 'ENSEIGNANT'
-        ? { pedagogicalRegistrations: { some: { teachingUnitId: { in: (await getTeacherScope(user, tenantId)).teachingUnitIds }, status: 'ACTIVE' } } }
-        : {}
+    const scopeFilter = await studentReadScope(user, tenantId)
     const student = await db.student.findFirst({
       where: { id, tenantId, ...scopeFilter },
       include: {
@@ -816,7 +814,7 @@ export const GET = withTenantAuth(async (user: SessionUser, tenantId: string, re
     return getStudentDetailHandler(user, tenantId, request)
   }
   return getStudentsHandler(user, tenantId, request)
-})
+}, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE', 'RECTORAT', 'FACULTE', 'DEPARTEMENT', 'RESPONSABLE_FILIERE', 'JURY', 'ENSEIGNANT'])
 
 export const POST = withTenantAuth(createStudentHandler, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE'])
 

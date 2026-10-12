@@ -6,7 +6,15 @@ const mocks = vi.hoisted(() => ({
   userFindFirst: vi.fn(), userUpdate: vi.fn(), teacherUpdate: vi.fn(), transaction: vi.fn(), auditCreate: vi.fn(),
 }))
 
-vi.mock('@/lib/auth/helpers', () => ({ withTenantAuth: (handler: unknown) => handler }))
+vi.mock('@/lib/auth/helpers', async () => {
+  const { NextResponse } = await import('next/server')
+  return {
+    withTenantAuth: (handler: (...args: unknown[]) => Promise<Response>, allowedRoles?: string[]) =>
+      async (user: { role: string }, ...args: unknown[]) => allowedRoles && !allowedRoles.includes(user.role)
+        ? NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 })
+        : handler(user, ...args),
+  }
+})
 vi.mock('@/lib/db', () => ({ db: {
   teacher: { findFirst: mocks.teacherFindFirst },
   academicYear: { findFirst: mocks.academicYearFindFirst },
@@ -72,8 +80,8 @@ describe('GET /api/teachers teacher profile', () => {
     expect(mocks.timetableFindMany).not.toHaveBeenCalled()
   })
 
-  it('blocks non-admin roles from the private teacher profile', async () => {
-    for (const role of ['ETUDIANT', 'ENSEIGNANT', 'SCOLARITE']) {
+  it('blocks roles without staff-roster access from the private teacher profile', async () => {
+    for (const role of ['ETUDIANT', 'ENSEIGNANT', 'CAISSE']) {
       const response = await handler({ id: 'user-A', role, tenantId: 'tenant-A' }, 'tenant-A', request('?id=teacher-A&schedule=true'))
       expect(response.status).toBe(403)
     }
@@ -119,5 +127,18 @@ describe('GET /api/teachers teacher profile', () => {
     expect(mocks.userUpdate).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'user-A' }, data: expect.objectContaining({ firstName: 'Awa', email: 'awa@example.test' }) }))
     expect(mocks.teacherUpdate).toHaveBeenCalledWith(expect.objectContaining({ where: { id: teacherId }, data: expect.objectContaining({ grade: 'ASSISTANT', maxHoursPerWeek: 20 }) }))
     expect(mocks.auditCreate).toHaveBeenCalled()
+  })
+
+  it('keeps rectorate teacher records read-only', async () => {
+    const response = await updateHandler(
+      { id: 'rector-A', role: 'RECTORAT', tenantId: 'tenant-A' },
+      'tenant-A',
+      new NextRequest('http://localhost:3000/api/teachers', {
+        method: 'PUT', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id: 'teacher-A', firstName: 'Mutation interdite' }),
+      }),
+    )
+    expect(response.status).toBe(403)
+    expect(mocks.teacherUpdate).not.toHaveBeenCalled()
   })
 })

@@ -51,6 +51,7 @@ import {
   ChevronRight,
 } from 'lucide-react'
 import { useAppStore } from '@/lib/store'
+import { canWriteTeachers } from '@/lib/auth/role-capabilities'
 import { useTeachers, useStructure } from '@/lib/api-hooks'
 import { exportToExcel } from '@/lib/export'
 import { exportListToPDF } from '@/lib/pdf-list'
@@ -206,7 +207,7 @@ const ITEMS_PER_PAGE = 20
 export function TeachersPage() {
   const { selectTeacher, setView } = useAppStore()
   const role = useAppStore((state) => state.user?.role)
-  const canCreateTeacher = ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE', 'DEPARTEMENT'].includes(role ?? '')
+  const canCreateTeacher = canWriteTeachers(role)
   const canImportTeachers = ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE'].includes(role ?? '')
   const queryClient = useQueryClient()
   const [search, setSearch] = useState('')

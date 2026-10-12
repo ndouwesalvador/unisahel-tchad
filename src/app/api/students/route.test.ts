@@ -3,9 +3,10 @@ import { NextRequest } from 'next/server'
 import { Prisma } from '@prisma/client'
 import sharp from 'sharp'
 
-const { authMock, credentialsMock, dbMock } = vi.hoisted(() => ({
+const { authMock, credentialsMock, scopeMock, dbMock } = vi.hoisted(() => ({
   authMock: vi.fn(),
   credentialsMock: vi.fn(),
+  scopeMock: vi.fn(),
   dbMock: {
     $transaction: vi.fn(),
     student: {
@@ -30,6 +31,10 @@ const { authMock, credentialsMock, dbMock } = vi.hoisted(() => ({
 vi.mock('@/lib/auth/config', () => ({ auth: authMock }))
 vi.mock('@/lib/db', () => ({ db: dbMock }))
 vi.mock('@/lib/student-portal', () => ({ createStudentPortalCredentials: credentialsMock }))
+vi.mock('@/lib/auth/organization-scope', () => ({
+  getOrganizationScope: scopeMock,
+  isOrganizationScopedRole: (role: string) => ['FACULTE', 'DEPARTEMENT', 'RESPONSABLE_FILIERE'].includes(role),
+}))
 
 const { GET, POST, PUT } = await import('./route')
 
@@ -67,6 +72,7 @@ beforeEach(() => {
   dbMock.student.update.mockResolvedValue({ id: 'cstudent00000000000000001' })
   dbMock.auditLog.create.mockResolvedValue({ id: 'caudit000000000000000001' })
   credentialsMock.mockResolvedValue({ pin: '123456', pinHash: 'hashed-pin' })
+  scopeMock.mockResolvedValue({ facultyId: 'faculty-A', departmentIds: ['department-A'] })
   authMock.mockResolvedValue({ user: sessionUser })
 })
 
@@ -87,6 +93,22 @@ describe('GET /api/students', () => {
 
   it('rejects a cross-tenant request from a non-SUPER_ADMIN with 403 before querying the DB', async () => {
     const res = await GET(req('/api/students?tenantId=tenant-B'))
+    expect(res.status).toBe(403)
+    expect(dbMock.student.findMany).not.toHaveBeenCalled()
+  })
+
+  it.each(['FACULTE', 'DEPARTEMENT', 'RESPONSABLE_FILIERE'])('limits %s to the departments assigned in the current user record', async (role) => {
+    authMock.mockResolvedValue({ user: { ...sessionUser, role } })
+    const res = await GET(req('/api/students'))
+    expect(res.status).toBe(200)
+    expect(dbMock.student.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ currentProgram: { departmentId: { in: ['department-A'] } } }),
+    }))
+  })
+
+  it.each(['CAISSE', 'MAITRE_STAGE', 'PARENT'])('refuses the full student roster to %s', async (role) => {
+    authMock.mockResolvedValue({ user: { ...sessionUser, role } })
+    const res = await GET(req('/api/students'))
     expect(res.status).toBe(403)
     expect(dbMock.student.findMany).not.toHaveBeenCalled()
   })

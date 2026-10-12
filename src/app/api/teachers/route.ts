@@ -440,7 +440,7 @@ async function deleteTeacherHandler(user: SessionUser, tenantId: string, request
 
 async function getTeacherScheduleHandler(user: SessionUser, tenantId: string, request: NextRequest) {
   try {
-    if (user.role !== 'ADMIN_INSTITUTION') {
+    if (!['ADMIN_INSTITUTION', 'SCOLARITE', 'RECTORAT', 'FACULTE', 'DEPARTEMENT'].includes(user.role)) {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
     }
     const { searchParams } = new URL(request.url)
@@ -454,8 +454,16 @@ async function getTeacherScheduleHandler(user: SessionUser, tenantId: string, re
       )
     }
 
+    const organizationScope = await getOrganizationScope(user, tenantId)
     const teacher = await db.teacher.findFirst({
-      where: { id, tenantId },
+      where: {
+        id, tenantId,
+        ...(organizationScope ? { AND: [{ OR: [
+          { departmentId: { in: organizationScope.departmentIds } },
+          { assignedElements: { some: { teachingUnit: { semester: { level: { program: { departmentId: { in: organizationScope.departmentIds } } } } } } } },
+          { responsibleUnits: { some: { semester: { level: { program: { departmentId: { in: organizationScope.departmentIds } } } } } } },
+        ] }] } : {}),
+      },
       include: {
         user: { select: { firstName: true, lastName: true, email: true, phone: true, photo: true } },
         department: { select: { id: true, name: true } },
@@ -632,10 +640,10 @@ export const GET = withTenantAuth(async (user: SessionUser, tenantId: string, re
     return getTeacherScheduleHandler(user, tenantId, request)
   }
   return getTeachersHandler(user, tenantId, request)
-})
+}, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE', 'RECTORAT', 'FACULTE', 'DEPARTEMENT'])
 
-export const POST = withTenantAuth(createTeacherHandler, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE', 'RECTORAT', 'DEPARTEMENT'])
+export const POST = withTenantAuth(createTeacherHandler, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE', 'DEPARTEMENT'])
 
-export const PUT = withTenantAuth(updateTeacherHandler, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE', 'RECTORAT', 'DEPARTEMENT'])
+export const PUT = withTenantAuth(updateTeacherHandler, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE', 'DEPARTEMENT'])
 
-export const DELETE = withTenantAuth(deleteTeacherHandler, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE', 'RECTORAT', 'DEPARTEMENT'])
+export const DELETE = withTenantAuth(deleteTeacherHandler, ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE', 'DEPARTEMENT'])

@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAppStore } from '@/lib/store'
+import { canManageStudents as roleCanManageStudents } from '@/lib/auth/role-capabilities'
 import { useStudents, useStructure } from '@/lib/api-hooks'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -161,7 +162,7 @@ const emptyStudentForm = {
 export function StudentsList() {
   const { setView, selectStudent } = useAppStore()
   const role = useAppStore((state) => state.user?.role)
-  const canManageStudents = ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE'].includes(role ?? '')
+  const canManageStudents = roleCanManageStudents(role)
   const canImportStudents = canManageStudents
   const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
@@ -713,7 +714,7 @@ export function StudentsList() {
                       >
                         <Eye className="size-3.5 text-gray-400" />
                       </Button>}
-                      <Button
+                      {canManageStudents && <Button
                         variant="ghost"
                         size="sm"
                         className="h-7 w-7 p-0 opacity-50 group-hover:opacity-100 transition-opacity"
@@ -721,7 +722,7 @@ export function StudentsList() {
                         title="Modifier le dossier"
                       >
                         <Pencil className="size-3.5 text-gray-400" />
-                      </Button>
+                      </Button>}
                       {canManageStudents && (
                         <Button
                           variant="ghost"

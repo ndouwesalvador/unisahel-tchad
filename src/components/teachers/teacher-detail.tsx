@@ -628,20 +628,20 @@ export function TeacherDetail() {
             </div>
           </div>
           <div className="mt-4 flex flex-wrap gap-2">
-            <Button variant="outline" onClick={() => setEditing(true)}>
+            {canManageAssignments && <Button variant="outline" onClick={() => setEditing(true)}>
               <Edit className="mr-2 size-4" />
               Modifier
-            </Button>
-            <Button
+            </Button>}
+            {canManageAssignments && <Button
               variant="outline"
               onClick={() => setActiveTab("affectations")}
             >
               <BookOpen className="mr-2 size-4" />
               Affectations
-            </Button>
-            <Button variant="outline" onClick={() => setView("maquette")}>
+            </Button>}
+            {canManageAssignments && <Button variant="outline" onClick={() => setView("maquette")}>
               Gérer les maquettes
-            </Button>
+            </Button>}
             <Button
               variant="outline"
               disabled={!teacher.email}
