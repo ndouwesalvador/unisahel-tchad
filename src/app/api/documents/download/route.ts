@@ -42,7 +42,8 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
   }
   if (isStudentSelfRole(user.role)) {
     const ownStudentId = await resolveOwnStudentId(user)
-    if (!ownStudentId || document.studentId !== ownStudentId || !document.validatedAt || !isStudentDocumentType(document.type)) {
+    if (!ownStudentId || document.studentId !== ownStudentId || !document.validatedAt || document.status === 'REVOKED' ||
+        !isStudentDocumentType(document.type)) {
       return NextResponse.json({ error: 'Accès refusé.' }, { status: 403 })
     }
   }

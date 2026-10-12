@@ -34,7 +34,7 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
     const requestedStudentId = ownStudentId || user.role === 'RECTORAT' ? null : new URL(request.url).searchParams.get('studentId')
     const scopedStudentId = ownStudentId || requestedStudentId
     const where: Prisma.OfficialDocumentWhereInput = user.role === 'RECTORAT'
-      ? { tenantId, type: 'PV_DELIBERATION', validatedAt: { not: null } }
+      ? { tenantId, type: 'PV_DELIBERATION', validatedAt: { not: null }, status: { not: 'REVOKED' } }
       : scopedStudentId
       ? {
           tenantId,
@@ -42,6 +42,7 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
           ...(ownStudentId ? {
             type: { in: [...STUDENT_DOCUMENT_TYPES] },
             validatedAt: { not: null },
+            status: { not: 'REVOKED' },
           } : {}),
         }
       : { tenantId }
@@ -53,7 +54,7 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
       const scope = await getOrganizationScope(user, tenantId)
       const departmentIds = new Set(scope?.departmentIds ?? [])
       const candidates = departmentIds.size > 0 ? await db.officialDocument.findMany({
-        where: { tenantId, type: 'PV_DELIBERATION' },
+        where: { tenantId, type: 'PV_DELIBERATION', status: { not: 'REVOKED' } },
         orderBy: { createdAt: 'desc' },
         take: 500,
         include: { student: { select: { firstName: true, lastName: true, matricule: true } } },
@@ -70,7 +71,7 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
         etudiant: document.student ? `${document.student.firstName} ${document.student.lastName}` : '—',
         matricule: document.student?.matricule || '—',
         date: document.createdAt,
-        statut: document.validatedAt ? 'signe' : document.status === 'DRAFT' ? 'en_attente' : 'genere',
+        statut: document.status === 'REVOKED' ? 'revoque' : document.validatedAt ? 'signe' : document.status === 'DRAFT' ? 'en_attente' : 'genere',
         codeVerification: document.verificationCode || '',
       }))
       return NextResponse.json({
@@ -106,7 +107,7 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
       etudiant: d.student ? `${d.student.firstName} ${d.student.lastName}` : '—',
       matricule: d.student?.matricule || '—',
       date: d.createdAt,
-      statut: d.validatedAt ? 'signe' : d.status === 'DRAFT' ? 'en_attente' : 'genere',
+      statut: d.status === 'REVOKED' ? 'revoque' : d.validatedAt ? 'signe' : d.status === 'DRAFT' ? 'en_attente' : 'genere',
       codeVerification: d.verificationCode || '',
     }))
 
@@ -121,15 +122,32 @@ async function handleGet(user: SessionUser, tenantId: string, request: NextReque
   }
 }
 
-// A generated PDF is immutable. Updating only the database validation flag
-// would make its verification page contradict the PDF that was downloaded.
-// Keep PUT as an explicit rejection for older clients; a new PDF must pass
-// generation-time checks and be validated atomically with sign=true.
-async function handlePut(_user: SessionUser, _tenantId: string, _request: NextRequest) {
-  return NextResponse.json(
-    { error: 'Ce PDF ne peut pas être validé après génération. Créez un nouveau PDF avec validation.' },
-    { status: 409 }
-  )
+// Issued bytes stay immutable. Revocation only changes their legal status and
+// leaves the original hash, audit trail and verification reference intact.
+async function handlePut(user: SessionUser, tenantId: string, request: NextRequest) {
+  const body = await request.json().catch(() => null)
+  if (!body || body.action !== 'REVOKE') {
+    return NextResponse.json(
+      { error: 'Ce PDF ne peut pas être validé après génération. Créez un nouveau PDF avec validation.' },
+      { status: 409 },
+    )
+  }
+  const id = typeof body.id === 'string' ? body.id : ''
+  const reason = typeof body.reason === 'string' ? body.reason.trim() : ''
+  if (!id || reason.length < 10 || reason.length > 1000) {
+    return NextResponse.json({ error: 'Document et motif de révocation (10 à 1000 caractères) requis.' }, { status: 400 })
+  }
+  const document = await db.officialDocument.findFirst({ where: { id, tenantId }, select: { id: true, type: true, status: true } })
+  if (!document) return NextResponse.json({ error: 'Document introuvable.' }, { status: 404 })
+  if (document.status === 'REVOKED') return NextResponse.json({ error: 'Ce document est déjà révoqué.' }, { status: 409 })
+  const data: { status: string; onecsStatus?: string } = { status: 'REVOKED' }
+  if (document.type === 'DIPLOME') data.onecsStatus = 'REVOKED'
+  const revoked = await db.officialDocument.update({ where: { id: document.id }, data })
+  await db.auditLog.create({ data: {
+    tenantId, userId: user.id, action: 'REVOKE', entity: 'OfficialDocument', entityId: document.id,
+    details: JSON.stringify({ reason, type: document.type }),
+  } })
+  return NextResponse.json({ document: revoked })
 }
 
 export const GET = withTenantAuth(handleGet)

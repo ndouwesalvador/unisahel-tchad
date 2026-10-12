@@ -4,7 +4,8 @@ import { NextRequest } from 'next/server'
 const { dbMock } = vi.hoisted(() => ({
   dbMock: {
     student: { findFirst: vi.fn() },
-    officialDocument: { findMany: vi.fn(), count: vi.fn(), groupBy: vi.fn(), update: vi.fn() },
+    officialDocument: { findMany: vi.fn(), count: vi.fn(), groupBy: vi.fn(), findFirst: vi.fn(), update: vi.fn() },
+    auditLog: { create: vi.fn() },
   },
 }))
 
@@ -63,6 +64,7 @@ describe('GET /api/documents', () => {
         studentId: 'student-A',
         type: { in: ['RELEVE_NOTES', 'ATTESTATION_INSCRIPTION', 'CERTIFICAT_SCOLARITE', 'ATTESTATION_NIVEAU', 'DIPLOME'] },
         validatedAt: { not: null },
+        status: { not: 'REVOKED' },
       }),
     }))
   })
@@ -93,7 +95,7 @@ describe('GET /api/documents', () => {
 
     expect(response.status).toBe(200)
     expect(dbMock.officialDocument.findMany).toHaveBeenCalledWith(expect.objectContaining({
-      where: { tenantId: 'tenant-A', type: 'PV_DELIBERATION', validatedAt: { not: null } },
+      where: { tenantId: 'tenant-A', type: 'PV_DELIBERATION', validatedAt: { not: null }, status: { not: 'REVOKED' } },
     }))
   })
 })
@@ -106,5 +108,21 @@ describe('PUT /api/documents', () => {
     const response = await handler(user, 'tenant-A', request)
     expect(response.status).toBe(409)
     expect(dbMock.officialDocument.update).not.toHaveBeenCalled()
+  })
+
+  it('revokes an issued document with an auditable reason', async () => {
+    dbMock.officialDocument.findFirst.mockResolvedValue({ id: 'doc-A', status: 'GENERATED', type: 'RELEVE_NOTES' })
+    dbMock.officialDocument.update.mockResolvedValue({ id: 'doc-A', status: 'REVOKED' })
+    const user = { id: 'admin-A', role: 'ADMIN_INSTITUTION', tenantId: 'tenant-A' }
+    const request = new NextRequest('http://localhost:3000/api/documents', { method: 'PUT', body: JSON.stringify({
+      id: 'doc-A', action: 'REVOKE', reason: 'En-tête institutionnel incorrect lors de l’émission.',
+    }) })
+    const handler = PUT as unknown as (sessionUser: typeof user, tenantId: string, request: NextRequest) => Promise<Response>
+    const response = await handler(user, 'tenant-A', request)
+    expect(response.status).toBe(200)
+    expect(dbMock.officialDocument.update).toHaveBeenCalledWith({ where: { id: 'doc-A' }, data: { status: 'REVOKED' } })
+    expect(dbMock.auditLog.create).toHaveBeenCalledWith({ data: expect.objectContaining({
+      tenantId: 'tenant-A', userId: 'admin-A', action: 'REVOKE', entity: 'OfficialDocument', entityId: 'doc-A',
+    }) })
   })
 })

@@ -99,6 +99,14 @@ describe('GET /api/documents/download', () => {
     expect(renderMock).not.toHaveBeenCalled()
   })
 
+  it('does not let a student download a revoked document', async () => {
+    dbMock.officialDocument.findFirst.mockResolvedValue({ ...document, status: 'REVOKED' })
+    dbMock.student.findFirst.mockResolvedValue({ id: 'student-A' })
+    const response = await handler({ id: 'student-user-A', role: 'ETUDIANT', tenantId: 'tenant-A' }, 'tenant-A', request)
+    expect(response.status).toBe(403)
+    expect(renderMock).not.toHaveBeenCalled()
+  })
+
   it('lets the rectorat download only validated PVs', async () => {
     const user = { id: 'rectorat-A', role: 'RECTORAT', tenantId: 'tenant-A' }
     const studentDocument = await handler(user, 'tenant-A', request)
