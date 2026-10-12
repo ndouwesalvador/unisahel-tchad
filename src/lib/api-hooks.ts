@@ -49,6 +49,23 @@ export function useStudents(params?: { search?: string; status?: string; program
   });
 }
 
+export function usePaymentStudentLookup(search: string, options?: { enabled?: boolean; limit?: number }) {
+  const limit = options?.limit ?? 6
+  return useQuery({
+    queryKey: ['paymentStudentLookup', search, limit],
+    enabled: options?.enabled ?? search.trim().length >= 2,
+    queryFn: async () => {
+      const url = new URL('/api/payments', window.location.origin)
+      url.searchParams.set('studentLookup', 'true')
+      url.searchParams.set('search', search.trim())
+      url.searchParams.set('limit', String(limit))
+      const response = await fetch(url.toString())
+      if (!response.ok) throw new Error('Impossible de rechercher cet étudiant')
+      return response.json() as Promise<{ data: Array<{ id: string; firstName: string; lastName: string; matricule: string | null; currentProgram: { name: string } | null; currentLevel: { name: string } | null }> }>
+    },
+  })
+}
+
 export function useStudentDetail(id?: string) {
   return useQuery({
     queryKey: ['studentDetail', id],

@@ -621,7 +621,7 @@ function MainContent({ view }: { view: AppView }) {
         ? <StudentPaymentsPage />
         : <PaymentsPage />
     case 'receipts':
-      return <PaymentsPage />
+      return <PaymentsPage mode="receipts" />
     case 'health':
       return <HealthPage />
     case 'internships':

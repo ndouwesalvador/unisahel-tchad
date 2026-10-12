@@ -7,6 +7,36 @@ import { Prisma } from '@prisma/client'
 import { createNotification } from '@/lib/notifications'
 import { sendEmail } from '@/lib/email'
 
+const PAYMENT_STUDENT_LOOKUP_ROLES = new Set(['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE', 'CAISSE'])
+
+async function getPaymentStudentLookup(user: SessionUser, tenantId: string, request: NextRequest) {
+  if (!PAYMENT_STUDENT_LOOKUP_ROLES.has(user.role)) {
+    return NextResponse.json({ error: 'FORBIDDEN', message: 'Accès refusé' }, { status: 403 })
+  }
+  const search = request.nextUrl.searchParams.get('search')?.trim() ?? ''
+  const rawLimit = Number(request.nextUrl.searchParams.get('limit') ?? 6)
+  const limit = Number.isInteger(rawLimit) ? Math.min(20, Math.max(1, rawLimit)) : 6
+  if (search.length < 2) return NextResponse.json({ data: [] })
+
+  const students = await db.student.findMany({
+    where: {
+      tenantId,
+      OR: [
+        { firstName: { contains: search, mode: 'insensitive' } },
+        { lastName: { contains: search, mode: 'insensitive' } },
+        { matricule: { contains: search, mode: 'insensitive' } },
+      ],
+    },
+    select: {
+      id: true, firstName: true, lastName: true, matricule: true,
+      currentProgram: { select: { name: true } }, currentLevel: { select: { name: true } },
+    },
+    orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
+    take: limit,
+  })
+  return NextResponse.json({ data: students })
+}
+
 async function getPaymentsHandler(user: SessionUser, tenantId: string, request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
@@ -744,6 +774,10 @@ export const GET = withTenantAuth(async (user: SessionUser, tenantId: string, re
   const id = searchParams.get('id')
   const receipt = searchParams.get('receipt')
   const stats = searchParams.get('stats')
+
+  if (searchParams.get('studentLookup') === 'true') {
+    return getPaymentStudentLookup(user, tenantId, request)
+  }
 
   if (stats === 'true') {
     if (isStudentSelfRole(user.role)) {

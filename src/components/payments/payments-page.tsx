@@ -4,7 +4,9 @@ import { useState, useEffect, useRef, useMemo, useDeferredValue } from 'react'
 import { toast } from 'sonner'
 import { motion } from 'framer-motion'
 import { useQueryClient } from '@tanstack/react-query'
-import { usePayments, usePaymentStats, useStudents, useDashboardStats } from '@/lib/api-hooks'
+import { usePayments, usePaymentStats, usePaymentStudentLookup, useDashboardStats } from '@/lib/api-hooks'
+import { useAppStore } from '@/lib/store'
+import { resolvePaymentAcademicYearId } from '@/lib/payments/academic-year'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -129,7 +131,7 @@ function useCountUp(target: number, duration: number = 1400) {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function PaymentsPage() {
+export function PaymentsPage({ mode = 'manage' }: { mode?: 'manage' | 'receipts' }) {
   const [search, setSearch] = useState('')
   const deferredSearch = useDeferredValue(search.trim())
   const [currentPage, setCurrentPage] = useState(1)
@@ -142,20 +144,21 @@ export function PaymentsPage() {
   const [remindingId, setRemindingId] = useState<string | null>(null)
 
   const queryClient = useQueryClient()
+  const selectedAcademicYearId = useAppStore((state) => state.selectedAcademicYearId)
   const statusApiMap: Record<string, string> = { paye: 'VALIDATED', en_attente: 'PENDING', annule: 'CANCELLED' }
   const methodApiMap: Record<string, string> = { cash: 'CASH', mobile_money: 'MOBILE_MONEY', bank: 'BANK_TRANSFER' }
   const { data: paymentsData, isLoading: paymentsLoading } = usePayments({
     search: deferredSearch || undefined,
-    status: statusFilter === 'tous' ? undefined : statusApiMap[statusFilter],
+    status: mode === 'receipts' ? 'VALIDATED' : statusFilter === 'tous' ? undefined : statusApiMap[statusFilter],
     paymentMethod: methodeFilter === 'tous' ? undefined : methodApiMap[methodeFilter],
     page: currentPage,
     limit: ITEMS_PER_PAGE,
   })
   const { data: paymentStatsData } = usePaymentStats()
-  const { data: studentMatches } = useStudents({ search: studentSearch, limit: 6 })
+  const { data: studentMatches } = usePaymentStudentLookup(studentSearch, { enabled: showNewPayment && studentSearch.length >= 2, limit: 6 })
   const showStudentDropdown = showNewPayment && studentSearch.length >= 2 && !newPayment.studentId
-  const { data: dashboardData } = useDashboardStats() as { data: { currentAcademicYear?: { id: string } } | undefined }
-  const currentAcademicYearId = dashboardData?.currentAcademicYear?.id
+  const { data: dashboardData } = useDashboardStats() as { data: { currentAcademicYear?: { id: string }; academicYear?: { id: string } } | undefined }
+  const currentAcademicYearId = resolvePaymentAcademicYearId(selectedAcademicYearId, dashboardData)
 
   const realPayments = useMemo(() => {
     if (!paymentsData?.data) return []
@@ -371,10 +374,10 @@ export function PaymentsPage() {
             <div className="relative">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h1 className="text-2xl font-bold">Gestion des paiements</h1>
-                  <p className="text-white/70 text-sm mt-1">Suivi des encaissements et des frais</p>
+                  <h1 className="text-2xl font-bold">{mode === 'receipts' ? 'Reçus de paiement' : 'Gestion des paiements'}</h1>
+                  <p className="text-white/70 text-sm mt-1">{mode === 'receipts' ? 'Retrouvez et imprimez les reçus des encaissements validés.' : 'Suivi des encaissements et des frais'}</p>
                 </div>
-                <Dialog open={showNewPayment} onOpenChange={(open) => { setShowNewPayment(open); if (!open) { setNewPayment({ studentId: '', studentLabel: '', montant: '', description: '', methode: '', reference: '' }); setStudentSearch('') } }}>
+                {mode === 'manage' && <Dialog open={showNewPayment} onOpenChange={(open) => { setShowNewPayment(open); if (!open) { setNewPayment({ studentId: '', studentLabel: '', montant: '', description: '', methode: '', reference: '' }); setStudentSearch('') } }}>
                   <DialogTrigger asChild>
                     <Button size="sm" className="bg-white/15 border border-white/25 text-white hover:bg-white/25 text-xs">
                       <Plus className="size-3.5 mr-1.5" />
@@ -463,7 +466,7 @@ export function PaymentsPage() {
                       </Button>
                     </div>
                   </DialogContent>
-                </Dialog>
+                </Dialog>}
               </div>
 
               {/* Revenue du jour / Revenue du mois */}

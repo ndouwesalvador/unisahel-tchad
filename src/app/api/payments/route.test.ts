@@ -8,7 +8,7 @@ const { authMock, dbMock } = vi.hoisted(() => ({
       findFirst: vi.fn(),
       update: vi.fn(),
     },
-    student: { findFirst: vi.fn() },
+    student: { findFirst: vi.fn(), findMany: vi.fn() },
     feeStructure: { findMany: vi.fn() },
     auditLog: {
       create: vi.fn(),
@@ -38,6 +38,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   authMock.mockResolvedValue({ user: sessionUser })
   dbMock.student.findFirst.mockResolvedValue(null)
+  dbMock.student.findMany.mockResolvedValue([])
   dbMock.feeStructure.findMany.mockResolvedValue([])
 })
 
@@ -92,6 +93,31 @@ describe('auth on the payments route', () => {
     authMock.mockResolvedValue(null)
     const res = await GET(req('/api/payments'))
     expect(res.status).toBe(401)
+  })
+})
+
+describe('GET /api/payments?studentLookup=true', () => {
+  it('returns a minimal tenant-scoped student lookup for caisse', async () => {
+    dbMock.student.findMany.mockResolvedValue([{ id: 'student-A', firstName: 'Succès', lastName: 'Ouangbe', matricule: 'UPM-001', currentProgram: { name: 'Master GE' }, currentLevel: { name: 'M1' } }])
+    const response = await GET(req('/api/payments?studentLookup=true&search=succ&limit=6'))
+    expect(response.status).toBe(200)
+    expect(await response.json()).toMatchObject({ data: [{ id: 'student-A', matricule: 'UPM-001' }] })
+    expect(dbMock.student.findMany).toHaveBeenCalledWith({
+      where: { tenantId: 'tenant-A', OR: expect.any(Array) },
+      select: {
+        id: true, firstName: true, lastName: true, matricule: true,
+        currentProgram: { select: { name: true } }, currentLevel: { select: { name: true } },
+      },
+      orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
+      take: 6,
+    })
+  })
+
+  it('refuses the cashier lookup to an unrelated oversight role', async () => {
+    authMock.mockResolvedValue({ user: { ...sessionUser, role: 'RECTORAT' } })
+    const response = await GET(req('/api/payments?studentLookup=true&search=succ'))
+    expect(response.status).toBe(403)
+    expect(dbMock.student.findMany).not.toHaveBeenCalled()
   })
 })
 
