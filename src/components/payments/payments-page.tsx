@@ -416,7 +416,7 @@ export function PaymentsPage({ mode = 'manage' }: { mode?: 'manage' | 'receipts'
                                 {(studentMatches?.data ?? []).length === 0 ? (
                                   <p className="px-3 py-2 text-xs text-gray-400">Aucun étudiant trouvé</p>
                                 ) : (
-                                  studentMatches.data.map((s: { id: string; firstName: string; lastName: string; matricule?: string }) => (
+                                  (studentMatches?.data ?? []).map((s) => (
                                     <button
                                       key={s.id}
                                       type="button"

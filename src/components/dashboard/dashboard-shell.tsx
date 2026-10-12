@@ -382,6 +382,7 @@ const viewLabels: Record<AppView, string> = {
   deliberation: 'Délibérations',
   documents: 'Documents',
   payments: 'Paiements',
+  receipts: 'Reçus',
   health: 'Santé',
   internships: 'Stages',
   statistics: 'Statistiques',

@@ -206,6 +206,20 @@ export function useInternships() {
   return useSimpleGet('internships', '/api/internships');
 }
 
+export function useStageSupervisors(options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: ['stageSupervisors'],
+    enabled: options?.enabled ?? true,
+    queryFn: async () => {
+      const response = await fetch('/api/internships?supervisors=true')
+      if (!response.ok) throw new Error('Impossible de charger les maîtres de stage')
+      return response.json() as Promise<{
+        supervisors: Array<{ id: string; firstName: string; lastName: string; email: string | null }>
+      }>
+    },
+  })
+}
+
 export function useStructure() {
   return useSimpleGet('structure', '/api/structure');
 }

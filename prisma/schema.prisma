@@ -477,36 +477,37 @@ model ExamSession {
 // ============================================
 
 model User {
-  id                 String           @id @default(cuid())
+  id                    String           @id @default(cuid())
   // Nullable: a SUPER_ADMIN manages the whole platform and belongs to no
   // single institution (mirrors a real multi-tenant SaaS control plane).
-  tenantId           String?
-  tenant             Tenant?          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  email              String?          @unique
-  passwordHash       String?
-  login              String?          @unique
-  pinHash            String?
-  firstName          String
-  lastName           String
-  middleName         String?
-  phone              String?
-  photo              String?
-  role               UserRole         @default(ETUDIANT)
-  facultyId          String?
-  faculty            Faculty?         @relation("FacultyManagers", fields: [facultyId], references: [id], onDelete: SetNull)
-  departmentId       String?
-  department         Department?      @relation("DepartmentManagers", fields: [departmentId], references: [id], onDelete: SetNull)
-  isActive           Boolean          @default(true)
-  emailVerified      Boolean          @default(false)
-  lastLoginAt        DateTime?
-  lastLoginIp        String?
-  mustChangePassword Boolean          @default(false)
-  teacher            Teacher?
-  student            Student?
-  auditLogs          AuditLog[]
-  juryAssignments    JuryAssignment[]
-  createdAt          DateTime         @default(now())
-  updatedAt          DateTime         @updatedAt
+  tenantId              String?
+  tenant                Tenant?          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  email                 String?          @unique
+  passwordHash          String?
+  login                 String?          @unique
+  pinHash               String?
+  firstName             String
+  lastName              String
+  middleName            String?
+  phone                 String?
+  photo                 String?
+  role                  UserRole         @default(ETUDIANT)
+  facultyId             String?
+  faculty               Faculty?         @relation("FacultyManagers", fields: [facultyId], references: [id], onDelete: SetNull)
+  departmentId          String?
+  department            Department?      @relation("DepartmentManagers", fields: [departmentId], references: [id], onDelete: SetNull)
+  isActive              Boolean          @default(true)
+  emailVerified         Boolean          @default(false)
+  lastLoginAt           DateTime?
+  lastLoginIp           String?
+  mustChangePassword    Boolean          @default(false)
+  teacher               Teacher?
+  student               Student?
+  auditLogs             AuditLog[]
+  juryAssignments       JuryAssignment[]
+  supervisedInternships Internship[]     @relation("InternshipSupervisor")
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
 
   @@index([tenantId, email])
   @@index([tenantId, login])
@@ -1626,25 +1627,28 @@ model Communication {
 // ============================================
 
 model Internship {
-  id             String    @id @default(cuid())
-  tenantId       String
-  studentName    String
-  matricule      String
-  entreprise     String
-  type           String // PROFESSIONNEL, HOSPITALIER, RECHERCHE, FIN_ETUDES
-  period         String?
-  status         String    @default("EN_ATTENTE") // EN_ATTENTE, CONVENTION_SIGNEE, EN_COURS, TERMINE, ANNULE
-  tuteur         String?
-  startDate      DateTime?
-  endDate        DateTime?
-  evaluation     String? // EXCELLENT, TRES_BIEN, BIEN, ASSEZ_BIEN, INSUFFISANT
-  evaluationDate DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id               String    @id @default(cuid())
+  tenantId         String
+  studentName      String
+  matricule        String
+  entreprise       String
+  type             String // PROFESSIONNEL, HOSPITALIER, RECHERCHE, FIN_ETUDES
+  period           String?
+  status           String    @default("EN_ATTENTE") // EN_ATTENTE, CONVENTION_SIGNEE, EN_COURS, TERMINE, ANNULE
+  tuteur           String?
+  startDate        DateTime?
+  endDate          DateTime?
+  evaluation       String? // EXCELLENT, TRES_BIEN, BIEN, ASSEZ_BIEN, INSUFFISANT
+  evaluationDate   DateTime?
+  supervisorUserId String?
+  supervisorUser   User?     @relation("InternshipSupervisor", fields: [supervisorUserId], references: [id], onDelete: SetNull)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id])
 
   @@index([tenantId])
+  @@index([tenantId, supervisorUserId])
   @@map("internships")
 }
 

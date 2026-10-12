@@ -4,7 +4,7 @@ import { exportToExcel } from '@/lib/export'
 import { useState, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
-import { useInternships, useStudents } from '@/lib/api-hooks'
+import { useInternships, useStageSupervisors, useStudents } from '@/lib/api-hooks'
 import { useAppStore } from '@/lib/store'
 import { motion } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -315,6 +315,7 @@ export function InternshipsPage() {
   const queryClient = useQueryClient()
   const role = useAppStore((state) => state.user?.role)
   const canCreateStage = ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE'].includes(role ?? '')
+  const canManageConvention = canCreateStage
   const canEvaluateStage = ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE', 'MAITRE_STAGE'].includes(role ?? '')
   const isStudentView = role === 'ETUDIANT_SANTE'
   const { data: internshipsQuery, isLoading } = useInternships()
@@ -360,7 +361,9 @@ export function InternshipsPage() {
   const [showNewStage, setShowNewStage] = useState(false)
   const [isCreatingStage, setIsCreatingStage] = useState(false)
   const [studentSearch, setStudentSearch] = useState('')
-  const [stageForm, setStageForm] = useState({ studentId: '', entreprise: '', type: '', period: '', tuteur: '', startDate: '', endDate: '' })
+  const [stageForm, setStageForm] = useState({ studentId: '', entreprise: '', type: '', period: '', tuteur: '', supervisorUserId: '', startDate: '', endDate: '' })
+  const { data: stageSupervisorsData } = useStageSupervisors({ enabled: showNewStage && canCreateStage })
+  const stageSupervisors = stageSupervisorsData?.supervisors ?? []
   const normalizedStudentSearch = studentSearch.trim()
   const { data: studentsData, isFetching: isSearchingStudents } = useStudents(
     { search: normalizedStudentSearch, limit: 30 },
@@ -440,7 +443,7 @@ export function InternshipsPage() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          status: 'TERMINE',
+          ...(canManageConvention ? { status: 'TERMINE' } : {}),
           evaluation: JSON.stringify({ ratings, appreciation, commentaire }),
         }),
       })
@@ -475,6 +478,7 @@ export function InternshipsPage() {
           type: f.type,
           period: f.period || undefined,
           tuteur: f.tuteur || undefined,
+          supervisorUserId: f.supervisorUserId || undefined,
           startDate: f.startDate || undefined,
           endDate: f.endDate || undefined,
           status: 'EN_ATTENTE',
@@ -485,7 +489,7 @@ export function InternshipsPage() {
       toast.success('Stage enregistré', { description: `${student.lastName} ${student.firstName} — ${f.entreprise}` })
       queryClient.invalidateQueries({ queryKey: ['internships'] })
       setShowNewStage(false)
-      setStageForm({ studentId: '', entreprise: '', type: '', period: '', tuteur: '', startDate: '', endDate: '' })
+      setStageForm({ studentId: '', entreprise: '', type: '', period: '', tuteur: '', supervisorUserId: '', startDate: '', endDate: '' })
     } catch (e) {
       toast.error('Erreur', { description: e instanceof Error ? e.message : 'Échec de la création' })
     } finally {
@@ -959,7 +963,7 @@ export function InternshipsPage() {
                           </div>
                         </div>
                         <div className="flex gap-2 shrink-0">
-                          {canEvaluateStage && convStatus === undefined && (
+                          {canManageConvention && convStatus === undefined && (
                             <>
                               <Button
                                 size="sm"
@@ -1423,7 +1427,7 @@ export function InternshipsPage() {
       </motion.div>
 
       {/* New internship dialog */}
-      <Dialog open={showNewStage} onOpenChange={(o) => { setShowNewStage(o); if (!o) { setStageForm({ studentId: '', entreprise: '', type: '', period: '', tuteur: '', startDate: '', endDate: '' }); setStudentSearch('') } }}>
+      <Dialog open={showNewStage} onOpenChange={(o) => { setShowNewStage(o); if (!o) { setStageForm({ studentId: '', entreprise: '', type: '', period: '', tuteur: '', supervisorUserId: '', startDate: '', endDate: '' }); setStudentSearch('') } }}>
         <DialogContent className="sm:max-w-[520px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-[var(--institution-primary)]">Nouveau stage</DialogTitle>
@@ -1473,9 +1477,24 @@ export function InternshipsPage() {
                 <Input placeholder="Ex: Semestre 2 2024-2025" value={stageForm.period} onChange={(e) => setStageForm((f) => ({ ...f, period: e.target.value }))} />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-sm">Tuteur (optionnel)</Label>
+                <Label className="text-sm">Tuteur en entreprise (optionnel)</Label>
                 <Input value={stageForm.tuteur} onChange={(e) => setStageForm((f) => ({ ...f, tuteur: e.target.value }))} />
               </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-sm">Maître de stage UniSahel (optionnel)</Label>
+              <Select value={stageForm.supervisorUserId || 'none'} onValueChange={(value) => setStageForm((form) => ({ ...form, supervisorUserId: value === 'none' ? '' : value }))}>
+                <SelectTrigger><SelectValue placeholder="Affecter un compte maître de stage" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Non affecté pour le moment</SelectItem>
+                  {stageSupervisors.map((supervisor) => (
+                    <SelectItem key={supervisor.id} value={supervisor.id}>
+                      {supervisor.lastName} {supervisor.firstName}{supervisor.email ? ` (${supervisor.email})` : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">Seul le compte affecté verra cet étudiant et pourra enregistrer son évaluation.</p>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">

@@ -8,15 +8,28 @@ const INTERNSHIP_MANAGE_ROLES = ['SUPER_ADMIN', 'ADMIN_INSTITUTION', 'SCOLARITE'
 const INTERNSHIP_EVALUATE_ROLES = [...INTERNSHIP_MANAGE_ROLES, 'MAITRE_STAGE']
 
 // GET /api/internships - List internships with stats
-async function handleGet(user: SessionUser, tenantId: string, _request: NextRequest) {
+async function handleGet(user: SessionUser, tenantId: string, request: NextRequest) {
   try {
+    if (request.nextUrl.searchParams.get('supervisors') === 'true') {
+      if (!INTERNSHIP_MANAGE_ROLES.includes(user.role)) {
+        return NextResponse.json({ error: 'FORBIDDEN', message: 'Accès refusé' }, { status: 403 })
+      }
+      const supervisors = await db.user.findMany({
+        where: { tenantId, role: 'MAITRE_STAGE', isActive: true },
+        select: { id: true, firstName: true, lastName: true, email: true },
+        orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
+      })
+      return NextResponse.json({ supervisors })
+    }
     const ownStudentId = user.role === 'ETUDIANT_SANTE' ? await resolveOwnStudentId(user) : null
     const ownStudent = ownStudentId
       ? await db.student.findFirst({ where: { id: ownStudentId, tenantId }, select: { matricule: true } })
       : null
     const where = user.role === 'ETUDIANT_SANTE'
       ? { tenantId, matricule: ownStudent?.matricule ?? '__AUCUN_STAGE__' }
-      : { tenantId }
+      : user.role === 'MAITRE_STAGE'
+        ? { tenantId, supervisorUserId: user.id }
+        : { tenantId }
 
     const [internships, total, enCours, conventionSignee, enAttente, termine, annule, partners] = await Promise.all([
       db.internship.findMany({
@@ -30,7 +43,7 @@ async function handleGet(user: SessionUser, tenantId: string, _request: NextRequ
       db.internship.count({ where: { ...where, status: 'EN_ATTENTE' } }),
       db.internship.count({ where: { ...where, status: 'TERMINE' } }),
       db.internship.count({ where: { ...where, status: 'ANNULE' } }),
-      user.role === 'ETUDIANT_SANTE'
+      user.role === 'ETUDIANT_SANTE' || user.role === 'MAITRE_STAGE'
         ? Promise.resolve([])
         : db.internshipPartner.findMany({ where: { tenantId }, orderBy: { name: 'asc' } }),
     ])
@@ -71,6 +84,7 @@ async function handlePost(_user: SessionUser, tenantId: string, request: NextReq
       endDate,
       evaluation,
       evaluationDate,
+      supervisorUserId,
     } = body
 
     if (!studentName || !matricule || !entreprise || !type) {
@@ -88,6 +102,14 @@ async function handlePost(_user: SessionUser, tenantId: string, request: NextReq
       )
     }
 
+    const supervisor = supervisorUserId ? await db.user.findFirst({
+      where: { id: supervisorUserId, tenantId, role: 'MAITRE_STAGE', isActive: true },
+      select: { id: true, firstName: true, lastName: true },
+    }) : null
+    if (supervisorUserId && !supervisor) {
+      return NextResponse.json({ error: 'Maître de stage actif introuvable dans cette institution' }, { status: 400 })
+    }
+
     const internship = await db.internship.create({
       data: {
         tenantId,
@@ -97,7 +119,8 @@ async function handlePost(_user: SessionUser, tenantId: string, request: NextReq
         type,
         period: period ?? null,
         status: status ?? 'EN_ATTENTE',
-        tuteur: tuteur ?? null,
+        tuteur: tuteur ?? (supervisor ? `${supervisor.firstName} ${supervisor.lastName}` : null),
+        supervisorUserId: supervisor?.id ?? null,
         startDate: startDate ? new Date(startDate) : null,
         endDate: endDate ? new Date(endDate) : null,
         evaluation: evaluation ?? null,
@@ -118,20 +141,26 @@ async function handlePost(_user: SessionUser, tenantId: string, request: NextReq
 
 // PUT /api/internships?id=X - update status (convention validation) and/or
 // record an evaluation. Convention approve -> CONVENTION_SIGNEE, reject -> ANNULE.
-async function handlePut(_user: SessionUser, tenantId: string, request: NextRequest) {
+async function handlePut(user: SessionUser, tenantId: string, request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
     if (!id) {
       return NextResponse.json({ error: 'id query parameter is required' }, { status: 400 })
     }
-    const existing = await db.internship.findFirst({ where: { id, tenantId } })
+    const existing = await db.internship.findFirst({
+      where: { id, tenantId, ...(user.role === 'MAITRE_STAGE' ? { supervisorUserId: user.id } : {}) },
+    })
     if (!existing) {
       return NextResponse.json({ error: 'Internship not found' }, { status: 404 })
     }
 
     const body = await request.json()
     const { status, evaluation } = body
+
+    if (user.role === 'MAITRE_STAGE' && status !== undefined) {
+      return NextResponse.json({ error: 'Le maître de stage peut enregistrer son évaluation, pas modifier le circuit administratif.' }, { status: 403 })
+    }
 
     const validStatuses = ['EN_ATTENTE', 'CONVENTION_SIGNEE', 'EN_COURS', 'TERMINE', 'ANNULE']
     const data: { status?: string; evaluation?: string; evaluationDate?: Date } = {}
