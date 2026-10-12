@@ -2,21 +2,8 @@ ALTER TABLE "Deliberation" ADD COLUMN IF NOT EXISTS "departmentId" TEXT;
 ALTER TABLE "Deliberation" ADD COLUMN IF NOT EXISTS "juryMembers" JSONB;
 CREATE INDEX IF NOT EXISTS "Deliberation_tenantId_academicYearId_departmentId_idx"
   ON "Deliberation"("tenantId", "academicYearId", "departmentId");
--- This legacy constraint pre-dates program/level-scoped juries. The production
--- bootstrap replays additive migrations, so do not recreate the obsolete broad
--- department constraint once the scoped columns already exist. A later
--- migration replaces it with the program/level-aware indexes.
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1
-    FROM information_schema.columns
-    WHERE table_schema = 'public'
-      AND table_name = 'Deliberation'
-      AND column_name = 'programId'
-  ) THEN
-    CREATE UNIQUE INDEX IF NOT EXISTS "Deliberation_department_session_unique"
-      ON "Deliberation"("tenantId", "academicYearId", "departmentId", "type")
-      WHERE "departmentId" IS NOT NULL;
-  END IF;
-END $$;
+-- Do not recreate the former department-wide unique constraint here. It cannot
+-- represent distinct juries for Licence, Master I and Master II, and the
+-- production bootstrap deliberately replays this additive migration. The
+-- mandatory jury-level migration later in the same bootstrap creates the
+-- program/level-aware constraint plus a legacy-only department constraint.
