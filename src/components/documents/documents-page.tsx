@@ -80,6 +80,26 @@ interface GeneratedDoc {
   codeVerification: string
 }
 
+interface PriorLevelRecognitionData {
+  program: { id: string; name: string }
+  currentLevel: { id: string; name: string; orderIndex: number }
+  priorLevels: Array<{
+    id: string
+    name: string
+    orderIndex: number
+    recognition: null | {
+      id: string
+      sourceInstitution: string
+      sourceReference: string
+      sourceAcademicYear: string
+      sourceAwardDate: string
+      creditsAcquired: number
+      average: number
+      status: string
+    }
+  }>
+}
+
 // ASCII keys for status config - NO accented characters
 const statusConfig: Record<string, { label: string; className: string; icon: React.ElementType }> = {
   signe: { label: 'Validé', className: 'bg-[var(--institution-secondary-15)] text-[var(--institution-secondary)] border-0', icon: CheckCircle2 },
@@ -140,6 +160,13 @@ export function DocumentsPage() {
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
   const [qrCode, setQrCode] = useState<string | null>(null)
   const qrCodeRef = useRef<string | null>(null)
+  const [recognitionData, setRecognitionData] = useState<PriorLevelRecognitionData | null>(null)
+  const [recognitionLoading, setRecognitionLoading] = useState(false)
+  const [recognitionSaving, setRecognitionSaving] = useState(false)
+  const [recognitionForm, setRecognitionForm] = useState({
+    levelId: '', sourceInstitution: '', sourceReference: '', sourceAcademicYear: '',
+    sourceAwardDate: '', creditsAcquired: '60', average: '',
+  })
 
   const { data: docsData } = useDocuments() as {
     data: { documents: Array<{ id: string; type: string; studentId: string | null; academicYearId: string | null; etudiant: string; matricule: string; date: string; statut: 'signe' | 'genere' | 'en_attente'; codeVerification: string }>; stats: { thisMonth: number; pending: number }; countByType: Record<string, number> } | undefined
@@ -180,6 +207,64 @@ export function DocumentsPage() {
     selectedDocumentType.apiType &&
     (!selectedDocumentType.requiresStudent || selectedStudentId)
   )
+
+  const loadRecognitions = useCallback(async () => {
+    if (!diplomaPreview || !selectedStudentId) {
+      setRecognitionData(null)
+      return
+    }
+    setRecognitionLoading(true)
+    try {
+      const response = await fetch(`/api/level-recognitions?studentId=${encodeURIComponent(selectedStudentId)}`)
+      const body = await response.json()
+      if (!response.ok) throw new Error(body.error || 'Parcours antérieur indisponible')
+      const data = body as PriorLevelRecognitionData
+      setRecognitionData(data)
+      const firstMissing = data.priorLevels.find((level) => level.recognition?.status !== 'APPROVED')
+      setRecognitionForm((current) => ({ ...current, levelId: firstMissing?.id ?? '' }))
+    } catch (error) {
+      setRecognitionData(null)
+      toast.error('Parcours antérieur indisponible', {
+        description: error instanceof Error ? error.message : 'Veuillez réessayer.',
+      })
+    } finally {
+      setRecognitionLoading(false)
+    }
+  }, [diplomaPreview, selectedStudentId])
+
+  useEffect(() => { void loadRecognitions() }, [loadRecognitions])
+
+  const saveRecognition = useCallback(async () => {
+    if (!selectedStudentId || !recognitionForm.levelId) return
+    setRecognitionSaving(true)
+    try {
+      const response = await fetch('/api/level-recognitions', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentId: selectedStudentId, levelId: recognitionForm.levelId,
+          sourceInstitution: recognitionForm.sourceInstitution,
+          sourceReference: recognitionForm.sourceReference,
+          sourceAcademicYear: recognitionForm.sourceAcademicYear,
+          sourceAwardDate: recognitionForm.sourceAwardDate,
+          creditsAcquired: Number(recognitionForm.creditsAcquired), average: Number(recognitionForm.average),
+        }),
+      })
+      const body = await response.json()
+      if (!response.ok) throw new Error(body.error || 'Reconnaissance impossible')
+      toast.success('Niveau antérieur reconnu', { description: 'La preuve et l’auteur sont enregistrés dans l’audit.' })
+      setRecognitionForm((current) => ({
+        ...current, levelId: '', sourceInstitution: '', sourceReference: '',
+        sourceAcademicYear: '', sourceAwardDate: '', average: '',
+      }))
+      await loadRecognitions()
+    } catch (error) {
+      toast.error('Reconnaissance impossible', {
+        description: error instanceof Error ? error.message : 'Veuillez réessayer.',
+      })
+    } finally {
+      setRecognitionSaving(false)
+    }
+  }, [loadRecognitions, recognitionForm, selectedStudentId])
 
   const generateDoc = useCallback(async (sign: boolean = false) => {
     const docType = documentTypeList.find((dt) => dt.key === selectedType)
@@ -605,6 +690,74 @@ export function DocumentsPage() {
               </p>
             )}
             {(signedOnlyDocument || diplomaPreview) && <p className="text-xs text-gray-500 mt-2">{diplomaPreview ? 'L’aperçu porte la mention « non validé ». Le diplôme officiel exige le dernier niveau du programme, une délibération finale et tous les crédits sans dette.' : 'Ce document exige une délibération finale validée, les crédits complets sans dette et une validation par un responsable.'}</p>}
+            {diplomaPreview && selectedStudentId && (
+              <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-950">Validation du parcours antérieur</h3>
+                    <p className="mt-1 text-xs text-slate-600">
+                      Un niveau suivi dans UniSahel reste validé par son jury. Pour une admission directe ou un transfert, enregistrez ici l’équivalence appuyée par le relevé ou l’attestation d’origine.
+                    </p>
+                  </div>
+                  {recognitionLoading && <Loader2 className="size-4 animate-spin text-slate-500" />}
+                </div>
+                {recognitionData && (
+                  <div className="mt-3 space-y-3">
+                    <div className="flex flex-wrap gap-2">
+                      {recognitionData.priorLevels.map((level) => (
+                        <Badge key={level.id} variant="outline" className={level.recognition?.status === 'APPROVED' ? 'border-emerald-300 bg-emerald-50 text-emerald-900' : 'border-amber-300 bg-amber-50 text-amber-950'}>
+                          {level.name} · {level.recognition?.status === 'APPROVED' ? `Équivalence validée (${level.recognition.creditsAcquired} crédits)` : 'Jury interne ou équivalence requis'}
+                        </Badge>
+                      ))}
+                      {recognitionData.priorLevels.length === 0 && <span className="text-xs text-slate-600">Aucun niveau antérieur n’est requis pour ce programme.</span>}
+                    </div>
+                    {recognitionData.priorLevels.some((level) => level.recognition?.status !== 'APPROVED') && (
+                      <div className="grid gap-3 border-t border-slate-200 pt-3 sm:grid-cols-2 lg:grid-cols-4">
+                        <div>
+                          <span className="mb-1 block text-xs font-medium text-slate-700">Niveau reconnu</span>
+                          <Select value={recognitionForm.levelId} onValueChange={(value) => setRecognitionForm((form) => ({ ...form, levelId: value }))}>
+                            <SelectTrigger className="h-9 bg-white text-sm"><SelectValue placeholder="Choisir" /></SelectTrigger>
+                            <SelectContent>
+                              {recognitionData.priorLevels.filter((level) => level.recognition?.status !== 'APPROVED').map((level) => <SelectItem key={level.id} value={level.id}>{level.name}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <span className="mb-1 block text-xs font-medium text-slate-700">Établissement d’origine</span>
+                          <Input className="h-9 bg-white text-sm" value={recognitionForm.sourceInstitution} onChange={(event) => setRecognitionForm((form) => ({ ...form, sourceInstitution: event.target.value }))} placeholder="Université ou institut" />
+                        </div>
+                        <div>
+                          <span className="mb-1 block text-xs font-medium text-slate-700">Référence de la preuve</span>
+                          <Input className="h-9 bg-white text-sm" value={recognitionForm.sourceReference} onChange={(event) => setRecognitionForm((form) => ({ ...form, sourceReference: event.target.value }))} placeholder="N° relevé ou décision" />
+                        </div>
+                        <div>
+                          <span className="mb-1 block text-xs font-medium text-slate-700">Année académique</span>
+                          <Input className="h-9 bg-white text-sm" value={recognitionForm.sourceAcademicYear} onChange={(event) => setRecognitionForm((form) => ({ ...form, sourceAcademicYear: event.target.value }))} placeholder="2025-2026" />
+                        </div>
+                        <div>
+                          <span className="mb-1 block text-xs font-medium text-slate-700">Date de validation</span>
+                          <Input type="date" className="h-9 bg-white text-sm" value={recognitionForm.sourceAwardDate} onChange={(event) => setRecognitionForm((form) => ({ ...form, sourceAwardDate: event.target.value }))} />
+                        </div>
+                        <div>
+                          <span className="mb-1 block text-xs font-medium text-slate-700">Crédits reconnus</span>
+                          <Input type="number" min="1" max="300" className="h-9 bg-white text-sm" value={recognitionForm.creditsAcquired} onChange={(event) => setRecognitionForm((form) => ({ ...form, creditsAcquired: event.target.value }))} />
+                        </div>
+                        <div>
+                          <span className="mb-1 block text-xs font-medium text-slate-700">Moyenne sur 20</span>
+                          <Input type="number" min="0" max="20" step="0.01" className="h-9 bg-white text-sm" value={recognitionForm.average} onChange={(event) => setRecognitionForm((form) => ({ ...form, average: event.target.value }))} />
+                        </div>
+                        <div className="flex items-end">
+                          <Button type="button" className="h-9 w-full bg-slate-900 text-white hover:bg-slate-800" disabled={recognitionSaving || !recognitionForm.levelId || !recognitionForm.sourceInstitution.trim() || !recognitionForm.sourceReference.trim() || !recognitionForm.sourceAcademicYear.trim() || !recognitionForm.sourceAwardDate || !recognitionForm.average} onClick={saveRecognition}>
+                            {recognitionSaving ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Shield className="mr-2 size-4" />}
+                            Valider l’équivalence
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
             <p className="text-xs text-gray-500 mt-2">Le logo et les signatures sont figés lors de l’émission. Après une modification de l’identité visuelle, générez un nouveau document pour l’utiliser ; les pièces déjà délivrées restent inchangées.</p>
             {selectedDocumentType && !selectedDocumentType.implemented && (
               <p className="text-xs text-[var(--institution-accent)] mt-2">

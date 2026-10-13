@@ -7,6 +7,7 @@ const dbMock = vi.hoisted(() => ({
   pedagogicalRegistration: { findMany: vi.fn() },
   grade: { findMany: vi.fn() },
   program: { findFirst: vi.fn() },
+  priorLevelRecognition: { findFirst: vi.fn() },
 }))
 vi.mock('@/lib/db', () => ({ db: dbMock }))
 
@@ -41,6 +42,7 @@ describe('validated diploma award', () => {
       id: 'program-A', name: 'Génie informatique', diplomaType: 'Licence', duration: 2,
       levels: [{ id: 'level-1', name: 'Licence 1', orderIndex: 1 }, { id: 'level-2', name: 'Licence 2', orderIndex: 2 }],
     })
+    dbMock.priorLevelRecognition.findFirst.mockResolvedValue(null)
   })
 
   it('requires every level to be validated in chronological order', async () => {
@@ -48,6 +50,29 @@ describe('validated diploma award', () => {
     expect(diploma.awards).toHaveLength(2)
     expect(diploma.creditsAcquired).toBe(120)
     expect(dbMock.deliberation.findFirst).toHaveBeenCalledTimes(2)
+  })
+
+  it('accepts an audited equivalence for a prior level when the student entered directly into the terminal level', async () => {
+    dbMock.administrativeRegistration.findMany.mockImplementation(({ where }) => {
+      if (where.levelId) return Promise.resolve([{ id: `registration-${where.academicYearId}` }])
+      if (where.programId) return Promise.resolve([
+        { academicYearId: 'year-2', levelId: 'level-2', academicYear: { startDate: new Date('2026-10-01') } },
+      ])
+      return Promise.resolve([{ programId: 'program-A', levelId: 'level-2' }])
+    })
+    dbMock.priorLevelRecognition.findFirst.mockResolvedValue({
+      id: 'recognition-1', sourceInstitution: 'Université partenaire', sourceReference: 'EQ-2026-001',
+      sourceAcademicYear: '2025-2026', sourceAwardDate: new Date('2026-07-15'),
+      creditsAcquired: 60, average: 13.5, validatedAt: new Date('2026-09-10'),
+    })
+
+    const diploma = await getValidatedDiplomaAward({ tenantId: 'tenant-A', studentId: 'student-A', academicYearId: 'year-2' })
+
+    expect(diploma.awards[0]).toMatchObject({
+      levelId: 'level-1', source: 'EQUIVALENCE', recognitionId: 'recognition-1',
+      creditsAcquired: 60, creditsRequired: 60,
+    })
+    expect(diploma.finalDecision.source).toBe('JURY')
   })
 
   it('blocks graduation when an earlier level has a debt', async () => {

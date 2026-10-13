@@ -3,11 +3,16 @@ import { db } from '@/lib/db'
 export class AwardEligibilityError extends Error {}
 
 export interface ValidatedLevelAward {
+  source: 'JURY' | 'EQUIVALENCE'
   programId: string
   levelId: string
-  academicYearId: string
-  deliberationId: string
-  decisionId: string
+  academicYearId: string | null
+  deliberationId: string | null
+  decisionId: string | null
+  recognitionId?: string
+  sourceInstitution?: string
+  sourceReference?: string
+  sourceAcademicYear?: string
   decision: string
   juryDate: Date
   average: number
@@ -125,6 +130,7 @@ export async function getValidatedLevelAward(input: {
   }
 
   return {
+    source: 'JURY',
     programId, levelId, academicYearId,
     deliberationId: deliberation.id,
     decisionId: decision.id,
@@ -188,13 +194,50 @@ export async function getValidatedDiplomaAward(input: {
   if (!finalYear) throw new AwardEligibilityError('Année de diplomation introuvable dans le parcours')
 
   const awards: ValidatedLevelAward[] = []
+  const settings = await db.tenantSettings.findUnique({
+    where: { tenantId }, select: { creditsPerYear: true, passingGrade: true },
+  })
+  const creditsRequired = settings?.creditsPerYear ?? 60
+  const passingGrade = settings?.passingGrade ?? 10
   let previousStartDate = Number.NEGATIVE_INFINITY
   for (const level of program.levels) {
     const candidates = registrations
       .filter((registration) => registration.levelId === level.id && registration.academicYear.startDate <= finalYear.academicYear.startDate)
       .sort((a, b) => b.academicYear.startDate.getTime() - a.academicYear.startDate.getTime())
     const chosen = candidates[0]
-    if (!chosen || (level.id === finalRegistration.levelId && chosen.academicYearId !== academicYearId) ||
+    if (!chosen) {
+      if (level.id === finalRegistration.levelId) {
+        throw new AwardEligibilityError(`Le niveau terminal ${level.name} doit être validé par un jury interne`)
+      }
+      const recognition = await db.priorLevelRecognition.findFirst({
+        where: {
+          tenantId, studentId, programId: program.id, levelId: level.id, status: 'APPROVED',
+          sourceAwardDate: { lt: finalYear.academicYear.startDate },
+        },
+        select: {
+          id: true, sourceInstitution: true, sourceReference: true, sourceAcademicYear: true,
+          sourceAwardDate: true, creditsAcquired: true, average: true, validatedAt: true,
+        },
+      })
+      if (!recognition || recognition.creditsAcquired < creditsRequired || recognition.average === null ||
+          !Number.isFinite(recognition.average) || recognition.average < passingGrade || recognition.average > 20 ||
+          recognition.sourceAwardDate.getTime() <= previousStartDate) {
+        throw new AwardEligibilityError(
+          `Le niveau ${level.name} n’a pas de validation interne ni de reconnaissance d’équivalence complète et chronologique`,
+        )
+      }
+      awards.push({
+        source: 'EQUIVALENCE', programId: program.id, levelId: level.id, academicYearId: null,
+        deliberationId: null, decisionId: null, recognitionId: recognition.id, decision: 'EQUIVALENCE',
+        juryDate: recognition.sourceAwardDate, average: recognition.average,
+        creditsAcquired: recognition.creditsAcquired, creditsRequired,
+        sourceInstitution: recognition.sourceInstitution, sourceReference: recognition.sourceReference,
+        sourceAcademicYear: recognition.sourceAcademicYear, session: 'NORMALE',
+      })
+      previousStartDate = recognition.sourceAwardDate.getTime()
+      continue
+    }
+    if ((level.id === finalRegistration.levelId && chosen.academicYearId !== academicYearId) ||
         chosen.academicYear.startDate.getTime() <= previousStartDate) {
       throw new AwardEligibilityError(`Le niveau ${level.name} n’a pas de validation chronologique complète dans ce programme`)
     }

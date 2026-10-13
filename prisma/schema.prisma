@@ -87,6 +87,7 @@ model Tenant {
   curriculumVersions     CurriculumVersion[]
   timetablePublications  TimetablePublication[]
   juryAssignments        JuryAssignment[]
+  priorLevelRecognitions PriorLevelRecognition[]
   users                  User[]
   students               Student[]
   teachers               Teacher[]
@@ -290,47 +291,49 @@ model Track {
 }
 
 model Program {
-  id                 String              @id @default(cuid())
-  tenantId           String
-  tenant             Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  facultyId          String?
-  faculty            Faculty?            @relation(fields: [facultyId], references: [id], onDelete: SetNull)
-  departmentId       String?
-  department         Department?         @relation(fields: [departmentId], references: [id], onDelete: SetNull)
-  mentionId          String?
-  mention            Mention?            @relation(fields: [mentionId], references: [id], onDelete: SetNull)
-  name               String
-  code               String?
-  cycle              String              @default("LICENCE")
-  diplomaType        String?
-  duration           Int                 @default(3)
-  isActive           Boolean             @default(true)
-  levels             Level[]
-  students           Student[]
-  admissions         Admission[]
-  juryAssignments    JuryAssignment[]
-  curriculumVersions CurriculumVersion[]
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
+  id                     String                  @id @default(cuid())
+  tenantId               String
+  tenant                 Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  facultyId              String?
+  faculty                Faculty?                @relation(fields: [facultyId], references: [id], onDelete: SetNull)
+  departmentId           String?
+  department             Department?             @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  mentionId              String?
+  mention                Mention?                @relation(fields: [mentionId], references: [id], onDelete: SetNull)
+  name                   String
+  code                   String?
+  cycle                  String                  @default("LICENCE")
+  diplomaType            String?
+  duration               Int                     @default(3)
+  isActive               Boolean                 @default(true)
+  levels                 Level[]
+  students               Student[]
+  admissions             Admission[]
+  juryAssignments        JuryAssignment[]
+  curriculumVersions     CurriculumVersion[]
+  priorLevelRecognitions PriorLevelRecognition[]
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
 
   @@index([tenantId, departmentId, isActive])
   @@index([tenantId, facultyId, isActive])
 }
 
 model Level {
-  id                 String              @id @default(cuid())
-  programId          String
-  program            Program             @relation(fields: [programId], references: [id], onDelete: Cascade)
-  name               String
-  code               String?
-  orderIndex         Int                 @default(0)
-  isActive           Boolean             @default(true)
-  semesters          Semester[]
-  students           Student[]
-  juryAssignments    JuryAssignment[]
-  curriculumVersions CurriculumVersion[]
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
+  id                     String                  @id @default(cuid())
+  programId              String
+  program                Program                 @relation(fields: [programId], references: [id], onDelete: Cascade)
+  name                   String
+  code                   String?
+  orderIndex             Int                     @default(0)
+  isActive               Boolean                 @default(true)
+  semesters              Semester[]
+  students               Student[]
+  juryAssignments        JuryAssignment[]
+  curriculumVersions     CurriculumVersion[]
+  priorLevelRecognitions PriorLevelRecognition[]
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
 
   @@index([programId, isActive, orderIndex])
 }
@@ -478,37 +481,38 @@ model ExamSession {
 // ============================================
 
 model User {
-  id                    String           @id @default(cuid())
+  id                    String                  @id @default(cuid())
   // Nullable: a SUPER_ADMIN manages the whole platform and belongs to no
   // single institution (mirrors a real multi-tenant SaaS control plane).
   tenantId              String?
-  tenant                Tenant?          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  email                 String?          @unique
+  tenant                Tenant?                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  email                 String?                 @unique
   passwordHash          String?
-  login                 String?          @unique
+  login                 String?                 @unique
   pinHash               String?
   firstName             String
   lastName              String
   middleName            String?
   phone                 String?
   photo                 String?
-  role                  UserRole         @default(ETUDIANT)
+  role                  UserRole                @default(ETUDIANT)
   facultyId             String?
-  faculty               Faculty?         @relation("FacultyManagers", fields: [facultyId], references: [id], onDelete: SetNull)
+  faculty               Faculty?                @relation("FacultyManagers", fields: [facultyId], references: [id], onDelete: SetNull)
   departmentId          String?
-  department            Department?      @relation("DepartmentManagers", fields: [departmentId], references: [id], onDelete: SetNull)
-  isActive              Boolean          @default(true)
-  emailVerified         Boolean          @default(false)
+  department            Department?             @relation("DepartmentManagers", fields: [departmentId], references: [id], onDelete: SetNull)
+  isActive              Boolean                 @default(true)
+  emailVerified         Boolean                 @default(false)
   lastLoginAt           DateTime?
   lastLoginIp           String?
-  mustChangePassword    Boolean          @default(false)
+  mustChangePassword    Boolean                 @default(false)
   teacher               Teacher?
   student               Student?
   auditLogs             AuditLog[]
   juryAssignments       JuryAssignment[]
-  supervisedInternships Internship[]     @relation("InternshipSupervisor")
-  createdAt             DateTime         @default(now())
-  updatedAt             DateTime         @updatedAt
+  validatedRecognitions PriorLevelRecognition[] @relation("PriorLevelRecognitionValidator")
+  supervisedInternships Internship[]            @relation("InternshipSupervisor")
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
 
   @@index([tenantId, email])
   @@index([tenantId, login])
@@ -609,6 +613,7 @@ model Student {
   currentProgram           Program?                     @relation(fields: [currentProgramId], references: [id], onDelete: SetNull)
   totalCreditsAcquired     Int                          @default(0)
   registrations            AdministrativeRegistration[]
+  priorLevelRecognitions   PriorLevelRecognition[]
   pedagogicalRegistrations PedagogicalRegistration[]
   grades                   Grade[]
   absences                 Absence[]
@@ -717,6 +722,41 @@ model AdministrativeRegistration {
   @@index([tenantId, academicYearId, status])
   @@index([tenantId, programId, levelId, academicYearId])
   @@index([curriculumVersionId])
+}
+
+// Audited recognition of a level completed before the student joined the
+// current programme (transfer, equivalence or historical data recovery). It
+// may replace only a prior level during diploma eligibility; the terminal
+// level must always be validated by an internal, locked jury decision.
+model PriorLevelRecognition {
+  id                 String    @id @default(cuid())
+  tenantId           String
+  tenant             Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  studentId          String
+  student            Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  programId          String
+  program            Program   @relation(fields: [programId], references: [id], onDelete: Restrict)
+  levelId            String
+  level              Level     @relation(fields: [levelId], references: [id], onDelete: Restrict)
+  sourceInstitution  String
+  sourceReference    String
+  sourceAcademicYear String
+  sourceAwardDate    DateTime
+  creditsAcquired    Int
+  average            Float?
+  status             String    @default("APPROVED")
+  validatedById      String
+  validatedBy        User      @relation("PriorLevelRecognitionValidator", fields: [validatedById], references: [id], onDelete: Restrict)
+  validatedAt        DateTime  @default(now())
+  revocationReason   String?
+  revokedById        String?
+  revokedAt          DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([tenantId, studentId, status])
+  @@index([tenantId, studentId, programId, levelId])
+  @@index([tenantId, programId, levelId])
 }
 
 model PedagogicalRegistration {

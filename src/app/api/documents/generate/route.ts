@@ -453,8 +453,11 @@ export async function POST(request: NextRequest) {
         documentData = {
           diploma, programId: diplomaAward.program.id, levelId: diplomaAward.finalLevel.id,
           awards: diplomaAward.awards.map((award) => ({
-            academicYearId: award.academicYearId, levelId: award.levelId, deliberationId: award.deliberationId,
-            decisionId: award.decisionId, creditsAcquired: award.creditsAcquired,
+            source: award.source, academicYearId: award.academicYearId, levelId: award.levelId,
+            deliberationId: award.deliberationId, decisionId: award.decisionId,
+            recognitionId: award.recognitionId, sourceInstitution: award.sourceInstitution,
+            sourceReference: award.sourceReference, sourceAcademicYear: award.sourceAcademicYear,
+            creditsAcquired: award.creditsAcquired,
           })),
         }
         break

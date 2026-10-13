@@ -104,4 +104,9 @@ if (process.env.VERCEL_ENV === 'production') {
     '--file', join('prisma', 'migrations', '20261012133000_onecs_diploma_authentication', 'migration.sql'),
     '--schema', join('prisma', 'schema.prisma'),
   ], { stdio: 'inherit' })
+  execFileSync(process.execPath, [
+    prismaCli, 'db', 'execute',
+    '--file', join('prisma', 'migrations', '20261013090000_prior_level_recognitions', 'migration.sql'),
+    '--schema', join('prisma', 'schema.prisma'),
+  ], { stdio: 'inherit' })
 }
